@@ -187,3 +187,37 @@ func TestEmptyBodyHeader(t *testing.T) {
 		t.Fatalf("code %d content %q", rr.Code, got)
 	}
 }
+
+func TestTransforms(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "up.txt")
+	s := New("k")
+	s.Transforms["upper"] = func(w io.Writer, r io.Reader, q url.Values) error {
+		b, err := io.ReadAll(r)
+		if err != nil {
+			return err
+		}
+		_, err = w.Write([]byte(strings.ToUpper(string(b)) + q.Get("suffix")))
+		return err
+	}
+	rec := do(t, s, "POST", "/__hia/save", url.Values{"t": {"k"}, "path": {p}, "transform": {"upper"}, "suffix": {"!"}}, "abc")
+	if got, _ := os.ReadFile(p); rec.Code != 200 || string(got) != "ABC!" {
+		t.Fatalf("single: %d %q", rec.Code, got)
+	}
+	rec = do(t, s, "POST", "/__hia/upload/begin", url.Values{"t": {"k"}, "path": {p}, "transform": {"upper"}}, "")
+	var begin map[string]string
+	json.Unmarshal(rec.Body.Bytes(), &begin)
+	do(t, s, "POST", "/__hia/upload/chunk", url.Values{"t": {"k"}, "id": {begin["id"]}}, "hello ")
+	do(t, s, "POST", "/__hia/upload/chunk", url.Values{"t": {"k"}, "id": {begin["id"]}}, "world")
+	rec = do(t, s, "POST", "/__hia/upload/commit", url.Values{"t": {"k"}, "id": {begin["id"]}}, "")
+	if got, _ := os.ReadFile(p); rec.Code != 200 || string(got) != "HELLO WORLD" {
+		t.Fatalf("chunked: %d %q %s", rec.Code, got, rec.Body.String())
+	}
+	rec = do(t, s, "POST", "/__hia/save", url.Values{"t": {"k"}, "path": {p}, "transform": {"nope"}}, "x")
+	if rec.Code != 400 {
+		t.Fatalf("unknown transform: %d", rec.Code)
+	}
+	if got, _ := os.ReadFile(p); string(got) != "HELLO WORLD" {
+		t.Fatal("file changed by failed transform")
+	}
+}

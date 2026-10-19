@@ -27,6 +27,13 @@ export function registerBuiltinModules() {
     load: () => import('./markdown'),
   });
   modules.register({
+    id: 'image',
+    name: 'Image',
+    extensions: ['png', 'jpg', 'jpeg', 'jfif', 'gif', 'webp', 'bmp', 'svg'],
+    mimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml'],
+    load: () => import('./image'),
+  });
+  modules.register({
     id: 'binary',
     name: 'Binary',
     extensions: ['exe', 'dll', 'so', 'dylib', 'bin', 'o', 'a', 'class', 'pyc', 'wasm', 'iso', 'dmg', 'img'],

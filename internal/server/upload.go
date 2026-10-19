@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -20,7 +22,9 @@ import (
 const uploadTTL = 10 * time.Minute
 
 type upload struct {
-	f       *fs.AtomicFile
+	f       *fs.AtomicFile // plain uploads: the temp file next to the target
+	raw     *os.File       // transformed uploads: staging file in the temp dir
+	query   url.Values
 	path    string
 	written int64
 	touched time.Time
@@ -41,16 +45,32 @@ func (s *Server) registerUploads() {
 			Error(w, http.StatusBadRequest, errors.New("absolute path required"))
 			return
 		}
-		f, err := fs.CreateAtomic(p)
-		if err != nil {
-			Error(w, StatusFor(err), err)
-			return
+		q := r.URL.Query()
+		up := &upload{path: p, query: q, touched: time.Now()}
+		if q.Get("transform") != "" {
+			if _, err := s.transform(q); err != nil {
+				Error(w, http.StatusBadRequest, err)
+				return
+			}
+			raw, err := os.CreateTemp("", "hia-upload-*")
+			if err != nil {
+				Error(w, StatusFor(err), err)
+				return
+			}
+			up.raw = raw
+		} else {
+			f, err := fs.CreateAtomic(p)
+			if err != nil {
+				Error(w, StatusFor(err), err)
+				return
+			}
+			up.f = f
 		}
 		u.mu.Lock()
 		u.expire()
 		u.seq++
 		id := fmt.Sprintf("u%d", u.seq)
-		u.open[id] = &upload{f: f, path: p, touched: time.Now()}
+		u.open[id] = up
 		u.mu.Unlock()
 		JSON(w, map[string]string{"id": id})
 	})
@@ -62,7 +82,7 @@ func (s *Server) registerUploads() {
 		}
 		up.mu.Lock()
 		defer up.mu.Unlock()
-		n, err := io.Copy(up.f, http.MaxBytesReader(w, r.Body, 64<<20))
+		n, err := io.Copy(up.writer(), http.MaxBytesReader(w, r.Body, 64<<20))
 		up.written += n
 		up.touched = time.Now()
 		if err != nil {
@@ -80,7 +100,7 @@ func (s *Server) registerUploads() {
 		}
 		up.mu.Lock()
 		defer up.mu.Unlock()
-		if err := up.f.Commit(); err != nil {
+		if err := s.commit(up); err != nil {
 			Error(w, StatusFor(err), err)
 			return
 		}
@@ -95,7 +115,7 @@ func (s *Server) registerUploads() {
 	s.mux.HandleFunc("POST /__hia/upload/abort", func(w http.ResponseWriter, r *http.Request) {
 		if up := u.take(r.URL.Query().Get("id")); up != nil {
 			up.mu.Lock()
-			up.f.Abort()
+			up.abort()
 			up.mu.Unlock()
 		}
 		JSON(w, map[string]bool{"ok": true})
@@ -120,8 +140,44 @@ func (u *uploads) take(id string) *upload {
 func (u *uploads) expire() {
 	for id, up := range u.open {
 		if time.Since(up.touched) > uploadTTL {
-			up.f.Abort()
+			up.abort()
 			delete(u.open, id)
 		}
 	}
+}
+
+func (up *upload) writer() io.Writer {
+	if up.raw != nil {
+		return up.raw
+	}
+	return up.f
+}
+
+func (up *upload) abort() {
+	if up.raw != nil {
+		up.raw.Close()
+		os.Remove(up.raw.Name())
+		return
+	}
+	up.f.Abort()
+}
+
+// commit finishes an upload: plain uploads rename their temp file; transformed
+// uploads run the transform from the staging file into an atomic write.
+func (s *Server) commit(up *upload) error {
+	if up.raw == nil {
+		return up.f.Commit()
+	}
+	defer func() {
+		up.raw.Close()
+		os.Remove(up.raw.Name())
+	}()
+	if _, err := up.raw.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+	tf, err := s.transform(up.query)
+	if err != nil {
+		return err
+	}
+	return fs.AtomicWrite(up.path, func(w io.Writer) error { return tf(w, up.raw, up.query) })
 }

@@ -41,6 +41,13 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 - **Folder search** (`internal/search`): parallel workers (≤ 8), skips binary files (NUL in first 8 KB), files > 20 MB, hidden folders, `.git` and `node_modules`; stops at 5,000 matches; results stream every 80 ms.
 - **Markdown source soft-wraps by default**; other text files follow the global word-wrap setting (Alt+Z).
 
+- **Image editing model**: one base raster (canvas) plus editable Konva markup shapes. Raster operations (crop, rotate, flip, resize, blur, pixelate) first merge the markup into the raster, so markup stays movable/editable until the next raster operation. Undo keeps whole snapshots, capped at 30 steps / 250 MP.
+- **Blur and pixelate** are done by down- and up-scaling the region (twice for blur) rather than `ctx.filter`, which older WKWebView/WebKitGTK builds lack. The result is irreversible (no recoverable detail), which matters for redaction.
+- **Images are saved by flattening to PNG in the webview and re-encoding in Go** (`internal/imaging`, a `transform` on the save endpoint), because canvases can't encode WebP/GIF/BMP in every webview. JPEG quality 92; alpha is flattened onto white for JPEG/BMP; GIF is single-frame with a 256-colour dithered palette.
+- **WebP is saved lossless** (pure-Go `nativewebp`, MIT); no permissive pure-Go lossy WebP encoder exists.
+- **GIFs open as an animated `<img>`**; "Edit" converts the first frame to the canvas editor (and says so). **SVGs are view-only** and render as `<img>` (scripts in SVG never run).
+- **Image shortcuts are single keys** (C crop, A arrow, R rectangle, T text, B blur, P pixelate, [ ] rotate, 0 fit, 1 actual size, ←/→ previous/next) and only fire while an image tab is active and focus isn't in a text field.
+
 ## Look & feel
 
 - **Darker palette than the brief's starting tokens** (user request): dark `--bg #1f1e1c`, sidebar `#181716`; light `--bg #f6f4ee`.
@@ -60,3 +67,6 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 | @fontsource-variable/inter, @fontsource-variable/source-serif-4 | OFL-1.1 | fonts |
 | @codemirror/* (state, view, commands, language, search, language-data, lang-*), @lezer/* | MIT | text editor |
 | markdown-it (+ its deps entities, linkify-it, mdurl, punycode.js, uc.micro) | MIT | markdown preview |
+| konva | MIT | image markup canvas |
+| golang.org/x/image (bmp, webp decode) | BSD-3-Clause | image encoding |
+| github.com/HugoSmits86/nativewebp | MIT | WebP (lossless) encoding |

@@ -8,6 +8,7 @@ const scenarios: Record<string, () => Promise<{ default: (arg: string) => Promis
   'm0-setup': () => import('./m0').then((m) => ({ default: m.setup })),
   'm0-restore': () => import('./m0').then((m) => ({ default: m.restore })),
   m1: () => import('./m1'),
+  m2: () => import('./m2'),
   probe: () => import('./probe'),
   show: () => import('./show'),
   prof: () => import('./prof'),

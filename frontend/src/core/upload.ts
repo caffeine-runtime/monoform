@@ -21,13 +21,19 @@ async function post(url: string, body?: ArrayBuffer | Uint8Array): Promise<any> 
 }
 
 /** Write parts (in order) to `path`; returns the backend's file entry. */
-export async function uploadParts(urlFor: UrlFor, path: string, parts: (ArrayBuffer | Uint8Array)[], onProgress?: (done: number, total: number) => void): Promise<any> {
+export async function uploadParts(
+  urlFor: UrlFor,
+  path: string,
+  parts: (ArrayBuffer | Uint8Array)[],
+  onProgress?: (done: number, total: number) => void,
+  extra: Record<string, string> = {},
+): Promise<any> {
   const total = parts.reduce((n, p) => n + p.byteLength, 0);
   if (total <= CHUNK_BYTES) {
     const one = parts.length === 1 ? parts[0] : concat(parts, total);
-    return post(urlFor('save', { path }), one);
+    return post(urlFor('save', { ...extra, path }), one);
   }
-  const { id } = await post(urlFor('upload/begin', { path }));
+  const { id } = await post(urlFor('upload/begin', { ...extra, path }));
   let done = 0;
   try {
     for (const chunk of rechunk(parts)) {
