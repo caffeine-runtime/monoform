@@ -50,6 +50,14 @@ export function registerBuiltinModules() {
     load: () => import('./html'),
   });
   modules.register({
+    id: 'model3d',
+    name: '3D model',
+    extensions: ['glb', 'gltf', 'fbx', 'obj', 'stl', 'ply', '3mf', 'dae', '3ds', 'usdz', 'usd', 'usda', 'usdc', 'wrl', 'vrml', 'amf', 'pcd', 'xyz', 'vtk', 'vtp'],
+    mimeTypes: ['model/gltf-binary', 'model/gltf+json', 'model/stl', 'model/obj'],
+    priority: 10,
+    load: () => import('./model3d'),
+  });
+  modules.register({
     id: 'pdf',
     name: 'PDF',
     extensions: ['pdf'],

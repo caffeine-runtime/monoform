@@ -1,7 +1,7 @@
 # Hold It All
 
 One fast desktop window for the everyday files that usually need five small apps: notes and Markdown, PDFs,
-images, JSON/YAML/CSV, Word and Excel files, archives, and file hashes. It runs on Windows, macOS and Linux,
+images, SVG and web pages, 3D models, JSON/YAML/CSV, Word and Excel files, archives, and file hashes. It runs on Windows, macOS and Linux,
 works offline, collects no telemetry and needs no account, and saves everything as plain files.
 
 ![Markdown in split view](docs/screenshots/markdown.png)
@@ -14,6 +14,7 @@ works offline, collects no telemetry and needs no account, and saves everything 
 | **PDF** | Fast viewer with search and thumbnails; highlight, comment and ink annotations; form filling; reorder, rotate, delete, extract, merge, split. |
 | **Images** | Layered editor: transparency, selections (rectangle, lasso, magic wand, click an object, select subject) with copy/paste, brush/eraser, text in any installed font, free rotation, colour adjustments, one-click background removal, "save a copy", layers saved as OpenRaster (.ora). |
 | **SVG & web pages** | Edit SVG with a live preview and export PNG at any size; open HTML files in a safe preview (scripts and internet content off until you allow them) next to their source. |
+| **3D models** | glTF/GLB (incl. Draco), FBX, OBJ+MTL, STL, PLY, 3MF, Collada, 3DS, USDZ, VRML, AMF, PCD, XYZ, VTK — orbit view, clickable animation list with play/pause/scrub/speed, wireframe and lighting toggles, floor grid, PNG snapshot. |
 | **Data** | JSON/YAML trees with exact error positions; CSV/TSV grid that stays smooth at a million rows, with sort, filter and edits. |
 | **Word & Excel** | Edit `.docx` and `.xlsx` in place (formulas recalculate). Legacy `.doc`/`.xls` open too and save as `.docx`/`.xlsx`. |
 | **Archives** | Browse ZIP, TAR(.gz/.bz2/.xz/.zst), 7z and RAR like folders, open files inside, extract safely, create ZIPs. |
@@ -28,6 +29,7 @@ Everything is keyboard-reachable: press **Ctrl+K** (**⌘K** on macOS) and type.
 | ![Word document](docs/screenshots/word.png) | ![CSV grid](docs/screenshots/csv.png) |
 | ![Image editor with layers and a magic-wand selection](docs/screenshots/image-layers.png) | ![Colour adjustments on a selection](docs/screenshots/image-adjust.png) |
 | ![SVG editing](docs/screenshots/svg.png) | ![HTML page preview](docs/screenshots/html.png) |
+| ![3D model viewer](docs/screenshots/model3d.png) | |
 | ![Settings](docs/screenshots/settings.png) | ![Archive browser](docs/screenshots/archive.png) |
 | ![Search box](docs/screenshots/palette.png) | ![Checksum verification](docs/screenshots/checksums.png) |
 | ![Search by meaning](docs/screenshots/search-by-meaning.png) | ![Search by meaning: consent](docs/screenshots/search-by-meaning-consent.png) |

@@ -26,6 +26,7 @@ const (
 	Checksum Kind = "checksum"
 	Document Kind = "document"
 	Sheet    Kind = "spreadsheet"
+	Model    Kind = "model"
 	Binary   Kind = "binary"
 	Unknown  Kind = ""
 )
@@ -60,6 +61,12 @@ var byExt = map[string]entry{
 	"png": {Image, "image/png"}, "jpg": {Image, "image/jpeg"}, "jpeg": {Image, "image/jpeg"}, "jfif": {Image, "image/jpeg"},
 	"gif": {Image, "image/gif"}, "webp": {Image, "image/webp"}, "bmp": {Image, "image/bmp"}, "ora": {Image, "image/openraster"},
 	"svg": {SVG, "image/svg+xml"},
+	"glb": {Model, "model/gltf-binary"}, "gltf": {Model, "model/gltf+json"}, "fbx": {Model, "application/octet-stream"},
+	"obj": {Model, "model/obj"}, "stl": {Model, "model/stl"}, "ply": {Model, "application/octet-stream"}, "3mf": {Model, "model/3mf"},
+	"dae": {Model, "model/vnd.collada+xml"}, "3ds": {Model, "application/octet-stream"}, "usdz": {Model, "model/vnd.usdz+zip"},
+	"usd": {Model, "application/octet-stream"}, "usda": {Model, "text/plain"}, "usdc": {Model, "application/octet-stream"},
+	"wrl": {Model, "model/vrml"}, "vrml": {Model, "model/vrml"}, "amf": {Model, "application/octet-stream"},
+	"pcd": {Model, "application/octet-stream"}, "xyz": {Model, "text/plain"}, "vtk": {Model, "application/octet-stream"}, "vtp": {Model, "application/octet-stream"},
 	// data
 	"json": {JSON, "application/json"}, "jsonc": {JSON, "application/json"}, "geojson": {JSON, "application/geo+json"}, "webmanifest": {JSON, "application/manifest+json"},
 	"yaml": {YAML, "application/yaml"}, "yml": {YAML, "application/yaml"},
