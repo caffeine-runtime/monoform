@@ -132,11 +132,10 @@ export default async function m2(dir: string) {
   log(`next after anim.gif: ${nav.title}`);
   await workspace.close(nav, { force: true });
 
-  // SVG is view-only.
+  // SVG files open in the SVG editor (M10), not the raster editor.
   const svg = (await workspace.openPath(join(dir, 'img', 'vector.svg')))!;
-  await waitFor(() => hooks(svg)?.imgMode() && hooks(svg).natural().w > 0, 'svg shown');
-  assert(!commands.execute('image.toolCrop'), 'edit tools disabled for SVG');
-  assert(!(await workspace.save(svg)), 'SVG save refused');
+  assertEq(svg.moduleId, 'svg', 'SVG routed to the SVG module');
+  assert(!commands.execute('image.toolCrop'), 'raster tools not active for SVG');
   await workspace.close(svg, { force: true });
   void api;
 }
