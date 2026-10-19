@@ -52,6 +52,17 @@
   without taking defaults) and Linux (tarball with .desktop file and per-user installer with opt-in defaults).
   README with build instructions and screenshots.
 
+## v2 slice (requested after v1)
+- **M8 — Settings, recents, new files.** Settings page (Ctrl/Cmd+,): theme, editor font size, wrap, hidden files,
+  recent files with per-item removal, clear lists, "remember recents" switch (off also forgets), search-by-meaning
+  link, data locations. An × on hover removes a recent file/folder in the sidebar and on the welcome page.
+  **New document, spreadsheet, image…** (Ctrl/Cmd+Alt+N, welcome page, sidebar, folder context menu) creates a
+  Markdown note, Word document, spreadsheet, CSV, PNG image (size preset + transparent/white/black), SVG, HTML
+  page, JSON or text file from a valid starter template and opens it; existing files are never overwritten.
+- Planned next: M9 image editor v2 (layers, transparency, selection copy, free rotation, fonts, adjustments,
+  smart selection, background removal, save as copy), M10 SVG editor, M10b HTML page viewer, M11 3D viewer,
+  M12 audio player/editor, M13 video player/editor.
+
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
   the packages.

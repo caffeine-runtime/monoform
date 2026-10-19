@@ -33,6 +33,8 @@ needs a window manager).
 
 | `m6b` | fixtures dir; env `HIA_MODEL_DIR=<empty dir> HIA_MODEL_URL=http://127.0.0.1:8765 HIA_CACHE=<empty dir>` with the model files served by `python3 -m http.server 8765` from a copy of the pinned model (see `internal/semantic/model.go` for the four files) | search box finds text in files with the feature off and shows no "By meaning"; settings page shows the consent (license, source, memory) and nothing happens before agreeing; download is SHA-256-verified; indexing runs in two passes in the background (lock file skipped) with UI frames logged; seven queries that share no words with the files rank the right file first (and the right passage line); "By meaning" rows open the file; editing one file re-embeds only that file; the model unloads after the idle timeout and reloads on the next query; turning off unloads it and hides the section |
 
+| `m8` | fixtures dir | creates Markdown, Word, spreadsheet, CSV, SVG, HTML, JSON, text and PNG files (size + background pickers) in the open folder with free default names, each opening in its module; extension added when omitted; the type picker command; × on a recent row removes exactly that entry; Settings: theme switch, recents listed, × and "Clear" work, turning recents off forgets folders and records nothing |
+
 Office fixtures live in `internal/office/testdata` and are regenerated with `scripts/office/make-fixtures.sh` (needs LibreOffice; dev-only).
 
 `scripts/fixtures.py` modifies nothing outside the given directory; re-run it before `m1` (the round-trip test edits files).
@@ -130,3 +132,9 @@ Run on each OS before a release.
 - [ ] Windows: opening a second file while the app runs adds a tab to the running window.
 - [ ] macOS: the unsigned app opens via right-click → Open; Finder *Open With* lists it for .md/.pdf/.csv; *Change All* makes it the default; double-clicking a file while it runs opens a tab.
 - [ ] Linux: `./install.sh` → app in the launcher and in *Open With*; `--set-default` → `xdg-mime query default text/markdown` is `hold-it-all.desktop`; `--uninstall` removes it.
+
+### Settings & new files
+- [ ] Ctrl/Cmd+, opens Settings; theme, font size and wrap apply immediately and survive a restart.
+- [ ] Hover a recent file in the sidebar → × appears in place of the folder name; clicking it removes only that entry.
+- [ ] Ctrl/Cmd+Alt+N → Word document → the new .docx opens in the editor and in Word/LibreOffice.
+- [ ] New image → 1080 × 1080, transparent → opens in the image editor with a checkerboard background.

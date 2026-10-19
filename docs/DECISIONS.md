@@ -108,6 +108,9 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   - One document icon (`build/fileicon.png`, from `build/icon/fileicon.svg`) for all associated types; Wails derives `.ico`/`.icns` from it.
   - The same 29 extensions are listed in `wails.json`, the NSIS `HIA_OPENWITH` macro and the `.desktop` MIME list.
 
+- **New files come from Go templates** (`internal/newfile`): Markdown starts with the file name as a heading; Word documents reuse the minimal package (with Normal/Heading 1–3 styles) that legacy `.doc` conversion writes; spreadsheets are excelize's empty workbook; images are PNGs up to 8192 px per side. Creation is exclusive (`O_EXCL` or an existence check), so nothing is overwritten. With a folder open, files go into it with a free "Untitled N" name; otherwise a save dialog asks where.
+- **Recents can be turned off** (`recentsOff`); turning it off also clears both lists, and Go's settings normalization enforces that. Removing single entries is an × on hover (sidebar, welcome page, settings) besides the existing context-menu item.
+
 ## Look & feel
 
 - **Darker palette than the brief's starting tokens** (user request): dark `--bg #1f1e1c`, sidebar `#181716`; light `--bg #f6f4ee`.

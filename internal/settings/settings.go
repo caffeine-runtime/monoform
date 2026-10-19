@@ -54,6 +54,8 @@ type Settings struct {
 	FontSize       int      `json:"fontSize"`
 	Session        Session  `json:"session"`
 	Semantic       Semantic `json:"semantic"`
+	// RecentsOff stops recording recent files and folders.
+	RecentsOff bool `json:"recentsOff"`
 }
 
 func Defaults() Settings {
@@ -198,6 +200,9 @@ func normalize(v Settings) Settings {
 	}
 	if v.Semantic.UnloadAfter < 10 || v.Semantic.UnloadAfter > 3600 {
 		v.Semantic.UnloadAfter = d.Semantic.UnloadAfter
+	}
+	if v.RecentsOff {
+		v.Recents, v.RecentFolders = []string{}, []string{}
 	}
 	v.Version = d.Version
 	return v

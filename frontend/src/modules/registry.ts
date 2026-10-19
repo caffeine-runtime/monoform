@@ -86,6 +86,14 @@ export function registerBuiltinModules() {
     load: () => import('./hash'),
   });
   modules.register({
+    id: 'settings',
+    name: 'Settings',
+    extensions: [],
+    mimeTypes: [],
+    tool: true,
+    load: () => import('./settings'),
+  });
+  modules.register({
     id: 'semantic',
     name: 'Search by meaning',
     extensions: [],

@@ -3,6 +3,7 @@
 import {archive} from '../models';
 import {app} from '../models';
 import {server} from '../models';
+import {newfile} from '../models';
 import {filetype} from '../models';
 import {fs} from '../models';
 import {pdf} from '../models';
@@ -30,6 +31,10 @@ export function CopyFile(arg1:string,arg2:string):Promise<void>;
 export function CreateFile(arg1:string):Promise<void>;
 
 export function CreateFolder(arg1:string):Promise<void>;
+
+export function CreateFromTemplate(arg1:string,arg2:string,arg3:newfile.Options):Promise<void>;
+
+export function DataLocations():Promise<app.Locations>;
 
 export function DetectType(arg1:string):Promise<filetype.Info>;
 

@@ -4,7 +4,7 @@ import os, sys, struct, zlib, shutil
 
 d = sys.argv[1]
 # Outputs written by earlier self-test runs; operations refuse to overwrite.
-for rel in ("pdf/out", "archives/out"):
+for rel in ("pdf/out", "archives/out", "newfiles"):
     shutil.rmtree(os.path.join(d, rel), ignore_errors=True)
 os.makedirs(os.path.join(d, "enc"), exist_ok=True)
 os.makedirs(os.path.join(d, "notes", "sub"), exist_ok=True)
