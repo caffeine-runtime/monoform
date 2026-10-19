@@ -23,6 +23,8 @@ needs a window manager).
 
 | `m3` then `scripts/verify-pdf.sh <dir>` | fixtures dir | 100-page PDF: first-page time, 100 search matches, thumbnails; free-text + ink + highlight annotations saved; form text field + checkbox filled and saved; reorder/rotate/append/delete then Save As; extract and split. The script then checks every output with **qpdf --check** and **poppler** (`pdftotext`, `pdfinfo`): annotation subtypes present, form values stored, page order/rotation, extract order, split page total. |
 
+| `m4` | fixtures dir | invalid.json error at line 4 col 6 (same as Python's json), clicking it puts the cursor there; tree expand, copy path `$.nested.deep.list[2]["x key"]`, minify/format, save; YAML tree, "As JSON", YAML error line; semicolon CSV with quoted newline + CRLF detected; unchanged save byte-identical; one edited cell changes only that cell; 1M-row CSV loads, scrolls (frame gaps logged), reaches the last row, sorts numerically, filters to 125,000 rows |
+
 `scripts/fixtures.py` modifies nothing outside the given directory; re-run it before `m1` (the round-trip test edits files).
 `scripts/screenshot.sh out.png "<folder>|<files>|<commands>|<search>"` captures the window in a given state.
 
@@ -74,3 +76,12 @@ Run on each OS before a release.
 - [ ] Thumbnails: drag to reorder (multi-select with Ctrl/Shift); right-click rotate/delete/extract; the banner says pages changed until saved.
 - [ ] ⋯ menu: append PDFs, split into files, extract a typed range.
 - [ ] External links in PDFs open in the browser; internal links jump within the document.
+
+### Data
+- [ ] JSON with an error: the toolbar shows "Line L, column C: …"; clicking jumps to it.
+- [ ] Tree: arrow keys navigate/expand; big arrays page with "Show more"; Copy path / Copy value.
+- [ ] Format and Minify are undoable (Ctrl/Cmd+Z in Raw).
+- [ ] YAML: tree, "As JSON", Save as JSON…
+- [ ] CSV: header toggle and delimiter override re-read correctly; click a header to sort (asc → desc → off); filter as you type.
+- [ ] Grid: arrows/PageUp/PageDown/Ctrl+Home/End; type or Enter/F2 to edit, Enter/Tab commit, Esc cancels; Ctrl/Cmd+C copies a cell; drag header edges to resize.
+- [ ] A 1,000,000-row CSV scrolls smoothly with the wheel and by dragging the scrollbar to the end.

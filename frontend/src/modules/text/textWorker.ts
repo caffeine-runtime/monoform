@@ -11,47 +11,7 @@ type In =
   | { type: 'encode-chunk'; id: number; text: string }
   | { type: 'encode-end'; id: number; encoding: Encoding; bom: boolean; path: string; token: string };
 
-// Fetching in the worker matters: WebKitGTK assembles large responses on the
-// main thread when the page itself calls fetch().arrayBuffer().
-// Large files are fetched in Range pieces so each piece's main-thread cost
-// stays small.
-const PIECE = 4 << 20;
-
-async function fetchBytes(url: string): Promise<Uint8Array> {
-  const first = await fetch(url, { headers: { Range: `bytes=0-${PIECE - 1}` } });
-  if (first.status === 206) {
-    const total = Number(first.headers.get('Content-Range')?.split('/')[1] ?? NaN);
-    const head = new Uint8Array(await first.arrayBuffer());
-    if (!Number.isFinite(total) || total <= head.byteLength) return head;
-    const out = new Uint8Array(total);
-    out.set(head);
-    for (let off = head.byteLength; off < total; ) {
-      const end = Math.min(total, off + PIECE) - 1;
-      const res = await fetch(url, { headers: { Range: `bytes=${off}-${end}` } });
-      if (res.status !== 206) throw new Error(`range request failed (${res.status})`);
-      const part = new Uint8Array(await res.arrayBuffer());
-      out.set(part, off);
-      off += part.byteLength;
-      if (!part.byteLength) throw new Error('short read');
-    }
-    return out;
-  }
-  // Server ignored Range (e.g. archive entries): use the whole response.
-  return readWhole(first);
-}
-
-async function readWhole(res: Response): Promise<Uint8Array> {
-  if (!res.ok) {
-    let msg = res.statusText || `HTTP ${res.status}`;
-    try {
-      msg = (await res.json()).error ?? msg;
-    } catch {
-      /* ignore */
-    }
-    throw new Error(msg);
-  }
-  return new Uint8Array(await res.arrayBuffer());
-}
+import { fetchBytes } from '../../core/fetchbytes';
 
 const pending = new Map<number, string[]>();
 
