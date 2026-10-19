@@ -27,10 +27,13 @@
   format/minify, copy path/value. YAML: validation, tree, as-JSON view/save. CSV/TSV: delimiter + header
   detection, virtualized editable grid (1M rows), sort, filter, add/delete rows, byte-exact saves.
 
+- **M4b — Office documents (added on request).** .xlsx/.xlsm editing in a grid with formula bar, live
+  recalculation, sheet tabs, row insert/delete, saving with fresh cached results; .docx editing on a page with
+  paragraph/run formatting, headings, tables, images, and all other package parts preserved; legacy .xls/.doc
+  read by our own BIFF8 / Word 97 readers and saved as .xlsx/.docx. Verified by reopening in LibreOffice.
+
 ## Next
-- **M4b Office documents** (added on request: open, edit and save
-  .xlsx/.docx in place; .xls/.doc open and edit, saved as .xlsx/.docx because the legacy binary formats
-  can't be written faithfully with permissive libraries), M5 Archives, M6 Hashing,
+- M5 Archives, M6 Hashing,
   **M6b Omnisearch** (added on request: one box over file names, contents and commands; optional, off-by-default
   semantic search with a local Gemma embedding model in a worker that is unloaded when idle — needs a one-time
   model download and the Gemma licence, both to be confirmed in the UI), M7 Packaging.
@@ -58,3 +61,4 @@ available here).
 - Markdown preview code blocks are not syntax-highlighted.
 - The first PDF opened in a session takes ~0.5 s to show page 1 (cold worker/fonts); later ones meet the 300 ms budget.
 - PDF annotation colours/thickness use pdf.js defaults (no colour picker yet).
+- Word editing: creating new bullet/numbered lists, inserting images/tables and editing headers/footers aren't supported yet (existing ones are preserved). Legacy .doc conversion keeps text only; .xls conversion keeps values (not formulas/formatting).

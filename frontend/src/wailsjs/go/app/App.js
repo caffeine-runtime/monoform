@@ -34,6 +34,14 @@ export function DetectType(arg1) {
   return window['go']['app']['App']['DetectType'](arg1);
 }
 
+export function DocOpen(arg1) {
+  return window['go']['app']['App']['DocOpen'](arg1);
+}
+
+export function DocSave(arg1, arg2, arg3) {
+  return window['go']['app']['App']['DocSave'](arg1, arg2, arg3);
+}
+
 export function Exists(arg1) {
   return window['go']['app']['App']['Exists'](arg1);
 }
@@ -116,6 +124,46 @@ export function SetDirtyCount(arg1) {
 
 export function SetTitle(arg1) {
   return window['go']['app']['App']['SetTitle'](arg1);
+}
+
+export function SheetAddSheet(arg1, arg2) {
+  return window['go']['app']['App']['SheetAddSheet'](arg1, arg2);
+}
+
+export function SheetCell(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['SheetCell'](arg1, arg2, arg3, arg4);
+}
+
+export function SheetClose(arg1) {
+  return window['go']['app']['App']['SheetClose'](arg1);
+}
+
+export function SheetDeleteRow(arg1, arg2, arg3) {
+  return window['go']['app']['App']['SheetDeleteRow'](arg1, arg2, arg3);
+}
+
+export function SheetInsertRow(arg1, arg2, arg3) {
+  return window['go']['app']['App']['SheetInsertRow'](arg1, arg2, arg3);
+}
+
+export function SheetOpen(arg1) {
+  return window['go']['app']['App']['SheetOpen'](arg1);
+}
+
+export function SheetRenameSheet(arg1, arg2, arg3) {
+  return window['go']['app']['App']['SheetRenameSheet'](arg1, arg2, arg3);
+}
+
+export function SheetRows(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['app']['App']['SheetRows'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function SheetSave(arg1, arg2) {
+  return window['go']['app']['App']['SheetSave'](arg1, arg2);
+}
+
+export function SheetSet(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['app']['App']['SheetSet'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function Siblings(arg1, arg2) {

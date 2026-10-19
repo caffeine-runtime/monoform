@@ -25,6 +25,10 @@ needs a window manager).
 
 | `m4` | fixtures dir | invalid.json error at line 4 col 6 (same as Python's json), clicking it puts the cursor there; tree expand, copy path `$.nested.deep.list[2]["x key"]`, minify/format, save; YAML tree, "As JSON", YAML error line; semicolon CSV with quoted newline + CRLF detected; unchanged save byte-identical; one edited cell changes only that cell; 1M-row CSV loads, scrolls (frame gaps logged), reaches the last row, sorts numerically, filters to 125,000 rows |
 
+| `m4b` then `scripts/verify-office.sh <dir>` | fixtures dir | .docx: headings, run formatting, list, table render; edit text, bold a word, add a paragraph, edit a table cell, save, reopen — all persisted; .doc opens with the legacy note, edits save as .docx; .xlsx: sheets, formula shown in the bar, value edit recalculates SUM, new formula computes, save; .xls opens and saves as .xlsx. The script then converts every output with **LibreOffice** (txt/csv) and checks the content, the bold run in document.xml, and that LibreOffice sees the recalculated totals. |
+
+Office fixtures live in `internal/office/testdata` and are regenerated with `scripts/office/make-fixtures.sh` (needs LibreOffice; dev-only).
+
 `scripts/fixtures.py` modifies nothing outside the given directory; re-run it before `m1` (the round-trip test edits files).
 `scripts/screenshot.sh out.png "<folder>|<files>|<commands>|<search>"` captures the window in a given state.
 
@@ -85,3 +89,10 @@ Run on each OS before a release.
 - [ ] CSV: header toggle and delimiter override re-read correctly; click a header to sort (asc → desc → off); filter as you type.
 - [ ] Grid: arrows/PageUp/PageDown/Ctrl+Home/End; type or Enter/F2 to edit, Enter/Tab commit, Esc cancels; Ctrl/Cmd+C copies a cell; drag header edges to resize.
 - [ ] A 1,000,000-row CSV scrolls smoothly with the wheel and by dragging the scrollbar to the end.
+
+### Word & Excel
+- [ ] A real-world .docx (with images, headers, a table of contents, tracked changes) opens; the TOC/tracked-change paragraphs are shown read-only with a tinted edge; images display.
+- [ ] Type, Enter for new paragraphs, Backspace to join, Ctrl/Cmd+B/I/U, Heading 1–3 from the style menu; undo/redo.
+- [ ] Save, then open the file in Word/LibreOffice/Pages: text and formatting changes appear; headers, footers and images are unchanged.
+- [ ] .xlsx: type numbers/text/`=SUM(…)` in cells or the formula bar; dependent totals update; add/rename sheets; insert/delete rows; save and open in Excel/LibreOffice — values and formulas are right.
+- [ ] .xls/.doc: the note explains saving creates .xlsx/.docx; the original file is unchanged afterwards.

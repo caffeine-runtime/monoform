@@ -18,7 +18,10 @@ export function iconFor(name: string, kind?: string): Component<any> {
     case 'yaml':
       return FileJson;
     case 'csv':
+    case 'spreadsheet':
       return FileSpreadsheet;
+    case 'document':
+      return FileText;
     case 'archive':
       return FileArchive;
     case 'checksum':

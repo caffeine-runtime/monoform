@@ -7,6 +7,7 @@ import {fs} from '../models';
 import {pdf} from '../models';
 import {settings} from '../models';
 import {search} from '../models';
+import {office} from '../models';
 
 export function Boot():Promise<app.BootInfo>;
 
@@ -23,6 +24,10 @@ export function CreateFile(arg1:string):Promise<void>;
 export function CreateFolder(arg1:string):Promise<void>;
 
 export function DetectType(arg1:string):Promise<filetype.Info>;
+
+export function DocOpen(arg1:string):Promise<app.DocOpenResult>;
+
+export function DocSave(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function Exists(arg1:Array<string>):Promise<Array<boolean>>;
 
@@ -65,6 +70,26 @@ export function SearchFolder(arg1:string,arg2:search.Options):Promise<string>;
 export function SetDirtyCount(arg1:number):Promise<void>;
 
 export function SetTitle(arg1:string):Promise<void>;
+
+export function SheetAddSheet(arg1:string,arg2:string):Promise<void>;
+
+export function SheetCell(arg1:string,arg2:string,arg3:number,arg4:number):Promise<office.CellInfo>;
+
+export function SheetClose(arg1:string):Promise<void>;
+
+export function SheetDeleteRow(arg1:string,arg2:string,arg3:number):Promise<void>;
+
+export function SheetInsertRow(arg1:string,arg2:string,arg3:number):Promise<void>;
+
+export function SheetOpen(arg1:string):Promise<office.BookInfo>;
+
+export function SheetRenameSheet(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function SheetRows(arg1:string,arg2:string,arg3:number,arg4:number,arg5:number):Promise<Array<any>>;
+
+export function SheetSave(arg1:string,arg2:string):Promise<void>;
+
+export function SheetSet(arg1:string,arg2:string,arg3:number,arg4:number,arg5:string):Promise<string>;
 
 export function Siblings(arg1:string,arg2:Array<string>):Promise<Array<string>>;
 
