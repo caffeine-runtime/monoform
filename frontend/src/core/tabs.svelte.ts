@@ -183,6 +183,8 @@ class Workspace {
     if (path) {
       try {
         const info = await api.DetectType(path);
+        // Checksum lists like SHA256SUMS have no extension and a text MIME.
+        if (info.kind === 'checksum' && modules.get('checksum')) return 'checksum';
         const m = modules.forMime(info.mime);
         if (m) return m.id;
         if (info.kind === 'binary') return 'binary';

@@ -78,6 +78,22 @@ export function registerBuiltinModules() {
     load: () => import('./archive'),
   });
   modules.register({
+    id: 'hash',
+    name: 'Hash',
+    extensions: [],
+    mimeTypes: [],
+    tool: true,
+    load: () => import('./hash'),
+  });
+  modules.register({
+    id: 'checksum',
+    name: 'Checksums',
+    extensions: ['sha256', 'sha1', 'md5', 'sha512', 'b3', 'sha256sum', 'md5sum', 'sha1sum', 'sha512sum'],
+    mimeTypes: [],
+    priority: 5,
+    load: () => import('./hash'),
+  });
+  modules.register({
     id: 'binary',
     name: 'Binary',
     extensions: ['exe', 'dll', 'so', 'dylib', 'bin', 'o', 'a', 'class', 'pyc', 'wasm', 'iso', 'dmg', 'img'],
