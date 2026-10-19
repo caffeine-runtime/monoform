@@ -120,3 +120,23 @@ export function pixelateRegion(src: HTMLCanvasElement, r: Rect, block?: number):
 export function toPNG(c: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('could not encode image'))), 'image/png'));
 }
+
+/** Rotation size: the bounding box of a w×h image rotated by degrees. */
+export function rotatedSize(w: number, h: number, degrees: number): { w: number; h: number } {
+  const r = (degrees * Math.PI) / 180;
+  const c = Math.abs(Math.cos(r));
+  const s = Math.abs(Math.sin(r));
+  return { w: Math.round(w * c + h * s), h: Math.round(w * s + h * c) };
+}
+
+/** Rotate by any angle around the centre; expand grows the canvas (corners transparent), otherwise the size stays. */
+export function rotateAny(src: HTMLCanvasElement, degrees: number, expand = true): HTMLCanvasElement {
+  const size = expand ? rotatedSize(src.width, src.height, degrees) : { w: src.width, h: src.height };
+  const c = makeCanvas(size.w, size.h);
+  const g = ctx2d(c);
+  g.imageSmoothingQuality = 'high';
+  g.translate(c.width / 2, c.height / 2);
+  g.rotate((degrees * Math.PI) / 180);
+  g.drawImage(src, -src.width / 2, -src.height / 2);
+  return c;
+}

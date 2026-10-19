@@ -58,7 +58,7 @@ var byExt = map[string]entry{
 	"pdf": {PDF, "application/pdf"},
 	// images
 	"png": {Image, "image/png"}, "jpg": {Image, "image/jpeg"}, "jpeg": {Image, "image/jpeg"}, "jfif": {Image, "image/jpeg"},
-	"gif": {Image, "image/gif"}, "webp": {Image, "image/webp"}, "bmp": {Image, "image/bmp"},
+	"gif": {Image, "image/gif"}, "webp": {Image, "image/webp"}, "bmp": {Image, "image/bmp"}, "ora": {Image, "image/openraster"},
 	"svg": {SVG, "image/svg+xml"},
 	// data
 	"json": {JSON, "application/json"}, "jsonc": {JSON, "application/json"}, "geojson": {JSON, "application/geo+json"}, "webmanifest": {JSON, "application/manifest+json"},

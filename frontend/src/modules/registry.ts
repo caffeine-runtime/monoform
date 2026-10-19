@@ -29,7 +29,7 @@ export function registerBuiltinModules() {
   modules.register({
     id: 'image',
     name: 'Image',
-    extensions: ['png', 'jpg', 'jpeg', 'jfif', 'gif', 'webp', 'bmp', 'svg'],
+    extensions: ['png', 'jpg', 'jpeg', 'jfif', 'gif', 'webp', 'bmp', 'svg', 'ora'],
     mimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml'],
     load: () => import('./image'),
   });

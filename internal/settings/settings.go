@@ -56,6 +56,9 @@ type Settings struct {
 	Semantic       Semantic `json:"semantic"`
 	// RecentsOff stops recording recent files and folders.
 	RecentsOff bool `json:"recentsOff"`
+	// ImageKeepOriginal makes Save write an edited image to a copy next to
+	// the original instead of overwriting it.
+	ImageKeepOriginal bool `json:"imageKeepOriginal"`
 }
 
 func Defaults() Settings {

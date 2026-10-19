@@ -1,0 +1,212 @@
+// M9: image editor v2 — layers, transparency, selections + clipboard, magic
+// wand, free rotation, fonts, adjustments, background removal, object
+// selection, save a copy, layered .ora round trip.
+import { api, fileUrl } from '../core/backend';
+import { join } from '../core/paths';
+import { workspace, type Tab } from '../core/tabs.svelte';
+import type { ImageEditor } from '../modules/image/editor';
+import * as selection from '../modules/image/selection';
+import { rotatedSize } from '../modules/image/raster';
+import { settings } from '../core/settings.svelte';
+import { assert, assertEq, log, measureJank, sleep, waitFor } from './harness';
+
+interface Hooks {
+  editor: () => ImageEditor | null;
+  writeImage: (p: string) => Promise<boolean>;
+  wandAt: (x: number, y: number, mode: string) => Promise<void>;
+  objectAt: (x: number, y: number, mode: string) => Promise<void>;
+  removeBackground: () => Promise<void>;
+  copy: (cut?: boolean, merged?: boolean) => void;
+  paste: () => Promise<void>;
+  saveCopy: () => Promise<boolean>;
+  adjust: () => { test: { set: (k: string, v: number | boolean) => void; apply: () => void } } | undefined;
+  setPanel: (p: 'layers' | 'adjust' | null) => void;
+  fonts: () => string[];
+}
+const hooks = (t: Tab) => (t as unknown as { imageTest: Hooks }).imageTest;
+
+function px(c: HTMLCanvasElement, x: number, y: number): number[] {
+  return [...c.getContext('2d')!.getImageData(x, y, 1, 1).data];
+}
+
+async function decodeFile(p: string): Promise<HTMLCanvasElement> {
+  const blob = await (await fetch(fileUrl(p))).blob();
+  const bmp = await createImageBitmap(blob);
+  const c = document.createElement('canvas');
+  c.width = bmp.width;
+  c.height = bmp.height;
+  c.getContext('2d')!.drawImage(bmp, 0, 0);
+  return c;
+}
+
+const near = (a: number, b: number, tol: number) => Math.abs(a - b) <= tol;
+
+export default async function m9(dir: string) {
+  const I = join(dir, 'img');
+  const src = join(I, 'subject.png');
+  const before = await api.Stat(src);
+  const tab = (await workspace.openPath(src))!;
+  const h = await waitFor(() => (hooks(tab)?.editor() ? hooks(tab) : null), 'image editor');
+  const ed = h.editor()!;
+  assertEq(`${ed.width}x${ed.height}`, '400x300', 'size');
+
+  // ---- layers ----
+  ed.addLayer('Paint');
+  assertEq(ed.state().layers.length, 2, 'two layers');
+  ed.setOptions({ color: '#00ff00', brushSize: 20, brushOpacity: 1 });
+  ed.paint([{ x: 300, y: 250 }, { x: 380, y: 250 }]);
+  assert(px(ed.composite(), 340, 250)[1] > 200, 'brush stroke visible in composite');
+  assert(px(ed.layerCanvas(ed.state().activeId)!, 20, 290)[3] === 0, 'new layer is transparent');
+  const paintId = ed.state().activeId;
+  ed.setLayerProps(paintId, { visible: false });
+  assert(px(ed.composite(), 340, 250)[1] < 240 && px(ed.composite(), 340, 250)[0] > 200, 'hidden layer not in composite');
+  ed.setLayerProps(paintId, { visible: true, opacity: 0.5 });
+  const half = px(ed.composite(), 340, 250);
+  assert(half[1] > 120 && half[1] < 250 && half[0] > 80, `half-opacity blend (${half})`);
+  ed.setLayerProps(paintId, { opacity: 1 });
+  ed.duplicateLayer();
+  assertEq(ed.state().layers.length, 3, 'duplicate');
+  ed.deleteLayer();
+  ed.moveLayer(paintId, -1);
+  assertEq(ed.state().layers[0].id, paintId, 'moved below background');
+  ed.moveLayer(paintId, 1);
+  ed.mergeDown(paintId);
+  assertEq(ed.state().layers.length, 1, 'merged down');
+  assert(px(ed.composite(), 340, 250)[1] > 200, 'stroke kept after merge');
+  ed.undo();
+  assertEq(ed.state().layers.length, 2, 'undo merge');
+  ed.redo();
+
+  // ---- transparency: eraser, then PNG keeps alpha ----
+  ed.paint([{ x: 10, y: 150 }, { x: 60, y: 150 }], true);
+  assertEq(px(ed.composite(), 30, 150)[3], 0, 'eraser makes pixels transparent');
+  const pngOut = join(I, 'out', 'alpha.png');
+  await api.CreateFolder(join(I, 'out')).catch(() => {});
+  assert(await h.writeImage(pngOut), 'saved PNG');
+  const back = await decodeFile(pngOut);
+  assertEq(px(back, 30, 150)[3], 0, 'PNG kept transparency');
+  assertEq(px(back, 200, 150)[3], 255, 'opaque elsewhere');
+
+  // ---- rectangle selection, copy/paste as layer, delete pixels ----
+  const r = { x: 140, y: 90, width: 120, height: 120 };
+  ed.setPixelSelection(selection.fromPath(selection.rectPath(r), r, ed.width, ed.height));
+  const copied = ed.copySelection();
+  assertEq(`${copied.canvas.width}x${copied.canvas.height}@${copied.x},${copied.y}`, '120x120@140,90', 'copy crops to the selection');
+  h.copy();
+  await h.paste();
+  await waitFor(() => (ed.state().layers.length === 2 ? true : null), 'pasted layer');
+  const pasted = ed.state().layers[1];
+  assertEq(pasted.name, 'Pasted', 'pasted layer name');
+  ed.setActive(ed.state().layers[0].id);
+  ed.setPixelSelection(selection.fromPath(selection.rectPath(r), r, ed.width, ed.height));
+  ed.clearSelectionPixels();
+  assertEq(px(ed.layerCanvas(ed.state().activeId)!, 200, 150)[3], 0, 'delete clears selected pixels');
+  assert(px(ed.composite(), 200, 150)[0] > 150, 'pasted copy covers the hole');
+  ed.deselect();
+  ed.undo(); // restore the hole
+  ed.undo(); // remove pasted layer
+  ed.deselect();
+  assertEq(ed.state().layers.length, 1, 'back to one layer');
+
+  // ---- magic wand on the red disc ----
+  await h.wandAt(200, 150, 'replace');
+  const wb = ed.state().pixelSelection!;
+  assert(near(wb.x, 120, 2) && near(wb.y, 70, 2) && near(wb.width, 161, 3) && near(wb.height, 161, 3), `wand bounds ${JSON.stringify(wb)}`);
+  await h.wandAt(50, 50, 'add');
+  assert(ed.state().pixelSelection!.x <= 20, 'shift-add the blue square');
+  ed.deselect();
+
+  // ---- text with a chosen font ----
+  const fonts = h.fonts();
+  assert(fonts.includes('Inter Variable') && fonts.includes('Source Serif 4 Variable'), `bundled fonts listed (${fonts.length} total)`);
+  ed.setOptions({ fontFamily: 'Source Serif 4 Variable', fontSize: 40, color: '#ffffff' });
+  const text = await ed.addText({ x: 30, y: 230 }, 'Hello');
+  assert(text, 'text added');
+  assertEq(ed.state().layers[0].objects, 1, 'text object on the layer');
+
+  // ---- adjustments: saturation −100 makes the disc gray ----
+  h.setPanel('adjust');
+  const adj = await waitFor(() => h.adjust(), 'adjust panel');
+  const jank = await measureJank(async () => {
+    adj.test.set('saturation', -1);
+    await sleep(100);
+    adj.test.apply();
+    await sleep(50);
+  });
+  const gray = px(ed.composite(), 200, 150);
+  assert(Math.abs(gray[0] - gray[1]) < 8 && Math.abs(gray[1] - gray[2]) < 8, `desaturated (${gray})`);
+  log(`adjust preview+apply longest frame ${Math.round(jank.maxGap)} ms`);
+  ed.undo();
+  assert(px(ed.composite(), 200, 150)[0] > 150, 'undo adjustment');
+  h.setPanel('layers');
+
+  // ---- background removal ----
+  let t0 = performance.now();
+  const bgJank = await measureJank(() => h.removeBackground());
+  const rb = ed.composite();
+  const corner = px(rb, 395, 295)[3];
+  const centre = px(rb, 200, 150)[3];
+  log(`remove background ${Math.round(performance.now() - t0)} ms (longest UI frame ${Math.round(bgJank.maxGap)} ms): corner alpha ${corner}, disc alpha ${centre}`);
+  assert(corner < 40 && centre > 200, 'background transparent, subject kept');
+  ed.undo();
+  t0 = performance.now();
+  const warm = await measureJank(() => h.removeBackground());
+  log(`remove background again (model loaded) ${Math.round(performance.now() - t0)} ms, longest UI frame ${Math.round(warm.maxGap)} ms`);
+  ed.undo();
+
+  // ---- object selection (SlimSAM) ----
+  t0 = performance.now();
+  const obJank = await measureJank(() => h.objectAt(200, 150, 'replace'));
+  const ob = ed.state().pixelSelection;
+  log(`object select ${Math.round(performance.now() - t0)} ms incl. analysis (longest UI frame ${Math.round(obJank.maxGap)} ms): ${JSON.stringify(ob)}`);
+  assert(ob && near(ob.x, 120, 20) && near(ob.y, 70, 20) && near(ob.width, 160, 30) && near(ob.height, 160, 30), 'object mask fits the disc');
+  t0 = performance.now();
+  await h.objectAt(50, 50, 'replace');
+  const ob2 = ed.state().pixelSelection;
+  log(`second click ${Math.round(performance.now() - t0)} ms: ${JSON.stringify(ob2)}`);
+  assert(ob2 && ob2.x < 40 && ob2.width < 120, 'second object (square)');
+  ed.deselect();
+
+  // ---- free rotation ----
+  ed.rotateBy(30, true);
+  const want = rotatedSize(400, 300, 30);
+  assertEq(`${ed.width}x${ed.height}`, `${want.w}x${want.h}`, 'rotated canvas enlarged');
+  assertEq(px(ed.composite(), 2, 2)[3], 0, 'rotated corners transparent');
+  ed.undo();
+  assertEq(`${ed.width}x${ed.height}`, '400x300', 'undo rotation');
+
+  // ---- layered .ora round trip (two layers, editable text) ----
+  ed.addLayer('Top');
+  ed.paint([{ x: 50, y: 280 }, { x: 150, y: 280 }]);
+  const ora = join(I, 'out', 'layers.ora');
+  assert(await h.writeImage(ora), 'saved .ora');
+  const oraTab = (await workspace.openPath(ora))!;
+  const oh = await waitFor(() => (hooks(oraTab)?.editor()?.state().layers.length === 2 ? hooks(oraTab) : null), '.ora reopened with 2 layers', 15000);
+  const os = oh.editor()!.state();
+  assertEq(os.layers.map((l) => l.name).join(','), 'Background,Top', 'layer names');
+  assertEq(os.layers[0].objects, 1, 'text still editable after reopening');
+  await workspace.close(oraTab, { force: true });
+  workspace.activate(tab);
+
+  // ---- save a copy keeps the original ----
+  assert(await h.saveCopy(), 'saved a copy');
+  const copyPath = join(I, 'subject (edited).png');
+  assert((await api.Exists([copyPath]))[0], 'copy exists');
+  const after = await api.Stat(src);
+  assertEq(`${after.size}/${after.modTime}`, `${before.size}/${before.modTime}`, 'original untouched');
+  assertEq(tab.filePath, copyPath, 'tab now edits the copy');
+  await workspace.close(tab, { force: true });
+
+  // "Keep originals": a plain save (Ctrl+S) of an opened image writes a copy.
+  settings.update((s) => (s.imageKeepOriginal = true));
+  const red = join(I, 'red.png');
+  const redBefore = await api.Stat(red);
+  const rt = (await workspace.openPath(red))!;
+  const rh = await waitFor(() => (hooks(rt)?.editor() ? hooks(rt) : null), 'red editor');
+  rh.editor()!.flip(true);
+  assert(await workspace.save(rt), 'saved');
+  assertEq(rt.filePath, join(I, 'red (edited).png'), 'save went to a copy');
+  assertEq((await api.Stat(red)).modTime, redBefore.modTime, 'original kept');
+  settings.update((s) => (s.imageKeepOriginal = false));
+  await workspace.close(rt, { force: true });
+}

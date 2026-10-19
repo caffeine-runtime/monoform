@@ -71,6 +71,10 @@
       <span class="lbl">Show hidden files and folders</span>
       <input type="checkbox" checked={s.showHidden} onchange={(e) => settings.update((x) => (x.showHidden = (e.target as HTMLInputElement).checked))} />
     </label>
+    <label class="row check">
+      <span class="lbl">Keep originals: save edited images as a copy next to them</span>
+      <input type="checkbox" checked={s.imageKeepOriginal} onchange={(e) => settings.update((x) => (x.imageKeepOriginal = (e.target as HTMLInputElement).checked))} />
+    </label>
     <div class="row">
       <span class="lbl">New files</span>
       <button class="btn" onclick={() => commands.execute('file.newOf')}>New document, spreadsheet, image… <span class="kbd">{formatShortcut('Mod+Alt+N')}</span></button>

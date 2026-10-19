@@ -3,9 +3,9 @@
 // backend. The model files come from Go over the data channel; nothing is
 // fetched from the network here. Terminating the worker frees all of it.
 import * as ort from 'onnxruntime-web/wasm';
-import wasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.wasm?url';
 import { Tokenizer } from '@huggingface/tokenizers';
 import { fetchBytes } from '../fetchbytes';
+import { initOrtWasm } from '../ortwasm';
 
 export type EmbedIn =
   | { type: 'init'; token: string; dims: number }
@@ -26,10 +26,7 @@ const post = (m: EmbedOut, transfer: Transferable[] = []) => (self as unknown as
 async function init(token: string, d: number) {
   const t0 = performance.now();
   dims = d;
-  ort.env.wasm.wasmPaths = { wasm: new URL(wasmUrl, location.href).href };
-  // The webview isn't cross-origin isolated, so there are no wasm threads.
-  ort.env.wasm.numThreads = 1;
-  ort.env.wasm.proxy = false;
+  await initOrtWasm(ort);
   const url = (f: string) => `/__hia/model/${f}?t=${encodeURIComponent(token)}`;
   // Ranged fetches: one big response costs WebKitGTK main-thread time.
   const json = async (f: string) => JSON.parse(new TextDecoder().decode(await fetchBytes(url(f))));
