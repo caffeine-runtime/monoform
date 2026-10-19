@@ -1,0 +1,201 @@
+// Package settings persists user preferences, recents, pinned items and the
+// tab session as JSON in the OS config directory.
+package settings
+
+import (
+	"encoding/json"
+	"errors"
+	iofs "io/fs"
+	"os"
+	"path/filepath"
+	"sync"
+
+	"github.com/caffeine-runtime/hold-it-all/internal/fs"
+)
+
+const MaxRecents = 30
+
+// SessionTab is one tab to restore on launch.
+type SessionTab struct {
+	Kind   string `json:"kind"`             // "file", "archive-entry" or "tool"
+	Path   string `json:"path,omitempty"`   // file path, or archive path for archive entries
+	Entry  string `json:"entry,omitempty"`  // entry name inside the archive
+	Tool   string `json:"tool,omitempty"`   // tool id, e.g. "hash"
+	Module string `json:"module,omitempty"` // module that handled the tab
+	State  string `json:"state,omitempty"`  // module-defined JSON (view mode, scroll, ...)
+	Pinned bool   `json:"pinned,omitempty"`
+}
+
+type Session struct {
+	Folder string       `json:"folder"`
+	Tabs   []SessionTab `json:"tabs"`
+	Active int          `json:"active"`
+	// Expanded folder-tree directories, so the tree reopens as it was.
+	Expanded []string `json:"expanded"`
+}
+
+type Settings struct {
+	Version        int      `json:"version"`
+	Theme          string   `json:"theme"` // "system", "dark" or "light"
+	Recents        []string `json:"recents"`
+	RecentFolders  []string `json:"recentFolders"`
+	Pinned         []string `json:"pinned"`
+	SidebarVisible bool     `json:"sidebarVisible"`
+	SidebarWidth   int      `json:"sidebarWidth"`
+	ShowHidden     bool     `json:"showHidden"`
+	WordWrap       bool     `json:"wordWrap"`
+	FontSize       int      `json:"fontSize"`
+	Session        Session  `json:"session"`
+}
+
+func Defaults() Settings {
+	return Settings{
+		Version:        1,
+		Theme:          "system",
+		Recents:        []string{},
+		RecentFolders:  []string{},
+		Pinned:         []string{},
+		SidebarVisible: true,
+		SidebarWidth:   260,
+		FontSize:       14,
+		Session:        Session{Tabs: []SessionTab{}, Expanded: []string{}},
+	}
+}
+
+// Store loads and saves settings at a fixed path. It is safe for concurrent use.
+type Store struct {
+	path string
+	mu   sync.Mutex
+	cur  Settings
+}
+
+// DefaultPath returns <UserConfigDir>/HoldItAll/settings.json.
+func DefaultPath() (string, error) {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "HoldItAll", "settings.json"), nil
+}
+
+// Open loads the settings file, falling back to defaults when it is missing
+// or unreadable (a corrupt file is kept as settings.json.bad).
+func Open(path string) (*Store, error) {
+	s := &Store{path: path, cur: Defaults()}
+	data, err := os.ReadFile(path)
+	switch {
+	case errors.Is(err, iofs.ErrNotExist):
+		return s, nil
+	case err != nil:
+		return s, err
+	}
+	loaded := Defaults()
+	if err := json.Unmarshal(data, &loaded); err != nil {
+		os.Rename(path, path+".bad")
+		return s, nil
+	}
+	s.cur = normalize(loaded)
+	return s, nil
+}
+
+func (s *Store) Path() string { return s.path }
+
+func (s *Store) Get() Settings {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return clone(s.cur)
+}
+
+// Set replaces all settings and writes them to disk.
+func (s *Store) Set(v Settings) error {
+	s.mu.Lock()
+	s.cur = normalize(clone(v))
+	snapshot := clone(s.cur)
+	s.mu.Unlock()
+	return s.write(snapshot)
+}
+
+// Update applies fn to a copy of the settings and saves the result.
+func (s *Store) Update(fn func(*Settings)) (Settings, error) {
+	s.mu.Lock()
+	next := clone(s.cur)
+	fn(&next)
+	s.cur = normalize(next)
+	snapshot := clone(s.cur)
+	s.mu.Unlock()
+	return snapshot, s.write(snapshot)
+}
+
+func (s *Store) write(v Settings) error {
+	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return err
+	}
+	return fs.AtomicWriteFile(s.path, data)
+}
+
+// AddRecent moves path to the front of list, removing duplicates and
+// trimming to MaxRecents.
+func AddRecent(list []string, path string) []string {
+	out := make([]string, 0, len(list)+1)
+	out = append(out, path)
+	for _, p := range list {
+		if p != path {
+			out = append(out, p)
+		}
+	}
+	if len(out) > MaxRecents {
+		out = out[:MaxRecents]
+	}
+	return out
+}
+
+func normalize(v Settings) Settings {
+	d := Defaults()
+	switch v.Theme {
+	case "system", "dark", "light":
+	default:
+		v.Theme = d.Theme
+	}
+	if v.Recents == nil {
+		v.Recents = []string{}
+	}
+	if v.RecentFolders == nil {
+		v.RecentFolders = []string{}
+	}
+	if v.Pinned == nil {
+		v.Pinned = []string{}
+	}
+	if len(v.Recents) > MaxRecents {
+		v.Recents = v.Recents[:MaxRecents]
+	}
+	if v.SidebarWidth < 160 || v.SidebarWidth > 640 {
+		v.SidebarWidth = d.SidebarWidth
+	}
+	if v.FontSize < 8 || v.FontSize > 40 {
+		v.FontSize = d.FontSize
+	}
+	if v.Session.Tabs == nil {
+		v.Session.Tabs = []SessionTab{}
+	}
+	if v.Session.Expanded == nil {
+		v.Session.Expanded = []string{}
+	}
+	if v.Session.Active < 0 || v.Session.Active >= len(v.Session.Tabs) {
+		v.Session.Active = 0
+	}
+	v.Version = d.Version
+	return v
+}
+
+func clone(v Settings) Settings {
+	v.Recents = append([]string{}, v.Recents...)
+	v.RecentFolders = append([]string{}, v.RecentFolders...)
+	v.Pinned = append([]string{}, v.Pinned...)
+	v.Session.Tabs = append([]SessionTab{}, v.Session.Tabs...)
+	v.Session.Expanded = append([]string{}, v.Session.Expanded...)
+	return v
+}

@@ -1,0 +1,302 @@
+// Package app is the Wails-bound facade: every method on App is callable from
+// the frontend (see frontend/wailsjs/go/app/App.d.ts). It owns the backend
+// services and keeps each method thin.
+package app
+
+import (
+	"context"
+	"log"
+	"os"
+	"path/filepath"
+	"runtime"
+	"sync"
+	"time"
+
+	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
+
+	"github.com/caffeine-runtime/hold-it-all/internal/filetype"
+	"github.com/caffeine-runtime/hold-it-all/internal/fs"
+	"github.com/caffeine-runtime/hold-it-all/internal/jobs"
+	"github.com/caffeine-runtime/hold-it-all/internal/server"
+	"github.com/caffeine-runtime/hold-it-all/internal/settings"
+)
+
+var Version = "1.0.0-dev"
+
+type App struct {
+	ctx      context.Context
+	start    time.Time
+	Server   *server.Server
+	Settings *settings.Store
+	Jobs     *jobs.Manager
+	watcher  *fs.Watcher
+
+	mu          sync.Mutex
+	ready       bool
+	pending     []string // files to open that arrived before the frontend was ready
+	dirty       int
+	forceQuit   bool
+	launchFiles []string
+}
+
+// New creates the app. start is the process start time used for the
+// startup-time measurement.
+func New(start time.Time, launchFiles []string) *App {
+	a := &App{start: start, launchFiles: launchFiles}
+	a.Server = server.New(server.NewToken())
+	path, err := settings.DefaultPath()
+	if err != nil {
+		path = filepath.Join(os.TempDir(), "HoldItAll", "settings.json")
+	}
+	if p := os.Getenv("HIA_SETTINGS"); p != "" {
+		path = p
+	}
+	a.Settings, err = settings.Open(path)
+	if err != nil {
+		log.Printf("settings: %v", err)
+	}
+	a.Jobs = jobs.NewManager(jobs.EmitterFunc(a.emit))
+	a.Server.OnWrite = func(p string) {
+		if a.watcher != nil {
+			a.watcher.NoteOwnWrite(p)
+		}
+	}
+	a.registerRoutes()
+	return a
+}
+
+func (a *App) emit(event string, data any) {
+	if a.ctx != nil {
+		wruntime.EventsEmit(a.ctx, event, data)
+	}
+}
+
+// Startup is the Wails OnStartup hook.
+func (a *App) Startup(ctx context.Context) {
+	a.ctx = ctx
+	w, err := fs.NewWatcher(func(ev fs.ChangeEvent) { a.emit("fs:changed", ev) })
+	if err != nil {
+		log.Printf("watcher: %v", err)
+	} else {
+		a.watcher = w
+	}
+}
+
+// Shutdown is the Wails OnShutdown hook.
+func (a *App) Shutdown(ctx context.Context) {
+	a.Jobs.CancelAll()
+	if a.watcher != nil {
+		a.watcher.Close()
+	}
+}
+
+// BeforeClose asks the frontend to confirm when there are unsaved tabs.
+func (a *App) BeforeClose(ctx context.Context) bool {
+	a.mu.Lock()
+	dirty, force := a.dirty, a.forceQuit
+	a.mu.Unlock()
+	if dirty > 0 && !force {
+		a.emit("app:confirm-quit", dirty)
+		return true
+	}
+	return false
+}
+
+// OpenFiles is called for files passed by the OS after launch (second
+// instance, macOS open-file events).
+func (a *App) OpenFiles(paths []string) {
+	a.mu.Lock()
+	if !a.ready {
+		a.pending = append(a.pending, paths...)
+		a.mu.Unlock()
+		return
+	}
+	a.mu.Unlock()
+	a.emit("app:open-files", paths)
+	if a.ctx != nil {
+		wruntime.WindowUnminimise(a.ctx)
+		wruntime.Show(a.ctx)
+	}
+}
+
+// BootInfo is everything the frontend needs to paint the shell.
+type BootInfo struct {
+	Token       string            `json:"token"`
+	Settings    settings.Settings `json:"settings"`
+	Platform    string            `json:"platform"`
+	Version     string            `json:"version"`
+	LaunchFiles []string          `json:"launchFiles"`
+	Home        string            `json:"home"`
+	PathSep     string            `json:"pathSep"`
+	TestScript  string            `json:"testScript"`
+	TestArg     string            `json:"testArg"`
+}
+
+// Boot returns startup info. Called once by the frontend before first paint.
+func (a *App) Boot() BootInfo {
+	home, _ := os.UserHomeDir()
+	a.mu.Lock()
+	files := append(append([]string{}, a.launchFiles...), a.pending...)
+	a.pending = nil
+	a.ready = true
+	a.mu.Unlock()
+	return BootInfo{
+		Token:       a.Server.Token(),
+		Settings:    a.Settings.Get(),
+		Platform:    runtime.GOOS,
+		Version:     Version,
+		LaunchFiles: files,
+		Home:        home,
+		PathSep:     string(filepath.Separator),
+		TestScript:  os.Getenv("HIA_TEST"),
+		TestArg:     os.Getenv("HIA_TEST_ARG"),
+	}
+}
+
+// MarkReady is called by the frontend once the shell is interactive; it
+// logs the cold-start time measured from process start.
+func (a *App) MarkReady(jsMillis float64) int64 {
+	ms := time.Since(a.start).Milliseconds()
+	log.Printf("startup: interactive %d ms after process start (frontend %.0f ms after navigation)", ms, jsMillis)
+	return ms
+}
+
+// Log lets the frontend write to the app log (used by the self-test mode).
+func (a *App) Log(msg string) { log.Print(msg) }
+
+// Quit exits immediately, used by the self-test harness.
+func (a *App) Quit(code int) {
+	a.mu.Lock()
+	a.forceQuit = true
+	a.mu.Unlock()
+	if code != 0 {
+		os.Exit(code)
+	}
+	wruntime.Quit(a.ctx)
+}
+
+// --- settings ---
+
+func (a *App) SaveSettings(s settings.Settings) error { return a.Settings.Set(s) }
+
+// --- files ---
+
+func (a *App) ListDir(dir string) ([]fs.Entry, error)     { return fs.ListDir(dir) }
+func (a *App) Stat(p string) (fs.Entry, error)            { return fs.Stat(p) }
+func (a *App) DetectType(p string) (filetype.Info, error) { return filetype.Detect(p) }
+func (a *App) Siblings(p string, kinds []string) ([]string, error) {
+	return fs.Siblings(p, kinds)
+}
+
+// Exists reports which of paths exist (used when restoring the session).
+func (a *App) Exists(paths []string) []bool {
+	out := make([]bool, len(paths))
+	for i, p := range paths {
+		_, err := os.Stat(p)
+		out[i] = err == nil
+	}
+	return out
+}
+
+// CreateFile creates an empty file (fails if it exists).
+func (a *App) CreateFile(p string) error {
+	f, err := os.OpenFile(p, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	return f.Close()
+}
+
+// CreateFolder creates a directory.
+func (a *App) CreateFolder(p string) error { return os.Mkdir(p, 0o755) }
+
+// Rename renames a file or folder (fails if the target exists).
+func (a *App) Rename(from, to string) error {
+	if _, err := os.Lstat(to); err == nil {
+		return os.ErrExist
+	}
+	return os.Rename(from, to)
+}
+
+func (a *App) WatchFile(p string) error {
+	if a.watcher == nil {
+		return nil
+	}
+	return a.watcher.WatchFile(p)
+}
+func (a *App) UnwatchFile(p string) {
+	if a.watcher != nil {
+		a.watcher.UnwatchFile(p)
+	}
+}
+func (a *App) WatchDir(p string) error {
+	if a.watcher == nil {
+		return nil
+	}
+	return a.watcher.WatchDir(p)
+}
+func (a *App) UnwatchDir(p string) {
+	if a.watcher != nil {
+		a.watcher.UnwatchDir(p)
+	}
+}
+
+// --- dialogs ---
+
+type FileFilter struct {
+	Name     string `json:"name"`
+	Patterns string `json:"patterns"` // "*.png;*.jpg"
+}
+
+func toFilters(fs []FileFilter) []wruntime.FileFilter {
+	out := make([]wruntime.FileFilter, len(fs))
+	for i, f := range fs {
+		out[i] = wruntime.FileFilter{DisplayName: f.Name, Pattern: f.Patterns}
+	}
+	return out
+}
+
+func (a *App) OpenFilesDialog(title string, filters []FileFilter) ([]string, error) {
+	return wruntime.OpenMultipleFilesDialog(a.ctx, wruntime.OpenDialogOptions{Title: title, Filters: toFilters(filters)})
+}
+
+func (a *App) OpenFolderDialog(title string) (string, error) {
+	return wruntime.OpenDirectoryDialog(a.ctx, wruntime.OpenDialogOptions{Title: title, CanCreateDirectories: true})
+}
+
+func (a *App) SaveFileDialog(title, defaultPath string, filters []FileFilter) (string, error) {
+	return wruntime.SaveFileDialog(a.ctx, wruntime.SaveDialogOptions{
+		Title:                title,
+		DefaultDirectory:     filepath.Dir(defaultPath),
+		DefaultFilename:      filepath.Base(defaultPath),
+		Filters:              toFilters(filters),
+		CanCreateDirectories: true,
+	})
+}
+
+// --- window / lifecycle ---
+
+func (a *App) SetTitle(t string) { wruntime.WindowSetTitle(a.ctx, t) }
+
+// SetDirtyCount tells the backend how many tabs have unsaved changes, so
+// closing the window can ask first.
+func (a *App) SetDirtyCount(n int) {
+	a.mu.Lock()
+	a.dirty = n
+	a.mu.Unlock()
+}
+
+// ConfirmQuit closes the window after the user agreed to discard changes.
+func (a *App) ConfirmQuit() {
+	a.mu.Lock()
+	a.forceQuit = true
+	a.mu.Unlock()
+	wruntime.Quit(a.ctx)
+}
+
+// --- jobs ---
+
+func (a *App) CancelJob(id string) bool { return a.Jobs.Cancel(id) }
+
+// QuickFiles lists files under root for the palette's quick-open.
+func (a *App) QuickFiles(root string, limit int) []string { return fs.WalkFiles(root, limit) }

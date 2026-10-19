@@ -1,0 +1,20 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "Hold It All",
+  "outputfilename": "hold-it-all",
+  "frontend:install": "npm ci",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "wailsjsdir": "./frontend/src",
+  "author": {
+    "name": "Hold It All contributors"
+  },
+  "info": {
+    "companyName": "Hold It All",
+    "productName": "Hold It All",
+    "productVersion": "1.0.0",
+    "copyright": "Copyright \u00a9 2026 Hold It All contributors",
+    "comments": "One window for your everyday files."
+  }
+}
