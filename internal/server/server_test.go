@@ -127,3 +127,63 @@ func TestSanitizeName(t *testing.T) {
 		}
 	}
 }
+
+func TestChunkedUpload(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "big.txt")
+	os.WriteFile(p, []byte("old"), 0o644)
+	s := New("k")
+	rec := do(t, s, "POST", "/__hia/upload/begin", url.Values{"t": {"k"}, "path": {p}}, "")
+	var begin map[string]string
+	json.Unmarshal(rec.Body.Bytes(), &begin)
+	id := begin["id"]
+	if id == "" {
+		t.Fatalf("begin: %s", rec.Body.String())
+	}
+	for _, part := range []string{"aaa", "bbb", "c"} {
+		rec = do(t, s, "POST", "/__hia/upload/chunk", url.Values{"t": {"k"}, "id": {id}}, part)
+		if rec.Code != 200 {
+			t.Fatalf("chunk: %d %s", rec.Code, rec.Body.String())
+		}
+	}
+	if got, _ := os.ReadFile(p); string(got) != "old" {
+		t.Fatal("target replaced before commit")
+	}
+	rec = do(t, s, "POST", "/__hia/upload/commit", url.Values{"t": {"k"}, "id": {id}}, "")
+	if rec.Code != 200 {
+		t.Fatalf("commit: %d %s", rec.Code, rec.Body.String())
+	}
+	if got, _ := os.ReadFile(p); string(got) != "aaabbbc" {
+		t.Fatalf("got %q", got)
+	}
+	rec = do(t, s, "POST", "/__hia/upload/chunk", url.Values{"t": {"k"}, "id": {id}}, "x")
+	if rec.Code != 404 {
+		t.Fatal("chunk after commit accepted")
+	}
+	// Abort leaves the file alone and removes the temp file.
+	rec = do(t, s, "POST", "/__hia/upload/begin", url.Values{"t": {"k"}, "path": {p}}, "")
+	json.Unmarshal(rec.Body.Bytes(), &begin)
+	do(t, s, "POST", "/__hia/upload/chunk", url.Values{"t": {"k"}, "id": {begin["id"]}}, "zzz")
+	do(t, s, "POST", "/__hia/upload/abort", url.Values{"t": {"k"}, "id": {begin["id"]}}, "")
+	if got, _ := os.ReadFile(p); string(got) != "aaabbbc" {
+		t.Fatal("abort changed file")
+	}
+	des, _ := os.ReadDir(dir)
+	if len(des) != 1 {
+		t.Fatalf("leftover files: %v", des)
+	}
+}
+
+func TestEmptyBodyHeader(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "e.txt")
+	os.WriteFile(p, []byte("x"), 0o644)
+	s := New("k")
+	req := httptest.NewRequest("POST", "/__hia/save?"+url.Values{"t": {"k"}, "path": {p}}.Encode(), strings.NewReader("ignored"))
+	req.Header.Set("X-Empty-Body", "1")
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+	if got, _ := os.ReadFile(p); rr.Code != 200 || len(got) != 0 {
+		t.Fatalf("code %d content %q", rr.Code, got)
+	}
+}

@@ -28,6 +28,19 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 - **Watcher watches parent directories**, not files, so saves by editors that replace the file are still seen; our own writes are recognised by size+mtime and suppressed.
 - **Self-test harness**: when `HIA_TEST` is set the frontend lazy-loads `src/test/*` scenarios that drive the real app inside the real webview and exit with a status code (`scripts/selftest.sh`). The chunk is never loaded otherwise.
 
+- **Request bodies are always ArrayBuffers.** WebKitGTK segfaults in `webkit_uri_scheme_request_get_http_body` when a custom-scheme POST carries a `Blob`; empty bodies are sent as an `X-Empty-Body: 1` header instead of a zero-length body for the same reason (`core/backend.ts`).
+- **Big saves are chunked**: anything over 4 MB is uploaded as 4 MB pieces (`/__hia/upload/{begin,chunk,commit,abort}`) into a temp file that Go renames atomically on commit. WebKitGTK copies request bodies on the page's main thread (≈120 ms per 16 MB), so one 50 MB POST froze the UI for ~0.5 s.
+- **Big reads happen in the text worker, in 4 MB Range requests.** `fetch().arrayBuffer()` of 55 MB on the page thread froze it for ~470 ms; the same fetch from a worker in Range pieces costs a few ms per piece.
+- **Text decode/encode runs in a worker**; decoded text streams to CodeMirror in ~2 MB chunks (appended without history) so the first screen shows before the whole file has loaded.
+- **Files over 8 MB get a lighter editor**: no syntax highlighting, folding, bracket matching or selection-match highlighting (CodeMirror itself is fine; those extensions are what costs).
+- **Encodings**: detection is BOM → BOM-less UTF-16 (NUL pattern) → strict UTF-8 → Windows-1252. Windows-1252 maps all 256 bytes, so even unknown 8-bit files round-trip losslessly. Writable: UTF-8 (±BOM), UTF-16 LE/BE, and single-byte code pages via a reverse table built from `TextDecoder`. Multi-byte legacy encodings (Shift JIS, GBK, …) can be *reopened* with but are saved as UTF-8 after asking.
+- **Line endings**: LF/CRLF/CR files use CodeMirror's normal splitting and are re-joined with the detected separator; files with *mixed* endings are split on `\n` only, so every `\r` stays in the text and the file round-trips byte-for-byte.
+- **Dirty state** is cleared again when undo returns to the saved text (length check, then `Text.eq`, debounced).
+- **Markdown**: preview rendered by markdown-it in a worker; raw HTML is escaped (`html: false`). Relative images load through the data channel; **remote images are not fetched** (offline principle) and show a placeholder. External links open in the system browser on click (the app itself makes no request).
+- **Pasted/dropped images** go to `assets/` next to the note with a collision-free name (`pasted-YYYYMMDD-HHMMSS.png`); images dragged from the sidebar are linked where they are (no copy); images dropped from the OS are copied into `assets/`.
+- **Folder search** (`internal/search`): parallel workers (≤ 8), skips binary files (NUL in first 8 KB), files > 20 MB, hidden folders, `.git` and `node_modules`; stops at 5,000 matches; results stream every 80 ms.
+- **Markdown source soft-wraps by default**; other text files follow the global word-wrap setting (Alt+Z).
+
 ## Look & feel
 
 - **Darker palette than the brief's starting tokens** (user request): dark `--bg #1f1e1c`, sidebar `#181716`; light `--bg #f6f4ee`.
@@ -45,3 +58,5 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 | typescript | Apache-2.0 | build |
 | @lucide/svelte | ISC | icons |
 | @fontsource-variable/inter, @fontsource-variable/source-serif-4 | OFL-1.1 | fonts |
+| @codemirror/* (state, view, commands, language, search, language-data, lang-*), @lezer/* | MIT | text editor |
+| markdown-it (+ its deps entities, linkify-it, mdurl, punycode.js, uc.micro) | MIT | markdown preview |

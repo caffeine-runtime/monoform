@@ -31,51 +31,90 @@ func AtomicWriteReader(path string, r io.Reader) error {
 
 // AtomicWrite calls fill with a writer for the temp file and commits the
 // result with a rename. If fill fails the target is left untouched.
-func AtomicWrite(path string, fill func(w io.Writer) error) (err error) {
-	target, err := resolveTarget(path)
+func AtomicWrite(path string, fill func(w io.Writer) error) error {
+	f, err := CreateAtomic(path)
 	if err != nil {
 		return err
+	}
+	if err := fill(f); err != nil {
+		f.Abort()
+		return err
+	}
+	return f.Commit()
+}
+
+// AtomicFile is a temp file next to its target that replaces the target on
+// Commit. Used for chunked uploads where the data arrives over several
+// requests.
+type AtomicFile struct {
+	*os.File
+	target string
+	perm   iofs.FileMode
+	done   bool
+}
+
+// CreateAtomic opens a temp file in the target's directory.
+func CreateAtomic(path string) (*AtomicFile, error) {
+	target, err := resolveTarget(path)
+	if err != nil {
+		return nil, err
 	}
 	perm := iofs.FileMode(0o644)
 	if st, statErr := os.Stat(target); statErr == nil {
 		if st.IsDir() {
-			return fmt.Errorf("%s is a directory", target)
+			return nil, fmt.Errorf("%s is a directory", target)
 		}
 		perm = st.Mode().Perm()
 	}
-
-	dir := filepath.Dir(target)
-	tmp, err := os.CreateTemp(dir, "."+filepath.Base(target)+".hia-*.tmp")
+	tmp, err := os.CreateTemp(filepath.Dir(target), "."+filepath.Base(target)+".hia-*.tmp")
 	if err != nil {
-		return err
+		return nil, err
 	}
-	tmpName := tmp.Name()
+	return &AtomicFile{File: tmp, target: target, perm: perm}, nil
+}
+
+// Target is the resolved path the file will replace.
+func (f *AtomicFile) Target() string { return f.target }
+
+// Commit syncs the temp file and renames it over the target.
+func (f *AtomicFile) Commit() (err error) {
+	if f.done {
+		return errors.New("already committed or aborted")
+	}
+	f.done = true
+	tmpName := f.Name()
 	defer func() {
 		if err != nil {
-			tmp.Close()
+			f.File.Close()
 			os.Remove(tmpName)
 		}
 	}()
-
-	if err = fill(tmp); err != nil {
+	if err = f.Sync(); err != nil {
 		return err
 	}
-	if err = tmp.Sync(); err != nil {
-		return err
-	}
-	if err = tmp.Close(); err != nil {
+	if err = f.File.Close(); err != nil {
 		return err
 	}
 	if runtime.GOOS != "windows" {
-		if err = os.Chmod(tmpName, perm); err != nil {
+		if err = os.Chmod(tmpName, f.perm); err != nil {
 			return err
 		}
 	}
-	if err = os.Rename(tmpName, target); err != nil {
+	if err = os.Rename(tmpName, f.target); err != nil {
 		return err
 	}
-	syncDir(dir)
+	syncDir(filepath.Dir(f.target))
 	return nil
+}
+
+// Abort discards the temp file.
+func (f *AtomicFile) Abort() {
+	if f.done {
+		return
+	}
+	f.done = true
+	f.File.Close()
+	os.Remove(f.Name())
 }
 
 // resolveTarget follows symlinks so a save replaces the file the link points

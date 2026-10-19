@@ -115,6 +115,54 @@ export namespace fs {
 
 }
 
+export namespace search {
+	
+	export class Options {
+	    query: string;
+	    caseSensitive: boolean;
+	    wholeWord: boolean;
+	    regex: boolean;
+	    showHidden: boolean;
+	    maxResults: number;
+	    maxFileSize: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Options(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.query = source["query"];
+	        this.caseSensitive = source["caseSensitive"];
+	        this.wholeWord = source["wholeWord"];
+	        this.regex = source["regex"];
+	        this.showHidden = source["showHidden"];
+	        this.maxResults = source["maxResults"];
+	        this.maxFileSize = source["maxFileSize"];
+	    }
+	}
+
+}
+
+export namespace server {
+	
+	export class AssetResult {
+	    path: string;
+	    rel: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AssetResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.rel = source["rel"];
+	    }
+	}
+
+}
+
 export namespace settings {
 	
 	export class SessionTab {

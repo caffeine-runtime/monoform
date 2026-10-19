@@ -28,6 +28,7 @@ function wireEvents() {
     'keydown',
     (e) => {
       if (ui.dialog) return; // dialogs handle their own keys
+      if (ui.picker) return;
       if (ui.paletteOpen && !(e.key === 'k' && (e.ctrlKey || e.metaKey))) return;
       commands.handleKey(e, inEditable(e.target));
     },

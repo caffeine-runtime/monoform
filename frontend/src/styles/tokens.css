@@ -65,3 +65,32 @@
   --statusbar-h: 26px;
   --ease: cubic-bezier(0.2, 0, 0, 1);
 }
+
+/* Syntax colours: warm, low-contrast. */
+:root,
+:root[data-theme='dark'] {
+  --syn-keyword: #e0937a;
+  --syn-string: #b5c98a;
+  --syn-number: #d9b26f;
+  --syn-comment: #7d796f;
+  --syn-function: #9cc0d8;
+  --syn-type: #d8b98c;
+  --syn-property: #c7b7e0;
+  --syn-def: #ece9e4;
+  --syn-punct: #a3a097;
+  --syn-heading: #f0a383;
+  --syn-link: #9cc0d8;
+}
+:root[data-theme='light'] {
+  --syn-keyword: #b5502c;
+  --syn-string: #5d7a2a;
+  --syn-number: #9a6a1f;
+  --syn-comment: #9a958a;
+  --syn-function: #2f6c8f;
+  --syn-type: #8a5a1c;
+  --syn-property: #6d4fa0;
+  --syn-def: #2b2a27;
+  --syn-punct: #6f6b62;
+  --syn-heading: #a8502f;
+  --syn-link: #2f6c8f;
+}

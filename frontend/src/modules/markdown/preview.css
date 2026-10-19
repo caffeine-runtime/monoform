@@ -1,0 +1,101 @@
+.md {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 28px 36px 80px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text);
+  word-wrap: break-word;
+}
+.md h1,
+.md h2,
+.md h3,
+.md h4,
+.md h5,
+.md h6 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.6em 0 0.5em;
+}
+.md h1 {
+  font-size: 2em;
+  margin-top: 0.4em;
+}
+.md h2 {
+  font-size: 1.5em;
+}
+.md h3 {
+  font-size: 1.22em;
+}
+.md p,
+.md ul,
+.md ol,
+.md blockquote,
+.md pre,
+.md table {
+  margin: 0 0 1em;
+}
+.md a {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent-text) 40%, transparent);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.md code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  padding: 0.12em 0.35em;
+  border-radius: 5px;
+  background: var(--bg-hover);
+}
+.md pre {
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-sidebar);
+  overflow-x: auto;
+  line-height: 1.5;
+}
+.md pre code {
+  padding: 0;
+  background: none;
+  font-size: 0.86em;
+}
+.md blockquote {
+  padding: 0 0 0 16px;
+  border-left: 3px solid var(--border);
+  color: var(--text-muted);
+}
+.md img {
+  max-width: 100%;
+  border-radius: var(--radius);
+}
+.md img[data-remote] {
+  display: inline-block;
+  min-width: 120px;
+  min-height: 24px;
+  border: 1px dashed var(--border);
+}
+.md hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2em 0;
+}
+.md table {
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+}
+.md th,
+.md td {
+  padding: 6px 12px;
+  border: 1px solid var(--border-soft);
+}
+.md th {
+  background: var(--bg-sidebar);
+  font-weight: 600;
+}
+.md li + li {
+  margin-top: 0.2em;
+}

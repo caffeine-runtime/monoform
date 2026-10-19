@@ -19,6 +19,14 @@ export function registerBuiltinModules() {
     load: () => import('./text'),
   });
   modules.register({
+    id: 'markdown',
+    name: 'Markdown',
+    extensions: ['md', 'markdown', 'mdown', 'mkd', 'mdx'],
+    mimeTypes: ['text/markdown'],
+    priority: 10,
+    load: () => import('./markdown'),
+  });
+  modules.register({
     id: 'binary',
     name: 'Binary',
     extensions: ['exe', 'dll', 'so', 'dylib', 'bin', 'o', 'a', 'class', 'pyc', 'wasm', 'iso', 'dmg', 'img'],
