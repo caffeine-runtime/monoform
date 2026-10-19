@@ -4,8 +4,10 @@ import os, sys, struct, zlib, shutil
 
 d = sys.argv[1]
 # Outputs written by earlier self-test runs; operations refuse to overwrite.
-for rel in ("pdf/out", "archives/out", "newfiles"):
-    shutil.rmtree(os.path.join(d, rel), ignore_errors=True)
+for rel in ("pdf/out", "archives/out", "newfiles", "img/out", "img/subject (edited).png", "img/red (edited).png"):
+    q = os.path.join(d, rel)
+    if os.path.isdir(q): shutil.rmtree(q, ignore_errors=True)
+    elif os.path.exists(q): os.remove(q)
 os.makedirs(os.path.join(d, "enc"), exist_ok=True)
 os.makedirs(os.path.join(d, "notes", "sub"), exist_ok=True)
 
@@ -51,6 +53,14 @@ def png_fn(wd, ht, fn):
     return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", wd, ht, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b"")
 
 # Left half: 2px black/white stripes (blur makes them grey); right half: blue.
+# Image editor v2: a red disc (subject) and a blue square on a light background.
+def _subject(x, y):
+    if (x - 200) ** 2 + (y - 150) ** 2 <= 80 ** 2:
+        return (200, 30, 40)
+    if 20 <= x < 80 and 20 <= y < 80:
+        return (40, 80, 200)
+    return (235, 232, 226)
+w("img/subject.png", png_fn(400, 300, _subject))
 w("img/photo.png", png_fn(400, 300, lambda x, y: (0, 0, 0) if x < 200 and (x // 2) % 2 == 0 else ((255, 255, 255) if x < 200 else (40, 80, 200))))
 w("img/vector.svg", b'<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80" viewBox="0 0 120 80"><rect width="120" height="80" rx="12" fill="#d97757"/><circle cx="60" cy="40" r="22" fill="#fff"/></svg>')
 # A 2-frame GIF (built by hand: 2x2 pixels, global palette of 2 colours).

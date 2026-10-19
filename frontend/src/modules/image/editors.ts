@@ -15,6 +15,22 @@ export interface ImageController {
   deleteSelection(): void;
   navigate(dir: 1 | -1): void;
   resize(): void;
+  rotateAngle(): void;
+  copy(merged: boolean): void;
+  cut(): void;
+  paste(): void;
+  selectAll(): void;
+  deselect(): void;
+  invert(): void;
+  layerFromSelection(): void;
+  newLayer(): void;
+  mergeDown(): void;
+  flatten(): void;
+  removeBackground(): void;
+  selectSubject(): void;
+  saveCopy(): void;
+  saveLayers(): void;
+  panel(p: 'layers' | 'adjust'): void;
   editable(): boolean;
 }
 

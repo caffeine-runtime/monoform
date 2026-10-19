@@ -35,6 +35,8 @@ needs a window manager).
 
 | `m8` | fixtures dir | creates Markdown, Word, spreadsheet, CSV, SVG, HTML, JSON, text and PNG files (size + background pickers) in the open folder with free default names, each opening in its module; extension added when omitted; the type picker command; × on a recent row removes exactly that entry; Settings: theme switch, recents listed, × and "Clear" work, turning recents off forgets folders and records nothing |
 
+| `m9` then `scripts/verify-images.sh <dir>` | fixtures dir (`HIA_TIMEOUT=400`) | layers: add, paint, hide, 50 % opacity blend, duplicate, delete, reorder, merge, undo; eraser → transparent pixels survive a PNG save; rect selection copy (crop + position), paste as layer, delete pixels; magic wand bounds on the disc, Shift-add; text in Source Serif; saturation −100 desaturates (UI frames logged); background removal (corner alpha 0, subject 255, timings + UI frames); object selection on the disc and the square (timings); 30° rotation enlarges the canvas with transparent corners; 2-layer .ora round trip keeps names and editable text; Save a copy leaves the original untouched; "keep originals" makes Ctrl+S write a copy. The script checks the .ora with Python's zipfile/xml (mimetype first and stored, stack.xml, PNG layers, merged image, thumbnail). |
+
 Office fixtures live in `internal/office/testdata` and are regenerated with `scripts/office/make-fixtures.sh` (needs LibreOffice; dev-only).
 
 `scripts/fixtures.py` modifies nothing outside the given directory; re-run it before `m1` (the round-trip test edits files).
@@ -138,3 +140,12 @@ Run on each OS before a release.
 - [ ] Hover a recent file in the sidebar → × appears in place of the folder name; clicking it removes only that entry.
 - [ ] Ctrl/Cmd+Alt+N → Word document → the new .docx opens in the editor and in Word/LibreOffice.
 - [ ] New image → 1080 × 1080, transparent → opens in the image editor with a checkerboard background.
+
+### Image editor v2
+- [ ] Magic wand / Select object / Select subject on a real photo; Shift adds, Alt subtracts; outline readable on light and dark areas.
+- [ ] Ctrl+C on a selection, paste into another app (GIMP, a chat window) → transparent PNG of just the selection; Ctrl+V of a screenshot → new layer.
+- [ ] Move tool (V): drag, rotate and scale a pasted layer; then brush on it (it is baked first).
+- [ ] Adjust panel on a 20+ MP photo: sliders preview smoothly; Apply; undo.
+- [ ] Remove background on a portrait and a product photo → transparent PNG/WebP opens with transparency elsewhere.
+- [ ] Save with layers (.ora) → open in GIMP or Krita: layers and names present; reopen in Hold It All: text still editable.
+- [ ] Settings → Keep originals → edit and Ctrl+S → "name (edited).ext" appears, original unchanged.

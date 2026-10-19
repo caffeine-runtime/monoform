@@ -59,9 +59,16 @@
   **New document, spreadsheet, image…** (Ctrl/Cmd+Alt+N, welcome page, sidebar, folder context menu) creates a
   Markdown note, Word document, spreadsheet, CSV, PNG image (size preset + transparent/white/black), SVG, HTML
   page, JSON or text file from a valid starter template and opens it; existing files are never overwritten.
-- Planned next: M9 image editor v2 (layers, transparency, selection copy, free rotation, fonts, adjustments,
-  smart selection, background removal, save as copy), M10 SVG editor, M10b HTML page viewer, M11 3D viewer,
-  M12 audio player/editor, M13 video player/editor.
+- **M9 — Image editor v2.** Layers (add, duplicate, reorder, opacity, blend modes, visibility, merge, flatten;
+  move/rotate/scale a layer), full transparency (eraser, PNG/WebP keep alpha), pixel selections (rectangle,
+  ellipse, lasso, magic wand, click-an-object, select subject; add/subtract) with copy/cut to the system clipboard,
+  paste as a layer, delete, fill, blur, pixelate, crop, invert, layer from selection; brush; free rotation by any
+  angle; text with a font picker (bundled + installed fonts), bold/italic/outline/shadow; GPU adjustments
+  (exposure, brightness, contrast, highlights, shadows, saturation, vibrance, temperature, tint, hue, sharpen,
+  blur, vignette, B&W, sepia, invert) with live preview, also limited to a selection; one-click background
+  removal; "Save a copy" (and an option to always keep originals); save/open layered OpenRaster (.ora).
+- Planned next: M10 SVG editor, M10b HTML page viewer, M11 3D viewer, M12 audio player/editor, M13 video
+  player/editor.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -82,6 +89,7 @@
 | 1M-row CSV (40 MB) | smooth scroll, sort | loads in 1.1–2.1 s (worst frame 54–61 ms); scrolling worst frame 60 ms (100 frames, 4 above 50 ms, all on large jumps); sort 2.6 s in the worker with UI frames ≤ 40 ms; filter 0.7 s | same |
 | Hashing (page cache warm) | progress ≥ 4/s, UI responsive | SHA-256 308 MB/s, BLAKE3 3.2 GB/s, all five at once 258 MB/s; 3 GiB file: progress every ≤ 113 ms, worst UI frame 38–60 ms while hashing | same |
 | Search by meaning (optional) | no freeze; memory returned when idle | 25–45 tokens/s (single-threaded WASM), query 1.0–1.3 s, model load 8–9 s, ~0.8 GB extra while loaded (webview RSS 0.34 → 1.11 GB) and freed on unload; worst UI frame 23–40 ms while indexing, 50–73 ms during a cold model load | same |
+| Image editor v2 (400×300 test image) | no freeze | adjustments preview+apply worst frame 21–23 ms; background removal 4.3–5.5 s first time, ~2 s after (worker); object selection: 16–18 s one-time analysis, 0.19–0.23 s per click; magic wand on 12 MP 0.9 s in the worker with UI frames ≤ 22 ms | same |
 | 100-page PDF: first page visible | < 300 ms | 133–287 ms once the PDF module is loaded; 490–570 ms for the first PDF of a session (worker + fonts cold) | same |
 
 The Linux numbers are from a headless VM with software rendering; ~350 ms of each start is
@@ -99,3 +107,5 @@ available here).
 - A cold load of the search model produces one 50–75 ms UI frame on the test VM (budget 50 ms).
 - Search by meaning indexes plain text/Markdown/code only (not PDFs or Word files yet).
 - Windows and macOS builds are produced by CI but haven't been exercised on real machines from this environment (the Windows installer was cross-built and inspected here; see docs/TESTING.md → Packaging for the manual pass). Packages are unsigned.
+- Image editor: applying a background-removal or object mask re-renders the layer synchronously; with blurred text shadows on the software-rendered VM that is one ~70–100 ms frame (the analysis itself runs in a worker without UI stalls).
+- Object selection analyses the whole image once (~15–18 s on the test VM, single-threaded WASM); clicks are fast afterwards. Background removal uses a small model (U²-Netp) — fine hair and glass are approximate.

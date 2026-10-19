@@ -740,6 +740,7 @@ export namespace settings {
 	    session: Session;
 	    semantic: Semantic;
 	    recentsOff: boolean;
+	    imageKeepOriginal: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -760,6 +761,7 @@ export namespace settings {
 	        this.session = this.convertValues(source["session"], Session);
 	        this.semantic = this.convertValues(source["semantic"], Semantic);
 	        this.recentsOff = source["recentsOff"];
+	        this.imageKeepOriginal = source["imageKeepOriginal"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
