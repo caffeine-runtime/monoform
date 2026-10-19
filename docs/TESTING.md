@@ -124,3 +124,9 @@ Run on each OS before a release.
 - [ ] A query phrased differently from the text ("money I owe" for an invoice) finds the right file under "By meaning".
 - [ ] After the idle timeout the app's memory drops back (Activity Monitor / Task Manager / `ps`); the next query reloads the model (~10 s on slow machines).
 - [ ] "Remove model…" deletes the model and indexes; the feature is off afterwards.
+
+### Packaging (per platform, on real machines)
+- [ ] Windows installer: components page shows "Open supported files … by default" **unchecked**; install without it → double-clicking a .md still opens the previous app, and *Open with* lists Hold It All; reinstall with it → .md/.pdf/.png open in Hold It All; uninstall → previous defaults are back.
+- [ ] Windows: opening a second file while the app runs adds a tab to the running window.
+- [ ] macOS: the unsigned app opens via right-click → Open; Finder *Open With* lists it for .md/.pdf/.csv; *Change All* makes it the default; double-clicking a file while it runs opens a tab.
+- [ ] Linux: `./install.sh` → app in the launcher and in *Open With*; `--set-default` → `xdg-mime query default text/markdown` is `hold-it-all.desktop`; `--uninstall` removes it.

@@ -8,7 +8,7 @@
         <key>CFBundleExecutable</key>
         <string>{{.OutputFilename}}</string>
         <key>CFBundleIdentifier</key>
-        <string>com.wails.{{safeBundleID .Name}}</string>
+        <string>dev.holditall.app</string>
         <key>CFBundleVersion</key>
         <string>{{.Info.ProductVersion}}</string>
         <key>CFBundleGetInfoString</key>
@@ -38,6 +38,9 @@
             <string>{{.Role}}</string>
             <key>CFBundleTypeIconFile</key>
             <string>{{.IconName}}</string>
+            <!-- Never claim to be the default app; users pick it in Open With / Get Info. -->
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
           </dict>
           {{end}}
         </array>

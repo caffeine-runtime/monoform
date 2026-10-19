@@ -32,6 +32,8 @@ Unicode true
 ####
 ## Include the wails tools
 ####
+# File names without spaces: hold-it-all.exe and hold-it-all-amd64-installer.exe.
+!define INFO_PROJECTNAME "hold-it-all"
 !include "wails_tools.nsh"
 
 # The version information for this two must consist of 4 parts
@@ -49,6 +51,7 @@ VIAddVersionKey "ProductName"     "${INFO_PRODUCTNAME}"
 ManifestDPIAware true
 
 !include "MUI.nsh"
+!include "LogicLib.nsh"
 
 !define MUI_ICON "..\icon.ico"
 !define MUI_UNICON "..\icon.ico"
@@ -58,6 +61,7 @@ ManifestDPIAware true
 
 !insertmacro MUI_PAGE_WELCOME # Welcome to the installer page.
 # !insertmacro MUI_PAGE_LICENSE "resources\eula.txt" # Adds a EULA page to the installer
+!insertmacro MUI_PAGE_COMPONENTS # Lets the user opt in to file associations.
 !insertmacro MUI_PAGE_DIRECTORY # In which folder install page.
 !insertmacro MUI_PAGE_INSTFILES # Installing page.
 !insertmacro MUI_PAGE_FINISH # Finished installation page.
@@ -83,11 +87,48 @@ OutFile "..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe" # Name of the inst
 !endif # Default installing folder ($PROGRAMFILES is Program Files folder).
 ShowInstDetails show # This will always show the installation details.
 
+# Listed in "Open with" for the supported types without becoming the default.
+# Keep in sync with info.fileAssociations in wails.json.
+!macro HIA_OPENWITH
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}" "FriendlyAppName" "${INFO_PRODUCTNAME}"
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\shell\open\command" "" '"$INSTDIR\${PRODUCT_EXECUTABLE}" "%1"'
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".txt" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".log" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".md" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".markdown" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".json" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".yaml" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".yml" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".csv" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".tsv" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".pdf" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".png" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".jpg" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".jpeg" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".gif" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".webp" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".bmp" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".svg" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".docx" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".doc" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".xlsx" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".xls" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".zip" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".7z" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".rar" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".tar" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".gz" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".tgz" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".sha256" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}\SupportedTypes" ".md5" ""
+!macroend
+
 Function .onInit
    !insertmacro wails.checkArchitecture
 FunctionEnd
 
-Section
+Section "${INFO_PRODUCTNAME} (required)" SecApp
+    SectionIn RO
     !insertmacro wails.setShellContext
 
     !insertmacro wails.webview2runtime
@@ -97,13 +138,35 @@ Section
     !insertmacro wails.files
 
     CreateShortcut "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
-    CreateShortCut "$DESKTOP\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
 
-    !insertmacro wails.associateFiles
+    !insertmacro HIA_OPENWITH
     !insertmacro wails.associateCustomProtocols
 
     !insertmacro wails.writeUninstaller
 SectionEnd
+
+# Unchecked by default: making Hold It All the default app for text, Markdown,
+# PDF, images, Office files and archives is the user's choice. Without it the
+# app still appears in "Open with".
+Section /o "Open supported files with ${INFO_PRODUCTNAME} by default" SecAssoc
+    !insertmacro wails.setShellContext
+    SetOutPath $INSTDIR
+    !insertmacro wails.associateFiles
+    # Marker: only undo associations on uninstall if we made them (the stock
+    # macro would otherwise blank existing defaults).
+    WriteRegStr SHELL_CONTEXT "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" "FileAssociations" "1"
+    System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)' # SHCNE_ASSOCCHANGED
+SectionEnd
+
+Section /o "Desktop shortcut" SecDesktop
+    CreateShortCut "$DESKTOP\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
+SectionEnd
+
+!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecApp} "The application."
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecAssoc} "Make ${INFO_PRODUCTNAME} the default app for .md, .txt, .json, .csv, .pdf, images, Word/Excel files and archives. Previous defaults are restored on uninstall."
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecDesktop} "Put a shortcut on the desktop."
+!insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 Section "uninstall"
     !insertmacro wails.setShellContext
@@ -115,7 +178,13 @@ Section "uninstall"
     Delete "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk"
     Delete "$DESKTOP\${INFO_PRODUCTNAME}.lnk"
 
-    !insertmacro wails.unassociateFiles
+    ReadRegStr $0 SHELL_CONTEXT "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" "FileAssociations"
+    ${If} $0 == "1"
+        !insertmacro wails.unassociateFiles
+        System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
+    ${EndIf}
+    DeleteRegKey SHELL_CONTEXT "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}"
+    DeleteRegKey SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}"
     !insertmacro wails.unassociateCustomProtocols
 
     !insertmacro wails.deleteUninstaller
