@@ -44,11 +44,19 @@
 - **M6b — Omnisearch + search by meaning (added on request).** The Ctrl/Cmd+K box now searches commands, file
   names and text inside files together. Optional, off-by-default search by meaning with EmbeddingGemma 2
   (Apache-2.0, 4-bit text encoder) running locally in a web worker on WebAssembly: explicit consent before the
-  one-time 206 MB verified download, incremental two-pass background indexing, int8 index per folder, worker
+  one-time ~200 MB verified download, incremental two-pass background indexing, int8 index per folder, worker
   unloaded when idle. Seven no-shared-words test queries rank the right file first.
 
-## Next
-- M7 Packaging: GitHub Actions for Windows/macOS/Linux, file associations (opt-in), README with screenshots.
+- **M7 — Packaging.** GitHub Actions: checks, Linux self-tests under Xvfb with external verifiers, and packages for
+  Windows (NSIS installer with opt-in file associations + portable zip), macOS (universal .app, listed in Open With
+  without taking defaults) and Linux (tarball with .desktop file and per-user installer with opt-in defaults).
+  README with build instructions and screenshots.
+
+## Next (after v1)
+- Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
+  the packages.
+- Measure startup and the other budgets on real Windows/macOS/Linux hardware.
+- Search by meaning for PDF and Word text.
 
 ## Performance (measured)
 
@@ -79,3 +87,4 @@ available here).
 - Search by meaning is slow to index (single-threaded WebAssembly; the webview can't run WASM threads — see DECISIONS) — a large notes folder takes hours on slow hardware, though every file gets one passage early. A query waits for at most one in-flight indexing passage (a few seconds on slow machines).
 - A cold load of the search model produces one 50–75 ms UI frame on the test VM (budget 50 ms).
 - Search by meaning indexes plain text/Markdown/code only (not PDFs or Word files yet).
+- Windows and macOS builds are produced by CI but haven't been exercised on real machines from this environment (the Windows installer was cross-built and inspected here; see docs/TESTING.md → Packaging for the manual pass). Packages are unsigned.

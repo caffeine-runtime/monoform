@@ -1,0 +1,99 @@
+# Hold It All
+
+One fast desktop window for the everyday files that usually need five small apps: notes and Markdown, PDFs,
+images, JSON/YAML/CSV, Word and Excel files, archives, and file hashes. It runs on Windows, macOS and Linux,
+works offline, collects no telemetry and needs no account, and saves everything as plain files.
+
+![Markdown in split view](docs/screenshots/markdown.png)
+
+## What it does
+
+| | |
+|---|---|
+| **Text & Markdown** | CodeMirror editor with byte-exact round-trips across encodings and line endings, find/replace, split/preview Markdown, image paste into `assets/`, folder search. |
+| **PDF** | Fast viewer with search and thumbnails; highlight, comment and ink annotations; form filling; reorder, rotate, delete, extract, merge, split. |
+| **Images** | PNG/JPEG/GIF/WebP/BMP/SVG viewer; crop, resize, rotate, arrows, boxes, text, blur/pixelate; save in any of those formats. |
+| **Data** | JSON/YAML trees with exact error positions; CSV/TSV grid that stays smooth at a million rows, with sort, filter and edits. |
+| **Word & Excel** | Edit `.docx` and `.xlsx` in place (formulas recalculate). Legacy `.doc`/`.xls` open too and save as `.docx`/`.xlsx`. |
+| **Archives** | Browse ZIP, TAR(.gz/.bz2/.xz/.zst), 7z and RAR like folders, open files inside, extract safely, create ZIPs. |
+| **Hashes** | MD5, SHA-1, SHA-256, SHA-512, BLAKE3 in one pass; paste-to-compare; verify `SHA256SUMS`/`.md5` files. |
+| **Search everything** | Ctrl/Cmd+K finds commands, file names and text inside files. An optional **search by meaning** (off by default) runs the EmbeddingGemma 2 model locally on your computer. |
+
+Everything is keyboard-reachable: press **Ctrl+K** (**⌘K** on macOS) and type.
+
+| | |
+|---|---|
+| ![PDF](docs/screenshots/pdf.png) | ![Spreadsheet](docs/screenshots/spreadsheet.png) |
+| ![Word document](docs/screenshots/word.png) | ![CSV grid](docs/screenshots/csv.png) |
+| ![Image editing](docs/screenshots/image.png) | ![Archive browser](docs/screenshots/archive.png) |
+| ![Search box](docs/screenshots/palette.png) | ![Checksum verification](docs/screenshots/checksums.png) |
+| ![Search by meaning](docs/screenshots/search-by-meaning.png) | ![Search by meaning: consent](docs/screenshots/search-by-meaning-consent.png) |
+
+## Install
+
+Builds come from GitHub Actions (**Actions → Build → latest run → Artifacts**):
+
+- **Windows:** `hold-it-all-amd64-installer.exe`. The installer has an **unchecked** option to make Hold It All
+  the default app for its file types. Without it, the app is still listed under *Open with*. Uninstalling restores
+  the previous defaults. There is also a portable `.zip`. The app uses the WebView2 runtime, which the installer
+  fetches if it is missing.
+- **macOS:** `hold-it-all-macos-universal.zip` contains `Hold It All.app` for Apple Silicon and Intel. The build
+  is not signed, so the first time, right-click the app and choose **Open**. The app declares its file types at the
+  lowest rank, so it appears in *Open With* but never takes over a default. To make it the default, use
+  *Get Info → Open with → Change All*.
+- **Linux:** `hold-it-all-linux-amd64.tar.gz`. Unpack it and run `./install.sh` to install into `~/.local`, with
+  no root needed. The app then appears in *Open With* menus. `./install.sh --set-default` also makes it the default
+  for its file types, and `./install.sh --uninstall` removes it. It needs WebKitGTK 4.1 (`libwebkit2gtk-4.1-0`;
+  Ubuntu 24.04+, Debian 13, Fedora 40+).
+
+## Build from source
+
+Prerequisites:
+
+- Go **1.25+**, Node.js **22+** with npm
+- Wails CLI **v2.17.0**: `go install github.com/wailsapp/wails/v2/cmd/wails@v2.17.0`
+- Linux: `sudo apt install libgtk-3-dev libwebkit2gtk-4.1-dev` (or your distro's equivalents)
+- Windows: the WebView2 runtime (preinstalled on Windows 10/11); [NSIS](https://nsis.sourceforge.io) for the installer
+- macOS: Xcode command-line tools (`xcode-select --install`)
+
+```sh
+cd frontend && npm ci && cd ..
+
+# Linux (WebKitGTK 4.1 needs the webkit2_41 tag; scripts/build.sh adds it automatically)
+./scripts/build.sh                                   # → build/bin/hold-it-all
+
+# Windows
+wails build -platform windows/amd64 -nsis            # → build/bin/hold-it-all.exe + installer
+
+# macOS
+wails build -platform darwin/universal               # → build/bin/Hold It All.app
+```
+
+Development with hot reload: `wails dev` (on Linux: `wails dev -tags webkit2_41`).
+
+## Tests
+
+```sh
+go test ./...                       # Go unit tests (Linux: add -tags webkit2_41 for the root package)
+cd frontend && npm test             # Vitest
+cd frontend && npm run check        # svelte-check / TypeScript
+python3 scripts/fixtures.py /tmp/fx && scripts/selftest.sh m4 /tmp/fx   # in-app self-tests (Linux)
+```
+
+The self-tests drive the real app inside its webview. [docs/TESTING.md](docs/TESTING.md) lists every scenario
+and the manual checklist. CI runs the checks, the Linux self-tests with external verifiers (qpdf, poppler, 7z), and
+builds all three platforms on every push to `main` and on pull requests.
+
+## Privacy
+
+Hold It All makes no network connections. The one exception happens only if you turn on *search by meaning*: after
+you agree, it downloads the model once (about 200 MB, Apache-2.0, checked against fixed SHA-256 sums). Your files never
+leave your computer. Settings live in your OS config folder (`HoldItAll/settings.json`). The optional model and
+search indexes live in the OS cache folder and can be removed from the app.
+
+## Documentation
+
+- [PROGRESS.md](PROGRESS.md): milestones, measured performance, known issues
+- [docs/DECISIONS.md](docs/DECISIONS.md): design decisions and the license of every dependency (all permissive;
+  `scripts/licenses.py` audits the built binary and the bundled npm packages)
+- [docs/TESTING.md](docs/TESTING.md): automated scenarios and the manual checklist

@@ -1,0 +1,145 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  WAILS_VERSION: v2.17.0
+  NODE_VERSION: "22"
+
+jobs:
+  check:
+    name: Checks (types, unit tests, licenses)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: System packages (WebKitGTK 4.1)
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+      - name: Frontend install
+        working-directory: frontend
+        run: npm ci
+      - name: Type check
+        working-directory: frontend
+        run: npm run check
+      - name: Frontend unit tests
+        working-directory: frontend
+        run: npm test
+      - name: Go vet and tests
+        run: |
+          go vet -tags webkit2_41 ./...
+          go test -tags webkit2_41 ./...
+      - name: License audit (permissive only)
+        run: |
+          go build -tags webkit2_41 -o /tmp/hold-it-all .
+          python3 scripts/licenses.py /tmp/hold-it-all
+
+  selftest:
+    name: In-app self-tests (Linux, Xvfb)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev xvfb openbox qpdf poppler-utils p7zip-full unzip
+      - name: Build
+        run: |
+          go install "github.com/wailsapp/wails/v2/cmd/wails@${WAILS_VERSION}"
+          (cd frontend && npm ci)
+          ./scripts/build.sh
+      - name: Self-tests
+        run: |
+          FX=$RUNNER_TEMP/fx
+          python3 scripts/fixtures.py "$FX"
+          M0=$RUNNER_TEMP/m0 && mkdir -p "$M0" && printf a >"$M0/a.txt" && printf b >"$M0/b.md" && printf c >"$M0/c.txt"
+          scripts/selftest.sh m0-setup "$M0" "$RUNNER_TEMP/m0.json"
+          scripts/selftest.sh m0-restore "$M0" "$RUNNER_TEMP/m0.json"
+          for s in m1 m2 m3 m4 m4b m5 m6; do scripts/selftest.sh "$s" "$FX"; done
+          scripts/verify-pdf.sh "$FX"
+          scripts/verify-archives.sh "$FX"
+
+  build:
+    name: Package (${{ matrix.name }})
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-amd64
+            os: ubuntu-24.04
+          - name: windows-amd64
+            os: windows-latest
+          - name: macos-universal
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
+
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+          wails build -tags webkit2_41 -platform linux/amd64 -trimpath
+          mkdir -p dist/hold-it-all
+          cp build/bin/hold-it-all build/linux/hold-it-all.desktop build/linux/install.sh dist/hold-it-all/
+          cp build/appicon.png dist/hold-it-all/hold-it-all.png
+          tar -C dist -czf dist/hold-it-all-linux-amd64.tar.gz hold-it-all
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
+            if (-not (Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) { choco install nsis -y --no-progress }
+            "${env:ProgramFiles(x86)}\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Append
+            $env:PATH = "${env:ProgramFiles(x86)}\NSIS;$env:PATH"
+          }
+          wails build -platform windows/amd64 -nsis -trimpath -o hold-it-all.exe
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item build/bin/hold-it-all-amd64-installer.exe dist/
+          Compress-Archive -Path build/bin/hold-it-all.exe -DestinationPath dist/hold-it-all-windows-amd64-portable.zip
+
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          wails build -platform darwin/universal -trimpath
+          mkdir -p dist
+          ditto -c -k --keepParent "build/bin/Hold It All.app" dist/hold-it-all-macos-universal.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hold-it-all-${{ matrix.name }}
+          path: dist/*
+          if-no-files-found: error

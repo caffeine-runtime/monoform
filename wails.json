@@ -14,7 +14,212 @@
     "companyName": "Hold It All",
     "productName": "Hold It All",
     "productVersion": "1.0.0",
-    "copyright": "Copyright \u00a9 2026 Hold It All contributors",
-    "comments": "One window for your everyday files."
+    "copyright": "Copyright © 2026 Hold It All contributors",
+    "comments": "One window for your everyday files.",
+    "fileAssociations": [
+      {
+        "ext": "txt",
+        "name": "HoldItAll.txt",
+        "description": "Text document",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "log",
+        "name": "HoldItAll.log",
+        "description": "Text document",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "md",
+        "name": "HoldItAll.md",
+        "description": "Markdown document",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "markdown",
+        "name": "HoldItAll.markdown",
+        "description": "Markdown document",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "json",
+        "name": "HoldItAll.json",
+        "description": "JSON document",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "yaml",
+        "name": "HoldItAll.yaml",
+        "description": "YAML document",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "yml",
+        "name": "HoldItAll.yml",
+        "description": "YAML document",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "csv",
+        "name": "HoldItAll.csv",
+        "description": "CSV table",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "tsv",
+        "name": "HoldItAll.tsv",
+        "description": "CSV table",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "pdf",
+        "name": "HoldItAll.pdf",
+        "description": "PDF document",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "png",
+        "name": "HoldItAll.png",
+        "description": "Image",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "jpg",
+        "name": "HoldItAll.jpg",
+        "description": "Image",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "jpeg",
+        "name": "HoldItAll.jpeg",
+        "description": "Image",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "gif",
+        "name": "HoldItAll.gif",
+        "description": "Image",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "webp",
+        "name": "HoldItAll.webp",
+        "description": "Image",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "bmp",
+        "name": "HoldItAll.bmp",
+        "description": "Image",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "svg",
+        "name": "HoldItAll.svg",
+        "description": "SVG image",
+        "iconName": "fileicon",
+        "role": "Viewer"
+      },
+      {
+        "ext": "docx",
+        "name": "HoldItAll.docx",
+        "description": "Word document",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "doc",
+        "name": "HoldItAll.doc",
+        "description": "Word document",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "xlsx",
+        "name": "HoldItAll.xlsx",
+        "description": "Excel workbook",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "xls",
+        "name": "HoldItAll.xls",
+        "description": "Excel workbook",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "zip",
+        "name": "HoldItAll.zip",
+        "description": "Archive",
+        "iconName": "fileicon",
+        "role": "Viewer"
+      },
+      {
+        "ext": "7z",
+        "name": "HoldItAll.7z",
+        "description": "Archive",
+        "iconName": "fileicon",
+        "role": "Viewer"
+      },
+      {
+        "ext": "rar",
+        "name": "HoldItAll.rar",
+        "description": "Archive",
+        "iconName": "fileicon",
+        "role": "Viewer"
+      },
+      {
+        "ext": "tar",
+        "name": "HoldItAll.tar",
+        "description": "Archive",
+        "iconName": "fileicon",
+        "role": "Viewer"
+      },
+      {
+        "ext": "gz",
+        "name": "HoldItAll.gz",
+        "description": "Archive",
+        "iconName": "fileicon",
+        "role": "Viewer"
+      },
+      {
+        "ext": "tgz",
+        "name": "HoldItAll.tgz",
+        "description": "Archive",
+        "iconName": "fileicon",
+        "role": "Viewer"
+      },
+      {
+        "ext": "sha256",
+        "name": "HoldItAll.sha256",
+        "description": "Checksum list",
+        "iconName": "fileicon",
+        "role": "Viewer"
+      },
+      {
+        "ext": "md5",
+        "name": "HoldItAll.md5",
+        "description": "Checksum list",
+        "iconName": "fileicon",
+        "role": "Viewer"
+      }
+    ]
   }
 }
