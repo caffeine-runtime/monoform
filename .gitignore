@@ -1,0 +1,7 @@
+build/bin
+frontend/dist/*
+!frontend/dist/.gitkeep
+frontend/node_modules
+*.test
+/tmp/
+.DS_Store

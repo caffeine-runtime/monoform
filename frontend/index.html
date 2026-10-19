@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' wails: blob: data:; script-src 'self' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' wails: blob: data:; connect-src 'self' wails: wails.localhost ipc: blob: data: ws://localhost:* http://localhost:*; worker-src 'self' blob:; font-src 'self' data:; object-src 'none'; frame-src 'none'" />
+    <title>Hold It All</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
