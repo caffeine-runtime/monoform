@@ -115,6 +115,31 @@ export namespace fs {
 
 }
 
+export namespace pdf {
+	
+	export class Op {
+	    kind: string;
+	    pages: number[];
+	    degrees: number;
+	    order: number[];
+	    others: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Op(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.pages = source["pages"];
+	        this.degrees = source["degrees"];
+	        this.order = source["order"];
+	        this.others = source["others"];
+	    }
+	}
+
+}
+
 export namespace search {
 	
 	export class Options {

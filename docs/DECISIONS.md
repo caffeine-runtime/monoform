@@ -48,6 +48,18 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 - **GIFs open as an animated `<img>`**; "Edit" converts the first frame to the canvas editor (and says so). **SVGs are view-only** and render as `<img>` (scripts in SVG never run).
 - **Image shortcuts are single keys** (C crop, A arrow, R rectangle, T text, B blur, P pixelate, [ ] rotate, 0 fit, 1 actual size, ←/→ previous/next) and only fire while an image tab is active and focus isn't in a text field.
 
+- **PDF viewer = pdf.js's own `PDFViewer` component** (lazy page rendering, text layer, find controller, annotation layer with forms, annotation editors). Writing our own would duplicate years of edge cases.
+- **pdf.js scripting is off** (no `PDFScriptingManager`; the QuickJS engine isn't shipped) — PDF JavaScript never runs.
+- **pdf.js resources are local**: CMaps, standard fonts, WASM image decoders (OpenJPEG BSD-2, JBIG2 BSD-3, QCMS MIT) and ICC profiles are copied into `dist/pdfjs/` by a small Vite plugin.
+- **"Low-res first, then sharpened"** uses pdf.js's built-in detail canvas: `maxCanvasPixels` is 1 MP, so a page first renders into a small CSS-scaled canvas, then pdf.js draws a sharp canvas for just the visible region.
+- **One shared pdf.js worker**, started when the PDF module loads, reused by every document.
+- **Page operations work on a working copy**: each op (pdfcpu) writes a new temp file that the viewer reloads; the tab is dirty until Save copies the working file over the original (atomic). Annotations made before a page op are first baked in with `saveDocument()`. Closing without saving discards everything.
+- **"Merge PDFs" appends** the chosen files to the open document (save or Save As to keep it); **split** writes `<name>_<n>.pdf` files into a chosen folder as a background job; **extract** writes selected pages (or a typed range) to a new file and offers to open it.
+- **Annotations and form values are written by pdf.js's `saveDocument()`** (incremental, standard /FreeText, /Ink, /Highlight annotations and AcroForm values), verified with qpdf and poppler.
+- **pdfcpu never touches its config dir** (`model.ConfigPath = "disable"`).
+- **Password-protected PDFs show a clear message**; opening them is part of the v2 encryption work.
+- **Thumbnail drag-and-drop moves the whole selection as a block**; Ctrl/Cmd-click toggles, Shift-click selects a range.
+
 ## Look & feel
 
 - **Darker palette than the brief's starting tokens** (user request): dark `--bg #1f1e1c`, sidebar `#181716`; light `--bg #f6f4ee`.
@@ -70,3 +82,7 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 | konva | MIT | image markup canvas |
 | golang.org/x/image (bmp, webp decode) | BSD-3-Clause | image encoding |
 | github.com/HugoSmits86/nativewebp | MIT | WebP (lossless) encoding |
+| pdfjs-dist (incl. OpenJPEG BSD-2, PDFium JBIG2 BSD-3, QCMS MIT wasm) | Apache-2.0 | PDF rendering, annotations, forms |
+| github.com/pdfcpu/pdfcpu (+ hhrutter/tiff BSD-3, xdg-go/stringprep Apache-2.0, go.yaml.in/yaml Apache-2.0, mattn/go-runewidth MIT, clipperhouse/uax29 MIT) | Apache-2.0 | PDF page operations |
+
+`scripts/licenses.py` lists every Go module linked into the binary and every runtime npm package with its licence and fails on anything not on the permissive allow-list (MIT, BSD, Apache-2.0, ISC, CC0, OFL, PSF/Python, Unlicense, 0BSD). `argparse` (PSF-2.0) is only used by markdown-it's CLI and isn't bundled; `@napi-rs/canvas` is a Node-only optional dependency of pdfjs-dist and isn't bundled either.
