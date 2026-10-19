@@ -19,6 +19,8 @@ needs a window manager).
 | `m0-setup` then `m0-restore` (same settings file) | a folder containing `a.txt`, `b.md`, `c.txt` | palette opens on Ctrl+K and lists every available command; fuzzy ranking; theme toggle changes colours; tabs, active tab, folder, theme and pins survive a restart; inactive tabs are not loaded |
 | `m1` (or `m1-roundtrip`, `m1-external`, `m1-search`, `m1-markdown`, `m1-large`, `m1-baseline`) | fixtures dir from `scripts/fixtures.py <dir>` | 11 encoding/line-ending files save byte-identical unchanged and after edit+undo; real edits keep UTF-16 BOM + CRLF; external change shows the reload banner, own saves don't; folder search counts, regex, click-to-reveal; markdown preview, live update, image paste into `assets/`, view modes, relative links; 50 MB log opens, scrolls, types, saves with frame gaps logged |
 
+| `m2` | fixtures dir | open PNG; crop, arrow, blur; undo/redo; save as JPG; reopen: size = crop, mean error < 6/255, blurred area smooth, arrow red, untouched area unchanged; rotate/flip/resize; save PNG/WebP/GIF/BMP and decode back; GIF opens animated, ← / → navigates the folder; SVG is view-only |
+
 `scripts/fixtures.py` modifies nothing outside the given directory; re-run it before `m1` (the round-trip test edits files).
 `scripts/screenshot.sh out.png "<folder>|<files>|<commands>|<search>"` captures the window in a given state.
 
@@ -51,3 +53,12 @@ Run on each OS before a release.
 - [ ] Drop an image from the file manager onto the note → copied into `assets/`; drag a file from the sidebar → relative link.
 - [ ] Click a relative `.md` link in the preview → opens in a new tab; external links open the browser.
 - [ ] Find in folder (Ctrl/Cmd+Shift+F): typing searches as you go, Stop works, clicking a result selects the match.
+
+### Images
+- [ ] Wheel zooms around the pointer; drag pans; 0 = fit, 1 = actual size; pixels are crisp (not blurry) above 200 %.
+- [ ] ← / → walk the folder (asks before discarding edits); the toolbar shows "n / N".
+- [ ] Crop/blur/pixelate: drag a region, adjust its handles, Enter applies, Esc cancels.
+- [ ] Arrows, rectangles and text: draw, then move/resize/rotate with the move tool; Delete removes; double-click text to edit; colour swatches recolour the selection.
+- [ ] Undo/redo (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z) across markup and raster edits.
+- [ ] Save keeps the format; Save as offers PNG/JPEG/WebP/GIF/BMP; transparent PNG → JPEG gets a white background.
+- [ ] Animated GIF plays; "Edit (first frame)" works. SVG scales crisply and is view-only.

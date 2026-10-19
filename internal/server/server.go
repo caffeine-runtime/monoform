@@ -20,6 +20,7 @@ import (
 	"log"
 	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -35,9 +36,16 @@ const Prefix = "/__hia/"
 // realistic document or image, small enough to stop runaway memory use.
 const MaxUpload = 4 << 30
 
+// Transform converts uploaded bytes before they are written (e.g. PNG from a
+// canvas re-encoded as JPEG). Registered by name; a save request selects one
+// with ?transform=<name>; the other query parameters are passed through.
+type Transform func(w io.Writer, r io.Reader, q url.Values) error
+
 type Server struct {
 	token string
 	mux   *http.ServeMux
+	// Transforms available to save/upload requests.
+	Transforms map[string]Transform
 	// OnWrite is called after a successful save (watcher self-write suppression).
 	OnWrite func(path string)
 }
@@ -51,7 +59,7 @@ func NewToken() string {
 }
 
 func New(token string) *Server {
-	s := &Server{token: token, mux: http.NewServeMux()}
+	s := &Server{token: token, mux: http.NewServeMux(), Transforms: map[string]Transform{}}
 	s.mux.HandleFunc("GET /__hia/file", s.handleFile)
 	s.mux.HandleFunc("POST /__hia/save", s.handleSave)
 	s.mux.HandleFunc("POST /__hia/asset", s.handleAsset)
@@ -163,7 +171,12 @@ func (s *Server) handleSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	body := http.MaxBytesReader(w, r.Body, MaxUpload)
-	if err := fs.AtomicWriteReader(p, body); err != nil {
+	tf, err := s.transform(r.URL.Query())
+	if err != nil {
+		Error(w, http.StatusBadRequest, err)
+		return
+	}
+	if err := fs.AtomicWrite(p, func(out io.Writer) error { return tf(out, body, r.URL.Query()) }); err != nil {
 		log.Printf("save %s: %v", p, err)
 		Error(w, StatusFor(err), err)
 		return
@@ -175,6 +188,22 @@ func (s *Server) handleSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	JSON(w, e)
+}
+
+// transform returns the requested transform, or a plain copy.
+func (s *Server) transform(q url.Values) (Transform, error) {
+	name := q.Get("transform")
+	if name == "" {
+		return func(w io.Writer, r io.Reader, _ url.Values) error {
+			_, err := io.Copy(w, r)
+			return err
+		}, nil
+	}
+	tf, ok := s.Transforms[name]
+	if !ok {
+		return nil, fmt.Errorf("unknown transform %q", name)
+	}
+	return tf, nil
 }
 
 func (s *Server) wrote(p string) {

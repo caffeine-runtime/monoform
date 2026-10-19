@@ -13,8 +13,13 @@
   banner; parallel streamed folder search; markdown split/source/preview with worker rendering, scroll sync,
   image paste/drop into `assets/`, in-app relative links.
 
+- **M2 — Images.** PNG/JPEG/GIF/WebP/BMP/SVG viewer with wheel zoom around the pointer, pan, fit/actual size,
+  folder navigation; crop, resize, rotate, flip; arrows, rectangles, text; blur/pixelate regions; undo/redo;
+  save in the same format or Save As PNG/JPEG/WebP/GIF/BMP (re-encoded in Go). Crop+arrow+blur → JPG → reopen
+  verified pixel-wise.
+
 ## Next
-- M2 Images, M3 PDF, M4 Data viewer, **M4b Office documents** (added on request: open, edit and save
+- M3 PDF, M4 Data viewer, **M4b Office documents** (added on request: open, edit and save
   .xlsx/.docx in place; .xls/.doc open and edit, saved as .xlsx/.docx because the legacy binary formats
   can't be written faithfully with permissive libraries), M5 Archives, M6 Hashing,
   **M6b Omnisearch** (added on request: one box over file names, contents and commands; optional, off-by-default

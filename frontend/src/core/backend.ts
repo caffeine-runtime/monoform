@@ -94,13 +94,14 @@ export async function postForBytes(url: string, body: Body): Promise<ArrayBuffer
 }
 
 /** Atomically write data to path (temp file + rename on the Go side). */
-export async function saveFile(path: string, data: Body, onProgress?: (done: number, total: number) => void): Promise<Entry> {
+/** `extra` adds query params, e.g. { transform: 'image', format: 'jpg' }. */
+export async function saveFile(path: string, data: Body, onProgress?: (done: number, total: number) => void, extra: Record<string, string> = {}): Promise<Entry> {
   let buf: ArrayBuffer | Uint8Array;
   if (data instanceof Blob) buf = await data.arrayBuffer();
   else if (typeof data === 'string') buf = new TextEncoder().encode(data);
   else if (data instanceof ArrayBuffer) buf = data;
   else buf = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-  return uploadParts((p, q) => endpoint(p, q), path, [buf], onProgress) as Promise<Entry>;
+  return uploadParts((p, q) => endpoint(p, q), path, [buf], onProgress, extra) as Promise<Entry>;
 }
 
 /** Token for code (workers) that builds its own URLs. */
