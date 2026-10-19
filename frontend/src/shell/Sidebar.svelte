@@ -13,7 +13,8 @@
   import { sidebar } from '../core/sidebar.svelte';
   import { boot } from '../core/boot';
   import { formatShortcut } from '../core/keys';
-  import { newFileIn, newFolderIn, copyText } from './treeActions';
+  import { newFolderIn, copyText } from './treeActions';
+  import { newFileOfKind } from '../core/newfile';
   import { extname } from '../core/paths';
 
   let pinnedOpen = $state(true);
@@ -102,7 +103,7 @@
           <div class="label row-label" title={workspace.folder}>
             <span class="label-text">{folderName}</span>
             <span class="label-actions">
-              <button class="icon-btn sm" title="New file" onclick={() => newFileIn(workspace.folder)}><Icon icon={FilePlus} size={14} /></button>
+              <button class="icon-btn sm" title="New file ({formatShortcut('Mod+Alt+N')})" onclick={() => newFileOfKind(workspace.folder)}><Icon icon={FilePlus} size={14} /></button>
               <button class="icon-btn sm" title="New folder" onclick={() => newFolderIn(workspace.folder)}><Icon icon={FolderPlus} size={14} /></button>
               <button class="icon-btn sm" title="Refresh" onclick={() => tree.refreshAll()}><Icon icon={RefreshCw} size={14} /></button>
               <button class="icon-btn sm" title="Collapse all" onclick={() => tree.collapseAll(workspace.folder)}><Icon icon={ListCollapse} size={14} /></button>
@@ -116,11 +117,14 @@
             {#if settings.value.recentFolders.length}
               <div class="recent-folders">
                 {#each settings.value.recentFolders.slice(0, 4) as f (f)}
-                  <button class="item" title={f} onclick={() => workspace.openFolder(f)}>
-                    <span class="ico"><Icon icon={FolderOpen} size={15} /></span>
-                    <span class="name">{basename(f)}</span>
-                    <span class="hint">{tildify(dirname(f), boot.home)}</span>
-                  </button>
+                  <div class="row">
+                    <button class="item" title={f} onclick={() => workspace.openFolder(f)}>
+                      <span class="ico"><Icon icon={FolderOpen} size={15} /></span>
+                      <span class="name">{basename(f)}</span>
+                      <span class="hint">{tildify(dirname(f), boot.home)}</span>
+                    </button>
+                    <button class="rm icon-btn xs" title="Remove from recent folders" aria-label="Remove {basename(f)} from recent folders" onclick={() => settings.removeRecentFolder(f)}><Icon icon={X} size={12} /></button>
+                  </div>
                 {/each}
               </div>
             {/if}
@@ -151,11 +155,14 @@
           </button>
           {#if recentsOpen}
             {#each recents as p (p)}
-              <button class="item" class:active={activePath === p} title={p} onclick={() => workspace.openPath(p)} oncontextmenu={(e) => listMenu(e, p, true)}>
-                <span class="ico"><Icon icon={iconFor(p, kindOf(p))} size={15} /></span>
-                <span class="name">{basename(p)}</span>
-                <span class="hint">{basename(dirname(p))}</span>
-              </button>
+              <div class="row">
+                <button class="item" class:active={activePath === p} title={p} onclick={() => workspace.openPath(p)} oncontextmenu={(e) => listMenu(e, p, true)}>
+                  <span class="ico"><Icon icon={iconFor(p, kindOf(p))} size={15} /></span>
+                  <span class="name">{basename(p)}</span>
+                  <span class="hint">{basename(dirname(p))}</span>
+                </button>
+                <button class="rm icon-btn xs" title="Remove from recents" aria-label="Remove {basename(p)} from recents" onclick={() => settings.removeRecent(p)}><Icon icon={X} size={12} /></button>
+              </div>
             {/each}
           {/if}
         </section>
@@ -312,6 +319,24 @@
     flex: 1 1 0;
     min-width: 0;
     text-align: right;
+  }
+  /* Recent rows: an X replaces the folder hint on hover. */
+  .row {
+    position: relative;
+  }
+  .row .rm {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+  }
+  .row:hover .rm,
+  .row .rm:focus-visible {
+    opacity: 1;
+  }
+  .row:hover .hint {
+    visibility: hidden;
   }
   .no-folder {
     padding: 8px 16px;

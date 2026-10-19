@@ -1,5 +1,6 @@
 // Actions on tree items (open, context menu), shared by the tree, pinned and
 // recents lists.
+import { newFileOfKind } from '../core/newfile';
 import { api } from '../core/backend';
 import { commands } from '../core/commands';
 import { basename, dirname, join } from '../core/paths';
@@ -75,7 +76,8 @@ export function treeContextMenu(e: MouseEvent, item: TreeItem) {
     if (!item.isDir) items.push({ label: 'Open', run: () => openTreeItem(item) });
   } else if (item.isDir) {
     items.push(
-      { label: 'New file…', run: () => newFileIn(item.path) },
+      { label: 'New document, spreadsheet, image…', run: () => newFileOfKind(item.path) },
+      { label: 'New empty file…', run: () => newFileIn(item.path) },
       { label: 'New folder…', run: () => newFolderIn(item.path) },
       { separator: true },
       { label: 'Find in this folder…', run: () => commands.execute('search.inFolder', item.path) },

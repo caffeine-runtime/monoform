@@ -47,6 +47,7 @@ class SettingsState {
   }
 
   addRecent(path: string) {
+    if (this.value.recentsOff) return;
     this.update((s) => {
       s.recents = [path, ...s.recents.filter((p) => p !== path)].slice(0, 30);
     });
@@ -58,7 +59,37 @@ class SettingsState {
     });
   }
 
+  clearRecents() {
+    this.update((s) => {
+      s.recents = [];
+    });
+  }
+
+  removeRecentFolder(path: string) {
+    this.update((s) => {
+      s.recentFolders = s.recentFolders.filter((p) => p !== path);
+    });
+  }
+
+  clearRecentFolders() {
+    this.update((s) => {
+      s.recentFolders = [];
+    });
+  }
+
+  /** Turning recents off also forgets the current lists. */
+  setRecentsOff(off: boolean) {
+    this.update((s) => {
+      s.recentsOff = off;
+      if (off) {
+        s.recents = [];
+        s.recentFolders = [];
+      }
+    });
+  }
+
   addRecentFolder(path: string) {
+    if (this.value.recentsOff) return;
     this.update((s) => {
       s.recentFolders = [path, ...s.recentFolders.filter((p) => p !== path)].slice(0, 10);
     });

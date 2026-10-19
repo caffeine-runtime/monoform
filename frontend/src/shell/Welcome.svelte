@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon from './Icon.svelte';
-  import { Command, FileText, FolderOpen, Hash } from '../core/icons';
+  import { Command, FilePlus, FileText, FolderOpen, Hash, X } from '../core/icons';
   import { commands } from '../core/commands';
   import { formatShortcut } from '../core/keys';
   import { settings } from '../core/settings.svelte';
@@ -9,6 +9,7 @@
   import { boot } from '../core/boot';
 
   const actions = [
+    { id: 'file.newOf', label: 'New document, spreadsheet, image…', icon: FilePlus },
     { id: 'file.open', label: 'Open file', icon: FileText },
     { id: 'file.openFolder', label: 'Open folder', icon: FolderOpen },
     { id: 'tools.hash', label: 'Check a file hash', icon: Hash },
@@ -34,10 +35,13 @@
       <h3>Recent</h3>
       <div class="recents">
         {#each settings.value.recents.slice(0, 8) as p (p)}
-          <button class="recent" title={p} onclick={() => workspace.openPath(p)}>
-            <span class="rn">{basename(p)}</span>
-            <span class="rd">{tildify(dirname(p), boot.home)}</span>
-          </button>
+          <div class="rrow">
+            <button class="recent" title={p} onclick={() => workspace.openPath(p)}>
+              <span class="rn">{basename(p)}</span>
+              <span class="rd">{tildify(dirname(p), boot.home)}</span>
+            </button>
+            <button class="rm icon-btn xs" title="Remove from recents" aria-label="Remove {basename(p)} from recents" onclick={() => settings.removeRecent(p)}><Icon icon={X} size={12} /></button>
+          </div>
         {/each}
       </div>
     {/if}
@@ -97,6 +101,23 @@
     font-size: 15px;
     margin: 32px 0 8px;
     color: var(--text-muted);
+  }
+  .rrow {
+    position: relative;
+  }
+  .rrow .rm {
+    position: absolute;
+    right: -4px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+  }
+  .rrow:hover .rm,
+  .rrow .rm:focus-visible {
+    opacity: 1;
+  }
+  .rrow:hover .rd {
+    visibility: hidden;
   }
   .recents {
     display: flex;

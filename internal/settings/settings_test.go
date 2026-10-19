@@ -85,3 +85,21 @@ func TestUpdate(t *testing.T) {
 		t.Fatal("aliasing")
 	}
 }
+
+func TestRecentsOffClearsLists(t *testing.T) {
+	s, err := Open(filepath.Join(t.TempDir(), "settings.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := s.Get()
+	v.Recents = []string{"/a.txt"}
+	v.RecentFolders = []string{"/notes"}
+	v.RecentsOff = true
+	if err := s.Set(v); err != nil {
+		t.Fatal(err)
+	}
+	got := s.Get()
+	if len(got.Recents) != 0 || len(got.RecentFolders) != 0 || !got.RecentsOff {
+		t.Fatalf("recents kept while off: %+v", got)
+	}
+}

@@ -100,6 +100,20 @@ export namespace app {
 	        this.patterns = source["patterns"];
 	    }
 	}
+	export class Locations {
+	    settings: string;
+	    cache: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Locations(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.settings = source["settings"];
+	        this.cache = source["cache"];
+	    }
+	}
 	export class PassagesResult {
 	    size: number;
 	    mod: number;
@@ -321,6 +335,27 @@ export namespace fs {
 	        this.modTime = source["modTime"];
 	        this.kind = source["kind"];
 	        this.hidden = source["hidden"];
+	    }
+	}
+
+}
+
+export namespace newfile {
+	
+	export class Options {
+	    width: number;
+	    height: number;
+	    background: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Options(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.width = source["width"];
+	        this.height = source["height"];
+	        this.background = source["background"];
 	    }
 	}
 
@@ -704,6 +739,7 @@ export namespace settings {
 	    fontSize: number;
 	    session: Session;
 	    semantic: Semantic;
+	    recentsOff: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -723,6 +759,7 @@ export namespace settings {
 	        this.fontSize = source["fontSize"];
 	        this.session = this.convertValues(source["session"], Session);
 	        this.semantic = this.convertValues(source["semantic"], Semantic);
+	        this.recentsOff = source["recentsOff"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

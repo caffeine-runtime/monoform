@@ -42,6 +42,14 @@ export function CreateFolder(arg1) {
   return window['go']['app']['App']['CreateFolder'](arg1);
 }
 
+export function CreateFromTemplate(arg1, arg2, arg3) {
+  return window['go']['app']['App']['CreateFromTemplate'](arg1, arg2, arg3);
+}
+
+export function DataLocations() {
+  return window['go']['app']['App']['DataLocations']();
+}
+
 export function DetectType(arg1) {
   return window['go']['app']['App']['DetectType'](arg1);
 }

@@ -1,4 +1,5 @@
 // Core commands: files, tabs, view and tools. Modules add their own when loaded.
+import { newFileOfKind } from './newfile';
 import { api } from './backend';
 import { commands } from './commands';
 import { formatShortcut } from './keys';
@@ -41,6 +42,11 @@ export function registerAppCommands() {
     { id: 'file.open', title: 'Open file…', category: 'File', shortcut: 'Mod+O', run: openFilesDialog },
     { id: 'file.openFolder', title: 'Open folder…', category: 'File', shortcut: 'Mod+Shift+O', run: openFolderDialog },
     { id: 'file.new', title: 'New text file', category: 'File', shortcut: 'Mod+N', run: () => workspace.newUntitled('text') },
+    { id: 'file.newOf', title: 'New document, spreadsheet, image…', category: 'File', shortcut: 'Mod+Alt+N', run: () => void newFileOfKind() },
+    { id: 'file.newMarkdown', title: 'New Markdown note', category: 'File', run: () => void newFileOfKind(undefined, 'markdown') },
+    { id: 'file.newDocx', title: 'New Word document', category: 'File', run: () => void newFileOfKind(undefined, 'docx') },
+    { id: 'file.newXlsx', title: 'New spreadsheet', category: 'File', run: () => void newFileOfKind(undefined, 'xlsx') },
+    { id: 'file.newImage', title: 'New image…', category: 'File', run: () => void newFileOfKind(undefined, 'image') },
     { id: 'file.save', title: 'Save', category: 'File', shortcut: 'Mod+S', when: hasTab, run: () => workspace.save() },
     { id: 'file.saveAs', title: 'Save as…', category: 'File', shortcut: 'Mod+Shift+S', when: hasTab, run: () => workspace.save(workspace.active, true) },
     {
@@ -115,6 +121,7 @@ export function registerAppCommands() {
         settings.update((s) => (s.sidebarVisible = true));
         sidebar.mode = 'files';
       } },
+    { id: 'app.settings', title: 'Settings', category: 'View', shortcut: 'Mod+,', run: () => workspace.openTool('settings') },
     { id: 'view.toggleTheme', title: 'Toggle dark / light theme', category: 'View', shortcut: 'Mod+Alt+T', run: () => theme.toggle() },
     { id: 'view.themeSystem', title: 'Theme: follow system', category: 'View', run: () => theme.set('system') },
     { id: 'view.themeDark', title: 'Theme: dark', category: 'View', run: () => theme.set('dark') },
