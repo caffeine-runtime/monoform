@@ -15,6 +15,7 @@ import { tree } from './core/tree.svelte';
 import { ui } from './core/ui.svelte';
 import { dropHandlers } from './core/drop';
 import { registerBuiltinModules } from './modules/registry';
+import { registerArchiveIntegration } from './core/archives';
 import { OnFileDrop } from './wailsjs/runtime/runtime';
 
 function inEditable(t: EventTarget | null): boolean {
@@ -82,6 +83,7 @@ async function start() {
 
   registerBuiltinModules();
   registerAppCommands();
+  registerArchiveIntegration();
   wireEvents();
 
   mount(App, { target: document.getElementById('app')! });

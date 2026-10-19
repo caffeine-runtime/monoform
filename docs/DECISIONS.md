@@ -76,6 +76,15 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   - Images inside .docx are served from the package via `/__hia/zip`.
   - Numeric-looking grid cells are right-aligned (spreadsheet convention).
 
+- **⚠️ `hashicorp/golang-lru/v2` (MPL-2.0) is replaced by our own ~50-line LRU** (`third_party/golang-lru`, MIT) via a `replace` directive in `go.mod`. `mholt/archives` → `bodgit/sevenzip` uses it only for a 10-entry 7z AES-key cache (`New`, `Get`, `Add`). MPL-2.0 is weak copyleft, not on the allowed list, so rather than ship it we provide the same three functions under MIT. Flagged here because it is a deliberate workaround: if MPL-2.0 is acceptable to you, delete the `replace` line.
+- **Extraction safety** (`internal/archive`): entry names with `..`, absolute paths, drive letters or reserved names are refused; symlinks are created only if their target stays inside the destination (never on Windows); hard links, devices and pipes are skipped; every write goes through an **`os.Root`** opened at the destination, so even a symlink already present (or created earlier in the same archive) can't redirect a write outside it. setuid/setgid bits are dropped. Skipped entries are listed to the user with the reason.
+- **Decompression-bomb limits**: 200,000 entries, 32 GiB total, and a 1000:1 expansion ratio once more than 1 GiB has been written. Bytes are counted as they are written (headers aren't trusted); a partial file is deleted when a limit stops extraction.
+- **Existing files** default to "rename" (`name (2).ext`) when extracting; nothing is overwritten silently.
+- **Selecting a folder inside an archive** extracts it relative to its parent (`a/b` → `b/…`).
+- **Archives in the sidebar tree** expand like folders (their listing is cached per path+size+mtime); clicking an archive opens the archive browser; inner files open in their normal module as read-only tabs (Save As to edit a copy), streamed from memory — no temp files.
+- **RAR and 7z are read-only by design** and the archive view says why in a banner (RAR compression is proprietary; 7z creation isn't supported) instead of showing disabled buttons. Only ZIP can be created ("Compress to ZIP…" on any file/folder, "Create ZIP from files…" in the palette); `.zip`, images, media and Office files are stored without recompression.
+- **RAR test fixtures are generated** (stored RAR5 written from the public format description), since RAR files can't be created with free tools.
+
 ## Look & feel
 
 - **Darker palette than the brief's starting tokens** (user request): dark `--bg #1f1e1c`, sidebar `#181716`; light `--bg #f6f4ee`.
@@ -102,6 +111,8 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 | yaml | ISC | YAML parsing |
 | github.com/xuri/excelize/v2 (+ xuri/efp BSD-3, xuri/nfp BSD-3, tiendc/go-deepcopy MIT) | BSD-3-Clause | .xlsx read/write |
 | github.com/richardlehane/mscfb, msoleps | Apache-2.0 | OLE compound files (.xls/.doc) |
+| github.com/mholt/archives (+ STARRY-S/zip BSD-3, bodgit/sevenzip BSD-3, bodgit/plumbing BSD-3, bodgit/windows BSD-3, nwaples/rardecode BSD-2, klauspost/compress BSD-3/Apache-2.0, klauspost/pgzip MIT, dsnet/compress BSD-3, andybalholm/brotli MIT, ulikunitz/xz BSD-3, mikelolasagasti/xz ISC, pierrec/lz4 BSD-3, minio/minlz Apache-2.0, sorairolake/lzip-go Apache-2.0/MIT, spf13/afero Apache-2.0, go4.org Apache-2.0) | MIT | archives |
+| third_party/golang-lru (ours, replaces hashicorp/golang-lru/v2) | MIT | 7z key cache |
 | github.com/pdfcpu/pdfcpu (+ hhrutter/tiff BSD-3, xdg-go/stringprep Apache-2.0, go.yaml.in/yaml Apache-2.0, mattn/go-runewidth MIT, clipperhouse/uax29 MIT) | Apache-2.0 | PDF page operations |
 
 `scripts/licenses.py` lists every Go module linked into the binary and every runtime npm package with its licence and fails on anything not on the permissive allow-list (MIT, BSD, Apache-2.0, ISC, CC0, OFL, PSF/Python, Unlicense, 0BSD). `argparse` (PSF-2.0) is only used by markdown-it's CLI and isn't bundled; `@napi-rs/canvas` is a Node-only optional dependency of pdfjs-dist and isn't bundled either.

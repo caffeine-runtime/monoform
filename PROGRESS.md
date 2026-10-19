@@ -32,8 +32,13 @@
   paragraph/run formatting, headings, tables, images, and all other package parts preserved; legacy .xls/.doc
   read by our own BIFF8 / Word 97 readers and saved as .xlsx/.docx. Verified by reopening in LibreOffice.
 
+- **M5 — Archives.** Browse ZIP/TAR/TAR.GZ/BZ2/XZ/ZST/GZ/7z/RAR as folders (also inline in the sidebar tree),
+  open inner files read-only in their modules, extract selected/all/here with progress and cancel, create ZIPs.
+  Zip-slip, escaping symlinks, pre-existing symlinks and decompression bombs are covered by unit tests;
+  RAR/7z read-only with an explanation.
+
 ## Next
-- M5 Archives, M6 Hashing,
+- M6 Hashing,
   **M6b Omnisearch** (added on request: one box over file names, contents and commands; optional, off-by-default
   semantic search with a local Gemma embedding model in a worker that is unloaded when idle — needs a one-time
   model download and the Gemma licence, both to be confirmed in the UI), M7 Packaging.

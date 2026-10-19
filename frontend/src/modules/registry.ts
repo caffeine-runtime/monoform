@@ -71,6 +71,13 @@ export function registerBuiltinModules() {
     load: () => import('./office/doc'),
   });
   modules.register({
+    id: 'archive',
+    name: 'Archive',
+    extensions: ['zip', 'tar', 'gz', 'tgz', 'tar.gz', 'tar.bz2', 'tbz2', 'tar.xz', 'txz', 'tar.zst', 'bz2', 'xz', 'zst', '7z', 'rar'],
+    mimeTypes: ['application/zip', 'application/x-tar', 'application/gzip', 'application/x-7z-compressed', 'application/vnd.rar', 'application/x-bzip2', 'application/x-xz', 'application/zstd'],
+    load: () => import('./archive'),
+  });
+  modules.register({
     id: 'binary',
     name: 'Binary',
     extensions: ['exe', 'dll', 'so', 'dylib', 'bin', 'o', 'a', 'class', 'pyc', 'wasm', 'iso', 'dmg', 'img'],
