@@ -38,6 +38,10 @@ export function DocSave(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function Exists(arg1:Array<string>):Promise<Array<boolean>>;
 
+export function HashFile(arg1:string,arg2:Array<string>):Promise<string>;
+
+export function HashVerify(arg1:string):Promise<string>;
+
 export function ListDir(arg1:string):Promise<Array<fs.Entry>>;
 
 export function Log(arg1:string):Promise<void>;

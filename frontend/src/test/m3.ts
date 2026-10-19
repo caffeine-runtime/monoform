@@ -141,5 +141,5 @@ export default async function m3(dir: string) {
   const splitDir = join(out, 'split');
   await api.CreateFolder(splitDir).catch(() => {});
   const done = await jobs.run<string[]>('split', () => api.PdfSplit(join(dir, 'pdf', 'hundred.pdf'), splitDir, 25));
-  assertEq(done.result?.length, 4, 'split into 4 files');
+  assertEq(done.result?.length, 4, `split into 4 files (${done.error})`);
 }

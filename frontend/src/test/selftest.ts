@@ -13,6 +13,7 @@ const scenarios: Record<string, () => Promise<{ default: (arg: string) => Promis
   m4: () => import('./m4'),
   m4b: () => import('./m4b'),
   m5: () => import('./m5'),
+  m6: () => import('./m6'),
   probe: () => import('./probe'),
   show: () => import('./show'),
   prof: () => import('./prof'),

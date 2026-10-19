@@ -97,11 +97,9 @@ class JobsState {
       if (!opts.silent) {
         this.list = [...this.list, view];
         setTimeout(() => {
-          const v = this.list.find((j) => j.id === id);
-          if (v) {
-            v.visible = true;
-            this.list = [...this.list];
-          }
+          // Mark the canonical view; list entries are copies made by refresh().
+          view.visible = true;
+          this.refresh(view);
         }, SHOW_AFTER_MS);
       }
       const early = this.early.get(id);

@@ -85,6 +85,12 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 - **RAR and 7z are read-only by design** and the archive view says why in a banner (RAR compression is proprietary; 7z creation isn't supported) instead of showing disabled buttons. Only ZIP can be created ("Compress to ZIP…" on any file/folder, "Create ZIP from files…" in the palette); `.zip`, images, media and Office files are stored without recompression.
 - **RAR test fixtures are generated** (stored RAR5 written from the public format description), since RAR files can't be created with free tools.
 
+- **Hashing runs one goroutine per algorithm over shared read buffers** (`internal/hash`): the file is read once in 1 MiB blocks and each block is handed to every selected hasher in parallel, so selecting all five algorithms costs about as much as the slowest one (SHA-512/SHA-256), not the sum. Progress is reported at most every 100 ms; cancel stops between blocks.
+- **Algorithms: MD5, SHA-1, SHA-256, SHA-512 (Go standard library) and BLAKE3** (`lukechampine.com/blake3`, MIT — pure Go with assembly, no cgo). SHA-256 is preselected; the selection is remembered. MD5/SHA-1 are offered for checking old downloads, not for security, and are labelled only by name.
+- **Compare box accepts what people paste**: whitespace, `0x`, upper case and a `sha256:` / `SHA256 (file) = …` wrapper are stripped; the algorithm is guessed from the length (32 hex = MD5, 40 = SHA-1, 64 = SHA-256 — or BLAKE3 if that is what matches, 128 = SHA-512) and computed on demand if it wasn't selected.
+- **Checksum files** (`SHA256SUMS`, `*.sha256`, `*.md5`, `*.b3`, …) open in a verification view instead of the text editor (Open With → Text still works). Both GNU (`hash  name`, `hash *name`) and BSD (`SHA256 (name) = hash`) lines are read; paths are relative to the checksum file; the algorithm comes from the BSD tag, the file name, or the hash length. Each line is reported OK / mismatch / missing / unreadable; duplicate lines are kept (a file listed twice with different hashes shows both verdicts).
+- **"Compute hash…" and "Verify checksums"** are in the palette (`Mod+Alt+H` for the hash tool), in the file-tree context menu, and dropping a file on the hash tool hashes it.
+
 ## Look & feel
 
 - **Darker palette than the brief's starting tokens** (user request): dark `--bg #1f1e1c`, sidebar `#181716`; light `--bg #f6f4ee`.
@@ -112,6 +118,7 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 | github.com/xuri/excelize/v2 (+ xuri/efp BSD-3, xuri/nfp BSD-3, tiendc/go-deepcopy MIT) | BSD-3-Clause | .xlsx read/write |
 | github.com/richardlehane/mscfb, msoleps | Apache-2.0 | OLE compound files (.xls/.doc) |
 | github.com/mholt/archives (+ STARRY-S/zip BSD-3, bodgit/sevenzip BSD-3, bodgit/plumbing BSD-3, bodgit/windows BSD-3, nwaples/rardecode BSD-2, klauspost/compress BSD-3/Apache-2.0, klauspost/pgzip MIT, dsnet/compress BSD-3, andybalholm/brotli MIT, ulikunitz/xz BSD-3, mikelolasagasti/xz ISC, pierrec/lz4 BSD-3, minio/minlz Apache-2.0, sorairolake/lzip-go Apache-2.0/MIT, spf13/afero Apache-2.0, go4.org Apache-2.0) | MIT | archives |
+| lukechampine.com/blake3 (+ klauspost/cpuid/v2 MIT) | MIT | BLAKE3 hashing |
 | third_party/golang-lru (ours, replaces hashicorp/golang-lru/v2) | MIT | 7z key cache |
 | github.com/pdfcpu/pdfcpu (+ hhrutter/tiff BSD-3, xdg-go/stringprep Apache-2.0, go.yaml.in/yaml Apache-2.0, mattn/go-runewidth MIT, clipperhouse/uax29 MIT) | Apache-2.0 | PDF page operations |
 

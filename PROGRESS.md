@@ -37,9 +37,12 @@
   Zip-slip, escaping symlinks, pre-existing symlinks and decompression bombs are covered by unit tests;
   RAR/7z read-only with an explanation.
 
+- **M6 — Hashing.** MD5, SHA-1, SHA-256, SHA-512, BLAKE3 computed in one pass with a goroutine per algorithm;
+  progress and cancel for multi-GB files; paste-to-compare with algorithm guessing; checksum files (GNU and BSD
+  formats, `SHA256SUMS`, `*.sha256`, `*.md5`, …) open in a verification view; tree/palette/drop entry points.
+
 ## Next
-- M6 Hashing,
-  **M6b Omnisearch** (added on request: one box over file names, contents and commands; optional, off-by-default
+- **M6b Omnisearch** (added on request: one box over file names, contents and commands; optional, off-by-default
   semantic search with a local Gemma embedding model in a worker that is unloaded when idle — needs a one-time
   model download and the Gemma licence, both to be confirmed in the UI), M7 Packaging.
 
@@ -54,6 +57,7 @@
 | 50 MB log: save | no freeze | 1.7–2.7 s, worst frame 40–57 ms (chunked upload) | same |
 | Folder search | streamed | 200 files in 33–45 ms | same |
 | 1M-row CSV (40 MB) | smooth scroll, sort | loads in 1.1–2.1 s (worst frame 54–61 ms); scrolling worst frame 60 ms (100 frames, 4 above 50 ms, all on large jumps); sort 2.6 s in the worker with UI frames ≤ 40 ms; filter 0.7 s | same |
+| Hashing (page cache warm) | progress ≥ 4/s, UI responsive | SHA-256 308 MB/s, BLAKE3 3.2 GB/s, all five at once 258 MB/s; 3 GiB file: progress every ≤ 113 ms, worst UI frame 38–60 ms while hashing | same |
 | 100-page PDF: first page visible | < 300 ms | 133–287 ms once the PDF module is loaded; 490–570 ms for the first PDF of a session (worker + fonts cold) | same |
 
 The Linux numbers are from a headless VM with software rendering; ~350 ms of each start is

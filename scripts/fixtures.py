@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Create self-test fixtures: scripts/fixtures.py <dir>"""
-import os, sys, struct, zlib
+import os, sys, struct, zlib, shutil
 
 d = sys.argv[1]
+# Outputs written by earlier self-test runs; operations refuse to overwrite.
+for rel in ("pdf/out", "archives/out"):
+    shutil.rmtree(os.path.join(d, rel), ignore_errors=True)
 os.makedirs(os.path.join(d, "enc"), exist_ok=True)
 os.makedirs(os.path.join(d, "notes", "sub"), exist_ok=True)
 
@@ -166,6 +169,17 @@ for stale in ("escaped.txt",):
     p = os.path.join(d, stale)
     if os.path.exists(p):
         os.remove(p)
+
+# Hashing
+import hashlib
+w("hash/abc.txt", b"abc")
+w("hash/empty.txt", b"")
+w("hash/SHA256SUMS", (hashlib.sha256(b"abc").hexdigest() + "  abc.txt\n" + hashlib.sha256(b"").hexdigest() + " *empty.txt\n" + "0" * 64 + "  abc.txt\n" + hashlib.sha256(b"x").hexdigest() + "  missing.bin\n").encode())
+w("hash/files.md5", (hashlib.md5(b"abc").hexdigest() + "  abc.txt\n").encode())
+big = os.path.join(d, "hash", "big.bin")
+if not os.path.exists(big):
+    with open(big, "wb") as f:
+        f.truncate(3 * 1024 * 1024 * 1024)  # sparse 3 GiB
 
 # 50 MB+ log file
 big = os.path.join(d, "big.log")

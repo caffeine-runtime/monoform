@@ -58,6 +58,14 @@ export function Exists(arg1) {
   return window['go']['app']['App']['Exists'](arg1);
 }
 
+export function HashFile(arg1, arg2) {
+  return window['go']['app']['App']['HashFile'](arg1, arg2);
+}
+
+export function HashVerify(arg1) {
+  return window['go']['app']['App']['HashVerify'](arg1);
+}
+
 export function ListDir(arg1) {
   return window['go']['app']['App']['ListDir'](arg1);
 }

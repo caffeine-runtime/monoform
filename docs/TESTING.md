@@ -29,6 +29,8 @@ needs a window manager).
 
 | `m5` then `scripts/verify-archives.sh <dir>` | fixtures dir | zip browsed and navigated; inner markdown/image open read-only in their modules; archive expands in the sidebar tree (nested folders too); zip, tar.gz, 7z and rar extract; RAR shows the read-only explanation; `slip.zip` extracts only its safe file and reports `../escaped.txt`, `/absolute.txt` and an escaping symlink; a ZIP is created from a folder + file. The script checks the created ZIP with `unzip -t`, `7z t` and Python's zipfile, and that nothing escaped. |
 
+| `m6` | fixtures dir | MD5/SHA-1/SHA-256/SHA-512/BLAKE3 of `abc` and the empty file equal the published test vectors; pasting a matching/wrong/foreign-length hash gives match/mismatch/"different algorithm"; `SHA256SUMS` opens in the checksum view with 2 OK, 1 mismatch, 1 missing (all four rows rendered, incl. a duplicate name); BSD-style `files.md5` verifies; a sparse 3 GiB file reports progress at least every 250 ms with UI frames logged, and is cancelled from the status-bar button with no result left behind |
+
 Office fixtures live in `internal/office/testdata` and are regenerated with `scripts/office/make-fixtures.sh` (needs LibreOffice; dev-only).
 
 `scripts/fixtures.py` modifies nothing outside the given directory; re-run it before `m1` (the round-trip test edits files).
@@ -106,3 +108,9 @@ Run on each OS before a release.
 - [ ] An archive with `../` entries reports them as skipped and writes nothing outside the chosen folder.
 - [ ] Compress to ZIP… on a folder; the result opens in Explorer/Finder/the Linux archive manager.
 - [ ] RAR/7z show the read-only explanation.
+
+### Hashing
+- [ ] Palette → "Compute hash…" (Mod+Alt+H) on a multi-GB file: progress bar, time estimate, status-bar entry after 0.3 s; cancel works; UI stays usable.
+- [ ] Paste a hash from a download page (with spaces / upper case / `sha256:` prefix) → green "Matches", or red with the expected/actual shown.
+- [ ] Open a `SHA256SUMS` from a Linux ISO download → each file listed OK/mismatch/missing; "Verify again" after editing a file.
+- [ ] Copy buttons put the lower-case hex on the clipboard.
