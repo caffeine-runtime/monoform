@@ -38,6 +38,9 @@ jobs:
       - name: Frontend unit tests
         working-directory: frontend
         run: npm test
+      - name: Frontend build (embedded into the Go binary)
+        working-directory: frontend
+        run: npm run build
       - name: Go vet and tests
         run: |
           go vet -tags webkit2_41 ./...
