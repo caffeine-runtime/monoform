@@ -34,6 +34,13 @@ type Session struct {
 	Expanded []string `json:"expanded"`
 }
 
+// Semantic configures the optional search by meaning (off by default).
+type Semantic struct {
+	Enabled bool `json:"enabled"`
+	// UnloadAfter is how many idle seconds the model stays in memory.
+	UnloadAfter int `json:"unloadAfter"`
+}
+
 type Settings struct {
 	Version        int      `json:"version"`
 	Theme          string   `json:"theme"` // "system", "dark" or "light"
@@ -46,6 +53,7 @@ type Settings struct {
 	WordWrap       bool     `json:"wordWrap"`
 	FontSize       int      `json:"fontSize"`
 	Session        Session  `json:"session"`
+	Semantic       Semantic `json:"semantic"`
 }
 
 func Defaults() Settings {
@@ -59,6 +67,7 @@ func Defaults() Settings {
 		SidebarWidth:   260,
 		FontSize:       14,
 		Session:        Session{Tabs: []SessionTab{}, Expanded: []string{}},
+		Semantic:       Semantic{UnloadAfter: 60},
 	}
 }
 
@@ -186,6 +195,9 @@ func normalize(v Settings) Settings {
 	}
 	if v.Session.Active < 0 || v.Session.Active >= len(v.Session.Tabs) {
 		v.Session.Active = 0
+	}
+	if v.Semantic.UnloadAfter < 10 || v.Semantic.UnloadAfter > 3600 {
+		v.Semantic.UnloadAfter = d.Semantic.UnloadAfter
 	}
 	v.Version = d.Version
 	return v

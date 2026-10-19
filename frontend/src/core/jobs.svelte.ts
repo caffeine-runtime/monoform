@@ -113,7 +113,43 @@ class JobsState {
   }
 
   cancel(id: string) {
-    void api.CancelJob(id);
+    const local = this.locals.get(id);
+    if (local) local();
+    else void api.CancelJob(id);
+  }
+
+  private locals = new Map<string, () => void>();
+  private localSeq = 0;
+
+  /**
+   * A job that runs in the frontend (e.g. embedding in a worker) but shows in
+   * the status bar like backend jobs, with the same 300 ms delay and cancel.
+   */
+  local(label: string, onCancel: () => void) {
+    const id = `local-${++this.localSeq}`;
+    const view: JobView = { id, kind: 'local', label, done: 0, total: 0, message: '', visible: false, started: Date.now() };
+    this.locals.set(id, onCancel);
+    this.list = [...this.list, view];
+    const timer = setTimeout(() => {
+      view.visible = true;
+      this.refresh(view);
+    }, SHOW_AFTER_MS);
+    return {
+      id,
+      set: (done: number, total: number, message = '') => {
+        Object.assign(view, { done, total, message });
+        this.refresh(view);
+      },
+      label: (l: string) => {
+        view.label = l;
+        this.refresh(view);
+      },
+      end: () => {
+        clearTimeout(timer);
+        this.locals.delete(id);
+        this.list = this.list.filter((j) => j.id !== id);
+      },
+    };
   }
 
   private refresh(view: JobView) {

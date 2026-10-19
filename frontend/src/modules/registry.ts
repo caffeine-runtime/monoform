@@ -86,6 +86,14 @@ export function registerBuiltinModules() {
     load: () => import('./hash'),
   });
   modules.register({
+    id: 'semantic',
+    name: 'Search by meaning',
+    extensions: [],
+    mimeTypes: [],
+    tool: true,
+    load: () => import('./semantic'),
+  });
+  modules.register({
     id: 'checksum',
     name: 'Checksums',
     extensions: ['sha256', 'sha1', 'md5', 'sha512', 'b3', 'sha256sum', 'md5sum', 'sha1sum', 'sha512sum'],

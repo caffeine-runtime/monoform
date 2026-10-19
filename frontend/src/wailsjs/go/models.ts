@@ -100,6 +100,66 @@ export namespace app {
 	        this.patterns = source["patterns"];
 	    }
 	}
+	export class PassagesResult {
+	    size: number;
+	    mod: number;
+	    passages: semantic.Passage[];
+	
+	    static createFrom(source: any = {}) {
+	        return new PassagesResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.size = source["size"];
+	        this.mod = source["mod"];
+	        this.passages = this.convertValues(source["passages"], semantic.Passage);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class SemanticInfo {
+	    installed: boolean;
+	    modelId: string;
+	    repo: string;
+	    revision: string;
+	    license: string;
+	    modelBytes: number;
+	    dims: number;
+	    modelDir: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SemanticInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.installed = source["installed"];
+	        this.modelId = source["modelId"];
+	        this.repo = source["repo"];
+	        this.revision = source["revision"];
+	        this.license = source["license"];
+	        this.modelBytes = source["modelBytes"];
+	        this.dims = source["dims"];
+	        this.modelDir = source["modelDir"];
+	    }
+	}
 
 }
 
@@ -413,6 +473,128 @@ export namespace search {
 
 }
 
+export namespace semantic {
+	
+	export class Hit {
+	    path: string;
+	    line: number;
+	    score: number;
+	    snippet: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Hit(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.line = source["line"];
+	        this.score = source["score"];
+	        this.snippet = source["snippet"];
+	    }
+	}
+	export class Item {
+	    line: number;
+	    text: string;
+	    vector: number[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Item(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.line = source["line"];
+	        this.text = source["text"];
+	        this.vector = source["vector"];
+	    }
+	}
+	export class Passage {
+	    line: number;
+	    text: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Passage(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.line = source["line"];
+	        this.text = source["text"];
+	    }
+	}
+	export class PendingFile {
+	    path: string;
+	    size: number;
+	    partial: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new PendingFile(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.size = source["size"];
+	        this.partial = source["partial"];
+	    }
+	}
+	export class Pending {
+	    files: PendingFile[];
+	    total: number;
+	    indexed: number;
+	    passages: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Pending(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.files = this.convertValues(source["files"], PendingFile);
+	        this.total = source["total"];
+	        this.indexed = source["indexed"];
+	        this.passages = source["passages"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	export class Status {
+	    files: number;
+	    passages: number;
+	    bytes: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Status(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.files = source["files"];
+	        this.passages = source["passages"];
+	        this.bytes = source["bytes"];
+	    }
+	}
+
+}
+
 export namespace server {
 	
 	export class AssetResult {
@@ -434,6 +616,20 @@ export namespace server {
 
 export namespace settings {
 	
+	export class Semantic {
+	    enabled: boolean;
+	    unloadAfter: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Semantic(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.unloadAfter = source["unloadAfter"];
+	    }
+	}
 	export class SessionTab {
 	    kind: string;
 	    path?: string;
@@ -507,6 +703,7 @@ export namespace settings {
 	    wordWrap: boolean;
 	    fontSize: number;
 	    session: Session;
+	    semantic: Semantic;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -525,6 +722,7 @@ export namespace settings {
 	        this.wordWrap = source["wordWrap"];
 	        this.fontSize = source["fontSize"];
 	        this.session = this.convertValues(source["session"], Session);
+	        this.semantic = this.convertValues(source["semantic"], Semantic);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

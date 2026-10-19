@@ -181,6 +181,63 @@ if not os.path.exists(big):
     with open(big, "wb") as f:
         f.truncate(3 * 1024 * 1024 * 1024)  # sparse 3 GiB
 
+# Search by meaning: topics whose wording doesn't overlap the test queries.
+shutil.rmtree(os.path.join(d, "meaning"), ignore_errors=True)
+w("meaning/aurora.md", b"""# Polar lights
+
+Charged particles streaming from the sun collide with oxygen and nitrogen high in
+the atmosphere. Near the magnetic poles these collisions make curtains of green
+and red light ripple across the dark winter sky.
+""")
+w("meaning/sourdough.md", b"""# Bread notes
+
+Feed the starter the evening before. Mix flour, water and salt, fold the dough
+every half hour, then let it proof slowly in the fridge overnight before baking
+in a very hot dutch oven.
+""")
+w("meaning/server.go", b"""package main
+
+import "net/http"
+
+// main answers every request with a greeting.
+func main() {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("hi")) })
+	http.ListenAndServe(":8080", nil)
+}
+""")
+w("meaning/garden.txt", b"""Plant tomato seedlings after the last frost, about sixty centimetres apart.
+Water deeply twice a week and tie the stems to stakes as the fruit gets heavy.
+""")
+w("meaning/invoice.txt", b"""Invoice 2026-114. Consulting services, 12 hours at 95 EUR. Payment due within
+30 days to the bank account below. VAT reverse charge applies.
+""")
+w("meaning/cats.md", b"""# Our cat
+
+Miso sleeps most of the day on the radiator, purrs loudly and insists on
+breakfast at five in the morning.
+""")
+w("meaning/package-lock.json", b'{"lockfileVersion": 3}')
+w("meaning/notes.md", ("""# Mixed notes
+
+Roman engineers carried water into their cities over long stone channels. The
+channels dropped only a few centimetres per kilometre, crossed valleys on tall
+arched bridges, and fed public fountains, baths and private houses. Lead pipes
+spread the water inside the walls, and keepers inspected the channels for leaks
+and for illegal taps by farmers along the route. Many of the arches still stand.
+
+In the year 79 the mountain above the bay erupted. Ash and pumice buried the
+towns at its foot for centuries, preserving bread in ovens, graffiti on walls
+and the hollow shapes of people caught in the fall. Excavations began in the
+eighteenth century and are still going on, with new rooms and frescoes found
+almost every year by the archaeologists working at the site today.
+
+White should fight for the centre from the first move. Develop the knights
+before the bishops, castle early to keep the king safe, and avoid moving the
+same piece twice before every piece is out. Do not bring the queen out too
+soon, where she can be chased around by smaller pieces while the opponent
+develops with tempo. Connect the rooks once the minor pieces are developed.
+""").encode())
+
 # 50 MB+ log file
 big = os.path.join(d, "big.log")
 if not os.path.exists(big):

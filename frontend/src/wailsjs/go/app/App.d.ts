@@ -8,6 +8,7 @@ import {fs} from '../models';
 import {pdf} from '../models';
 import {settings} from '../models';
 import {search} from '../models';
+import {semantic} from '../models';
 import {office} from '../models';
 
 export function ArchiveCreateZip(arg1:Array<string>,arg2:string):Promise<string>;
@@ -77,6 +78,26 @@ export function SaveFileDialog(arg1:string,arg2:string,arg3:Array<app.FileFilter
 export function SaveSettings(arg1:settings.Settings):Promise<void>;
 
 export function SearchFolder(arg1:string,arg2:search.Options):Promise<string>;
+
+export function SemanticClearIndex():Promise<void>;
+
+export function SemanticDownload():Promise<string>;
+
+export function SemanticInfo():Promise<app.SemanticInfo>;
+
+export function SemanticPassages(arg1:string):Promise<app.PassagesResult>;
+
+export function SemanticPending(arg1:string):Promise<semantic.Pending>;
+
+export function SemanticPut(arg1:string,arg2:string,arg3:number,arg4:number,arg5:Array<semantic.Item>,arg6:string):Promise<void>;
+
+export function SemanticQuery(arg1:string,arg2:Array<number>,arg3:number):Promise<Array<semantic.Hit>>;
+
+export function SemanticRemoveModel():Promise<void>;
+
+export function SemanticStatus(arg1:string):Promise<semantic.Status>;
+
+export function SemanticUnload():Promise<void>;
 
 export function SetDirtyCount(arg1:number):Promise<void>;
 
