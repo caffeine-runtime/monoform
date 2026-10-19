@@ -17,6 +17,7 @@ import { dropHandlers } from './core/drop';
 import { registerBuiltinModules } from './modules/registry';
 import { registerArchiveIntegration } from './core/archives';
 import { registerTools } from './core/tools';
+import { semantic } from './core/semantic/semantic.svelte';
 import { OnFileDrop } from './wailsjs/runtime/runtime';
 
 function inEditable(t: EventTarget | null): boolean {
@@ -103,6 +104,7 @@ async function start() {
   );
   await workspace.restore(info.settings.session);
   for (const p of info.launchFiles ?? []) await workspace.openPath(p);
+  semantic.start();
 
   if (info.testScript) {
     const { runSelfTest } = await import('./test/selftest');

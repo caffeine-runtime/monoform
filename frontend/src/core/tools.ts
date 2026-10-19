@@ -3,6 +3,7 @@ import { api } from './backend';
 import { commands } from './commands';
 import { extname } from './paths';
 import { workspace } from './tabs.svelte';
+import { semantic } from './semantic/semantic.svelte';
 import { treeMenuContributions } from '../shell/treeActions';
 import type { MenuItem } from './ui.svelte';
 
@@ -28,6 +29,21 @@ export function registerTools() {
         const r = await api.OpenFilesDialog('Choose a checksum file (.sha256, .md5, SHA256SUMS…)', [{ name: 'Checksum files', patterns: '*.sha256;*.sha1;*.md5;*.sha512;*.b3;*SUMS;*.txt' }]);
         if (r?.[0]) await workspace.openPath(r[0], { moduleId: 'checksum' });
       },
+    },
+    { id: 'semantic.settings', title: 'Search by meaning…', category: 'Search', run: () => workspace.openTool('semantic') },
+    {
+      id: 'semantic.toggle',
+      title: 'Turn search by meaning on/off',
+      category: 'Search',
+      // Turning on needs consent (download, memory), so it goes through the settings page.
+      run: () => (semantic.enabled ? void semantic.disable() : workspace.openTool('semantic', undefined, { state: { consent: true } })),
+    },
+    {
+      id: 'semantic.reindex',
+      title: 'Update search-by-meaning index',
+      category: 'Search',
+      when: () => semantic.usable && !!workspace.folder,
+      run: () => void semantic.indexFolder(workspace.folder!),
     },
   );
   treeMenuContributions.push((item) => {

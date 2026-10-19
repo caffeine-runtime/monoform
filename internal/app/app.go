@@ -66,6 +66,7 @@ func New(start time.Time, launchFiles []string) *App {
 		}
 	}
 	a.registerRoutes()
+	a.registerModelRoute()
 	return a
 }
 
@@ -89,6 +90,7 @@ func (a *App) Startup(ctx context.Context) {
 // Shutdown is the Wails OnShutdown hook.
 func (a *App) Shutdown(ctx context.Context) {
 	a.Jobs.CancelAll()
+	a.flushSemantic()
 	cleanupTemp()
 	if a.watcher != nil {
 		a.watcher.Close()

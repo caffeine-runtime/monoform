@@ -138,6 +138,46 @@ export function SearchFolder(arg1, arg2) {
   return window['go']['app']['App']['SearchFolder'](arg1, arg2);
 }
 
+export function SemanticClearIndex() {
+  return window['go']['app']['App']['SemanticClearIndex']();
+}
+
+export function SemanticDownload() {
+  return window['go']['app']['App']['SemanticDownload']();
+}
+
+export function SemanticInfo() {
+  return window['go']['app']['App']['SemanticInfo']();
+}
+
+export function SemanticPassages(arg1) {
+  return window['go']['app']['App']['SemanticPassages'](arg1);
+}
+
+export function SemanticPending(arg1) {
+  return window['go']['app']['App']['SemanticPending'](arg1);
+}
+
+export function SemanticPut(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['app']['App']['SemanticPut'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function SemanticQuery(arg1, arg2, arg3) {
+  return window['go']['app']['App']['SemanticQuery'](arg1, arg2, arg3);
+}
+
+export function SemanticRemoveModel() {
+  return window['go']['app']['App']['SemanticRemoveModel']();
+}
+
+export function SemanticStatus(arg1) {
+  return window['go']['app']['App']['SemanticStatus'](arg1);
+}
+
+export function SemanticUnload() {
+  return window['go']['app']['App']['SemanticUnload']();
+}
+
 export function SetDirtyCount(arg1) {
   return window['go']['app']['App']['SetDirtyCount'](arg1);
 }

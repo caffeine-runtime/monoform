@@ -41,10 +41,14 @@
   progress and cancel for multi-GB files; paste-to-compare with algorithm guessing; checksum files (GNU and BSD
   formats, `SHA256SUMS`, `*.sha256`, `*.md5`, …) open in a verification view; tree/palette/drop entry points.
 
+- **M6b — Omnisearch + search by meaning (added on request).** The Ctrl/Cmd+K box now searches commands, file
+  names and text inside files together. Optional, off-by-default search by meaning with EmbeddingGemma 2
+  (Apache-2.0, 4-bit text encoder) running locally in a web worker on WebAssembly: explicit consent before the
+  one-time 206 MB verified download, incremental two-pass background indexing, int8 index per folder, worker
+  unloaded when idle. Seven no-shared-words test queries rank the right file first.
+
 ## Next
-- **M6b Omnisearch** (added on request: one box over file names, contents and commands; optional, off-by-default
-  semantic search with a local Gemma embedding model in a worker that is unloaded when idle — needs a one-time
-  model download and the Gemma licence, both to be confirmed in the UI), M7 Packaging.
+- M7 Packaging: GitHub Actions for Windows/macOS/Linux, file associations (opt-in), README with screenshots.
 
 ## Performance (measured)
 
@@ -58,6 +62,7 @@
 | Folder search | streamed | 200 files in 33–45 ms | same |
 | 1M-row CSV (40 MB) | smooth scroll, sort | loads in 1.1–2.1 s (worst frame 54–61 ms); scrolling worst frame 60 ms (100 frames, 4 above 50 ms, all on large jumps); sort 2.6 s in the worker with UI frames ≤ 40 ms; filter 0.7 s | same |
 | Hashing (page cache warm) | progress ≥ 4/s, UI responsive | SHA-256 308 MB/s, BLAKE3 3.2 GB/s, all five at once 258 MB/s; 3 GiB file: progress every ≤ 113 ms, worst UI frame 38–60 ms while hashing | same |
+| Search by meaning (optional) | no freeze; memory returned when idle | 25–45 tokens/s (single-threaded WASM), query 1.0–1.3 s, model load 8–9 s, ~0.8 GB extra while loaded (webview RSS 0.34 → 1.11 GB) and freed on unload; worst UI frame 23–40 ms while indexing, 50–73 ms during a cold model load | same |
 | 100-page PDF: first page visible | < 300 ms | 133–287 ms once the PDF module is loaded; 490–570 ms for the first PDF of a session (worker + fonts cold) | same |
 
 The Linux numbers are from a headless VM with software rendering; ~350 ms of each start is
@@ -71,3 +76,6 @@ available here).
 - The first PDF opened in a session takes ~0.5 s to show page 1 (cold worker/fonts); later ones meet the 300 ms budget.
 - PDF annotation colours/thickness use pdf.js defaults (no colour picker yet).
 - Word editing: creating new bullet/numbered lists, inserting images/tables and editing headers/footers aren't supported yet (existing ones are preserved). Legacy .doc conversion keeps text only; .xls conversion keeps values (not formulas/formatting).
+- Search by meaning is slow to index (single-threaded WebAssembly; the webview can't run WASM threads — see DECISIONS) — a large notes folder takes hours on slow hardware, though every file gets one passage early. A query waits for at most one in-flight indexing passage (a few seconds on slow machines).
+- A cold load of the search model produces one 50–75 ms UI frame on the test VM (budget 50 ms).
+- Search by meaning indexes plain text/Markdown/code only (not PDFs or Word files yet).

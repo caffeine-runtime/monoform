@@ -36,3 +36,5 @@ export { default as Regex } from '@lucide/svelte/icons/regex';
 export { default as WholeWord } from '@lucide/svelte/icons/whole-word';
 export { default as ListCollapse } from '@lucide/svelte/icons/list-collapse';
 export { default as Lock } from '@lucide/svelte/icons/lock';
+export { default as TextSearch } from '@lucide/svelte/icons/text-search';
+export { default as Sparkles } from '@lucide/svelte/icons/sparkles';

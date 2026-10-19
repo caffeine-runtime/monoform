@@ -31,10 +31,12 @@ needs a window manager).
 
 | `m6` | fixtures dir | MD5/SHA-1/SHA-256/SHA-512/BLAKE3 of `abc` and the empty file equal the published test vectors; pasting a matching/wrong/foreign-length hash gives match/mismatch/"different algorithm"; `SHA256SUMS` opens in the checksum view with 2 OK, 1 mismatch, 1 missing (all four rows rendered, incl. a duplicate name); BSD-style `files.md5` verifies; a sparse 3 GiB file reports progress at least every 250 ms with UI frames logged, and is cancelled from the status-bar button with no result left behind |
 
+| `m6b` | fixtures dir; env `HIA_MODEL_DIR=<empty dir> HIA_MODEL_URL=http://127.0.0.1:8765 HIA_CACHE=<empty dir>` with the model files served by `python3 -m http.server 8765` from a copy of the pinned model (see `internal/semantic/model.go` for the four files) | search box finds text in files with the feature off and shows no "By meaning"; settings page shows the consent (license, source, memory) and nothing happens before agreeing; download is SHA-256-verified; indexing runs in two passes in the background (lock file skipped) with UI frames logged; seven queries that share no words with the files rank the right file first (and the right passage line); "By meaning" rows open the file; editing one file re-embeds only that file; the model unloads after the idle timeout and reloads on the next query; turning off unloads it and hides the section |
+
 Office fixtures live in `internal/office/testdata` and are regenerated with `scripts/office/make-fixtures.sh` (needs LibreOffice; dev-only).
 
 `scripts/fixtures.py` modifies nothing outside the given directory; re-run it before `m1` (the round-trip test edits files).
-`scripts/screenshot.sh out.png "<folder>|<files>|<commands>|<search>"` captures the window in a given state.
+`scripts/screenshot.sh out.png "<folder>|<files>|<commands>|<search>|<palette query>|<wait ms>"` captures the window in a given state (set `SHOT_DELAY` for long waits).
 
 ## Manual checklist (needs eyes)
 
@@ -114,3 +116,11 @@ Run on each OS before a release.
 - [ ] Paste a hash from a download page (with spaces / upper case / `sha256:` prefix) → green "Matches", or red with the expected/actual shown.
 - [ ] Open a `SHA256SUMS` from a Linux ISO download → each file listed OK/mismatch/missing; "Verify again" after editing a file.
 - [ ] Copy buttons put the lower-case hex on the clipboard.
+
+### Search
+- [ ] Ctrl/Cmd+K, type a word that appears inside files → "In files" rows with file:line; Enter opens the file at that line.
+- [ ] "Turn search by meaning on/off" opens the terms; nothing downloads until the box is ticked; the status bar shows download progress and Cancel works.
+- [ ] With a real notes folder: the status bar shows "Indexing for search by meaning" with a time estimate; typing stays smooth while it runs.
+- [ ] A query phrased differently from the text ("money I owe" for an invoice) finds the right file under "By meaning".
+- [ ] After the idle timeout the app's memory drops back (Activity Monitor / Task Manager / `ps`); the next query reloads the model (~10 s on slow machines).
+- [ ] "Remove model…" deletes the model and indexes; the feature is off afterwards.

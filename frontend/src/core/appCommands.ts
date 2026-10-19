@@ -36,7 +36,7 @@ const hasFile = () => !!workspace.active?.filePath;
 
 export function registerAppCommands() {
   commands.register(
-    { id: 'app.palette', title: 'Show all commands', category: 'View', shortcut: ['Mod+K', 'Mod+Shift+P'], run: () => (ui.paletteOpen ? (ui.paletteOpen = false) : ui.openPalette()) },
+    { id: 'app.palette', title: 'Search files, text and commands', category: 'View', shortcut: ['Mod+K', 'Mod+Shift+P'], run: () => (ui.paletteOpen ? (ui.paletteOpen = false) : ui.openPalette()) },
     { id: 'file.quickOpen', title: 'Go to file…', category: 'File', shortcut: 'Mod+P', run: () => ui.openPalette('') },
     { id: 'file.open', title: 'Open file…', category: 'File', shortcut: 'Mod+O', run: openFilesDialog },
     { id: 'file.openFolder', title: 'Open folder…', category: 'File', shortcut: 'Mod+Shift+O', run: openFolderDialog },
