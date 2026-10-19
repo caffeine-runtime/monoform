@@ -12,7 +12,7 @@ export { pdfjs };
 // opening a PDF doesn't pay for worker start-up.
 let shared: InstanceType<typeof pdfjs.PDFWorker> | null = null;
 export function sharedWorker() {
-  if (!shared || shared.destroyed) shared = new pdfjs.PDFWorker({ name: 'hia-pdf' });
+  if (!shared || shared.destroyed) shared = new pdfjs.PDFWorker({ name: 'hia-pdf' as unknown as null });
   return shared;
 }
 sharedWorker();

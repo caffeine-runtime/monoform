@@ -7,7 +7,7 @@ const TEXT_EXT = [
   'js', 'mjs', 'cjs', 'jsx', 'ts', 'mts', 'cts', 'tsx', 'svelte', 'vue', 'go', 'mod', 'sum', 'rs', 'py', 'rb', 'php', 'java', 'kt', 'kts',
   'c', 'h', 'cc', 'cpp', 'cxx', 'hpp', 'hh', 'cs', 'swift', 'm', 'mm', 'sh', 'bash', 'zsh', 'fish', 'ps1', 'bat', 'cmd',
   'sql', 'lua', 'pl', 'r', 'dart', 'scala', 'clj', 'ex', 'exs', 'erl', 'hs', 'elm', 'jl', 'nim', 'zig', 'tex', 'rst',
-  'adoc', 'gitignore', 'gitattributes', 'editorconfig', 'dockerfile', 'makefile', 'cmake', 'gradle', 'diff', 'patch', 'srt', 'vtt', 'jsonc',
+  'adoc', 'gitignore', 'gitattributes', 'editorconfig', 'dockerfile', 'makefile', 'cmake', 'gradle', 'diff', 'patch', 'srt', 'vtt',
 ];
 
 export function registerBuiltinModules() {
@@ -39,6 +39,22 @@ export function registerBuiltinModules() {
     extensions: ['pdf'],
     mimeTypes: ['application/pdf'],
     load: () => import('./pdf'),
+  });
+  modules.register({
+    id: 'data',
+    name: 'Data',
+    extensions: ['json', 'jsonc', 'geojson', 'webmanifest', 'yaml', 'yml'],
+    mimeTypes: ['application/json', 'application/yaml', 'application/geo+json', 'application/manifest+json'],
+    priority: 5,
+    load: () => import('./data/dataIndex'),
+  });
+  modules.register({
+    id: 'csv',
+    name: 'Table',
+    extensions: ['csv', 'tsv', 'tab'],
+    mimeTypes: ['text/csv', 'text/tab-separated-values'],
+    priority: 5,
+    load: () => import('./data/csvIndex'),
   });
   modules.register({
     id: 'binary',

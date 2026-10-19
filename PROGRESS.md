@@ -23,8 +23,12 @@
   `saveDocument()`; pdfcpu page operations on a working copy (reorder, rotate, delete, extract, append/merge,
   split). Outputs verified with qpdf and poppler.
 
+- **M4 — Data viewer.** JSON/JSONC: tree (lazy, worker-backed) + raw editor, validation with line/column,
+  format/minify, copy path/value. YAML: validation, tree, as-JSON view/save. CSV/TSV: delimiter + header
+  detection, virtualized editable grid (1M rows), sort, filter, add/delete rows, byte-exact saves.
+
 ## Next
-- M4 Data viewer, **M4b Office documents** (added on request: open, edit and save
+- **M4b Office documents** (added on request: open, edit and save
   .xlsx/.docx in place; .xls/.doc open and edit, saved as .xlsx/.docx because the legacy binary formats
   can't be written faithfully with permissive libraries), M5 Archives, M6 Hashing,
   **M6b Omnisearch** (added on request: one box over file names, contents and commands; optional, off-by-default
@@ -41,6 +45,7 @@
 | 50 MB log: typing / scrolling | no freeze | typing worst frame 35 ms; jump-scrolling across the file 54–88 ms | same |
 | 50 MB log: save | no freeze | 1.7–2.7 s, worst frame 40–57 ms (chunked upload) | same |
 | Folder search | streamed | 200 files in 33–45 ms | same |
+| 1M-row CSV (40 MB) | smooth scroll, sort | loads in 1.1–2.1 s (worst frame 54–61 ms); scrolling worst frame 60 ms (100 frames, 4 above 50 ms, all on large jumps); sort 2.6 s in the worker with UI frames ≤ 40 ms; filter 0.7 s | same |
 | 100-page PDF: first page visible | < 300 ms | 133–287 ms once the PDF module is loaded; 490–570 ms for the first PDF of a session (worker + fonts cold) | same |
 
 The Linux numbers are from a headless VM with software rendering; ~350 ms of each start is

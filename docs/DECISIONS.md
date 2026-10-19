@@ -60,6 +60,15 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 - **Password-protected PDFs show a clear message**; opening them is part of the v2 encryption work.
 - **Thumbnail drag-and-drop moves the whole selection as a block**; Ctrl/Cmd-click toggles, Shift-click selects a range.
 
+- **JSON errors come from our own scanner** (`modules/data/jsonparse.ts`): `JSON.parse` is tried first for speed; on failure the scanner finds the exact line/column with a human message. JavaScriptCore's `JSON.parse` messages carry no position, so relying on them would break on macOS/Linux.
+- **JSON/YAML trees are served lazily by a worker** that keeps the parsed value; the tree requests children of a path (500 at a time, "show more" for bigger containers). A 50 MB JSON never has to be cloned to the main thread or rendered as DOM. "Expand all" is capped at 2,000 containers.
+- **JSONC** (`.jsonc`) accepts comments and trailing commas; **YAML** uses the `yaml` package (ISC) with unique-key checking; multi-document YAML shows as an array of documents. YAML is edited as text; "As JSON" shows a read-only conversion that can be saved as a `.json` file.
+- **Format/Minify rewrite the editor text in one transaction** (undoable), using 2-space indentation.
+- **CSV/TSV live in a worker** that keeps the decoded text plus a `Float64Array` of record offsets; the grid fetches 200-row blocks. Sorting uses per-column keys (numeric when ≥ 90 % of non-empty values are numbers, else case-insensitive text; empty cells last), filtering is a case-insensitive substring match on the raw record.
+- **CSV saves are byte-exact for untouched rows**: each record is written back from its original text slice including its own line terminator; only edited rows are re-serialized (minimal quoting). Encoding, BOM and delimiter are preserved. Added rows use the file's dominant line ending.
+- **Header detection**: a first row is a header when it is non-empty, unique, and is text above numeric/date columns (or, for all-text tables, its values don't repeat below it). It can be toggled in the toolbar; the delimiter can be overridden.
+- **Very tall grids use a scaled scrollbar** (browsers cap element height at ~16–33 M px): above 8 M px of rows, the scrollbar position maps proportionally to rows. Rows sit at their virtual positions inside one container moved by a single transform, which keeps scrolling at roughly one paint per frame.
+
 ## Look & feel
 
 - **Darker palette than the brief's starting tokens** (user request): dark `--bg #1f1e1c`, sidebar `#181716`; light `--bg #f6f4ee`.
@@ -83,6 +92,7 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 | golang.org/x/image (bmp, webp decode) | BSD-3-Clause | image encoding |
 | github.com/HugoSmits86/nativewebp | MIT | WebP (lossless) encoding |
 | pdfjs-dist (incl. OpenJPEG BSD-2, PDFium JBIG2 BSD-3, QCMS MIT wasm) | Apache-2.0 | PDF rendering, annotations, forms |
+| yaml | ISC | YAML parsing |
 | github.com/pdfcpu/pdfcpu (+ hhrutter/tiff BSD-3, xdg-go/stringprep Apache-2.0, go.yaml.in/yaml Apache-2.0, mattn/go-runewidth MIT, clipperhouse/uax29 MIT) | Apache-2.0 | PDF page operations |
 
 `scripts/licenses.py` lists every Go module linked into the binary and every runtime npm package with its licence and fails on anything not on the permissive allow-list (MIT, BSD, Apache-2.0, ISC, CC0, OFL, PSF/Python, Unlicense, 0BSD). `argparse` (PSF-2.0) is only used by markdown-it's CLI and isn't bundled; `@napi-rs/canvas` is a Node-only optional dependency of pdfjs-dist and isn't bundled either.

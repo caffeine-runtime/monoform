@@ -95,6 +95,20 @@ form_objs = [
 ]
 w("pdf/form.pdf", pdf(1, form_objs, "/AcroForm << /Fields [6 0 R 7 0 R] /DA (/Helv 0 Tf 0 g) /DR << /Font << /Helv 3 0 R >> >> >>", lambda i: "/Annots [6 0 R 7 0 R]"))
 
+# Data
+w("data/sample.json", b'{\n  "name": "Hold It All",\n  "version": 1,\n  "tags": ["fast", "calm"],\n  "nested": {"deep": {"list": [1, 2, {"x key": true}]}},\n  "nothing": null\n}\n')
+w("data/invalid.json", b'{\n  "a": 1,\n  "b": [1, 2,\n  "c": "missing bracket"\n}\n')
+w("data/sample.yaml", b"# config\nname: Hold It All\nports:\n  - 80\n  - 443\nowner:\n  name: Ann\n  active: true\n")
+w("data/invalid.yaml", b"name: ok\nlist:\n  - a\n - b\n")
+w("data/semi.csv", 'name;city;amount\r\n"Kowalski; Jan";Kraków;12,50\r\nAnn;"Paris\r\nFrance";7\r\nBob;Rome;100\r\n'.encode())
+big_csv = os.path.join(d, "data", "million.csv")
+if not os.path.exists(big_csv):
+    cities = ["Krakow", "Paris", "Rome", "Lisbon", "Oslo", "Tallinn", "Porto", "Gdansk"]
+    with open(big_csv, "w", newline="") as f:
+        f.write("id,name,city,amount,date\n")
+        for i in range(1, 1_000_001):
+            f.write(f"{i},user{(i * 7919) % 1000003},{cities[i % 8]},{(i * 37) % 100000 / 100:.2f},2026-{1 + i % 12:02}-{1 + i % 28:02}\n")
+
 # 50 MB+ log file
 big = os.path.join(d, "big.log")
 if not os.path.exists(big):
