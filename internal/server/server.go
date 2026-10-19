@@ -48,6 +48,7 @@ type Server struct {
 	Transforms map[string]Transform
 	// OnWrite is called after a successful save (watcher self-write suppression).
 	OnWrite func(path string)
+	pages   pageRoots
 }
 
 func NewToken() string {
@@ -85,6 +86,10 @@ func (s *Server) Middleware(next http.Handler) http.Handler {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if strings.HasPrefix(r.URL.Path, PagePrefix) {
+		s.servePage(w, r) // scoped page tokens, see pages.go
+		return
+	}
 	tok := r.URL.Query().Get("t")
 	if subtle.ConstantTimeCompare([]byte(tok), []byte(s.token)) != 1 {
 		http.Error(w, "forbidden", http.StatusForbidden)

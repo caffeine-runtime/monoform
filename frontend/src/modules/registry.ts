@@ -29,9 +29,25 @@ export function registerBuiltinModules() {
   modules.register({
     id: 'image',
     name: 'Image',
-    extensions: ['png', 'jpg', 'jpeg', 'jfif', 'gif', 'webp', 'bmp', 'svg', 'ora'],
-    mimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml'],
+    extensions: ['png', 'jpg', 'jpeg', 'jfif', 'gif', 'webp', 'bmp', 'ora'],
+    mimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/bmp'],
     load: () => import('./image'),
+  });
+  modules.register({
+    id: 'svg',
+    name: 'SVG',
+    extensions: ['svg'],
+    mimeTypes: ['image/svg+xml'],
+    priority: 10,
+    load: () => import('./svg'),
+  });
+  modules.register({
+    id: 'html',
+    name: 'Web page',
+    extensions: ['html', 'htm', 'xhtml'],
+    mimeTypes: ['text/html'],
+    priority: 10,
+    load: () => import('./html'),
   });
   modules.register({
     id: 'pdf',

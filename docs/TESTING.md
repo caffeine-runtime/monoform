@@ -37,6 +37,8 @@ needs a window manager).
 
 | `m9` then `scripts/verify-images.sh <dir>` | fixtures dir (`HIA_TIMEOUT=400`) | layers: add, paint, hide, 50 % opacity blend, duplicate, delete, reorder, merge, undo; eraser → transparent pixels survive a PNG save; rect selection copy (crop + position), paste as layer, delete pixels; magic wand bounds on the disc, Shift-add; text in Source Serif; saturation −100 desaturates (UI frames logged); background removal (corner alpha 0, subject 255, timings + UI frames); object selection on the disc and the square (timings); 30° rotation enlarges the canvas with transparent corners; 2-layer .ora round trip keeps names and editable text; Save a copy leaves the original untouched; "keep originals" makes Ctrl+S write a copy. The script checks the .ora with Python's zipfile/xml (mimetype first and stored, stack.xml, PNG layers, merged image, thumbnail). |
 
+| `m10` | fixtures dir | SVG opens in its own module; size from attributes; a broken edit reports the XML error and keeps the last render; fixing it re-renders at the new size; PNG export at 2× has the right size, letterbox transparency and colours; HTML opens in the page module with CSP and base injected, title, 1 remote reference and 1 external link detected and neutralised, banner shown, iframe fully sandboxed; the folder route served the stylesheet and image but not the script; with scripts on the script is served and the iframe is still not same-origin |
+
 Office fixtures live in `internal/office/testdata` and are regenerated with `scripts/office/make-fixtures.sh` (needs LibreOffice; dev-only).
 
 `scripts/fixtures.py` modifies nothing outside the given directory; re-run it before `m1` (the round-trip test edits files).
@@ -149,3 +151,8 @@ Run on each OS before a release.
 - [ ] Remove background on a portrait and a product photo → transparent PNG/WebP opens with transparency elsewhere.
 - [ ] Save with layers (.ora) → open in GIMP or Krita: layers and names present; reopen in Hold It All: text still editable.
 - [ ] Settings → Keep originals → edit and Ctrl+S → "name (edited).ext" appears, original unchanged.
+
+### SVG & HTML pages
+- [ ] An SVG exported from Illustrator/Inkscape renders like in a browser; Export PNG at 4× is sharp.
+- [ ] A saved web page (HTML + _files folder) shows its images and styles; remote fonts/images appear only after "Load remote content".
+- [ ] A page with JavaScript (e.g. an interactive chart) works after enabling Scripts; "Open in browser" opens it in the default browser.

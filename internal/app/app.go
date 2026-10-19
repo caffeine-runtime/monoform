@@ -5,7 +5,9 @@ package app
 
 import (
 	"context"
+	"errors"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -48,6 +50,7 @@ type App struct {
 func New(start time.Time, launchFiles []string) *App {
 	a := &App{start: start, launchFiles: launchFiles, books: office.NewBooks()}
 	a.Server = server.New(server.NewToken())
+	server.RecordPages = os.Getenv("HIA_TEST") != ""
 	path, err := settings.DefaultPath()
 	if err != nil {
 		path = filepath.Join(os.TempDir(), "HoldItAll", "settings.json")
@@ -355,6 +358,15 @@ func (a *App) OpenExternal(url string) {
 	}
 }
 
+// TestServedPages lists files the HTML page route served since the last
+// call. Only available in self-test mode (HIA_TEST set).
+func (a *App) TestServedPages() []string {
+	if os.Getenv("HIA_TEST") == "" {
+		return nil
+	}
+	return a.Server.ServedPages()
+}
+
 // TestWriteFile simulates another program changing a file. Only available
 // in self-test mode (HIA_TEST set).
 func (a *App) TestWriteFile(p, content string) error {
@@ -362,4 +374,30 @@ func (a *App) TestWriteFile(p, content string) error {
 		return os.ErrPermission
 	}
 	return os.WriteFile(p, []byte(content), 0o644)
+}
+
+// PageRoot returns a read-only token that serves dir to an HTML preview at
+// /__hia/page/<token>/ (see server/pages.go).
+func (a *App) PageRoot(dir string) (string, error) { return a.Server.PageRoot(dir) }
+
+// OpenInBrowser opens an existing local HTML or SVG file in the default
+// browser (where its scripts and remote content run normally).
+func (a *App) OpenInBrowser(p string) error {
+	ext := strings.ToLower(filepath.Ext(p))
+	if ext != ".html" && ext != ".htm" && ext != ".xhtml" && ext != ".svg" {
+		return errors.New("only HTML and SVG files can be opened in the browser")
+	}
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		return err
+	}
+	if st, err := os.Stat(abs); err != nil || st.IsDir() {
+		return errors.New("file not found")
+	}
+	u := url.URL{Scheme: "file", Path: filepath.ToSlash(abs)}
+	if runtime.GOOS == "windows" {
+		u.Path = "/" + u.Path
+	}
+	wruntime.BrowserOpenURL(a.ctx, u.String())
+	return nil
 }

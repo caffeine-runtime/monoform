@@ -102,6 +102,14 @@ export function OpenFolderDialog(arg1) {
   return window['go']['app']['App']['OpenFolderDialog'](arg1);
 }
 
+export function OpenInBrowser(arg1) {
+  return window['go']['app']['App']['OpenInBrowser'](arg1);
+}
+
+export function PageRoot(arg1) {
+  return window['go']['app']['App']['PageRoot'](arg1);
+}
+
 export function PdfOp(arg1, arg2, arg3) {
   return window['go']['app']['App']['PdfOp'](arg1, arg2, arg3);
 }
@@ -244,6 +252,10 @@ export function Stat(arg1) {
 
 export function TempPath(arg1) {
   return window['go']['app']['App']['TempPath'](arg1);
+}
+
+export function TestServedPages() {
+  return window['go']['app']['App']['TestServedPages']();
 }
 
 export function TestWriteFile(arg1, arg2) {

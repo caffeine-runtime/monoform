@@ -248,6 +248,28 @@ soon, where she can be chased around by smaller pieces while the opponent
 develops with tempo. Connect the rooks once the minor pieces are developed.
 """).encode())
 
+# HTML page with relative resources, a script, a remote image and links.
+w("web/index.html", b"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Fixture page</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js"></script>
+</head>
+<body>
+  <h1 id="h">Hello from a local page</h1>
+  <img src="img/pic.png" alt="local picture" width="40" height="30">
+  <img src="https://example.com/remote.png" alt="remote picture">
+  <p><a href="page2.html">Next page</a> and <a href="https://example.com/">an external site</a>.</p>
+</body>
+</html>
+""")
+w("web/style.css", b"body { background: #ffeecc; font-family: serif; } h1 { color: #aa2200; }")
+w("web/script.js", b"document.addEventListener('DOMContentLoaded', () => { document.getElementById('h').textContent = 'Script ran'; });")
+w("web/img/pic.png", png(40, 30, (30, 120, 220)))
+w("web/page2.html", b"<!doctype html><title>Second</title><p>Second page</p>")
+
 # 50 MB+ log file
 big = os.path.join(d, "big.log")
 if not os.path.exists(big):
