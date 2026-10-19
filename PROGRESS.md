@@ -67,8 +67,14 @@
   (exposure, brightness, contrast, highlights, shadows, saturation, vibrance, temperature, tint, hue, sharpen,
   blur, vignette, B&W, sepia, invert) with live preview, also limited to a selection; one-click background
   removal; "Save a copy" (and an option to always keep originals); save/open layered OpenRaster (.ora).
-- Planned next: M10 SVG editor, M10b HTML page viewer, M11 3D viewer, M12 audio player/editor, M13 video
-  player/editor.
+- **M10 — SVG.** Source and live preview side by side (preview through `<img>`, so scripts and external
+  references in the file never run), zoom/pan, transparent/light/dark background, XML errors with line and
+  column while the last good render stays, PNG export at 1×/2×/4×/custom width, open in browser.
+- **M10b — HTML pages.** Page / split / source views; the page renders in a sandboxed iframe with an injected
+  Content-Security-Policy: scripts off and remote content blocked by default (one click to allow either),
+  relative images/styles/scripts served from the page's folder by a read-only, folder-scoped route; external
+  links are disabled in the preview ("Open in browser" for the real thing).
+- Planned next: M11 3D viewer, M12 audio player/editor, M13 video player/editor.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

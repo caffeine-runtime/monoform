@@ -13,6 +13,7 @@ works offline, collects no telemetry and needs no account, and saves everything 
 | **Text & Markdown** | CodeMirror editor with byte-exact round-trips across encodings and line endings, find/replace, split/preview Markdown, image paste into `assets/`, folder search. |
 | **PDF** | Fast viewer with search and thumbnails; highlight, comment and ink annotations; form filling; reorder, rotate, delete, extract, merge, split. |
 | **Images** | Layered editor: transparency, selections (rectangle, lasso, magic wand, click an object, select subject) with copy/paste, brush/eraser, text in any installed font, free rotation, colour adjustments, one-click background removal, "save a copy", layers saved as OpenRaster (.ora). |
+| **SVG & web pages** | Edit SVG with a live preview and export PNG at any size; open HTML files in a safe preview (scripts and internet content off until you allow them) next to their source. |
 | **Data** | JSON/YAML trees with exact error positions; CSV/TSV grid that stays smooth at a million rows, with sort, filter and edits. |
 | **Word & Excel** | Edit `.docx` and `.xlsx` in place (formulas recalculate). Legacy `.doc`/`.xls` open too and save as `.docx`/`.xlsx`. |
 | **Archives** | Browse ZIP, TAR(.gz/.bz2/.xz/.zst), 7z and RAR like folders, open files inside, extract safely, create ZIPs. |
@@ -26,6 +27,7 @@ Everything is keyboard-reachable: press **Ctrl+K** (**⌘K** on macOS) and type.
 | ![PDF](docs/screenshots/pdf.png) | ![Spreadsheet](docs/screenshots/spreadsheet.png) |
 | ![Word document](docs/screenshots/word.png) | ![CSV grid](docs/screenshots/csv.png) |
 | ![Image editor with layers and a magic-wand selection](docs/screenshots/image-layers.png) | ![Colour adjustments on a selection](docs/screenshots/image-adjust.png) |
+| ![SVG editing](docs/screenshots/svg.png) | ![HTML page preview](docs/screenshots/html.png) |
 | ![Settings](docs/screenshots/settings.png) | ![Archive browser](docs/screenshots/archive.png) |
 | ![Search box](docs/screenshots/palette.png) | ![Checksum verification](docs/screenshots/checksums.png) |
 | ![Search by meaning](docs/screenshots/search-by-meaning.png) | ![Search by meaning: consent](docs/screenshots/search-by-meaning-consent.png) |

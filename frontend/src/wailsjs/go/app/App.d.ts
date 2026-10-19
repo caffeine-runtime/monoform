@@ -62,6 +62,10 @@ export function OpenFilesDialog(arg1:string,arg2:Array<app.FileFilter>):Promise<
 
 export function OpenFolderDialog(arg1:string):Promise<string>;
 
+export function OpenInBrowser(arg1:string):Promise<void>;
+
+export function PageRoot(arg1:string):Promise<string>;
+
 export function PdfOp(arg1:string,arg2:string,arg3:pdf.Op):Promise<string>;
 
 export function PdfPageCount(arg1:string):Promise<number>;
@@ -133,6 +137,8 @@ export function Siblings(arg1:string,arg2:Array<string>):Promise<Array<string>>;
 export function Stat(arg1:string):Promise<fs.Entry>;
 
 export function TempPath(arg1:string):Promise<string>;
+
+export function TestServedPages():Promise<Array<string>>;
 
 export function TestWriteFile(arg1:string,arg2:string):Promise<void>;
 
