@@ -4,6 +4,7 @@ import {app} from '../models';
 import {server} from '../models';
 import {filetype} from '../models';
 import {fs} from '../models';
+import {pdf} from '../models';
 import {settings} from '../models';
 import {search} from '../models';
 
@@ -14,6 +15,8 @@ export function CancelJob(arg1:string):Promise<boolean>;
 export function ConfirmQuit():Promise<void>;
 
 export function CopyAsset(arg1:string,arg2:string):Promise<server.AssetResult>;
+
+export function CopyFile(arg1:string,arg2:string):Promise<void>;
 
 export function CreateFile(arg1:string):Promise<void>;
 
@@ -37,11 +40,19 @@ export function OpenFilesDialog(arg1:string,arg2:Array<app.FileFilter>):Promise<
 
 export function OpenFolderDialog(arg1:string):Promise<string>;
 
+export function PdfOp(arg1:string,arg2:string,arg3:pdf.Op):Promise<string>;
+
+export function PdfPageCount(arg1:string):Promise<number>;
+
+export function PdfSplit(arg1:string,arg2:string,arg3:number):Promise<string>;
+
 export function QuickFiles(arg1:string,arg2:number):Promise<Array<string>>;
 
 export function Quit(arg1:number):Promise<void>;
 
 export function RelPath(arg1:string,arg2:string):Promise<string>;
+
+export function RemoveTemp(arg1:string):Promise<void>;
 
 export function Rename(arg1:string,arg2:string):Promise<void>;
 
@@ -58,6 +69,8 @@ export function SetTitle(arg1:string):Promise<void>;
 export function Siblings(arg1:string,arg2:Array<string>):Promise<Array<string>>;
 
 export function Stat(arg1:string):Promise<fs.Entry>;
+
+export function TempPath(arg1:string):Promise<string>;
 
 export function TestWriteFile(arg1:string,arg2:string):Promise<void>;
 

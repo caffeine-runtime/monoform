@@ -18,8 +18,13 @@
   save in the same format or Save As PNG/JPEG/WebP/GIF/BMP (re-encoded in Go). Crop+arrow+blur → JPG → reopen
   verified pixel-wise.
 
+- **M3 — PDF.** pdf.js viewer (worker, lazy pages, low-res-then-sharp detail canvas), search, thumbnails with
+  multi-select and drag-reorder, zoom/fit; highlight, text comment and ink annotations; form filling; save via
+  `saveDocument()`; pdfcpu page operations on a working copy (reorder, rotate, delete, extract, append/merge,
+  split). Outputs verified with qpdf and poppler.
+
 ## Next
-- M3 PDF, M4 Data viewer, **M4b Office documents** (added on request: open, edit and save
+- M4 Data viewer, **M4b Office documents** (added on request: open, edit and save
   .xlsx/.docx in place; .xls/.doc open and edit, saved as .xlsx/.docx because the legacy binary formats
   can't be written faithfully with permissive libraries), M5 Archives, M6 Hashing,
   **M6b Omnisearch** (added on request: one box over file names, contents and commands; optional, off-by-default
@@ -36,6 +41,7 @@
 | 50 MB log: typing / scrolling | no freeze | typing worst frame 35 ms; jump-scrolling across the file 54–88 ms | same |
 | 50 MB log: save | no freeze | 1.7–2.7 s, worst frame 40–57 ms (chunked upload) | same |
 | Folder search | streamed | 200 files in 33–45 ms | same |
+| 100-page PDF: first page visible | < 300 ms | 133–287 ms once the PDF module is loaded; 490–570 ms for the first PDF of a session (worker + fonts cold) | same |
 
 The Linux numbers are from a headless VM with software rendering; ~350 ms of each start is
 GTK/WebKitGTK process start-up before our page loads. Not yet measured on Windows/macOS (no machines
@@ -45,3 +51,5 @@ available here).
 - Start-up on the headless Linux VM is above the 500 ms budget; needs measuring on real hardware.
 - Opening a 50 MB file has one or two 80–120 ms frames on the software-rendered VM (budget 50 ms).
 - Markdown preview code blocks are not syntax-highlighted.
+- The first PDF opened in a session takes ~0.5 s to show page 1 (cold worker/fonts); later ones meet the 300 ms budget.
+- PDF annotation colours/thickness use pdf.js defaults (no colour picker yet).

@@ -18,6 +18,10 @@ export function CopyAsset(arg1, arg2) {
   return window['go']['app']['App']['CopyAsset'](arg1, arg2);
 }
 
+export function CopyFile(arg1, arg2) {
+  return window['go']['app']['App']['CopyFile'](arg1, arg2);
+}
+
 export function CreateFile(arg1) {
   return window['go']['app']['App']['CreateFile'](arg1);
 }
@@ -62,6 +66,18 @@ export function OpenFolderDialog(arg1) {
   return window['go']['app']['App']['OpenFolderDialog'](arg1);
 }
 
+export function PdfOp(arg1, arg2, arg3) {
+  return window['go']['app']['App']['PdfOp'](arg1, arg2, arg3);
+}
+
+export function PdfPageCount(arg1) {
+  return window['go']['app']['App']['PdfPageCount'](arg1);
+}
+
+export function PdfSplit(arg1, arg2, arg3) {
+  return window['go']['app']['App']['PdfSplit'](arg1, arg2, arg3);
+}
+
 export function QuickFiles(arg1, arg2) {
   return window['go']['app']['App']['QuickFiles'](arg1, arg2);
 }
@@ -72,6 +88,10 @@ export function Quit(arg1) {
 
 export function RelPath(arg1, arg2) {
   return window['go']['app']['App']['RelPath'](arg1, arg2);
+}
+
+export function RemoveTemp(arg1) {
+  return window['go']['app']['App']['RemoveTemp'](arg1);
 }
 
 export function Rename(arg1, arg2) {
@@ -104,6 +124,10 @@ export function Siblings(arg1, arg2) {
 
 export function Stat(arg1) {
   return window['go']['app']['App']['Stat'](arg1);
+}
+
+export function TempPath(arg1) {
+  return window['go']['app']['App']['TempPath'](arg1);
 }
 
 export function TestWriteFile(arg1, arg2) {

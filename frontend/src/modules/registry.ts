@@ -34,6 +34,13 @@ export function registerBuiltinModules() {
     load: () => import('./image'),
   });
   modules.register({
+    id: 'pdf',
+    name: 'PDF',
+    extensions: ['pdf'],
+    mimeTypes: ['application/pdf'],
+    load: () => import('./pdf'),
+  });
+  modules.register({
     id: 'binary',
     name: 'Binary',
     extensions: ['exe', 'dll', 'so', 'dylib', 'bin', 'o', 'a', 'class', 'pyc', 'wasm', 'iso', 'dmg', 'img'],

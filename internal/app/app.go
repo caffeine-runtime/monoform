@@ -87,6 +87,7 @@ func (a *App) Startup(ctx context.Context) {
 // Shutdown is the Wails OnShutdown hook.
 func (a *App) Shutdown(ctx context.Context) {
 	a.Jobs.CancelAll()
+	cleanupTemp()
 	if a.watcher != nil {
 		a.watcher.Close()
 	}
