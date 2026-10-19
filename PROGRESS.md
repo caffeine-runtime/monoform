@@ -74,7 +74,13 @@
   Content-Security-Policy: scripts off and remote content blocked by default (one click to allow either),
   relative images/styles/scripts served from the page's folder by a read-only, folder-scoped route; external
   links are disabled in the preview ("Open in browser" for the real thing).
-- Planned next: M11 3D viewer, M12 audio player/editor, M13 video player/editor.
+- **M11 — 3D viewer.** glTF/GLB (Draco and meshopt compression), FBX, OBJ+MTL, STL, PLY, 3MF, Collada, 3DS,
+  USD/USDZ, VRML, AMF, PCD, XYZ, VTK/VTP. Parsing runs in a worker (except the four formats whose loaders need
+  DOMParser); textures and .bin/.mtl files come from the model's folder through the read-only folder route.
+  Orbit/pan/zoom, frame-to-fit, animation list (click to play, click again to pause, scrub, speed, stop),
+  wireframe, lighting on/off (unlit shows base colours and textures), floor grid, dark/light background, save
+  the view as PNG. Renders only when something moves; one shared WebGL renderer for all 3D tabs.
+- Planned next: M12 audio player/editor, M13 video player/editor.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -96,6 +102,7 @@
 | Hashing (page cache warm) | progress ≥ 4/s, UI responsive | SHA-256 308 MB/s, BLAKE3 3.2 GB/s, all five at once 258 MB/s; 3 GiB file: progress every ≤ 113 ms, worst UI frame 38–60 ms while hashing | same |
 | Search by meaning (optional) | no freeze; memory returned when idle | 25–45 tokens/s (single-threaded WASM), query 1.0–1.3 s, model load 8–9 s, ~0.8 GB extra while loaded (webview RSS 0.34 → 1.11 GB) and freed on unload; worst UI frame 23–40 ms while indexing, 50–73 ms during a cold model load | same |
 | Image editor v2 (400×300 test image) | no freeze | adjustments preview+apply worst frame 21–23 ms; background removal 4.3–5.5 s first time, ~2 s after (worker); object selection: 16–18 s one-time analysis, 0.19–0.23 s per click; magic wand on 12 MP 0.9 s in the worker with UI frames ≤ 22 ms | same |
+| 3D model open (small models) | no freeze | first 3D tab of a session 460–540 ms, worst UI frame 87–115 ms (WebGL context + three.js + shader compiles, once); later tabs 160–300 ms, worst frame 30–55 ms; parse in the worker 33–67 ms | same |
 | 100-page PDF: first page visible | < 300 ms | 133–287 ms once the PDF module is loaded; 490–570 ms for the first PDF of a session (worker + fonts cold) | same |
 
 The Linux numbers are from a headless VM with software rendering; ~350 ms of each start is
@@ -114,4 +121,7 @@ available here).
 - Search by meaning indexes plain text/Markdown/code only (not PDFs or Word files yet).
 - Windows and macOS builds are produced by CI but haven't been exercised on real machines from this environment (the Windows installer was cross-built and inspected here; see docs/TESTING.md → Packaging for the manual pass). Packages are unsigned.
 - Image editor: applying a background-removal or object mask re-renders the layer synchronously; with blurred text shadows on the software-rendered VM that is one ~70–100 ms frame (the analysis itself runs in a worker without UI stalls).
+- 3D: the first model opened in a session has one ~90–115 ms frame on the software-rendered VM (creating the WebGL context and compiling shaders, which WebKitGTK does synchronously even with `KHR_parallel_shader_compile`); later opens stay ≤ 55 ms.
+- 3D: on the software-rendered Linux VM (llvmpipe) a floor-grid line passing under the camera can show as a wide grey bar; the same scene renders correctly in Chromium's software renderer, so it looks like a llvmpipe/WebKitGTK rasterisation bug. Toggle the grid (G) if it appears.
+- 3D: glTF files with KTX2/Basis textures (`KHR_texture_basisu`) aren't supported yet (clear error); FBX files with external textures need them next to the model; USD support is three.js's (USDA/USDC/USDZ geometry and materials, no variants or skeletal animation).
 - Object selection analyses the whole image once (~15–18 s on the test VM, single-threaded WASM); clicks are fast afterwards. Background removal uses a small model (U²-Netp) — fine hair and glass are approximate.

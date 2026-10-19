@@ -270,6 +270,282 @@ w("web/script.js", b"document.addEventListener('DOMContentLoaded', () => { docum
 w("web/img/pic.png", png(40, 30, (30, 120, 220)))
 w("web/page2.html", b"<!doctype html><title>Second</title><p>Second page</p>")
 
+# ---- 3D models ----
+import json as _json, math as _math
+def _cube():
+    # 24 vertices (flat normals, per-face UVs), 36 indices.
+    faces = [((1,0,0),(0,1,0)),((-1,0,0),(0,1,0)),((0,1,0),(0,0,-1)),((0,-1,0),(0,0,1)),((0,0,1),(0,1,0)),((0,0,-1),(0,1,0))]
+    pos, nor, uv, idx = [], [], [], []
+    for n, up in faces:
+        n = list(n); up = list(up)
+        r = [up[1]*n[2]-up[2]*n[1], up[2]*n[0]-up[0]*n[2], up[0]*n[1]-up[1]*n[0]]
+        base = len(pos)
+        for su, sv in ((-1,-1),(1,-1),(1,1),(-1,1)):
+            pos.append([n[k] * 0.5 + r[k] * 0.5 * su + up[k] * 0.5 * sv for k in range(3)])
+            nor.append(n); uv.append([(su + 1) / 2, 1 - (sv + 1) / 2])
+        idx += [base, base + 1, base + 2, base, base + 2, base + 3]
+    return pos, nor, uv, idx
+
+def _glb():
+    pos, nor, uv, idx = _cube()
+    tex = png_fn(64, 64, lambda x, y: (220, 90, 60) if (x // 16 + y // 16) % 2 == 0 else (245, 235, 220))
+    buf = bytearray(); views = []
+    def add(data, target=None):
+        while len(buf) % 4: buf.append(0)
+        off = len(buf); buf.extend(data)
+        v = {"buffer": 0, "byteOffset": off, "byteLength": len(data)}
+        if target: v["target"] = target
+        views.append(v); return len(views) - 1
+    f32 = lambda arr: struct.pack("<%df" % len(arr), *arr)
+    flat = lambda a: [c for v in a for c in v]
+    vp = add(f32(flat(pos)), 34962); vn = add(f32(flat(nor)), 34962); vt = add(f32(flat(uv)), 34962)
+    vi = add(struct.pack("<%dH" % len(idx), *idx), 34963)
+    vimg = add(tex)
+    # Two clips: "Spin" (rotation, 2 s) and "Bounce" (translation, 1 s).
+    t_spin = [0, 0.5, 1, 1.5, 2]
+    q = lambda a: [0, _math.sin(a / 2), 0, _math.cos(a / 2)]
+    r_spin = flat([q(_math.pi * t) for t in t_spin])
+    t_b = [0, 0.5, 1]
+    tr_b = flat([[0, 0, 0], [0, 0.6, 0], [0, 0, 0]])
+    a_ts = add(f32(t_spin)); a_rs = add(f32(r_spin)); a_tb = add(f32(t_b)); a_trb = add(f32(tr_b))
+    acc = [
+        {"bufferView": vp, "componentType": 5126, "count": 24, "type": "VEC3", "min": [-0.5,-0.5,-0.5], "max": [0.5,0.5,0.5]},
+        {"bufferView": vn, "componentType": 5126, "count": 24, "type": "VEC3"},
+        {"bufferView": vt, "componentType": 5126, "count": 24, "type": "VEC2"},
+        {"bufferView": vi, "componentType": 5123, "count": 36, "type": "SCALAR"},
+        {"bufferView": a_ts, "componentType": 5126, "count": 5, "type": "SCALAR", "min": [0], "max": [2]},
+        {"bufferView": a_rs, "componentType": 5126, "count": 5, "type": "VEC4"},
+        {"bufferView": a_tb, "componentType": 5126, "count": 3, "type": "SCALAR", "min": [0], "max": [1]},
+        {"bufferView": a_trb, "componentType": 5126, "count": 3, "type": "VEC3"},
+    ]
+    gltf = {
+        "asset": {"version": "2.0", "generator": "hold-it-all fixtures"},
+        "scene": 0, "scenes": [{"nodes": [0]}],
+        "nodes": [{"name": "Cube", "mesh": 0}],
+        "meshes": [{"primitives": [{"attributes": {"POSITION": 0, "NORMAL": 1, "TEXCOORD_0": 2}, "indices": 3, "material": 0}]}],
+        "materials": [{"name": "Checker", "pbrMetallicRoughness": {"baseColorTexture": {"index": 0}, "metallicFactor": 0, "roughnessFactor": 0.8}}],
+        "textures": [{"source": 0}], "images": [{"bufferView": vimg, "mimeType": "image/png"}],
+        "accessors": acc, "bufferViews": views, "buffers": [{"byteLength": 0}],
+        "animations": [
+            {"name": "Spin", "samplers": [{"input": 4, "output": 5}], "channels": [{"sampler": 0, "target": {"node": 0, "path": "rotation"}}]},
+            {"name": "Bounce", "samplers": [{"input": 6, "output": 7}], "channels": [{"sampler": 0, "target": {"node": 0, "path": "translation"}}]},
+        ],
+    }
+    while len(buf) % 4: buf.append(0)
+    gltf["buffers"][0]["byteLength"] = len(buf)
+    js = _json.dumps(gltf, separators=(",", ":")).encode()
+    while len(js) % 4: js += b" "
+    body = struct.pack("<II", len(js), 0x4E4F534A) + js + struct.pack("<II", len(buf), 0x004E4942) + bytes(buf)
+    return struct.pack("<III", 0x46546C67, 2, 12 + len(body)) + body
+w("models/animated.glb", _glb())
+
+def _spheres():
+    # Three PBR spheres (gold metal, glossy plastic, rough clay) for checking
+    # reflections and lighting.
+    seg, ring = 48, 24
+    pos, nor, idx = [], [], []
+    for j in range(ring + 1):
+        v = j / ring; th = v * _math.pi
+        for i in range(seg + 1):
+            ph = i / seg * 2 * _math.pi
+            n = [_math.sin(th) * _math.cos(ph), _math.cos(th), _math.sin(th) * _math.sin(ph)]
+            pos.append([c * 0.5 for c in n]); nor.append(n)
+    for j in range(ring):
+        for i in range(seg):
+            a = j * (seg + 1) + i; b = a + seg + 1
+            idx += [a, b, a + 1, b, b + 1, a + 1]
+    flat = lambda a: [c for v in a for c in v]
+    pb = struct.pack("<%df" % (len(pos) * 3), *flat(pos)); nb = struct.pack("<%df" % (len(nor) * 3), *flat(nor))
+    ib = struct.pack("<%dH" % len(idx), *idx)
+    buf = pb + nb + ib
+    mats = [("Gold", [1.0, 0.77, 0.34, 1], 1.0, 0.25), ("Plastic", [0.75, 0.12, 0.1, 1], 0.0, 0.2), ("Clay", [0.55, 0.62, 0.7, 1], 0.0, 0.9)]
+    gltf = {
+        "asset": {"version": "2.0", "generator": "hold-it-all fixtures"},
+        "scene": 0, "scenes": [{"nodes": [0, 1, 2]}],
+        "nodes": [{"name": m[0], "mesh": k, "translation": [(k - 1) * 1.2, 0.5, 0]} for k, m in enumerate(mats)],
+        "meshes": [{"primitives": [{"attributes": {"POSITION": 0, "NORMAL": 1}, "indices": 2, "material": k}]} for k in range(3)],
+        "materials": [{"name": m[0], "pbrMetallicRoughness": {"baseColorFactor": m[1], "metallicFactor": m[2], "roughnessFactor": m[3]}} for m in mats],
+        "accessors": [
+            {"bufferView": 0, "componentType": 5126, "count": len(pos), "type": "VEC3", "min": [-0.5, -0.5, -0.5], "max": [0.5, 0.5, 0.5]},
+            {"bufferView": 1, "componentType": 5126, "count": len(nor), "type": "VEC3"},
+            {"bufferView": 2, "componentType": 5123, "count": len(idx), "type": "SCALAR"},
+        ],
+        "bufferViews": [
+            {"buffer": 0, "byteOffset": 0, "byteLength": len(pb), "target": 34962},
+            {"buffer": 0, "byteOffset": len(pb), "byteLength": len(nb), "target": 34962},
+            {"buffer": 0, "byteOffset": len(pb) + len(nb), "byteLength": len(ib), "target": 34963},
+        ],
+        "buffers": [{"byteLength": len(buf)}],
+    }
+    buf = bytearray(buf)
+    while len(buf) % 4: buf.append(0)
+    js = _json.dumps(gltf, separators=(",", ":")).encode()
+    while len(js) % 4: js += b" "
+    body = struct.pack("<II", len(js), 0x4E4F534A) + js + struct.pack("<II", len(buf), 0x004E4942) + bytes(buf)
+    return struct.pack("<III", 0x46546C67, 2, 12 + len(body)) + body
+w("models/spheres.glb", _spheres())
+# Draco-compressed glTF (generated once by fixture-data/knot-draco.mjs).
+w("models/knot-draco.glb", open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixture-data", "knot-draco.glb"), "rb").read())
+
+_pos, _nor, _uv, _idx = _cube()
+def _stl():
+    tris = [(_idx[i], _idx[i + 1], _idx[i + 2]) for i in range(0, len(_idx), 3)]
+    out = bytearray(b"hold-it-all fixture".ljust(80, b" ")) + struct.pack("<I", len(tris))
+    for a, b, c in tris:
+        out += struct.pack("<3f", *_nor[a])
+        for v in (a, b, c): out += struct.pack("<3f", *[x * 20 for x in _pos[v]])
+        out += b"\0\0"
+    return bytes(out)
+w("models/cube.stl", _stl())
+obj = ["mtllib textured.mtl", "o Box", "usemtl Checker"] + ["v %g %g %g" % tuple(p) for p in _pos] + ["vt %g %g" % (u, 1 - v) for u, v in _uv] + ["vn %g %g %g" % tuple(n) for n in _nor]
+obj += ["f %d/%d/%d %d/%d/%d %d/%d/%d" % tuple(x for v in _idx[i:i + 3] for x in (v + 1, v + 1, v + 1)) for i in range(0, len(_idx), 3)]
+w("models/textured.obj", ("\n".join(obj) + "\n").encode())
+w("models/textured.mtl", b"newmtl Checker\nKd 1 1 1\nmap_Kd tex/checker.png\n")
+w("models/tex/checker.png", png_fn(64, 64, lambda x, y: (40, 120, 220) if (x // 8 + y // 8) % 2 == 0 else (255, 255, 255)))
+ply = ["ply", "format ascii 1.0", "element vertex 1000", "property float x", "property float y", "property float z", "property uchar red", "property uchar green", "property uchar blue", "end_header"]
+for i in range(1000):
+    t = i / 1000 * 20 * _math.pi
+    ply.append("%f %f %f %d %d %d" % (_math.cos(t) * (1 + i / 1000), i / 500, _math.sin(t) * (1 + i / 1000), 255 * i // 1000, 120, 255 - 255 * i // 1000))
+w("models/spiral.ply", ("\n".join(ply) + "\n").encode())
+w("models/triangle.dae", b"""<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+  <asset><up_axis>Y_UP</up_axis></asset>
+  <library_geometries><geometry id="tri" name="Triangle"><mesh>
+    <source id="tri-pos"><float_array id="tri-pos-a" count="9">0 0 0 1 0 0 0 1 0</float_array>
+      <technique_common><accessor source="#tri-pos-a" count="3" stride="3"><param name="X" type="float"/><param name="Y" type="float"/><param name="Z" type="float"/></accessor></technique_common></source>
+    <vertices id="tri-v"><input semantic="POSITION" source="#tri-pos"/></vertices>
+    <triangles count="1"><input semantic="VERTEX" source="#tri-v" offset="0"/><p>0 1 2</p></triangles>
+  </mesh></geometry></library_geometries>
+  <library_visual_scenes><visual_scene id="s"><node id="n" name="Triangle"><instance_geometry url="#tri"/></node></visual_scene></library_visual_scenes>
+  <scene><instance_visual_scene url="#s"/></scene>
+</COLLADA>
+""")
+
+# ASCII FBX 7.4: a cube with two animation stacks ("Wave", "Nod").
+def _fbx():
+    verts = [-1,-1,-1, 1,-1,-1, 1,1,-1, -1,1,-1, -1,-1,1, 1,-1,1, 1,1,1, -1,1,1]
+    quads = [(0,3,2,1),(4,5,6,7),(0,1,5,4),(2,3,7,6),(1,2,6,5),(0,4,7,3)]
+    normals = [(0,0,-1),(0,0,1),(0,-1,0),(0,1,0),(1,0,0),(-1,0,0)]
+    pvi = []
+    for q in quads: pvi += [q[0], q[1], q[2], -q[3] - 1]
+    nrm = []
+    for n in normals: nrm += list(n) * 4
+    sec = 46186158000
+    def stack(sid, name, node, axis, values):
+        times = ",".join(str(int(sec * i / (len(values) - 1) * 2)) for i in range(len(values)))
+        vals = ",".join(str(v) for v in values)
+        return f"""	AnimationStack: {sid}, "AnimStack::{name}", "" {{
+		Properties70:  {{
+			P: "LocalStop", "KTime", "Time", "",{sec * 2}
+			P: "ReferenceStop", "KTime", "Time", "",{sec * 2}
+		}}
+	}}
+	AnimationLayer: {sid + 1}, "AnimLayer::BaseLayer", "" {{
+	}}
+	AnimationCurveNode: {sid + 2}, "AnimCurveNode::R", "" {{
+		Properties70:  {{
+			P: "d|X", "Number", "", "A",0
+			P: "d|Y", "Number", "", "A",0
+			P: "d|Z", "Number", "", "A",0
+		}}
+	}}
+	AnimationCurve: {sid + 3}, "AnimCurve::", "" {{
+		Default: 0
+		KeyVer: 4009
+		KeyTime: *{len(values)} {{
+			a: {times}
+		}}
+		KeyValueFloat: *{len(values)} {{
+			a: {vals}
+		}}
+		KeyAttrFlags: *1 {{
+			a: 24836
+		}}
+		KeyAttrDataFloat: *4 {{
+			a: 0,0,218434821,0
+		}}
+		KeyAttrRefCount: *1 {{
+			a: {len(values)}
+		}}
+	}}
+""", f"""	C: "OO",{sid + 1},{sid}
+	C: "OO",{sid + 2},{sid + 1}
+	C: "OP",{sid + 2},{node}, "Lcl Rotation"
+	C: "OP",{sid + 3},{sid + 2}, "d|{axis}"
+"""
+    s1, c1 = stack(4000, "Wave", 2000, "Y", [0, 90, 180, 270, 360])
+    s2, c2 = stack(5000, "Nod", 2000, "X", [0, 30, 0])
+    j = lambda a: ",".join(str(x) for x in a)
+    return f"""; FBX 7.4.0 project file
+FBXHeaderExtension:  {{
+	FBXHeaderVersion: 1003
+	FBXVersion: 7400
+}}
+GlobalSettings:  {{
+	Version: 1000
+	Properties70:  {{
+		P: "UpAxis", "int", "Integer", "",1
+		P: "UpAxisSign", "int", "Integer", "",1
+		P: "FrontAxis", "int", "Integer", "",2
+		P: "FrontAxisSign", "int", "Integer", "",1
+		P: "CoordAxis", "int", "Integer", "",0
+		P: "CoordAxisSign", "int", "Integer", "",1
+		P: "UnitScaleFactor", "double", "Number", "",1
+	}}
+}}
+Objects:  {{
+	Geometry: 1000, "Geometry::Cube", "Mesh" {{
+		Vertices: *{len(verts)} {{
+			a: {j(verts)}
+		}}
+		PolygonVertexIndex: *{len(pvi)} {{
+			a: {j(pvi)}
+		}}
+		GeometryVersion: 124
+		LayerElementNormal: 0 {{
+			Version: 101
+			Name: ""
+			MappingInformationType: "ByPolygonVertex"
+			ReferenceInformationType: "Direct"
+			Normals: *{len(nrm)} {{
+				a: {j(nrm)}
+			}}
+		}}
+		Layer: 0 {{
+			Version: 100
+			LayerElement:  {{
+				Type: "LayerElementNormal"
+				TypedIndex: 0
+			}}
+		}}
+	}}
+	Model: 2000, "Model::Cube", "Mesh" {{
+		Version: 232
+		Properties70:  {{
+			P: "Lcl Translation", "Lcl Translation", "", "A",0,0,0
+			P: "Lcl Rotation", "Lcl Rotation", "", "A",0,0,0
+			P: "Lcl Scaling", "Lcl Scaling", "", "A",1,1,1
+		}}
+		Shading: T
+		Culling: "CullingOff"
+	}}
+	Material: 3000, "Material::Red", "" {{
+		Version: 102
+		ShadingModel: "phong"
+		MultiLayer: 0
+		Properties70:  {{
+			P: "DiffuseColor", "Color", "", "A",0.8,0.25,0.2
+		}}
+	}}
+{s1}{s2}}}
+Connections:  {{
+	C: "OO",2000,0
+	C: "OO",1000,2000
+	C: "OO",3000,2000
+{c1}{c2}}}
+""".encode()
+w("models/waving.fbx", _fbx())
+
 # 50 MB+ log file
 big = os.path.join(d, "big.log")
 if not os.path.exists(big):

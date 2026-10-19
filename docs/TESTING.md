@@ -39,6 +39,10 @@ needs a window manager).
 
 | `m10` | fixtures dir | SVG opens in its own module; size from attributes; a broken edit reports the XML error and keeps the last render; fixing it re-renders at the new size; PNG export at 2× has the right size, letterbox transparency and colours; HTML opens in the page module with CSP and base injected, title, 1 remote reference and 1 external link detected and neutralised, banner shown, iframe fully sandboxed; the folder route served the stylesheet and image but not the script; with scripts on the script is served and the iframe is still not same-origin |
 
+| `m11` | fixtures dir | GLB: stats (1 mesh/24 vertices/12 triangles/1 texture), embedded texture arrives as pixels with the right colours, clips "Spin,Bounce" listed; clicking a clip plays it (the cube moves), clicking again pauses, the other clip rotates it; wireframe on/off; lighting off swaps in unlit materials keeping the texture and drops the environment, back on restores them; FBX lists "Wave,Nod" and plays; Draco GLB decodes (2304 triangles) through the decoder's nested worker; PBR spheres get the baked environment; a second 3D tab reuses the renderer and the canvas follows the shown tab and the remaining tab after a close; OBJ fetches its .mtl and texture through the folder route; STL triangles, PLY 1000 points, Collada parsed on the main thread; every model is checked to actually draw; open times and UI frames logged |
+
+`bakeenv <path>` regenerates `frontend/src/modules/model3d/room-env.bin` (the viewer's pre-filtered reflection environment) — only needed after a three.js upgrade changes the PMREM format. The Draco fixture is `scripts/fixture-data/knot-draco.glb`, made once by `knot-draco.mjs` next to it.
+
 Office fixtures live in `internal/office/testdata` and are regenerated with `scripts/office/make-fixtures.sh` (needs LibreOffice; dev-only).
 
 `scripts/fixtures.py` modifies nothing outside the given directory; re-run it before `m1` (the round-trip test edits files).

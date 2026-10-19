@@ -35,8 +35,37 @@ function pdfjsAssets(): Plugin {
   };
 }
 
+// three.js decoders for compressed glTF (Draco geometry, KTX2/Basis
+// textures), copied into dist/three/ and loaded by the 3D viewer on demand.
+const THREE_LIBS = path.resolve(__dirname, 'node_modules/three/examples/jsm/libs');
+const THREE_FILES: [string, string][] = [
+  ['draco/gltf/draco_decoder.wasm', 'draco/draco_decoder.wasm'],
+  ['draco/gltf/draco_wasm_wrapper.js', 'draco/draco_wasm_wrapper.js'],
+];
+
+function threeAssets(): Plugin {
+  return {
+    name: 'hia-three-assets',
+    configureServer(server) {
+      server.middlewares.use('/three/', (req, res, next) => {
+        const rel = decodeURIComponent((req.url ?? '').split('?')[0]).replace(/^\/+/, '');
+        const hit = THREE_FILES.find(([, to]) => to === rel);
+        if (!hit) return next();
+        fs.createReadStream(path.join(THREE_LIBS, hit[0])).pipe(res);
+      });
+    },
+    writeBundle(opts) {
+      const out = path.join(opts.dir ?? 'dist', 'three');
+      for (const [from, to] of THREE_FILES) {
+        fs.mkdirSync(path.dirname(path.join(out, to)), { recursive: true });
+        fs.copyFileSync(path.join(THREE_LIBS, from), path.join(out, to));
+      }
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [svelte(), pdfjsAssets()],
+  plugins: [svelte(), pdfjsAssets(), threeAssets()],
   build: {
     // WebView2 (Chromium), WKWebView (Safari 16+) and WebKitGTK 2.40+ all
     // support ES2022.
