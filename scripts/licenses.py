@@ -11,8 +11,8 @@ ALLOWED = {"MIT", "BSD-2-Clause", "BSD-3-Clause", "Apache-2.0", "ISC", "CC0-1.0"
 
 def classify(text):
     t = " ".join(text.split())
-    if re.search(r"GNU (AFFERO|LESSER|GENERAL) PUBLIC LICENSE", t, re.I): return "GPL-family"
     if "Mozilla Public License" in t: return "MPL-2.0"
+    if re.search(r"GNU (AFFERO|LESSER|GENERAL) PUBLIC LICENSE", t, re.I): return "GPL-family"
     if "Apache License" in t and "Version 2.0" in t: return "Apache-2.0"
     if "Permission is hereby granted, free of charge" in t: return "MIT"
     if "Permission to use, copy, modify, and/or distribute" in t or "Permission to use, copy, modify, and distribute this software for any purpose" in t: return "ISC"
@@ -26,18 +26,25 @@ def classify(text):
 rows, bad = [], []
 gomod = subprocess.run(["go", "env", "GOMODCACHE"], capture_output=True, text=True).stdout.strip()
 out = subprocess.run(["go", "version", "-m", BIN], capture_output=True, text=True).stdout
-for line in out.splitlines():
+lines = out.splitlines()
+for i, line in enumerate(lines):
     parts = line.split()
     if len(parts) >= 3 and parts[0] == "dep":
         mod, ver = parts[1], parts[2]
         esc = re.sub(r"[A-Z]", lambda m: "!" + m.group(0).lower(), mod)
         d = os.path.join(gomod, f"{esc}@{ver}")
+        nxt = lines[i + 1].split() if i + 1 < len(lines) else []
+        if nxt[:1] == ["=>"]:
+            # replace directive: a local path or another module
+            target = nxt[1]
+            d = target if target.startswith(".") or target.startswith("/") else os.path.join(gomod, re.sub(r"[A-Z]", lambda m: "!" + m.group(0).lower(), target) + "@" + nxt[2])
+            mod = f"{mod} => {target}"
         lic = "UNKNOWN"
         if os.path.isdir(d):
             for f in sorted(os.listdir(d)):
                 if re.match(r"(LICEN[CS]E|COPYING)", f, re.I):
                     lic = classify(open(os.path.join(d, f), errors="ignore").read()); break
-        rows.append(("go", mod, ver, lic))
+        rows.append(("go", mod.replace('"', ''), ver, lic))
 
 # npm packages that end up in dist (runtime dependencies and their deps).
 lock = json.load(open("frontend/package-lock.json"))
