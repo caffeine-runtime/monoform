@@ -18,6 +18,7 @@ import (
 	"github.com/caffeine-runtime/hold-it-all/internal/filetype"
 	"github.com/caffeine-runtime/hold-it-all/internal/fs"
 	"github.com/caffeine-runtime/hold-it-all/internal/jobs"
+	"github.com/caffeine-runtime/hold-it-all/internal/office"
 	"github.com/caffeine-runtime/hold-it-all/internal/search"
 	"github.com/caffeine-runtime/hold-it-all/internal/server"
 	"github.com/caffeine-runtime/hold-it-all/internal/settings"
@@ -32,6 +33,7 @@ type App struct {
 	Settings *settings.Store
 	Jobs     *jobs.Manager
 	watcher  *fs.Watcher
+	books    *office.Books
 
 	mu          sync.Mutex
 	ready       bool
@@ -44,7 +46,7 @@ type App struct {
 // New creates the app. start is the process start time used for the
 // startup-time measurement.
 func New(start time.Time, launchFiles []string) *App {
-	a := &App{start: start, launchFiles: launchFiles}
+	a := &App{start: start, launchFiles: launchFiles, books: office.NewBooks()}
 	a.Server = server.New(server.NewToken())
 	path, err := settings.DefaultPath()
 	if err != nil {

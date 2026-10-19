@@ -57,6 +57,20 @@ export function registerBuiltinModules() {
     load: () => import('./data/csvIndex'),
   });
   modules.register({
+    id: 'sheet',
+    name: 'Spreadsheet',
+    extensions: ['xlsx', 'xlsm', 'xltx', 'xltm', 'xls'],
+    mimeTypes: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'],
+    load: () => import('./office/sheet'),
+  });
+  modules.register({
+    id: 'doc',
+    name: 'Document',
+    extensions: ['docx', 'doc'],
+    mimeTypes: ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'],
+    load: () => import('./office/doc'),
+  });
+  modules.register({
     id: 'binary',
     name: 'Binary',
     extensions: ['exe', 'dll', 'so', 'dylib', 'bin', 'o', 'a', 'class', 'pyc', 'wasm', 'iso', 'dmg', 'img'],

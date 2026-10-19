@@ -46,6 +46,7 @@
     oncontext?: (e: MouseEvent, row: number, col: number) => void;
   } = $props();
 
+  const NUMERIC = /^\s*[-+]?(\d{1,3}([ ,]\d{3})*|\d+)([.,]\d+)?([eE][-+]?\d+)?\s*%?\s*$/;
   const ROW = 28;
   const HEAD = 32;
   const BLOCK = 200;
@@ -310,6 +311,7 @@
             class="td"
             class:cur={r === cur.row && i === cur.col}
             class:loading={v === undefined}
+            class:numeric={!!v && NUMERIC.test(v)}
             style:width="{c.width}px"
             role="gridcell"
             tabindex="-1"
@@ -440,6 +442,9 @@
     text-overflow: ellipsis;
     border-right: 1px solid var(--border-soft);
     cursor: cell;
+  }
+  .td.numeric {
+    text-align: right;
   }
   .td.loading {
     color: transparent;

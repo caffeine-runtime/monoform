@@ -24,6 +24,8 @@ const (
 	CSV      Kind = "csv"
 	Archive  Kind = "archive"
 	Checksum Kind = "checksum"
+	Document Kind = "document"
+	Sheet    Kind = "spreadsheet"
 	Binary   Kind = "binary"
 	Unknown  Kind = ""
 )
@@ -67,6 +69,10 @@ var byExt = map[string]entry{
 	"tgz": {Archive, "application/gzip"}, "7z": {Archive, "application/x-7z-compressed"}, "rar": {Archive, "application/vnd.rar"},
 	"bz2": {Archive, "application/x-bzip2"}, "xz": {Archive, "application/x-xz"}, "zst": {Archive, "application/zstd"},
 	"tbz2": {Archive, "application/x-bzip2"}, "txz": {Archive, "application/x-xz"},
+	// office
+	"docx": {Document, "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}, "doc": {Document, "application/msword"},
+	"xlsx": {Sheet, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}, "xlsm": {Sheet, "application/vnd.ms-excel.sheet.macroEnabled.12"},
+	"xls": {Sheet, "application/vnd.ms-excel"},
 	// checksum lists
 	"sha256": {Checksum, "text/plain"}, "sha1": {Checksum, "text/plain"}, "md5": {Checksum, "text/plain"},
 	"sha512": {Checksum, "text/plain"}, "b3": {Checksum, "text/plain"}, "sha256sum": {Checksum, "text/plain"},
