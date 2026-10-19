@@ -6,6 +6,7 @@
   import Palette from './Palette.svelte';
   import Overlays from './Overlays.svelte';
   import Welcome from './Welcome.svelte';
+  import QuickPick from './QuickPick.svelte';
   import { workspace } from '../core/tabs.svelte';
   import { settings } from '../core/settings.svelte';
   import { theme } from '../core/theme.svelte';
@@ -51,6 +52,9 @@
   $effect(() => {
     void api.SetDirtyCount(workspace.dirtyCount);
   });
+  $effect(() => {
+    document.documentElement.style.setProperty('--editor-font-size', `${settings.value.fontSize}px`);
+  });
 </script>
 
 <div class="app" data-platform={boot.platform}>
@@ -75,6 +79,9 @@
 
 {#if ui.paletteOpen}
   <Palette />
+{/if}
+{#if ui.picker}
+  <QuickPick />
 {/if}
 <Overlays />
 

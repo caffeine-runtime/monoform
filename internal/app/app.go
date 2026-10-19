@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/caffeine-runtime/hold-it-all/internal/filetype"
 	"github.com/caffeine-runtime/hold-it-all/internal/fs"
 	"github.com/caffeine-runtime/hold-it-all/internal/jobs"
+	"github.com/caffeine-runtime/hold-it-all/internal/search"
 	"github.com/caffeine-runtime/hold-it-all/internal/server"
 	"github.com/caffeine-runtime/hold-it-all/internal/settings"
 )
@@ -300,3 +302,59 @@ func (a *App) CancelJob(id string) bool { return a.Jobs.Cancel(id) }
 
 // QuickFiles lists files under root for the palette's quick-open.
 func (a *App) QuickFiles(root string, limit int) []string { return fs.WalkFiles(root, limit) }
+
+// --- search ---
+
+// SearchFolder starts a folder search job; matches stream as job:data events.
+func (a *App) SearchFolder(root string, opts search.Options) (string, error) {
+	if _, err := search.Compile(opts); err != nil {
+		return "", err
+	}
+	return a.Jobs.Start("search", "Searching "+filepath.Base(root), func(ctx context.Context, r *jobs.Reporter) (any, error) {
+		return search.Run(ctx, root, opts, search.Sink{
+			Matches:  func(m []search.Match) { r.Send(m) },
+			Progress: func(scanned, found int64) { r.Set(scanned, found, "") },
+		})
+	}), nil
+}
+
+// CopyAsset copies src into an assets/ folder next to note (images dropped
+// onto a markdown note) and returns the relative link.
+func (a *App) CopyAsset(note, src string) (server.AssetResult, error) {
+	f, err := os.Open(src)
+	if err != nil {
+		return server.AssetResult{}, err
+	}
+	defer f.Close()
+	res, err := server.SaveAsset(note, filepath.Base(src), f)
+	if err == nil && a.watcher != nil {
+		a.watcher.NoteOwnWrite(res.Path)
+	}
+	return res, err
+}
+
+// RelPath returns target relative to the directory of from, with forward slashes.
+func (a *App) RelPath(from, target string) (string, error) {
+	rel, err := filepath.Rel(filepath.Dir(from), target)
+	if err != nil {
+		return "", err
+	}
+	return filepath.ToSlash(rel), nil
+}
+
+// OpenExternal opens an http(s)/mailto link in the user's browser. The app
+// itself never makes network requests.
+func (a *App) OpenExternal(url string) {
+	if strings.HasPrefix(url, "https://") || strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "mailto:") {
+		wruntime.BrowserOpenURL(a.ctx, url)
+	}
+}
+
+// TestWriteFile simulates another program changing a file. Only available
+// in self-test mode (HIA_TEST set).
+func (a *App) TestWriteFile(p, content string) error {
+	if os.Getenv("HIA_TEST") == "" {
+		return os.ErrPermission
+	}
+	return os.WriteFile(p, []byte(content), 0o644)
+}

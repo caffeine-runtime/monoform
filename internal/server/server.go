@@ -55,6 +55,7 @@ func New(token string) *Server {
 	s.mux.HandleFunc("GET /__hia/file", s.handleFile)
 	s.mux.HandleFunc("POST /__hia/save", s.handleSave)
 	s.mux.HandleFunc("POST /__hia/asset", s.handleAsset)
+	s.registerUploads()
 	s.mux.HandleFunc("GET /__hia/ping", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok")) })
 	return s
 }
@@ -82,6 +83,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
+	if r.Header.Get("X-Empty-Body") == "1" {
+		// The frontend never sends a zero-length body (WebKitGTK can't), it
+		// sets this header instead.
+		r.Body = http.NoBody
+	}
 	s.mux.ServeHTTP(w, r)
 }
 

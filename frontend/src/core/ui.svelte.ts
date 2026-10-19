@@ -29,8 +29,21 @@ export interface DialogRequest {
   resolve: (r: { button: string; value?: string }) => void;
 }
 
+export interface PickItem {
+  id: string;
+  label: string;
+  detail?: string;
+}
+
+export interface PickRequest {
+  title: string;
+  items: PickItem[];
+  resolve: (id: string | null) => void;
+}
+
 class UIState {
   toasts = $state<Toast[]>([]);
+  picker = $state<PickRequest | null>(null);
   dialog = $state<DialogRequest | null>(null);
   paletteOpen = $state(false);
   paletteQuery = $state('');
@@ -84,6 +97,21 @@ class UIState {
       input: { value, selectStem },
     });
     return r.button === 'ok' ? (r.value ?? '') : null;
+  }
+
+  /** Quick-pick list (like the palette) resolving to the chosen id or null. */
+  pick(title: string, items: PickItem[]): Promise<string | null> {
+    return new Promise((resolve) => {
+      this.picker?.resolve(null);
+      this.picker = {
+        title,
+        items,
+        resolve: (id) => {
+          this.picker = null;
+          resolve(id);
+        },
+      };
+    });
   }
 
   openPalette(query = '') {

@@ -109,6 +109,7 @@
 >
   <div class="spacer" style:height="{rows.length * ROW}px">
     {#each visible as row, i (row.item.id)}
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
       <div
         class="row"
         class:selected={tree.selected === row.item.id}

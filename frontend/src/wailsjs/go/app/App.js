@@ -14,6 +14,10 @@ export function ConfirmQuit() {
   return window['go']['app']['App']['ConfirmQuit']();
 }
 
+export function CopyAsset(arg1, arg2) {
+  return window['go']['app']['App']['CopyAsset'](arg1, arg2);
+}
+
 export function CreateFile(arg1) {
   return window['go']['app']['App']['CreateFile'](arg1);
 }
@@ -42,6 +46,10 @@ export function MarkReady(arg1) {
   return window['go']['app']['App']['MarkReady'](arg1);
 }
 
+export function OpenExternal(arg1) {
+  return window['go']['app']['App']['OpenExternal'](arg1);
+}
+
 export function OpenFiles(arg1) {
   return window['go']['app']['App']['OpenFiles'](arg1);
 }
@@ -62,6 +70,10 @@ export function Quit(arg1) {
   return window['go']['app']['App']['Quit'](arg1);
 }
 
+export function RelPath(arg1, arg2) {
+  return window['go']['app']['App']['RelPath'](arg1, arg2);
+}
+
 export function Rename(arg1, arg2) {
   return window['go']['app']['App']['Rename'](arg1, arg2);
 }
@@ -72,6 +84,10 @@ export function SaveFileDialog(arg1, arg2, arg3) {
 
 export function SaveSettings(arg1) {
   return window['go']['app']['App']['SaveSettings'](arg1);
+}
+
+export function SearchFolder(arg1, arg2) {
+  return window['go']['app']['App']['SearchFolder'](arg1, arg2);
 }
 
 export function SetDirtyCount(arg1) {
@@ -88,6 +104,10 @@ export function Siblings(arg1, arg2) {
 
 export function Stat(arg1) {
   return window['go']['app']['App']['Stat'](arg1);
+}
+
+export function TestWriteFile(arg1, arg2) {
+  return window['go']['app']['App']['TestWriteFile'](arg1, arg2);
 }
 
 export function UnwatchDir(arg1) {

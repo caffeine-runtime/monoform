@@ -264,3 +264,34 @@ func TestWalkFiles(t *testing.T) {
 		t.Fatal("limit not applied")
 	}
 }
+
+func TestAtomicFileChunks(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "chunked.txt")
+	os.WriteFile(p, []byte("old"), 0o600)
+	f, err := CreateAtomic(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Write([]byte("part1-"))
+	f.Write([]byte("part2"))
+	if got, _ := os.ReadFile(p); string(got) != "old" {
+		t.Fatal("target changed before commit")
+	}
+	if err := f.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(p); string(got) != "part1-part2" {
+		t.Fatalf("got %q", got)
+	}
+	if err := f.Commit(); err == nil {
+		t.Fatal("double commit allowed")
+	}
+	g, _ := CreateAtomic(p)
+	g.Write([]byte("never"))
+	g.Abort()
+	if got, _ := os.ReadFile(p); string(got) != "part1-part2" {
+		t.Fatal("abort changed target")
+	}
+	assertNoTemps(t, dir)
+}

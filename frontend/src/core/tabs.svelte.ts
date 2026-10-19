@@ -1,6 +1,6 @@
 // Tabs and the workspace: which files are open, which one is active, and how
 // a file is routed to a module.
-import { api, errorMessage, fileUrl, readFile, saveFile, endpoint, type Entry, type SessionTab } from './backend';
+import { api, errorMessage, fileUrl, readFile, saveFile, endpoint, type Body, type Entry, type SessionTab } from './backend';
 import { modules } from './modules';
 import { basename, dirname } from './paths';
 import { settings } from './settings.svelte';
@@ -127,7 +127,7 @@ export class Tab {
   }
 
   /** Write bytes to the tab's file (atomic). */
-  async write(data: BodyInit, path = this.filePath): Promise<Entry> {
+  async write(data: Body, path = this.filePath): Promise<Entry> {
     if (!path) throw new Error('no path to save to');
     const e = await saveFile(path, data);
     this.size = e.size;

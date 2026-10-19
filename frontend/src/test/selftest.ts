@@ -7,6 +7,24 @@ import { log } from './harness';
 const scenarios: Record<string, () => Promise<{ default: (arg: string) => Promise<void> }>> = {
   'm0-setup': () => import('./m0').then((m) => ({ default: m.setup })),
   'm0-restore': () => import('./m0').then((m) => ({ default: m.restore })),
+  m1: () => import('./m1'),
+  probe: () => import('./probe'),
+  show: () => import('./show'),
+  prof: () => import('./prof'),
+  'm1-roundtrip': () => import('./m1').then((m) => ({ default: m.roundtrip })),
+  'm1-baseline': () => import('./m1').then((m) => ({ default: m.baseline })),
+  // "seq" runs several m1 steps: HIA_TEST_ARG="<dir>|step1,step2"
+  seq: () =>
+    import('./m1').then((m) => ({
+      default: async (arg: string) => {
+        const [dir, steps] = arg.split('|');
+        for (const st of steps.split(',')) await (m as any)[st](dir);
+      },
+    })),
+  'm1-large': () => import('./m1').then((m) => ({ default: m.large })),
+  'm1-search': () => import('./m1').then((m) => ({ default: m.search })),
+  'm1-markdown': () => import('./m1').then((m) => ({ default: m.markdown })),
+  'm1-external': () => import('./m1').then((m) => ({ default: m.external })),
 };
 
 export function registerScenario(name: string, load: () => Promise<{ default: (arg: string) => Promise<void> }>) {
