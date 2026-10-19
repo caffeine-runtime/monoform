@@ -121,6 +121,52 @@ for stale in ("legacy.docx", "legacy.xlsx"):
     if os.path.exists(p):
         os.remove(p)
 
+# Archives
+import zipfile, tarfile, io, binascii
+os.makedirs(os.path.join(d, "archives"), exist_ok=True)
+def zadd(z, name, data, mode=0o644):
+    zi = zipfile.ZipInfo(name, date_time=(2026, 10, 19, 12, 0, 0))
+    zi.external_attr = (mode & 0xFFFF) << 16
+    zi.compress_type = zipfile.ZIP_DEFLATED
+    z.writestr(zi, data)
+with zipfile.ZipFile(os.path.join(d, "archives", "sample.zip"), "w") as z:
+    zadd(z, "docs/readme.md", b"# Inside a zip\n\nHello from the archive.\n")
+    zadd(z, "docs/deep/data.csv", b"a,b\n1,2\n")
+    zadd(z, "img/red.png", png(40, 30, (220, 60, 40)))
+    zadd(z, "top.txt", b"top level\n")
+with tarfile.open(os.path.join(d, "archives", "sample.tar.gz"), "w:gz") as t:
+    for name, data in [("project/main.go", b"package main\n"), ("project/notes.txt", b"notes\n")]:
+        ti = tarfile.TarInfo(name); ti.size = len(data); ti.mtime = 1792400000
+        t.addfile(ti, io.BytesIO(data))
+shutil.copyfile(os.path.join(here, "..", "internal", "archive", "testdata", "sample.7z"), os.path.join(d, "archives", "sample.7z"))
+def rar5(files):
+    def vint(v):
+        out = bytearray()
+        while True:
+            b = v & 0x7F; v >>= 7
+            if v: out.append(b | 0x80)
+            else:
+                out.append(b); return bytes(out)
+    def block(fields, data=b""):
+        hdr = vint(len(fields)) + fields
+        return binascii.crc32(hdr).to_bytes(4, "little") + hdr + data
+    out = b"Rar!\x1a\x07\x01\x00" + block(vint(1) + vint(0) + vint(0))
+    for name, body in files:
+        nb = name.encode()
+        f = vint(2) + vint(2) + vint(len(body)) + vint(4) + vint(len(body)) + vint(0x20) + binascii.crc32(body).to_bytes(4, "little") + vint(0) + vint(1) + vint(len(nb)) + nb
+        out += block(f, body)
+    return out + block(vint(5) + vint(0) + vint(0))
+w("archives/sample.rar", rar5([("music/list.txt", b"rar entry\n"), ("readme.txt", b"hello rar\n")]))
+with zipfile.ZipFile(os.path.join(d, "archives", "slip.zip"), "w") as z:
+    zadd(z, "../escaped.txt", b"should not escape")
+    zadd(z, "/absolute.txt", b"nope")
+    zadd(z, "safe/ok.txt", b"ok")
+    zadd(z, "safe/link", b"../../../../etc/passwd", 0o120777)
+for stale in ("escaped.txt",):
+    p = os.path.join(d, stale)
+    if os.path.exists(p):
+        os.remove(p)
+
 # 50 MB+ log file
 big = os.path.join(d, "big.log")
 if not os.path.exists(big):

@@ -27,6 +27,8 @@ needs a window manager).
 
 | `m4b` then `scripts/verify-office.sh <dir>` | fixtures dir | .docx: headings, run formatting, list, table render; edit text, bold a word, add a paragraph, edit a table cell, save, reopen — all persisted; .doc opens with the legacy note, edits save as .docx; .xlsx: sheets, formula shown in the bar, value edit recalculates SUM, new formula computes, save; .xls opens and saves as .xlsx. The script then converts every output with **LibreOffice** (txt/csv) and checks the content, the bold run in document.xml, and that LibreOffice sees the recalculated totals. |
 
+| `m5` then `scripts/verify-archives.sh <dir>` | fixtures dir | zip browsed and navigated; inner markdown/image open read-only in their modules; archive expands in the sidebar tree (nested folders too); zip, tar.gz, 7z and rar extract; RAR shows the read-only explanation; `slip.zip` extracts only its safe file and reports `../escaped.txt`, `/absolute.txt` and an escaping symlink; a ZIP is created from a folder + file. The script checks the created ZIP with `unzip -t`, `7z t` and Python's zipfile, and that nothing escaped. |
+
 Office fixtures live in `internal/office/testdata` and are regenerated with `scripts/office/make-fixtures.sh` (needs LibreOffice; dev-only).
 
 `scripts/fixtures.py` modifies nothing outside the given directory; re-run it before `m1` (the round-trip test edits files).
@@ -96,3 +98,11 @@ Run on each OS before a release.
 - [ ] Save, then open the file in Word/LibreOffice/Pages: text and formatting changes appear; headers, footers and images are unchanged.
 - [ ] .xlsx: type numbers/text/`=SUM(…)` in cells or the formula bar; dependent totals update; add/rename sheets; insert/delete rows; save and open in Excel/LibreOffice — values and formulas are right.
 - [ ] .xls/.doc: the note explains saving creates .xlsx/.docx; the original file is unchanged afterwards.
+
+### Archives
+- [ ] Single-click an archive in the tree opens the browser; the chevron expands it inline like a folder.
+- [ ] Double-click a file inside → opens read-only in the right viewer; Save As writes a normal file.
+- [ ] Extract here / Extract to… / Extract selected (Ctrl/Shift multi-select) show progress for big archives and can be cancelled from the status bar.
+- [ ] An archive with `../` entries reports them as skipped and writes nothing outside the chosen folder.
+- [ ] Compress to ZIP… on a folder; the result opens in Explorer/Finder/the Linux archive manager.
+- [ ] RAR/7z show the read-only explanation.
