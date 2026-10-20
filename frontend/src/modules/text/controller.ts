@@ -35,6 +35,8 @@ export class TextController {
   large = false;
   loading = false;
   private saved: Text | null = null;
+  /** Size in bytes of what was loaded (follow mode appends from here). */
+  private bytes = 0;
   private dirtyTimer: ReturnType<typeof setTimeout> | undefined;
   private statusFrame = 0;
   private wrap: boolean;
@@ -101,6 +103,7 @@ export class TextController {
         this.bom = meta.bom;
         this.eol = meta.eol;
         tab.size = meta.size;
+        this.bytes = meta.size;
         this.large = meta.size > LARGE_FILE;
       },
       async (chunk) => {
@@ -133,6 +136,49 @@ export class TextController {
     if (this.large) return;
     const lang = this.opts.language ?? (await languageFor(this.tab.name).catch(() => null));
     if (lang) this.view.dispatch({ effects: this.c.language.reconfigure(lang) });
+  }
+
+  /**
+   * Follow a growing file (tail -f): append only what was added since the last
+   * read; reload when it shrank (rotated), uses a multi-byte encoding other
+   * than UTF-8, or has unsaved edits.
+   */
+  async follow(): Promise<'appended' | 'reloaded' | 'none'> {
+    const path = this.tab.filePath;
+    if (!path || this.loading) return 'none';
+    const st = await api.Stat(path);
+    if (st.size === this.bytes) return 'none';
+    const simple = this.encoding === 'utf-8' || this.encoding === 'utf-8-bom' || /^(windows-|iso-|koi8)/.test(this.encoding);
+    if (st.size < this.bytes || !simple || this.tab.dirty) {
+      await this.load();
+      return 'reloaded';
+    }
+    const res = await fetch(this.tab.url(), { headers: { Range: `bytes=${this.bytes}-${st.size - 1}` } });
+    if (res.status !== 206) {
+      await this.load();
+      return 'reloaded';
+    }
+    const buf = new Uint8Array(await res.arrayBuffer());
+    let cut = buf.length;
+    if (this.encoding.startsWith('utf-8')) {
+      // Leave an incomplete character at the end for the next read.
+      let i = buf.length - 1;
+      while (i >= 0 && buf.length - i <= 3 && (buf[i] & 0xc0) === 0x80) i--;
+      if (i >= 0) {
+        const b = buf[i];
+        const need = b >= 0xf0 ? 4 : b >= 0xe0 ? 3 : b >= 0xc0 ? 2 : 1;
+        if (need > buf.length - i) cut = i;
+      }
+    }
+    const text = new TextDecoder(this.encoding.startsWith('utf-8') ? 'utf-8' : this.encoding).decode(buf.subarray(0, cut));
+    this.bytes += cut;
+    this.tab.size = this.bytes;
+    if (text) {
+      this.view.dispatch({ changes: { from: this.view.state.doc.length, insert: text }, annotations: [Transaction.addToHistory.of(false), loadingAnno.of(true)] });
+      this.saved = this.view.state.doc;
+      this.updateStatus();
+    }
+    return 'appended';
   }
 
   /** Jump to tab.reveal (line/col, from search results or links). */
@@ -188,6 +234,7 @@ export class TextController {
         if (big && performance.now() - t0 > 300) this.tab.status = { ...this.tab.status, info: `Saving… ${Math.round((done / total) * 100)}%` };
       });
       this.tab.size = entry.size;
+      this.bytes = entry.size;
       if (big) this.tab.status = { ...this.tab.status, info: this.large ? 'Large file: highlighting off' : undefined };
     };
     try {

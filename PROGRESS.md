@@ -205,6 +205,16 @@
   swipe, onion skin, difference (changed pixels in magenta, count and share, a tolerance for JPEG noise). Anything
   else: byte by byte, reporting the first difference. Diffing runs in a worker (Myers' O(ND) in linear space), so a
   100,000-line pair compares in ~0.1 s without stalls.
+- **M23 — XML, TOML, JSON Lines and logs.** XML (.xml, .plist, .csproj, .gpx, .kml, .rss, .xsd…) and TOML open in
+  the data view: tree, validation with the line and column of the first error, "As JSON" and "Save as JSON" (XML
+  maps to the usual "@attribute" / "#text" shape; repeated elements become lists). JSON Lines / NDJSON: one record
+  per line, the bad line pointed out; lists of records (JSONL, or a JSON array of objects) also get a Table view
+  (the spreadsheet grid, columns from the keys). Log files (.log, .out, .err) open in a log view: the editor with
+  error/warning lines tinted and the level word and timestamp coloured (ERROR, [WARN], level=info, JSON "level",
+  Android "E/", klog "E1020"), chips counting errors, warnings, info and debug lines (lines without a level, such as
+  stack traces, belong to the line above), a text or regex filter listing the matching lines below (click to jump),
+  next/previous error (F8 / Shift+F8), and Follow: new lines appear as the file grows — only the added bytes are
+  read, a shrunk (rotated) file is reloaded.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

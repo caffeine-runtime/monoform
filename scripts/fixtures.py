@@ -564,6 +564,36 @@ for _i in range(50):
     _big[_i * 1999 + 7] = f"line changed {_i}"
 w("compare/big-b.txt", ("\n".join(_big) + "\n").encode())
 
+# ---- more data formats and logs ----
+w("data/catalog.xml", b"""<?xml version="1.0" encoding="UTF-8"?>
+<!-- books -->
+<catalog lang="en">
+  <book id="1"><title>Tom &amp; Jerry</title><price>9.5</price></book>
+  <book id="2"><title><![CDATA[<b>Bold</b>]]></title><price>12</price></book>
+</catalog>
+""")
+w("data/config.toml", b"""title = "Hold It All"
+[server]
+port = 8080
+hosts = ["a", "b"]
+started = 2026-10-20T12:00:00Z
+[[users]]
+name = "ann"
+[[users]]
+name = "bob"
+""")
+w("data/events.jsonl", "".join(_json.dumps({"id": i, "kind": ["open", "save", "close"][i % 3], "ms": i * 7 % 500, **({"extra": {"n": i}} if i % 10 == 0 else {})}) + "\n" for i in range(5000)).encode())
+w("data/people.json", _json.dumps([{"name": f"P{i}", "age": 20 + i % 50, "city": ["Berlin", "Paris"][i % 2]} for i in range(300)]).encode())
+_log = []
+for i in range(3000):
+    lv = ["INFO", "INFO", "DEBUG", "WARN", "INFO", "ERROR"][i % 6]
+    _log.append(f"2026-10-20T12:{i // 60 % 60:02d}:{i % 60:02d}Z {lv} [svc-{i % 4}] event {i} done")
+    if lv == "ERROR":
+        _log.append("java.lang.IllegalStateException: boom")
+        _log.append("    at com.example.Main.run(Main.java:42)")
+_log.append('time="2026-10-20T13:00:00Z" level=fatal msg="disk full"')
+w("logs/app.log", ("\n".join(_log) + "\n").encode())
+
 _pos, _nor, _uv, _idx = _cube()
 def _stl():
     tris = [(_idx[i], _idx[i + 1], _idx[i + 2]) for i in range(0, len(_idx), 3)]

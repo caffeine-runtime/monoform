@@ -2,6 +2,7 @@
 // have to be materialized as DOM or cloned to the main thread.
 import { parseAllDocuments, type Document } from 'yaml';
 import { parseJson, lineCol, type JsonError } from './jsonparse';
+import { cell, isTable, parseJsonl, parseTomlText, parseXml, tableColumns, type Parsed } from './formats';
 
 export type NodeType = 'object' | 'array' | 'string' | 'number' | 'boolean' | 'null';
 
@@ -89,9 +90,21 @@ function yamlError(docs: Document.Parsed[], text: string): JsonError | null {
   return null;
 }
 
-function parse(text: string, format: string): { ok: boolean; error?: JsonError; root?: TreeNode; documents?: number } {
+let columns: string[] = [];
+
+function parse(text: string, format: string): { ok: boolean; error?: JsonError; root?: TreeNode; documents?: number; table?: string[] } {
   ok = false;
   root = undefined;
+  columns = [];
+  const more: Record<string, (t: string) => Parsed> = { xml: parseXml, toml: parseTomlText, jsonl: parseJsonl };
+  if (more[format]) {
+    const r = more[format](text);
+    if (!r.ok) return { ok: false, error: r.error };
+    root = r.value;
+    ok = true;
+    if (isTable(root)) columns = tableColumns(root);
+    return { ok: true, root: node('$', [], root), documents: r.documents, table: columns.length ? columns : undefined };
+  }
   if (format === 'yaml') {
     const docs = parseAllDocuments(text, { prettyErrors: true, uniqueKeys: true });
     const list = Array.isArray(docs) ? docs : [docs];
@@ -106,7 +119,8 @@ function parse(text: string, format: string): { ok: boolean; error?: JsonError; 
   if (!r.ok) return { ok: false, error: r.error };
   root = r.value;
   ok = true;
-  return { ok: true, root: node('$', [], root) };
+  if (isTable(root)) columns = tableColumns(root);
+  return { ok: true, root: node('$', [], root), table: columns.length ? columns : undefined };
 }
 
 self.onmessage = (e: MessageEvent) => {
@@ -119,6 +133,11 @@ self.onmessage = (e: MessageEvent) => {
       case 'children':
         if (!ok) return reply({ nodes: [], total: 0 });
         return reply(children(m.path, m.offset, m.limit));
+      case 'rows': {
+        // Table view: cells of rows [start, end) of the root list.
+        const list = ok && Array.isArray(root) ? (root as Record<string, unknown>[]) : [];
+        return reply({ rows: list.slice(m.start, m.end).map((r) => columns.map((c) => cell(r && typeof r === 'object' ? r[c] : undefined))) });
+      }
       case 'stringify': {
         if (!ok) return reply({ error: 'The document has errors' });
         const v = m.path ? at(m.path) : root;

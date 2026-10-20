@@ -38,6 +38,7 @@
     "markdown-it": "^15.0.3",
     "onnxruntime-web": "1.30.0",
     "pdfjs-dist": "^6.4.299",
+    "smol-toml": "^1.9.1",
     "three": "0.186.1",
     "yaml": "^2.9.1"
   }

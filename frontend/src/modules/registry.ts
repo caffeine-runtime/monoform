@@ -1,6 +1,7 @@
 // Built-in modules. Each entry only describes the module; its code is loaded
 // with a dynamic import() the first time a file of that type is opened.
 import { modules } from '../core/modules';
+import { XML_EXT } from './data/formatExt';
 
 const TEXT_EXT = [
   'txt', 'log', 'ini', 'cfg', 'conf', 'toml', 'env', 'properties', 'xml', 'html', 'htm', 'css', 'scss', 'less',
@@ -25,6 +26,14 @@ export function registerBuiltinModules() {
     mimeTypes: ['text/markdown'],
     priority: 10,
     load: () => import('./markdown'),
+  });
+  modules.register({
+    id: 'log',
+    name: 'Log',
+    extensions: ['log', 'out', 'err'],
+    mimeTypes: [],
+    priority: 5,
+    load: () => import('./log'),
   });
   modules.register({
     id: 'image',
@@ -99,8 +108,8 @@ export function registerBuiltinModules() {
   modules.register({
     id: 'data',
     name: 'Data',
-    extensions: ['json', 'jsonc', 'geojson', 'webmanifest', 'yaml', 'yml'],
-    mimeTypes: ['application/json', 'application/yaml', 'application/geo+json', 'application/manifest+json'],
+    extensions: ['json', 'jsonc', 'geojson', 'webmanifest', 'yaml', 'yml', 'toml', 'jsonl', 'ndjson', 'jsonlines', ...XML_EXT],
+    mimeTypes: ['application/json', 'application/yaml', 'application/geo+json', 'application/manifest+json', 'application/toml', 'application/x-ndjson', 'application/xml', 'text/xml'],
     priority: 5,
     load: () => import('./data/dataIndex'),
   });
