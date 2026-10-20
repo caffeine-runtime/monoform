@@ -85,7 +85,7 @@ jobs:
           M0=$RUNNER_TEMP/m0 && mkdir -p "$M0" && printf a >"$M0/a.txt" && printf b >"$M0/b.md" && printf c >"$M0/c.txt"
           scripts/selftest.sh m0-setup "$M0" "$RUNNER_TEMP/m0.json"
           scripts/selftest.sh m0-restore "$M0" "$RUNNER_TEMP/m0.json"
-          for s in m1 m2 m3 m4 m4b m5 m6 m8 m10 m11 m12 m13; do scripts/selftest.sh "$s" "$FX"; done
+          for s in m1 m2 m3 m4 m4b m5 m6 m8 m10 m11 m12 m13 m14; do scripts/selftest.sh "$s" "$FX"; done
           HIA_TIMEOUT=400 scripts/selftest.sh m9 "$FX"
           scripts/verify-pdf.sh "$FX"
           scripts/verify-archives.sh "$FX"

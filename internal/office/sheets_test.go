@@ -123,3 +123,46 @@ func TestRowsInsertDeleteSheets(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestSetCellsBatchUndoAndComplete(t *testing.T) {
+	bs := NewBooks()
+	path := filepath.Join(t.TempDir(), "b.xlsx")
+	f := excelize.NewFile()
+	f.SetCellValue("Sheet1", "A1", "Warsaw")
+	f.SetCellValue("Sheet1", "A2", 1)
+	f.SetCellValue("Sheet1", "A3", 2)
+	f.SetCellFormula("Sheet1", "B1", "SUM(A2:A3)")
+	if err := f.SaveAs(path); err != nil {
+		t.Fatal(err)
+	}
+	info, err := bs.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old, err := bs.SetCells(info.ID, "Sheet1", []CellEdit{{1, 0, "10"}, {2, 0, "20"}, {3, 0, "=A2*2"}}, []CellRange{{0, 0, 0, 0}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, _ := bs.Rows(info.ID, "Sheet1", 0, 4, 2)
+	if rows[0][0] != "" || rows[0][1] != "30" || rows[3][0] != "20" {
+		t.Fatalf("after batch: %v", rows)
+	}
+	in, _ := bs.Inputs(info.ID, "Sheet1", 0, 3, 0, 1)
+	if in[0][1] != "=SUM(A2:A3)" || in[3][0] != "=A2*2" {
+		t.Fatalf("inputs %v", in)
+	}
+	// Undo by writing the old inputs back.
+	if _, err := bs.SetCells(info.ID, "Sheet1", old, nil); err != nil {
+		t.Fatal(err)
+	}
+	rows, _ = bs.Rows(info.ID, "Sheet1", 0, 4, 2)
+	if rows[0][0] != "Warsaw" || rows[0][1] != "3" || rows[3][0] != "" {
+		t.Fatalf("after undo: %v (old %v)", rows, old)
+	}
+	if c, _ := bs.Complete(info.ID, "Sheet1", 0, "wa"); c != "Warsaw" {
+		t.Errorf("complete %q", c)
+	}
+	if c, _ := bs.Complete(info.ID, "Sheet1", 0, "1"); c != "" {
+		t.Errorf("numbers don't complete: %q", c)
+	}
+}

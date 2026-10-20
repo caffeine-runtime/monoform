@@ -96,6 +96,20 @@
   any length, no quality loss. Editing works even where the system can't play the codec (e.g. H.264 on a bare
   Linux).
 
+## After v2.0.0-beta.1
+- **M14 — Spreadsheet-style grid (CSV and Excel).** The CSV/TSV and .xlsx grids now behave like Excel: select
+  ranges by dragging, Shift+click, Shift+arrows/Page/Home/End, row numbers, column headers (sorting moved to the
+  ▾ button in the header), Ctrl+Space / Shift+Space and Ctrl/Cmd+A; the status bar shows Average · Count · Sum of
+  the selection. Copy/cut/paste as tab-separated text (interchanges with Excel, LibreOffice and Google Sheets):
+  one value fills the selection, a block tiles it when it divides evenly, a CSV paste past the last row adds rows,
+  cut + paste moves. Delete clears the range. Drag the selection's border to move cells (Ctrl/Alt-drag copies;
+  asks before overwriting data); drag the fill handle to continue a series (numbers by their step, "Item 1",
+  weekdays, months, ISO dates; anything else repeats) or Ctrl+D / Ctrl+R to fill down/right. Copying, filling
+  and Ctrl+D move a formula's relative references (`$` parts stay; off-sheet references become `#REF!`).
+  AutoComplete proposes the one matching entry from the column while typing (Enter accepts, Delete/Backspace
+  drops it). Every change, including paste/fill/move batches, is one undo step (Ctrl/Cmd+Z, Ctrl+Y /
+  Ctrl+Shift+Z; toolbar buttons in CSV); context menu with cut/copy/paste/clear/insert/delete rows.
+
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
   the packages.
@@ -147,3 +161,7 @@ available here).
 - 3D: on the software-rendered Linux VM (llvmpipe) a floor-grid line passing under the camera can show as a wide grey bar; the same scene renders correctly in Chromium's software renderer, so it looks like a llvmpipe/WebKitGTK rasterisation bug. Toggle the grid (G) if it appears.
 - 3D: glTF files with KTX2/Basis textures (`KHR_texture_basisu`) aren't supported yet (clear error); FBX files with external textures need them next to the model; USD support is three.js's (USDA/USDC/USDZ geometry and materials, no variants or skeletal animation).
 - Object selection analyses the whole image once (~15–18 s on the test VM, single-threaded WASM); clicks are fast afterwards. Background removal uses a small model (U²-Netp) — fine hair and glass are approximate.
+- Grid: one rectangular selection at a time (no Ctrl+click multi-ranges); a CSV paste wider than the table is cut
+  at the last column (with a notice) — add columns first; rows can't be reordered by dragging their numbers.
+- Grid: in .xlsx, editing a date-formatted cell shows the stored serial number (e.g. 46327), not the date.
+- CSV undo history is cleared by changing the delimiter or header setting; .xlsx undo by inserting/deleting rows.

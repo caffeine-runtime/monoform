@@ -12,6 +12,8 @@ export interface CsvInfo {
   sortCol: number;
   sortDir: 1 | -1;
   dirty: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 export class CsvClient {

@@ -590,6 +590,22 @@ export namespace office {
 		    return a;
 		}
 	}
+	export class CellEdit {
+	    row: number;
+	    col: number;
+	    value: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CellEdit(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.row = source["row"];
+	        this.col = source["col"];
+	        this.value = source["value"];
+	    }
+	}
 	export class CellInfo {
 	    value: string;
 	    formula: string;
@@ -604,6 +620,24 @@ export namespace office {
 	        this.value = source["value"];
 	        this.formula = source["formula"];
 	        this.input = source["input"];
+	    }
+	}
+	export class CellRange {
+	    r0: number;
+	    c0: number;
+	    r1: number;
+	    c1: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new CellRange(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.r0 = source["r0"];
+	        this.c0 = source["c0"];
+	        this.r1 = source["r1"];
+	        this.c1 = source["c1"];
 	    }
 	}
 	export class Relationship {

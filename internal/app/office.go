@@ -19,6 +19,15 @@ func (a *App) SheetCell(id, sheet string, row, col int) (office.CellInfo, error)
 func (a *App) SheetSet(id, sheet string, row, col int, input string) (string, error) {
 	return a.books.SetCell(id, sheet, row, col, input)
 }
+func (a *App) SheetSetCells(id, sheet string, cells []office.CellEdit, clear []office.CellRange) ([]office.CellEdit, error) {
+	return a.books.SetCells(id, sheet, cells, clear)
+}
+func (a *App) SheetInputs(id, sheet string, r0, r1, c0, c1 int) ([][]string, error) {
+	return a.books.Inputs(id, sheet, r0, r1, c0, c1)
+}
+func (a *App) SheetComplete(id, sheet string, col int, typed string) (string, error) {
+	return a.books.Complete(id, sheet, col, typed)
+}
 func (a *App) SheetInsertRow(id, sheet string, row int) error {
 	return a.books.InsertRow(id, sheet, row)
 }

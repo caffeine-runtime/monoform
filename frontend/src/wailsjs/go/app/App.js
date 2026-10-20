@@ -238,8 +238,16 @@ export function SheetClose(arg1) {
   return window['go']['app']['App']['SheetClose'](arg1);
 }
 
+export function SheetComplete(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['SheetComplete'](arg1, arg2, arg3, arg4);
+}
+
 export function SheetDeleteRow(arg1, arg2, arg3) {
   return window['go']['app']['App']['SheetDeleteRow'](arg1, arg2, arg3);
+}
+
+export function SheetInputs(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['app']['App']['SheetInputs'](arg1, arg2, arg3, arg4, arg5, arg6);
 }
 
 export function SheetInsertRow(arg1, arg2, arg3) {
@@ -264,6 +272,10 @@ export function SheetSave(arg1, arg2) {
 
 export function SheetSet(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['app']['App']['SheetSet'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function SheetSetCells(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['SheetSetCells'](arg1, arg2, arg3, arg4);
 }
 
 export function Siblings(arg1, arg2) {

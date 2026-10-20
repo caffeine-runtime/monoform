@@ -4,8 +4,12 @@
   import Search from '@lucide/svelte/icons/search';
   import Plus from '@lucide/svelte/icons/plus';
   import Trash from '@lucide/svelte/icons/trash-2';
+  import Undo2 from '@lucide/svelte/icons/undo-2';
+  import Redo2 from '@lucide/svelte/icons/redo-2';
   import FileText from '@lucide/svelte/icons/file-text';
-  import Grid, { type GridColumn } from './Grid.svelte';
+  import Grid, { type GridColumn, type GridEdit } from './Grid.svelte';
+  import { formatStats, rangeCells, rangeRows, type Range, type Stats } from './gridOps';
+  import { formatShortcut } from '../../core/keys';
   import { CsvClient, type CsvInfo } from './csvClient';
   import { api, sessionToken } from '../../core/backend';
   import { extname } from '../../core/paths';
@@ -57,12 +61,15 @@
     });
   }
 
+  let selStats = $state('');
+  let lastPos = { row: 0, col: 0 };
   function status(row?: number, col?: number) {
     if (!info) return;
+    if (row !== undefined) lastPos = { row, col: col! };
     tab.status = {
       ...tab.status,
       type: info.delimiter === '\t' ? 'TSV' : 'CSV',
-      position: row !== undefined ? `Row ${row + 1}, ${columns[col!]?.name ?? ''}` : undefined,
+      position: selStats || `Row ${lastPos.row + 1}, ${columns[lastPos.col]?.name ?? ''}`,
       info: `${info.rows.toLocaleString()}${info.rows !== info.totalRows ? ` of ${info.totalRows.toLocaleString()}` : ''} rows · ${info.columns.length} columns`,
       encoding: info.encoding.toUpperCase(),
       eol: info.eol,
@@ -112,6 +119,45 @@
     await run({ type: 'edit', row, col, value });
   }
 
+  /** Paste, clear, move and fill arrive here as one undoable batch. */
+  async function applyEdit(e: GridEdit, label: string): Promise<boolean> {
+    if (tab.readOnly) {
+      ui.toast('This file is read-only here. Use Save as to edit a copy.', 'info');
+      return false;
+    }
+    return !!(await run({ type: 'apply', cells: e.cells, clear: e.clear }, `${label}…`));
+  }
+
+  async function undoRedo(redo: boolean) {
+    const r = (await run({ type: redo ? 'redo' : 'undo' })) as { at?: { row: number; col: number } } | undefined;
+    return r?.at ?? undefined;
+  }
+
+  async function complete(col: number, typed: string): Promise<string | null> {
+    return (await client.call<{ value: string | null }>({ type: 'complete', col, typed })).value;
+  }
+
+  // Excel-style "Average · Count · Sum" for multi-cell selections (computed in the worker).
+  let statsTimer: ReturnType<typeof setTimeout> | undefined;
+  let statsSeq = 0;
+  function onSelection(r: Range) {
+    clearTimeout(statsTimer);
+    if (rangeCells(r) <= 1) {
+      if (selStats) {
+        selStats = '';
+        status();
+      }
+      return;
+    }
+    const seq = ++statsSeq;
+    statsTimer = setTimeout(async () => {
+      const res = await client.call<{ stats: Stats }>({ type: 'stats', range: r }).catch(() => null);
+      if (!res || seq !== statsSeq) return;
+      selStats = formatStats(res.stats);
+      status();
+    }, 120);
+  }
+
   async function renameColumn(col: number) {
     if (!info?.header || tab.readOnly) return;
     const v = await ui.prompt('Column name', info.columns[col], 'Rename');
@@ -123,11 +169,13 @@
     if (r?.row !== undefined && r.row >= 0) grid?.moveTo(r.row, 0);
   }
 
+  /** Delete the selected rows (or the current one). */
   async function deleteRow() {
-    const c = grid?.cursor();
-    if (!c || !info?.rows) return;
-    await run({ type: 'deleteRows', rows: [c.row] });
-    grid?.moveTo(c.row, c.col);
+    const s = grid?.selection();
+    if (!s || !info?.rows) return;
+    const rows = Array.from({ length: Math.min(rangeRows(s), info.rows - s.r0) }, (_, i) => s.r0 + i);
+    await run({ type: 'deleteRows', rows }, 'Deleting…');
+    grid?.moveTo(s.r0, s.c0);
   }
 
   async function save(): Promise<boolean> {
@@ -171,15 +219,21 @@
     if (r?.info) await sizeColumns(r.info);
   }
 
-  function cellMenu(e: MouseEvent, row: number, col: number) {
+  function cellMenu(e: MouseEvent, _row: number, col: number) {
+    const s = grid?.selection();
+    const n = s ? Math.min(rangeRows(s), (info?.rows ?? 0) - s.r0) : 1;
+    const ro = tab.readOnly;
     menu.show(e, [
-      { label: 'Copy cell', run: async () => navigator.clipboard.writeText((await source.rows(row, row + 1))[0]?.[col] ?? '') },
-      { label: 'Copy row (tab-separated)', run: async () => navigator.clipboard.writeText(((await source.rows(row, row + 1))[0] ?? []).join('\t')) },
+      { label: 'Cut', shortcut: formatShortcut('Mod+X'), run: () => void grid?.copy(true), disabled: ro },
+      { label: 'Copy', shortcut: formatShortcut('Mod+C'), run: () => void grid?.copy() },
+      { label: 'Paste', shortcut: formatShortcut('Mod+V'), run: async () => grid?.pasteText(await navigator.clipboard.readText()), disabled: ro },
+      { label: 'Clear contents', shortcut: 'Del', run: () => void grid?.clearSelection(), disabled: ro },
       { separator: true },
-      { label: 'Insert row at end', run: addRow, disabled: tab.readOnly },
-      { label: 'Delete row', run: deleteRow, disabled: tab.readOnly },
+      { label: 'Insert row at end', run: addRow, disabled: ro },
+      { label: n > 1 ? `Delete ${n} rows` : 'Delete row', run: deleteRow, disabled: ro },
       { separator: true },
-      { label: `Sort by “${columns[col]?.name}”`, run: () => sort(col) },
+      { label: `Sort “${columns[col]?.name}” A → Z`, run: () => run({ type: 'sort', col, dir: 1 }, 'Sorting…') },
+      { label: `Sort “${columns[col]?.name}” Z → A`, run: () => run({ type: 'sort', col, dir: -1 }, 'Sorting…') },
     ]);
   }
 
@@ -190,7 +244,7 @@
   });
 
   // Hooks for self-tests.
-  (tab as unknown as { csvTest: unknown }).csvTest = { info: () => info, client, edit, sort: (c: number, d: 1 | -1) => run({ type: 'sort', col: c, dir: d }), filter: (q: string) => run({ type: 'filter', query: q }), rows: source.rows, grid: () => grid, save };
+  (tab as unknown as { csvTest: unknown }).csvTest = { info: () => info, client, edit, sort: (c: number, d: 1 | -1) => run({ type: 'sort', col: c, dir: d }), filter: (q: string) => run({ type: 'filter', query: q }), rows: source.rows, grid: () => grid, save, stats: () => selStats, deleteRow };
 
   onMount(() => {
     tab.handlers = {
@@ -222,8 +276,11 @@
   </select>
   {#if !tab.readOnly}
     <span class="sep"></span>
+    <button class="icon-btn" title="Undo ({formatShortcut('Mod+Z')})" disabled={!info?.canUndo} onclick={async () => { const at = await undoRedo(false); if (at) grid?.moveTo(at.row, at.col); }}><Icon icon={Undo2} /></button>
+    <button class="icon-btn" title="Redo ({formatShortcut('Mod+Shift+Z')})" disabled={!info?.canRedo} onclick={async () => { const at = await undoRedo(true); if (at) grid?.moveTo(at.row, at.col); }}><Icon icon={Redo2} /></button>
+    <span class="sep"></span>
     <button class="icon-btn" title="Add row" onclick={addRow}><Icon icon={Plus} /></button>
-    <button class="icon-btn" title="Delete current row" onclick={deleteRow}><Icon icon={Trash} /></button>
+    <button class="icon-btn" title="Delete selected rows" onclick={deleteRow}><Icon icon={Trash} /></button>
   {/if}
   <span class="spacer"></span>
   {#if busy}<span class="label"><span class="spinner inline"></span> {busy}</span>{/if}
@@ -246,6 +303,11 @@
       sortDir={info.sortDir}
       onsort={sort}
       onedit={edit}
+      onapply={applyEdit}
+      onundo={() => undoRedo(false)}
+      onredo={() => undoRedo(true)}
+      oncomplete={complete}
+      onselection={onSelection}
       onheaderedit={renameColumn}
       oncursor={(r, c) => status(r, c)}
       oncontext={cellMenu}
