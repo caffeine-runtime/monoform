@@ -33,6 +33,7 @@ const (
 	idTrackNumber    = 0xD7
 	idTrackType      = 0x83
 	idCodecID        = 0x86
+	idCodecPrivate   = 0x63A2
 	idDefaultDur     = 0x23E383
 	idVideo          = 0xE0
 	idPixelWidth     = 0xB0
@@ -171,6 +172,7 @@ type mkvTrack struct {
 	rate       float64
 	channels   int
 	defaultDur uint64
+	private    []byte // CodecPrivate
 	raw        []byte // whole TrackEntry element
 }
 
@@ -181,6 +183,7 @@ type mkvBlock struct {
 	off   int64 // element start
 	size  int64 // whole element
 	patch int   // offset of the int16 timecode within the element
+	end   int64 // end of the (Simple)Block's data (BlockGroups hold more after it)
 }
 
 type mkvFile struct {
@@ -258,6 +261,8 @@ func openMKV(path string) (*os.File, *mkvFile, error) {
 						t.kind = uintOf(v)
 					case idCodecID:
 						t.codec = string(v)
+					case idCodecPrivate:
+						t.private = v
 					case idDefaultDur:
 						t.defaultDur = uintOf(v)
 					case idVideo:
@@ -335,7 +340,7 @@ func (m *mkvFile) indexCluster(body, size, segEnd int64) (int64, error) {
 			track, vl := vint(b)
 			if vl > 0 && len(b) >= vl+3 {
 				rel := int16(binary.BigEndian.Uint16(b[vl:]))
-				m.blocks = append(m.blocks, mkvBlock{track: track, time: ts + int64(rel), key: b[vl+2]&0x80 != 0, off: p, size: int64(hl) + sz, patch: hl + vl})
+				m.blocks = append(m.blocks, mkvBlock{track: track, time: ts + int64(rel), key: b[vl+2]&0x80 != 0, off: p, size: int64(hl) + sz, patch: hl + vl, end: data + sz})
 			}
 		case idBlockGroup:
 			blk := mkvBlock{off: p, size: int64(hl) + sz, key: true}
@@ -352,6 +357,7 @@ func (m *mkvFile) indexCluster(body, size, segEnd int64) (int64, error) {
 						blk.track = track
 						blk.time = ts + int64(int16(binary.BigEndian.Uint16(b[vl:])))
 						blk.patch = int(q-p) + chl + vl
+						blk.end = q + int64(chl) + csz
 					}
 				case idReferenceBlock:
 					blk.key = false

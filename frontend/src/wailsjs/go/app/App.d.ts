@@ -166,6 +166,8 @@ export function UnwatchDir(arg1:string):Promise<void>;
 
 export function UnwatchFile(arg1:string):Promise<void>;
 
+export function VideoDemux(arg1:string):Promise<video.Demux>;
+
 export function VideoExport(arg1:string,arg2:video.Plan,arg3:string):Promise<string>;
 
 export function VideoOpen(arg1:string):Promise<app.VideoOpened>;

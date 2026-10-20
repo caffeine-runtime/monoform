@@ -3,12 +3,16 @@
 // keyframes; snap() mirrors internal/video.Snap so the timeline shows exactly
 // what will be written.
 
+import { hasEffects, type Project } from './project';
+
 export type Range = [number, number];
 
 export interface VideoEdit {
   keep: Range[];
   rotate: number; // extra clockwise degrees: 0/90/180/270
   mute: boolean;
+  /** Effects (overlays, speed, transitions); any make saving a render instead of a remux. */
+  fx?: Project;
 }
 
 /** A keyframe this close to a cut point counts as on it (Go: snapSlack). */
@@ -102,5 +106,5 @@ export function rangeAt(keep: readonly Range[], t: number): { inside: boolean; r
 }
 
 export function isUnchanged(e: VideoEdit, dur: number): boolean {
-  return e.rotate % 360 === 0 && !e.mute && e.keep.length === 1 && e.keep[0][0] <= 0.001 && e.keep[0][1] >= dur - 0.001;
+  return e.rotate % 360 === 0 && !e.mute && !(e.fx && hasEffects(e.fx)) && e.keep.length === 1 && e.keep[0][0] <= 0.001 && e.keep[0][1] >= dur - 0.001;
 }

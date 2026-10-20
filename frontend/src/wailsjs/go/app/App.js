@@ -306,6 +306,10 @@ export function UnwatchFile(arg1) {
   return window['go']['app']['App']['UnwatchFile'](arg1);
 }
 
+export function VideoDemux(arg1) {
+  return window['go']['app']['App']['VideoDemux'](arg1);
+}
+
 export function VideoExport(arg1, arg2, arg3) {
   return window['go']['app']['App']['VideoExport'](arg1, arg2, arg3);
 }

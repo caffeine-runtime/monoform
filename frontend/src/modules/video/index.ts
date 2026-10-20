@@ -1,6 +1,7 @@
 import { commands } from '../../core/commands';
 import { workspace } from '../../core/tabs.svelte';
 import { videoViews, type VideoView } from './views';
+import { dropHandlers } from '../../core/drop';
 
 const active = () => (workspace.active ? videoViews.get(workspace.active.id) : undefined);
 const has = () => !!active();
@@ -33,5 +34,8 @@ commands.register(
   { id: 'video.mute', title: 'Mute / unmute playback', category: 'Video', shortcut: 'M', when: has, run: run((v) => v.mute()) },
   { id: 'video.loop', title: 'Loop selection', category: 'Video', shortcut: 'L', when: has, run: run((v) => v.toggleLoop()) },
 );
+
+// Images dropped from the OS onto the picture become overlays.
+dropHandlers.unshift((x, y, paths) => active()?.dropImages(paths, x, y) ?? false);
 
 export { default } from './VideoModule.svelte';

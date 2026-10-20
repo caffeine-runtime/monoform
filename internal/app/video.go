@@ -48,3 +48,13 @@ func (a *App) VideoExport(src string, plan video.Plan, dest string) (string, err
 		return kept, err
 	}), nil
 }
+
+// VideoDemux lists a video's streams and sample locations so the webview can
+// decode it with WebCodecs (rendering effects). Sample bytes are read from the
+// media server URL returned by VideoOpen.
+func (a *App) VideoDemux(path string) (*video.Demux, error) {
+	if !filepath.IsAbs(path) {
+		return nil, errors.New("absolute path required")
+	}
+	return video.DemuxFile(path)
+}
