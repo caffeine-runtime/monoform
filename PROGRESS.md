@@ -126,6 +126,17 @@
   render per frame (m11 checks this: 70 renders in 70 frames, longest frame ≤ 41 ms on the software-rendered VM).
   The renderer also no longer keeps its drawing buffer between frames (an extra copy per frame); "Save view as
   PNG" renders right before reading the canvas, which m11 now checks.
+- **M15 — Video effects.** Overlays on the video: images (Add image, or drop one on the picture from the OS or
+  the sidebar) and area blurs (Gaussian, pixelate, motion, zoom, lens; ellipse or rectangle, soft edge). Each is
+  placed by dragging on the preview (move, scale, rotate) and animated with keyframes: an "Animate" switch adds a
+  key at the playhead, keys can be retimed on the overlay's track, every key has a timing curve (linear, ease
+  in/out, bounce, hold or a custom Bézier drawn in a curve editor) and the path between keys is curved or
+  straight; fades in/out per overlay. "Pin to moving object" tracks what is under the overlay (template matching
+  in a worker, sub-pixel) and turns it into keys. Speed changes (0.25×–4×) for the selection or the whole video,
+  with pitch-preserving audio; transitions where parts meet (crossfade, dip to black, wipe, slide, zoom; 0.5–2 s)
+  and whole-video fades. Everything previews live (WebGL compositor over the playing video) and undoes. With
+  effects, saving renders a WebM (VP9/VP8 + Opus) with the webview's WebCodecs encoders, cuts exact; without
+  effects, saving stays the lossless remux. Nothing loads until the first effect is added.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -146,7 +157,7 @@
 | 1M-row CSV (40 MB) | smooth scroll, sort | loads in 1.1–2.1 s (worst frame 54–61 ms); scrolling worst frame 60 ms (100 frames, 4 above 50 ms, all on large jumps); sort 2.6 s in the worker with UI frames ≤ 40 ms; filter 0.7 s | same |
 | Hashing (page cache warm) | progress ≥ 4/s, UI responsive | SHA-256 308 MB/s, BLAKE3 3.2 GB/s, all five at once 258 MB/s; 3 GiB file: progress every ≤ 113 ms, worst UI frame 38–60 ms while hashing | same |
 | Search by meaning (optional) | no freeze; memory returned when idle | 25–45 tokens/s (single-threaded WASM), query 1.0–1.3 s, model load 8–9 s, ~0.8 GB extra while loaded (webview RSS 0.34 → 1.11 GB) and freed on unload; worst UI frame 23–40 ms while indexing, 50–73 ms during a cold model load | same |
-| Image editor v2 (400×300 test image) | no freeze | adjustments preview+apply worst frame 21–23 ms; background removal 4.3–5.5 s first time, ~2 s after (worker); object selection: 16–18 s one-time analysis, 0.23–0.26 s per click incl. edge refinement; magic wand on 12 MP 0.9 s in the worker with UI frames ≤ 22 ms | same |
+| Image editor v2 (400×300 test image) | no freeze | adjustments preview+apply worst frame 21–23 ms; background removal 4.3–5.5 s first time, ~2 s after (worker); object selection: 16–18 s one-time analysis, 0.23–0.26 s per click incl. edge refinement; video effects (320×180, 3.5 s output): render 2.6 s with WebCodecs decoding, 4.7 s via <video> seeking; tracking 50 frames 0.9 s / 1.8 s; magic wand on 12 MP 0.9 s in the worker with UI frames ≤ 22 ms | same |
 | 3D model open (small models) | no freeze | first 3D tab of a session 460–540 ms, worst UI frame 87–115 ms (WebGL context + three.js + shader compiles, once); later tabs 160–300 ms, worst frame 30–55 ms; parse in the worker 33–67 ms | same |
 | Audio open | playable at once, waveform streams in | 3 s WAV: 195–240 ms to open, waveform complete after 140–190 ms; 10-min WAV: open 225 ms, waveform 165–175 ms, worst UI frame 35–50 ms; 10-min MP3 waveform 2.5 s (4 cores; 9.6 s on one), OGG 0.4 s, FLAC 2.4 s | same |
 | Video open / save | playable at once; save ≈ copy speed | 6 s WebM: open ~200 ms; saving remuxes without decoding (bounded by disk speed); Go tests remux 4 formats in < 1 s | same |
@@ -171,7 +182,10 @@ available here).
 - Audio: very-low-bitrate MPEG-2 MP3s (below 40 kbit/s at 16–24 kHz, e.g. some voice memos) decode with errors in the pure-Go decoder (go-mp3), so their waveform and re-encoded saves are wrong; playback (the system decoder) and lossless MP3 cuts are unaffected. MPEG-2.5 (8–12 kHz) MP3s aren't editable.
 - Audio: there's no permissively licensed MP3/AAC/Vorbis encoder in pure Go, so edited audio is saved as WAV or FLAC (MP3 only after cuts, by copying frames). Opus/AAC/M4A play (where the system can) but aren't editable.
 - Audio preview: cut points can sound a few milliseconds late (the player seeks over removed parts); the saved file is exact. MP3 waveform and playback can be offset by up to ~25–50 ms (players skip the encoder delay differently); edits are sample-exact relative to the waveform.
-- Video editing doesn't re-encode, so cuts snap to keyframes (the timeline shows the snapped result) and there are no transitions, filters, crop or format conversion: there's no permissively licensed H.264/HEVC encoder in pure Go, and WebCodecs encoders differ per platform (WebKitGTK: VP8/VP9 only).
+- Video saving without effects doesn't re-encode, so cuts snap to keyframes (the timeline shows the snapped result). With effects the video is rendered to WebM (VP9/VP8 + Opus) — the encoders every webview has; MP4/H.264 output isn't offered (no permissively licensed encoder in pure Go; WebKitGTK has no H.264 WebCodecs encoder). No crop or colour filters on video yet.
+- Video effects: rendering keeps the whole encoded output in memory until it is written (fine for clips; a long 1080p render needs RAM of roughly its file size), and runs at about 1–2× real time at 320×180 on the test VM (WebCodecs) — slower where WebKitGTK's WebCodecs decoder is missing its GStreamer parser (gst-plugins-bad), because frames then come from seeking a <video> element.
+- Video effects: starting a render or a track sets up WebKitGTK's codec pipelines on the main thread — one 80–170 ms UI frame on the test VM; the frame loop itself stays under ~60 ms.
+- Video effects: tracking follows translation (not rotation or scale) and stops when the object is lost or covered; overlays and effects aren't saved inside the original file — render, or they're lost when the tab closes (the tab asks first).
 - Video: rotation is saved for MP4/MOV only (WebM/MKV have no standard rotation flag); fragmented MP4 (some screen recorders, DASH) and AVI/OGV are play-only.
 - Video playback depends on the system's codecs: on Linux, H.264/HEVC/AAC need GStreamer's libav or bad plugins (the app explains this and still lets you edit and save).
 - 3D: the first model opened in a session has one ~90–115 ms frame on the software-rendered VM (creating the WebGL context and compiling shaders, which WebKitGTK does synchronously even with `KHR_parallel_shader_compile`); later opens stay ≤ 55 ms.

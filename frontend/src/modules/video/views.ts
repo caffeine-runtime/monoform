@@ -11,5 +11,7 @@ export interface VideoView {
   snapshot: () => void;
   mute: () => void;
   toggleLoop: () => void;
+  /** Images dropped from the OS at window point (x, y); true when handled. */
+  dropImages: (paths: string[], x: number, y: number) => boolean;
 }
 export const videoViews = new Map<string, VideoView>();

@@ -23,7 +23,18 @@
   import { formatShortcut } from '../../core/keys';
   import { formatTime } from '../audio/waveform';
   import * as E from './edits';
+  import * as P from './project';
   import { videoViews, type VideoOp } from './views';
+  import FxStage from './FxStage.svelte';
+  import FxTracks from './FxTracks.svelte';
+  import FxPanel from './FxPanel.svelte';
+  import type { Compositor } from './compositor';
+  import ImagePlus from '@lucide/svelte/icons/image-plus';
+  import Droplet from '@lucide/svelte/icons/droplet';
+  import Gauge from '@lucide/svelte/icons/gauge';
+  import Wand from '@lucide/svelte/icons/wand-sparkles';
+  import { fileUrl, readFile } from '../../core/backend';
+  import { workspace } from '../../core/tabs.svelte';
 
   type Opened = Awaited<ReturnType<typeof api.VideoOpen>>;
 
@@ -47,7 +58,7 @@
   let speed = $state(1);
   let loopOn = $state(false);
   let sel = $state<E.Range | null>(null);
-  let edit = $state.raw<E.VideoEdit>({ keep: [], rotate: 0, mute: false });
+  let edit = $state.raw<E.VideoEdit>({ keep: [], rotate: 0, mute: false, fx: P.EMPTY });
   let undoStack: E.VideoEdit[] = [];
   let redoStack: E.VideoEdit[] = [];
   let canUndo = $state(false);
@@ -56,7 +67,28 @@
 
   const dur = $derived(info?.duration || el?.duration || 0);
   const editable = $derived(!!info?.editable);
-  const kept = $derived(E.snap(edit.keep, info?.keyframes ?? [], dur));
+  // ---- effects ----
+  const fx = $derived(edit.fx ?? P.EMPTY);
+  /** With effects the video is re-encoded, so cuts are exact instead of snapping to keyframes. */
+  const fxOn = $derived(P.hasEffects(fx));
+  let selId = $state<string | null>(null);
+  let autoKey = $state(false);
+  let fxPanel = $state(false);
+  let tracking = $state('');
+  let rendering = $state<{ done: number; total: number; abort: AbortController } | null>(null);
+  let fxCanvas = $state<HTMLCanvasElement>();
+  let el2 = $state<HTMLVideoElement>();
+  let comp: Compositor | null = null;
+  /** Overlay images by asset id (immutable; layers refer to them). */
+  const assets = new Map<string, ImageBitmap>();
+  let assetsVersion = $state(0);
+  const selLayer = $derived(fx.layers.find((l) => l.id === selId) ?? null);
+  const outW = $derived(edit.rotate % 180 ? natural.h : natural.w);
+  const outH = $derived(edit.rotate % 180 ? natural.w : natural.h);
+
+  const kept = $derived(fxOn ? E.normalize(edit.keep, dur) : E.snap(edit.keep, info?.keyframes ?? [], dur));
+  const ps = $derived(fxOn ? P.pieces(kept, fx) : []);
+  const outLen = $derived(fxOn ? P.outputLength(ps) : E.keptLength(kept));
   const gaps = $derived(E.removed(kept, dur));
   /** Parts just cut out, flashed on the timeline so the change is noticed. */
   let flash = $state<E.Range[]>([]);
@@ -95,7 +127,8 @@
       const o = await api.VideoOpen(tab.filePath);
       if (!o?.info) throw new Error('Couldn’t read this video.');
       opened = o;
-      edit = { keep: o.info.duration ? [[0, o.info.duration]] : [], rotate: 0, mute: false };
+      edit = { keep: o.info.duration ? [[0, o.info.duration]] : [], rotate: 0, mute: false, fx: P.EMPTY };
+      selId = null;
       undoStack = [];
       redoStack = [];
       canUndo = canRedo = false;
@@ -189,14 +222,22 @@
       else {
         const r = E.rangeAt(kept, time);
         if (!r.inside) {
-          if (r.range) el.currentTime = r.range[0];
-          else {
+          if (r.range) {
+            // After an overlapping transition the next part has already been playing for a while.
+            const i = kept.indexOf(r.range);
+            const pc = ps[i];
+            const jump = pc && pc.enter && P.TRANSITIONS.find((x) => x.id === pc.enter!.kind)?.overlap ? P.advance(fx.speeds, pc.src[0], ps[i - 1].out[1] - pc.out[0], pc.src[1]) : r.range[0];
+            el.currentTime = jump;
+          } else {
             el.pause();
             el.currentTime = kept[0][0];
           }
         }
       }
+      const rate = speed * P.speedAt(fx.speeds, time);
+      if (Math.abs(el.playbackRate - rate) > 0.001) el.playbackRate = rate;
     }
+    if (fxOn) drawFx();
     updateStatus();
     if (playing) raf = requestAnimationFrame(tick);
   }
@@ -294,7 +335,7 @@
   function afterEdit() {
     canUndo = undoStack.length > 0;
     canRedo = redoStack.length > 0;
-    tab.dirty = changed;
+    tab.dirty = changed && edit !== renderedEdit;
     updateStatus();
   }
 
@@ -364,6 +405,276 @@
     ui.toast(`Restored ${formatTime(g[1] - g[0], 1)}.`, 'success', { label: 'Undo', run: () => doEdit('undo') });
   }
 
+  // ---------- effects ----------
+
+  let liveBase: E.VideoEdit | null = null;
+  let commitTimer: ReturnType<typeof setTimeout> | undefined;
+
+  /** Change the effects: live while dragging (done=false), committed to undo on done; undefined = commit when idle. */
+  function setFx(next: P.Project, done?: boolean) {
+    if (!needEditable()) return;
+    liveBase ??= edit;
+    edit = { ...edit, fx: next };
+    clearTimeout(commitTimer);
+    if (done === false) return void queueMicrotask(drawFx);
+    const finish = () => {
+      const base = liveBase;
+      liveBase = null;
+      if (base && base !== edit) {
+        undoStack.push(base);
+        redoStack = [];
+      }
+      afterEdit();
+      drawFx();
+    };
+    if (done) finish();
+    else commitTimer = setTimeout(finish, 400);
+    queueMicrotask(drawFx);
+  }
+
+  function updateLayer(l: P.Layer, done?: boolean) {
+    setFx({ ...fx, layers: fx.layers.map((x) => (x.id === l.id ? l : x)) }, done);
+  }
+
+  function stageChange(l: P.Layer, st: Partial<P.State>, done: boolean) {
+    updateLayer(P.place(l, time, st, autoKey), done);
+  }
+
+  function addLayer(l: P.Layer) {
+    setFx({ ...fx, layers: [...fx.layers, l] }, true);
+    selId = l.id;
+    fxPanel = true;
+  }
+
+  /** Where a new overlay goes in time: the selection, else 5 s from the playhead. */
+  function span(): { start: number; end: number } {
+    if (sel) return { start: sel[0], end: sel[1] };
+    return { start: time, end: Math.min(dur, time + 5) };
+  }
+
+  async function addImageBitmap(bmp: ImageBitmap, name: string, at?: { x: number; y: number }) {
+    if (!needEditable() || !outW) return;
+    const id = `img-${Date.now().toString(36)}-${assets.size}`;
+    assets.set(id, bmp);
+    assetsVersion++;
+    const f = Math.min(1, (outW * 0.4) / bmp.width, (outH * 0.4) / bmp.height);
+    addLayer(P.newLayer('image', { ...span(), x: at?.x ?? outW / 2, y: at?.y ?? outH / 2, w: Math.round(bmp.width * f), h: Math.round(bmp.height * f) }, { asset: id, name }));
+  }
+
+  const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'avif'];
+  async function addImages(paths?: string[], at?: { x: number; y: number }) {
+    if (!needEditable()) return;
+    if (!paths) paths = (await api.OpenFilesDialog('Add an image to the video', [{ name: 'Images', patterns: IMAGE_EXT.map((e) => `*.${e}`).join(';') }])) ?? [];
+    for (const p of paths.filter((x) => IMAGE_EXT.includes(extname(x)))) {
+      try {
+        const bmp = await createImageBitmap(new Blob([await readFile(p)]));
+        await addImageBitmap(bmp, stem(p), at);
+      } catch (e) {
+        toastError(e, `Couldn’t add ${basename(p)}`);
+      }
+    }
+  }
+
+  function addBlur() {
+    if (!needEditable() || !outW) return;
+    addLayer(P.newLayer('blur', { ...span(), x: outW / 2, y: outH / 2, w: Math.round(outW / 3), h: Math.round(outH / 3) }, { name: `Blur ${fx.layers.filter((l) => l.kind === 'blur').length + 1}` }));
+  }
+
+  function speedMenu(e: MouseEvent) {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const [a, b] = sel ?? [0, dur];
+    const cur = P.speedAt(fx.speeds, (a + b) / 2);
+    menu.show(
+      { clientX: r.left, clientY: r.bottom + 4 },
+      [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4].map((rate) => ({
+        label: `${rate === cur ? '✓ ' : ''}${rate}×${rate === 1 ? ' (normal)' : rate < 1 ? ' slower' : ' faster'}`,
+        run: () => {
+          setFx({ ...fx, speeds: P.setSpeed(fx.speeds, a, b, rate) }, true);
+          ui.toast(`${sel ? 'Selection' : 'Whole video'} at ${rate}×. The video is now ${formatTime(P.outputLength(P.pieces(E.normalize(edit.keep, dur), fx)), 1)} long.`, 'success', { label: 'Undo', run: () => doEdit('undo') });
+        },
+      })),
+    );
+  }
+
+  function transitionMenu(e: MouseEvent, at: number) {
+    e.stopPropagation();
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const cur = fx.transitions.find((t) => Math.abs(t.at - at) < 0.02);
+    const set = (kind: P.TransitionKind | null, d = 1) =>
+      setFx({ ...fx, transitions: [...fx.transitions.filter((t) => Math.abs(t.at - at) >= 0.02), ...(kind ? [{ at, kind, dur: d }] : [])] }, true);
+    menu.show({ clientX: r.left, clientY: r.bottom + 4 }, [
+      { label: `${cur ? '' : '✓ '}Hard cut (no transition)`, run: () => set(null) },
+      { separator: true },
+      ...P.TRANSITIONS.flatMap((t) => [0.5, 1, 2].map((d) => ({ label: `${cur?.kind === t.id && cur.dur === d ? '✓ ' : ''}${t.label} · ${d} s`, run: () => set(t.id, d) }))),
+    ]);
+  }
+
+  async function ensureComp(): Promise<Compositor | null> {
+    if (comp) return comp;
+    if (!fxCanvas) return null;
+    try {
+      const { Compositor } = await import('./compositor');
+      comp ??= new Compositor(fxCanvas);
+    } catch (e) {
+      toastError(e, 'Effects preview isn’t available');
+      return null;
+    }
+    return comp;
+  }
+
+  let drawQueued = false;
+  /** Draw the effects preview for the current time (coalesced to one per frame). */
+  function drawFx() {
+    if (drawQueued) return;
+    drawQueued = true;
+    requestAnimationFrame(() => {
+      drawQueued = false;
+      void drawNow();
+    });
+  }
+
+  async function drawNow() {
+    if (!fxOn || !el || !natural.w || el.readyState < 2) return;
+    const c = await ensureComp();
+    if (!c) return;
+    c.resize(outW & ~1 || outW, outH & ~1 || outH);
+    for (const [id, bmp] of assets) if (!c.hasImage(id)) c.setImage(id, bmp);
+    const o = P.outputTimeOf(ps, fx, time);
+    const ref = o === null ? null : P.frameAt(ps, fx, o);
+    let b: Parameters<Compositor['render']>[0]['b'] = null;
+    if (ref?.b && el2) {
+      if (!el2.src && opened) el2.src = opened.url;
+      if (Math.abs(el2.currentTime - ref.b.t) > 0.25) el2.currentTime = ref.b.t;
+      if (playing && el2.paused) void el2.play().catch(() => {});
+      if (el2.readyState >= 2) b = { frame: el2, frameW: el2.videoWidth, frameH: el2.videoHeight, t: ref.b.t, kind: ref.b.kind, progress: ref.b.progress };
+    } else if (el2 && !el2.paused) el2.pause();
+    c.render({ a: { frame: el, frameW: natural.w, frameH: natural.h, t: time }, b, light: ref?.light ?? 1, rotate: edit.rotate, layers: fx.layers });
+  }
+
+  $effect(() => {
+    void fx;
+    void assetsVersion;
+    void time;
+    if (fxOn) drawFx();
+  });
+
+  /** Follow what is under the overlay from the playhead to its end; keys become the tracked path. */
+  async function trackLayer(l: P.Layer): Promise<boolean> {
+    if (!tab.filePath || !opened || tracking) return false;
+    const t0 = Math.max(l.start, Math.min(time, l.end));
+    tracking = 'Preparing…';
+    el?.pause();
+    try {
+      const [{ demux, Frames }, { toGray }, { default: TrackWorker }] = await Promise.all([import('./source'), import('./track'), import('./trackWorker?worker')]);
+      const streams = await demux(tab.filePath);
+      const v = streams.video;
+      if (!v) throw new Error('This file has no video track.');
+      const cursor = await Frames.open(v, opened.url, fileUrl(tab.filePath));
+      // Track on a small copy (≤ 320 px wide) for speed.
+      const k = Math.min(1, 320 / v.width);
+      const gw = Math.round(v.width * k);
+      const gh = Math.round(v.height * k);
+      const cv = document.createElement('canvas');
+      cv.width = gw;
+      cv.height = gh;
+      const g = cv.getContext('2d', { willReadFrequently: true })!;
+      const grab = async (t: number) => {
+        const f = await cursor.frameAt(t);
+        if (!f) return null;
+        g.drawImage(f.image, 0, 0, gw, gh);
+        f.close();
+        return toGray(g.getImageData(0, 0, gw, gh).data, gw, gh);
+      };
+      const s0 = P.stateAt({ ...l, fadeIn: 0, fadeOut: 0 }, t0);
+      const [sx, sy] = P.toSource(s0.x, s0.y, edit.rotate, v.width, v.height);
+      const size = Math.min(Math.max(16, Math.min(l.w, l.h) * s0.scale * k), 96);
+      const first = await grab(t0);
+      if (!first) throw new Error('No picture at the playhead.');
+      const worker: Worker = new TrackWorker();
+      const ask = (msg: unknown, frame: { data: Float32Array }) =>
+        new Promise<{ x: number; y: number } | null>((resolve, reject) => {
+          worker.onmessage = (e) => resolve(e.data);
+          worker.onerror = (e) => reject(new Error(e.message || 'tracking failed'));
+          worker.postMessage(msg, [frame.data.buffer]);
+        });
+      await ask({ type: 'init', frame: first, box: { x: sx * k, y: sy * k, w: size, h: size } }, first);
+      const times = v.samples.map((x) => x[0]).filter((t) => t > t0 + 1e-3 && t <= l.end).sort((a, b) => a - b);
+      const keys: P.Key[] = [{ ...s0, t: t0, ease: 'linear' }];
+      let lost = -1;
+      for (let i = 0; i < times.length; i++) {
+        if (!tracking) break; // cancelled
+        const f = await grab(times[i]);
+        if (!f) break;
+        const p = await ask({ type: 'next', frame: f }, f);
+        if (!p) {
+          lost = times[i];
+          break;
+        }
+        const [x, y] = P.toOutput(p.x / k, p.y / k, edit.rotate, v.width, v.height);
+        keys.push({ ...s0, t: times[i], x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, ease: 'linear' });
+        tracking = `Tracking… ${Math.round(((i + 1) / times.length) * 100)}%`;
+      }
+      cursor.close();
+      worker.terminate();
+      const before = l.keys.filter((key) => key.t < t0 - 1e-3);
+      updateLayer({ ...l, keys: [...before, ...keys], tracked: true, path: 'straight' }, true);
+      ui.toast(lost >= 0 ? `Tracked until ${formatTime(lost, 2)}, where the object was lost.` : `Pinned to the object: ${keys.length} positions.`, lost >= 0 ? 'warning' : 'success', { label: 'Undo', run: () => doEdit('undo') });
+      return true;
+    } catch (e) {
+      toastError(e, 'Tracking failed');
+      return false;
+    } finally {
+      tracking = '';
+    }
+  }
+
+  function deleteLayer(l: P.Layer) {
+    setFx({ ...fx, layers: fx.layers.filter((x) => x.id !== l.id) }, true);
+    selId = null;
+  }
+
+  /** Render the edits and effects into a new WebM file. */
+  async function renderTo(dest: string): Promise<boolean> {
+    if (!tab.filePath || !opened || rendering) return false;
+    el?.pause();
+    const abort = new AbortController();
+    rendering = { done: 0, total: 1, abort };
+    try {
+      const { renderVideo } = await import('./render');
+      const r = await renderVideo({
+        path: tab.filePath,
+        url: opened.url,
+        keep: E.normalize(edit.keep, dur),
+        rotate: edit.rotate,
+        mute: edit.mute,
+        project: fx,
+        images: assets,
+        fps: info?.fps || 30,
+        signal: abort.signal,
+        onProgress: (done, total) => rendering && (rendering = { ...rendering, done, total }),
+      });
+      await saveFile(dest, r.blob);
+      renderedEdit = edit;
+      tab.dirty = false;
+      ui.toast(`Rendered ${basename(dest)} (${formatTime(r.duration, 1)}, ${r.videoCodec.startsWith('vp09') ? 'VP9' : 'VP8'}${r.audioCodec ? ` + ${r.audioCodec === 'opus' ? 'Opus' : 'Vorbis'}` : ''})`, 'success', { label: 'Open', run: () => void workspace.openPath(dest) }, 8000);
+      return true;
+    } catch (e) {
+      if ((e as Error)?.name !== 'AbortError') toastError(e, 'Rendering failed');
+      return false;
+    } finally {
+      rendering = null;
+    }
+  }
+  let renderedEdit: E.VideoEdit | null = null;
+
+  async function renderAs(): Promise<boolean> {
+    if (!needEditable()) return false;
+    let dest = await api.SaveFileDialog('Render video as WebM', join(dirname(tab.filePath ?? ''), `${stem(tab.title)} (edited).webm`), [{ name: 'WebM video', patterns: '*.webm' }]);
+    if (!dest) return false;
+    if (extname(dest) !== 'webm') dest += '.webm';
+    return renderTo(dest);
+  }
+
   // ---------- saving ----------
 
   function plan(audioOnly = false) {
@@ -384,6 +695,7 @@
   async function save(): Promise<boolean> {
     if (!editable || !tab.filePath) return false;
     if (!changed) return true;
+    if (fxOn) return renderAs();
     if (!(await exportTo(tab.filePath))) return false;
     await load();
     ui.toast(`Saved ${basename(tab.filePath)}`, 'success');
@@ -392,6 +704,7 @@
 
   async function saveAs(): Promise<boolean> {
     if (!needEditable()) return false;
+    if (fxOn) return renderAs();
     const ext = extname(tab.name) || (info?.container === 'mp4' ? 'mp4' : 'webm');
     const filters =
       info?.container === 'mp4'
@@ -459,8 +772,12 @@
   function saveMenu(e: MouseEvent) {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     menu.show({ clientX: r.left, clientY: r.bottom + 4 }, [
-      { label: 'Save', shortcut: formatShortcut('Mod+S'), run: () => void save() },
-      { label: 'Save as…', shortcut: formatShortcut('Mod+Shift+S'), run: () => void saveAs() },
+      ...(fxOn
+        ? [{ label: 'Render video with effects (.webm)…', shortcut: formatShortcut('Mod+S'), run: () => void renderAs() }]
+        : [
+            { label: 'Save', shortcut: formatShortcut('Mod+S'), run: () => void save() },
+            { label: 'Save as…', shortcut: formatShortcut('Mod+Shift+S'), run: () => void saveAs() },
+          ]),
       { separator: true },
       { label: 'Extract audio…', run: () => void extractAudio() },
       { label: 'Save current frame as PNG…', shortcut: 'P', run: () => void snapshot() },
@@ -506,7 +823,32 @@
     snapshot: () => void snapshot(),
     mute: () => el && (el.muted = muted = !muted),
     toggleLoop: () => (loopOn = !loopOn),
+    dropImages: (paths, x, y) => {
+      if (!stage) return false;
+      const r = stage.getBoundingClientRect();
+      if (x < r.left || x > r.right || y < r.top || y > r.bottom || !paths.some((p) => IMAGE_EXT.includes(extname(p)))) return false;
+      void addImages(paths, dropPoint(x, y));
+      return true;
+    },
   });
+
+  /** Window point → output pixel (for drops). */
+  function dropPoint(x: number, y: number): { x: number; y: number } | undefined {
+    if (!stage || !outW) return undefined;
+    const r = stage.getBoundingClientRect();
+    const k = Math.min(r.width / outW, r.height / outH);
+    return { x: (x - r.left - (r.width - outW * k) / 2) / k, y: (y - r.top - (r.height - outH * k) / 2) / k };
+  }
+
+  function onStageDrop(e: DragEvent) {
+    const internal = e.dataTransfer?.getData('application/x-hia-path');
+    const files = Array.from(e.dataTransfer?.files ?? []).filter((f) => f.type.startsWith('image/'));
+    if (!internal && !files.length) return;
+    e.preventDefault();
+    const at = dropPoint(e.clientX, e.clientY);
+    if (internal) void addImages([internal], at);
+    for (const f of files) void createImageBitmap(f).then((b) => addImageBitmap(b, f.name.replace(/\.[^.]+$/, ''), at));
+  }
 
   onMount(() => {
     tab.handlers = { ...tab.handlers, save, saveAs, reload: () => load(), onShow: () => updateStatus(), getState: () => undefined };
@@ -522,6 +864,12 @@
         el.load();
       }
       release();
+      comp?.destroy();
+      comp = null;
+      el2?.removeAttribute('src');
+      rendering?.abort.abort();
+      tracking = '';
+      for (const b of assets.values()) b.close();
     };
   });
 
@@ -543,9 +891,22 @@
     exportTo,
     save,
     natural: () => natural,
+    fx: () => fx,
+    setFx: (p: P.Project) => setFx(p, true),
+    addImageBitmap,
+    addBlur,
+    selectLayer: (id: string | null) => (selId = id),
+    stageChange,
+    trackLayer,
+    renderTo,
+    drawNow,
+    fxCanvas: () => fxCanvas,
+    outLen: () => outLen,
   };
 </script>
 
+<div class="vwrap">
+<div class="vmain">
 <header class="head">
   <div class="meta">
     <div class="title" title={tab.title}>{info?.title || tab.title}</div>
@@ -553,12 +914,13 @@
   </div>
 </header>
 
-<div class="stage" bind:this={stage} bind:clientWidth={stageW} bind:clientHeight={stageH} onclick={toggle} ondblclick={fullscreen} role="presentation">
+<div class="stage" bind:this={stage} bind:clientWidth={stageW} bind:clientHeight={stageH} onclick={toggle} ondblclick={fullscreen} ondragover={(e) => e.preventDefault()} ondrop={onStageDrop} role="presentation">
   <!-- svelte-ignore a11y_media_has_caption -->
   <video
     bind:this={el}
     preload="auto"
-    style:transform={edit.rotate ? `rotate(${edit.rotate}deg) scale(${rotScale})` : ''}
+    class:fxhide={fxOn}
+    style:transform={edit.rotate && !fxOn ? `rotate(${edit.rotate}deg) scale(${rotScale})` : ''}
     onloadedmetadata={onMeta}
     onerror={onError}
     onplay={() => ((playing = true), !raf && (raf = requestAnimationFrame(tick)))}
@@ -566,6 +928,13 @@
     onseeked={() => tick()}
     ontimeupdate={() => !playing && (time = el!.currentTime)}
   ></video>
+  <!-- The next part during a transition preview. -->
+  <!-- svelte-ignore a11y_media_has_caption -->
+  <video bind:this={el2} class="el2" muted preload="auto" crossorigin="anonymous"></video>
+  <canvas bind:this={fxCanvas} class="fxcanvas" class:hidden={!fxOn}></canvas>
+  {#if fxOn && outW}
+    <FxStage W={outW} H={outH} {stageW} {stageH} layers={fx.layers} selected={selId} {time} onselect={(id) => ((selId = id), id && (fxPanel = true))} onchange={stageChange} />
+  {/if}
   {#if loading}<div class="overlay"><span class="spinner"></span></div>{/if}
   {#if error}<div class="overlay err">{error}</div>{/if}
   {#if playError && !error}<div class="overlay note">{playError}</div>{/if}
@@ -583,6 +952,15 @@
       {#if w > 22}<button class="restore" title="Restore this part" aria-label="Restore removed part" onpointerdown={(e) => e.stopPropagation()} onclick={() => restoreGap(g)}>↺</button>{/if}
     </div>
   {/each}
+  {#each fx.speeds as sp (sp.a)}
+    <div class="speedband" class:slow={sp.rate < 1} style:left="{xOf(sp.a)}px" style:width="{xOf(sp.b) - xOf(sp.a)}px" title="{sp.rate}× from {formatTime(sp.a, 1)} to {formatTime(sp.b, 1)}"><span>{sp.rate}×</span></div>
+  {/each}
+  {#if editable}
+    {#each kept.slice(0, -1) as r (r[1])}
+      {@const tr = fx.transitions.find((t) => Math.abs(t.at - r[1]) < 0.02)}
+      <button class="join" class:has={!!tr} style:left="{xOf(r[1])}px" title={tr ? `${P.TRANSITIONS.find((x) => x.id === tr.kind)?.label} (${tr.dur} s) — click to change` : 'Add a transition here'} onpointerdown={(e) => e.stopPropagation()} onclick={(e) => transitionMenu(e, r[1])}>⧉</button>
+    {/each}
+  {/if}
   {#each flash as f (f[0])}<div class="flash" style:left="{xOf(f[0])}px" style:width="{Math.max(3, xOf(f[1]) - xOf(f[0]))}px"></div>{/each}
   {#if sel}
     <div class="dim" style:left="0px" style:width="{xOf(sel[0])}px"></div>
@@ -594,6 +972,14 @@
   {/if}
   <div class="playhead" style:left="{xOf(time)}px"></div>
 </div>
+<FxTracks layers={fx.layers} {dur} {lineW} {time} selected={selId} onselect={(id) => ((selId = id), (fxPanel = true))} onchange={(l, done) => updateLayer(l, done)} onseek={seek} />
+{#if rendering}
+  <div class="renderbar">
+    <span>Rendering… {Math.round((rendering.done / Math.max(1, rendering.total)) * 100)}%</span>
+    <progress max={rendering.total} value={rendering.done}></progress>
+    <button class="btn ghost" onclick={() => rendering?.abort.abort()}>Cancel</button>
+  </div>
+{/if}
 {#if sel}
   <div class="selbar">
     <span class="selchip"><Icon icon={Scissors} size={13} /> Selected {formatTime(sel[1] - sel[0], 2)} <span class="muted">({formatTime(sel[0], 2)} – {formatTime(sel[1], 2)})</span></span>
@@ -610,7 +996,7 @@
   <button class="icon-btn" title="Previous frame (,)" onclick={() => frame(-1)}><Icon icon={StepBack} size={15} /></button>
   <button class="icon-btn" title="Next frame (.)" onclick={() => frame(1)}><Icon icon={StepForward} size={15} /></button>
   <span class="time">{formatTime(time, 2)} <span class="muted">/ {formatTime(dur, 2)}</span></span>
-  {#if changed}<span class="label edited" title="Length after your edits">Edited: {formatTime(E.keptLength(kept), 2)}{gaps.length ? ` · ${gaps.length} part${gaps.length > 1 ? 's' : ''} removed` : ''}{edit.rotate ? ` · ↻${edit.rotate}°` : ''}{edit.mute ? ' · no audio' : ''}</span>{/if}
+  {#if changed}<span class="label edited" title="Length after your edits">Edited: {formatTime(outLen, 2)}{gaps.length ? ` · ${gaps.length} part${gaps.length > 1 ? 's' : ''} removed` : ''}{edit.rotate ? ` · ↻${edit.rotate}°` : ''}{edit.mute ? ' · no audio' : ''}</span>{/if}
   <span class="spacer"></span>
   <button class="icon-btn" class:on={loopOn} title="Loop selection (L)" onclick={() => (loopOn = !loopOn)}><Icon icon={Repeat} size={14} /></button>
   <button class="icon-btn" title={muted ? 'Unmute (M)' : 'Mute (M)'} onclick={() => el && (el.muted = muted = !muted)}><Icon icon={muted ? VolumeX : Volume2} size={15} /></button>
@@ -628,14 +1014,118 @@
     <button class="btn ghost" class:on={edit.mute} title="Save without the audio track" onclick={() => doEdit('removeAudio')}>{edit.mute ? 'Audio removed' : 'Remove audio'}</button>
     <button class="icon-btn" title="Undo ({formatShortcut('Mod+Z')})" disabled={!canUndo} onclick={() => doEdit('undo')}><Icon icon={Undo2} size={15} /></button>
     <button class="icon-btn" title="Redo ({formatShortcut('Mod+Shift+Z')})" disabled={!canRedo} onclick={() => doEdit('redo')}><Icon icon={Redo2} size={15} /></button>
-    <button class="btn ghost" onclick={saveMenu}>Save ▾</button>
+    <span class="sep"></span>
+    <button class="icon-btn" title="Add an image on top of the video (or drop one on the picture)" onclick={() => void addImages()}><Icon icon={ImagePlus} size={15} /></button>
+    <button class="icon-btn" title="Blur an area (faces, plates…); it can follow a moving object" onclick={addBlur}><Icon icon={Droplet} size={15} /></button>
+    <button class="icon-btn" class:on={fx.speeds.length > 0} title="Speed up or slow down the selection (or the whole video)" onclick={speedMenu}><Icon icon={Gauge} size={15} /></button>
+    <button class="icon-btn" class:on={fxPanel} title="Effects panel: overlays, keyframes, curves, fades, transitions" onclick={() => (fxPanel = !fxPanel)}><Icon icon={Wand} size={15} /></button>
+    <button class="btn ghost" onclick={saveMenu}>{fxOn ? 'Render ▾' : 'Save ▾'}</button>
   {/if}
 </div>
-{#if snapped && changed}
+{#if snapped && changed && !fxOn}
   <div class="hint">Cuts snap to keyframes{gop ? ` (about every ${gop.toFixed(1)} s in this file)` : ''} so the video is saved without re-encoding; the shaded parts are what will be removed.</div>
 {/if}
 
+</div>
+{#if fxPanel && editable}
+  <FxPanel
+    project={fx}
+    selected={selLayer}
+    {time}
+    bind:autoKey
+    {tracking}
+    onselect={(id) => (selId = id)}
+    onlayer={(l) => updateLayer(l)}
+    onproject={(p) => setFx(p)}
+    onstate={(l, st) => updateLayer(P.place(l, time, st, autoKey))}
+    onseek={seek}
+    ontrack={(l) => void trackLayer(l)}
+    ondelete={deleteLayer}
+  />
+{/if}
+</div>
+
 <style>
+  .vwrap {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+  }
+  .vmain {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .fxcanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+  }
+  .fxcanvas.hidden {
+    display: none;
+  }
+  video.fxhide {
+    opacity: 0;
+  }
+  .el2 {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .speedband {
+    position: absolute;
+    top: 0;
+    height: 12px;
+    background: rgba(91, 141, 239, 0.75);
+    color: #fff;
+    font-size: 9.5px;
+    line-height: 12px;
+    overflow: hidden;
+    pointer-events: none;
+    border-radius: 0 0 3px 3px;
+  }
+  .speedband.slow {
+    background: rgba(214, 160, 60, 0.85);
+  }
+  .speedband span {
+    padding: 0 4px;
+  }
+  .join {
+    position: absolute;
+    bottom: 2px;
+    width: 18px;
+    height: 18px;
+    margin-left: -9px;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-size: 11px;
+    line-height: 16px;
+    padding: 0;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .join.has {
+    background: var(--accent);
+  }
+  .renderbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 8px 0;
+    font-size: var(--fs-small);
+  }
+  .renderbar progress {
+    flex: 1;
+    accent-color: var(--accent);
+  }
   .head {
     padding: 10px 16px 6px;
   }

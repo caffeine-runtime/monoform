@@ -412,7 +412,7 @@ for _f in ("tone.mp3", "tone.flac", "tone.ogg", "tone.opus"):
 w("audio/tone.m4a", open(os.path.join(_here, "fixture-data", "tone.m4a"), "rb").read())
 
 # ---- video (small clips made with ffmpeg; see internal/video/testdata) ----
-for _f in ("clip.webm", "clip.mp4", "h264.mp4", "clip.mkv"):
+for _f in ("clip.webm", "clip.mp4", "h264.mp4", "clip.mkv", "track.webm"):
     w("video/" + _f, open(os.path.join(_here, "..", "internal", "video", "testdata", _f), "rb").read())
 
 _pos, _nor, _uv, _idx = _cube()
