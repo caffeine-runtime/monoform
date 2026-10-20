@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run an in-webview self-test scenario against the built Linux binary.
-#   scripts/selftest.sh <scenario> [arg] [settings.json]
+#   scripts/selftest.sh <scenario> [arg] [settings.json] [app arguments…]
 # Needs Xvfb + a window manager (openbox) when no display is available.
 # Exit code 0 = PASS.
 set -euo pipefail
@@ -8,6 +8,7 @@ cd "$(dirname "$0")/.."
 SCENARIO=$1
 ARG=${2:-}
 SETTINGS=${3:-$(mktemp -d)/settings.json}
+shift $(( $# < 3 ? $# : 3 ))
 BIN=${HIA_BIN:-build/bin/hold-it-all}
 if [ -z "${DISPLAY:-}" ]; then
   export DISPLAY=:99
@@ -16,7 +17,7 @@ if [ -z "${DISPLAY:-}" ]; then
 fi
 LOG=$(mktemp)
 set +e
-HIA_SCREENSHOTS="${HIA_SCREENSHOTS:-${TMPDIR:-/tmp}/hia-screenshots}" HIA_TEST="$SCENARIO" HIA_TEST_ARG="$ARG" HIA_SETTINGS="$SETTINGS" timeout "${HIA_TIMEOUT:-120}" "$BIN" >"$LOG" 2>&1
+HIA_SCREENSHOTS="${HIA_SCREENSHOTS:-${TMPDIR:-/tmp}/hia-screenshots}" HIA_TEST="$SCENARIO" HIA_TEST_ARG="$ARG" HIA_SETTINGS="$SETTINGS" timeout "${HIA_TIMEOUT:-120}" "$BIN" "$@" >"$LOG" 2>&1
 CODE=$?
 set -e
 grep -E "selftest|startup:" "$LOG" || true

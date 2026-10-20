@@ -16,7 +16,12 @@
     {#if tab}
       <span>{typeLabel}</span>
       {#if tab.size != null}<span>{formatBytes(tab.size)}</span>{/if}
-      {#if tab.readOnly}<span>Read-only</span>{/if}
+      {#if tab.preview}
+        <button class="mode" title="Preview mode: the file can't be changed. Click to edit it." onclick={() => void workspace.setPreview(tab, false)}>Preview · <b>Edit</b></button>
+      {:else if tab.readOnly}<span>Read-only</span>
+      {:else if tab.source.kind === 'file'}
+        <button class="mode quiet" title="Editing. Click for preview mode (read-only)." onclick={() => void workspace.setPreview(tab, true)}>Editing</button>
+      {/if}
       {#if tab.status.info}<span class="info">{tab.status.info}</span>{/if}
     {/if}
   </div>
@@ -45,6 +50,26 @@
 </footer>
 
 <style>
+  .mode {
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    padding: 0 4px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .mode:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+  }
+  .mode b {
+    color: var(--accent-text);
+    font-weight: 600;
+  }
+  .mode.quiet {
+    opacity: 0.8;
+  }
   .status {
     height: var(--statusbar-h);
     display: flex;

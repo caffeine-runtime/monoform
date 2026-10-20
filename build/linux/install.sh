@@ -17,7 +17,7 @@ refresh() {
 
 case "${1:-}" in
 --uninstall)
-  rm -f "$BIN/hold-it-all" "$APPS/hold-it-all.desktop" "$ICONS/hold-it-all.png"
+  rm -f "$BIN/hold-it-all" "$BIN/holdit" "$APPS/hold-it-all.desktop" "$APPS/hold-it-all-peek.desktop" "$ICONS/hold-it-all.png"
   refresh
   echo "Removed. Settings stay in ~/.config/HoldItAll; the optional search model and indexes in ~/.cache/HoldItAll."
   exit 0
@@ -31,11 +31,15 @@ esac
 
 mkdir -p "$BIN" "$APPS" "$ICONS"
 install -m 755 hold-it-all "$BIN/hold-it-all"
+[ -f holdit ] && install -m 755 holdit "$BIN/holdit"
 install -m 644 hold-it-all.png "$ICONS/hold-it-all.png"
 sed "s|^Exec=hold-it-all|Exec=$BIN/hold-it-all|" hold-it-all.desktop >"$APPS/hold-it-all.desktop"
 chmod 644 "$APPS/hold-it-all.desktop"
+# "Open With → Quick peek": a small read-only window that can become the editor.
+sed "s|^Exec=hold-it-all|Exec=$BIN/hold-it-all|" hold-it-all-peek.desktop >"$APPS/hold-it-all-peek.desktop"
+chmod 644 "$APPS/hold-it-all-peek.desktop"
 refresh
-echo "Installed to $BIN/hold-it-all."
+echo "Installed to $BIN/hold-it-all (and the holdit command)."
 
 if [ "${1:-}" = "--set-default" ] && ! command -v xdg-mime >/dev/null 2>&1; then
   echo "xdg-mime (package xdg-utils) is not installed, so defaults were not changed." >&2

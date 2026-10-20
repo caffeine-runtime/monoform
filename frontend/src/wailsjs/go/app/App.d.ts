@@ -43,6 +43,8 @@ export function CancelJob(arg1:string):Promise<boolean>;
 
 export function CertInspect(arg1:string,arg2:string):Promise<certs.Result>;
 
+export function CommandLineStatus():Promise<app.CommandLine>;
+
 export function ConfirmQuit():Promise<void>;
 
 export function ConvertImage(arg1:string,arg2:string,arg3:string):Promise<void>;
@@ -81,6 +83,8 @@ export function DocSave(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function Exists(arg1:Array<string>):Promise<Array<boolean>>;
 
+export function ExpandWindow():Promise<void>;
+
 export function HashFile(arg1:string,arg2:Array<string>):Promise<string>;
 
 export function HashVerify(arg1:string):Promise<string>;
@@ -90,6 +94,8 @@ export function IconOpen(arg1:string):Promise<Array<app.IconEntry>>;
 export function IconWrite(arg1:string,arg2:string,arg3:string,arg4:Array<number>):Promise<void>;
 
 export function ImageViaSystem(arg1:string):Promise<app.SystemImage>;
+
+export function InstallCommandLine():Promise<string>;
 
 export function ListDir(arg1:string):Promise<Array<fs.Entry>>;
 
@@ -112,6 +118,8 @@ export function OpenExternal(arg1:string):Promise<void>;
 export function OpenFiles(arg1:Array<string>):Promise<void>;
 
 export function OpenFilesDialog(arg1:string,arg2:Array<app.FileFilter>):Promise<Array<string>>;
+
+export function OpenFilesMode(arg1:Array<string>,arg2:string):Promise<void>;
 
 export function OpenFolderDialog(arg1:string):Promise<string>;
 

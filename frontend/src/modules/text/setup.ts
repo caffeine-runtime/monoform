@@ -159,6 +159,14 @@ export function heavyFeatures(large: boolean): Extension {
   ];
 }
 
+/**
+ * Read-only for commands (EditorState.readOnly) and for typing: the content
+ * isn't editable then (text can still be selected, copied and searched).
+ */
+export function readOnlyExt(on: boolean): Extension {
+  return [EditorState.readOnly.of(on), EditorView.editable.of(!on)];
+}
+
 export function baseExtensions(c: Compartments, opts: { large: boolean; wrap: boolean; readOnly: boolean; lineSep?: string; minimap?: boolean; whitespace?: boolean }): Extension[] {
   return [
     sublimeKeymap,
@@ -179,7 +187,7 @@ export function baseExtensions(c: Compartments, opts: { large: boolean; wrap: bo
     c.heavy.of(heavyFeatures(opts.large)),
     c.language.of([]),
     c.wrap.of(opts.wrap ? EditorView.lineWrapping : []),
-    c.readOnly.of(EditorState.readOnly.of(opts.readOnly)),
+    c.readOnly.of(readOnlyExt(opts.readOnly)),
     c.lineSep.of(opts.lineSep ? EditorState.lineSeparator.of(opts.lineSep) : []),
     c.minimap.of(minimapExt(!!opts.minimap, opts.large)),
     c.whitespace.of(whitespaceExt(!!opts.whitespace)),

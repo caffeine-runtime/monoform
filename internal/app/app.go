@@ -46,12 +46,13 @@ type App struct {
 	dirty       int
 	forceQuit   bool
 	launchFiles []string
+	launchMode  string // "peek", "preview" or ""
 }
 
 // New creates the app. start is the process start time used for the
 // startup-time measurement.
-func New(start time.Time, launchFiles []string) *App {
-	a := &App{start: start, launchFiles: launchFiles, books: office.NewBooks()}
+func New(start time.Time, launchFiles []string, launchMode string) *App {
+	a := &App{start: start, launchFiles: launchFiles, launchMode: launchMode, books: office.NewBooks()}
 	a.Server = server.New(server.NewToken())
 	server.RecordPages = os.Getenv("HIA_TEST") != ""
 	path, err := settings.DefaultPath()
@@ -118,7 +119,11 @@ func (a *App) BeforeClose(ctx context.Context) bool {
 
 // OpenFiles is called for files passed by the OS after launch (second
 // instance, macOS open-file events).
-func (a *App) OpenFiles(paths []string) {
+func (a *App) OpenFiles(paths []string) { a.OpenFilesMode(paths, "") }
+
+// OpenFilesMode opens files passed after launch, in preview mode when mode
+// is "peek" or "preview" (a running window shows them as preview tabs).
+func (a *App) OpenFilesMode(paths []string, mode string) {
 	a.mu.Lock()
 	if !a.ready {
 		a.pending = append(a.pending, paths...)
@@ -126,11 +131,26 @@ func (a *App) OpenFiles(paths []string) {
 		return
 	}
 	a.mu.Unlock()
-	a.emit("app:open-files", paths)
+	a.emit("app:open-files", OpenRequest{Paths: paths, Preview: mode != ""})
 	if a.ctx != nil {
 		wruntime.WindowUnminimise(a.ctx)
 		wruntime.Show(a.ctx)
 	}
+}
+
+// OpenRequest asks the frontend to open files.
+type OpenRequest struct {
+	Paths   []string `json:"paths"`
+	Preview bool     `json:"preview"`
+}
+
+// ExpandWindow turns a quick-peek window into the full-size editor window.
+func (a *App) ExpandWindow() {
+	if a.ctx == nil {
+		return
+	}
+	wruntime.WindowSetSize(a.ctx, 1280, 820)
+	wruntime.WindowCenter(a.ctx)
 }
 
 // BootInfo is everything the frontend needs to paint the shell.
@@ -140,6 +160,7 @@ type BootInfo struct {
 	Platform    string            `json:"platform"`
 	Version     string            `json:"version"`
 	LaunchFiles []string          `json:"launchFiles"`
+	LaunchMode  string            `json:"launchMode"` // "peek", "preview" or ""
 	Home        string            `json:"home"`
 	PathSep     string            `json:"pathSep"`
 	TestScript  string            `json:"testScript"`
@@ -160,6 +181,7 @@ func (a *App) Boot() BootInfo {
 		Platform:    runtime.GOOS,
 		Version:     Version,
 		LaunchFiles: files,
+		LaunchMode:  a.launchMode,
 		Home:        home,
 		PathSep:     string(filepath.Separator),
 		TestScript:  os.Getenv("HIA_TEST"),

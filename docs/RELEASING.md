@@ -39,7 +39,9 @@ building.
    - `hold-it-all-amd64-installer.exe` — Windows installer
    - `hold-it-all-windows-amd64-portable.zip` — Windows, no install
    - `hold-it-all-macos-universal.zip` — macOS app (Apple Silicon + Intel)
-   - `hold-it-all-linux-amd64.tar.gz` — Linux binary, `.desktop` file and `install.sh`
+   - `hold-it-all-linux-amd64.tar.gz` — Linux binary, the `holdit` command, `.desktop` files (app and Quick peek)
+     and `install.sh`
+   - every package includes `holdit` (inside the macOS app bundle; next to the Windows exe)
    - `SHA256SUMS` — checksums of all of the above
 
 The tag (`v2.1.0`) is created by the release on the commit the run built.
