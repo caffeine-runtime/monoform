@@ -8,6 +8,7 @@ import {server} from '../models';
 import {newfile} from '../models';
 import {db} from '../models';
 import {filetype} from '../models';
+import {history} from '../models';
 import {fs} from '../models';
 import {pdf} from '../models';
 import {settings} from '../models';
@@ -88,6 +89,18 @@ export function ExpandWindow():Promise<void>;
 export function HashFile(arg1:string,arg2:Array<string>):Promise<string>;
 
 export function HashVerify(arg1:string):Promise<string>;
+
+export function HistoryExtract(arg1:string,arg2:string,arg3:number):Promise<string>;
+
+export function HistoryFiles():Promise<Array<history.Summary>>;
+
+export function HistoryForget(arg1:string):Promise<void>;
+
+export function HistoryOf(arg1:string):Promise<history.File>;
+
+export function HistoryRestore(arg1:string,arg2:string):Promise<void>;
+
+export function HistoryUsage():Promise<number>;
 
 export function IconOpen(arg1:string):Promise<Array<app.IconEntry>>;
 

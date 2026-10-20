@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
+
+	hfs "github.com/caffeine-runtime/hold-it-all/internal/fs"
 )
 
 // PeakFrames is how many sample frames one waveform bucket covers.
@@ -370,7 +372,7 @@ func Export(ctx context.Context, src string, segs []Segment, dest string, opt Ex
 	if err := tmp.Close(); err != nil {
 		return err
 	}
-	if err := os.Rename(tmp.Name(), dest); err != nil {
+	if err := hfs.ReplaceFile(tmp.Name(), dest); err != nil {
 		return err
 	}
 	ok = true

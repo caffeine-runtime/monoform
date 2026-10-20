@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PaneDivider, { savedRatio } from '../../shell/PaneDivider.svelte';
   import ImageDown from '@lucide/svelte/icons/image-down';
   import FileDown from '@lucide/svelte/icons/file-down';
   import Eye from '@lucide/svelte/icons/eye';
@@ -31,6 +32,7 @@
   const kind = kindOfPath(tab.path ?? tab.title);
   const restored = (tab.restoredState as { view?: ViewMode } | undefined)?.view;
   let view = $state<ViewMode>(restored ?? 'split');
+  let ratio = $state(savedRatio('diagram'));
   let svg = $state('');
   let size = $state({ w: 0, h: 0 });
   let error = $state('');
@@ -274,7 +276,8 @@
   <button class="btn ghost" onclick={exportPng} disabled={!svg}><Icon icon={ImageDown} size={14} /> Export PNG…</button>
 </div>
 <div class="panes" data-view={view}>
-  <div class="src"><TextEditor {tab} {options} onready={ready} /></div>
+  <div class="src" style:flex={view === 'split' ? `0 0 ${ratio * 100}%` : null}><TextEditor {tab} {options} onready={ready} /></div>
+  {#if view === 'split'}<PaneDivider bind:ratio key="diagram" />{/if}
   {#if view !== 'source'}
     <div class="preview">
       {#if error}

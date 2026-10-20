@@ -146,6 +146,30 @@ export function HashVerify(arg1) {
   return window['go']['app']['App']['HashVerify'](arg1);
 }
 
+export function HistoryExtract(arg1, arg2, arg3) {
+  return window['go']['app']['App']['HistoryExtract'](arg1, arg2, arg3);
+}
+
+export function HistoryFiles() {
+  return window['go']['app']['App']['HistoryFiles']();
+}
+
+export function HistoryForget(arg1) {
+  return window['go']['app']['App']['HistoryForget'](arg1);
+}
+
+export function HistoryOf(arg1) {
+  return window['go']['app']['App']['HistoryOf'](arg1);
+}
+
+export function HistoryRestore(arg1, arg2) {
+  return window['go']['app']['App']['HistoryRestore'](arg1, arg2);
+}
+
+export function HistoryUsage() {
+  return window['go']['app']['App']['HistoryUsage']();
+}
+
 export function IconOpen(arg1) {
   return window['go']['app']['App']['IconOpen'](arg1);
 }

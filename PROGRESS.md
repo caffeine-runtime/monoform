@@ -317,6 +317,21 @@
   becomes narrow and open from the toolbar. Settings rows put their control under the label when narrow; the
   hash checker's summary and time readouts don't break mid-phrase. Checked at 320–1100 px pane widths and the
   640×400 minimum window (self-test `m33`; `uiaudit` lists wrapped labels and overflowing bars for every view).
+- **M34 — File history.** Every save made in Hold It All keeps the file's earlier content and the new one
+  (text, images, documents, spreadsheets, PDFs, drawings, audio/video exports — anything written through the
+  app). *Show file history* (Ctrl+Alt+Y, the tab or file-tree menu) lists the versions by day — before the first
+  save, saved, changed by another program, restored — with size changes; each opens read-only, compares with the
+  file now (in Compare) or restores (the open tab reloads; what the file had becomes a version, so a restore can
+  be undone). *File history: all files* lists every file with versions, deleted ones too (restoring recreates
+  them). History follows renames made in the app. Contents are stored once per SHA-256, gzipped unless already
+  compressed; the content being replaced is hard-linked (no copy on the save path), the new content copied; a
+  save costs ~20 ms extra for small files. Limits in Settings → File history: on/off, total space (default 2 GB,
+  oldest versions dropped first, never a file's newest) and versions per file (default 100); files over 256 MB
+  aren't versioned. The app's own settings, caches and working copies are never versioned.
+- **M35 — Resizable splits.** The source | preview split of Markdown, HTML, diagrams and SVG has a divider:
+  drag it (the share is shown while dragging), double-click for 50/50, arrow keys to nudge; each kind remembers
+  its ratio. The split view's dividers between tabs (2, 3 or 4 tabs) now have a visible handle, show the share
+  while dragging, reset to equal sizes on double-click and move with the arrow keys when focused.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

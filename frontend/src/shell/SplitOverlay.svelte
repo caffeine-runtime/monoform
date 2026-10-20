@@ -77,8 +77,9 @@
   }
 
   // ---- dividers ----
-  let drag: 'x' | 'y' | null = null;
+  let drag = $state<'x' | 'y' | null>(null);
   function down(e: PointerEvent, axis: 'x' | 'y') {
+    if (e.button !== 0) return;
     drag = axis;
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
     e.preventDefault();
@@ -94,6 +95,21 @@
     drag = null;
     workspace.setSplit(workspace.split); // persist + let panes re-measure
   }
+  /** Set a divider (double-click: back to the middle; arrow keys nudge it). */
+  function place(axis: 'x' | 'y', v: number) {
+    if (!s) return;
+    workspace.setSplit({ ...s, [axis]: Math.min(0.85, Math.max(0.15, v)) });
+  }
+  function key(e: KeyboardEvent, axis: 'x' | 'y') {
+    if (!s) return;
+    const step = e.shiftKey ? 0.1 : 0.02;
+    const back = axis === 'x' ? 'ArrowLeft' : 'ArrowUp';
+    const fwd = axis === 'x' ? 'ArrowRight' : 'ArrowDown';
+    if (e.key !== back && e.key !== fwd) return;
+    e.preventDefault();
+    place(axis, s[axis] + (e.key === fwd ? step : -step));
+  }
+  const share = (v: number) => `${Math.round(v * 100)} % · ${Math.round((1 - v) * 100)} %`;
   const pct = (v: number) => `${(v * 100).toFixed(3)}%`;
 </script>
 
@@ -102,22 +118,52 @@
 <div class="split-overlay" class:active={dragging} bind:this={host} role="presentation" ondragover={over} ondragenter={over} ondragleave={(e) => e.target === host && ((dragging = false), (hover = null))} ondrop={drop}>
   {#if s}
     {#if dv.x}
-      <div class="div x" style:left={pct(s.x)} role="separator" aria-orientation="vertical" aria-label="Resize panes" title="Drag to resize" onpointerdown={(e) => down(e, 'x')} onpointermove={move} onpointerup={up}></div>
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+      <div
+        class="div x"
+        class:dragging={drag === 'x'}
+        style:left={pct(s.x)}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize panes"
+        aria-valuenow={Math.round(s.x * 100)}
+        tabindex="0"
+        title="Drag to resize · double-click: equal sizes"
+        onpointerdown={(e) => down(e, 'x')}
+        onpointermove={move}
+        onpointerup={up}
+        onpointercancel={up}
+        ondblclick={() => place('x', 0.5)}
+        onkeydown={(e) => key(e, 'x')}
+      >
+        <span class="grip"></span>
+        {#if drag === 'x'}<span class="pct">{share(s.x)}</span>{/if}
+      </div>
     {/if}
     {#if dv.y}
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
       <div
         class="div y"
+        class:dragging={drag === 'y'}
         style:top={pct(s.y)}
         style:left={s.layout === 'grid' && s.panes.length === 3 ? pct(s.x) : '0'}
         style:right="0"
         role="separator"
         aria-orientation="horizontal"
         aria-label="Resize panes"
-        title="Drag to resize"
+        aria-valuenow={Math.round(s.y * 100)}
+        tabindex="0"
+        title="Drag to resize · double-click: equal sizes"
         onpointerdown={(e) => down(e, 'y')}
         onpointermove={move}
         onpointerup={up}
-      ></div>
+        onpointercancel={up}
+        ondblclick={() => place('y', 0.5)}
+        onkeydown={(e) => key(e, 'y')}
+      >
+        <span class="grip"></span>
+        {#if drag === 'y'}<span class="pct">{share(s.y)}</span>{/if}
+      </div>
     {/if}
   {/if}
   {#if dragging && hover}
@@ -154,8 +200,52 @@
     margin-top: -4px;
     cursor: row-resize;
   }
-  .div:hover {
+  .div {
+    display: grid;
+    place-items: center;
+    touch-action: none;
+  }
+  .div:hover,
+  .div.dragging,
+  .div:focus-visible {
     background: var(--accent-soft);
+    outline: none;
+  }
+  /* A small handle in the middle so the divider can be found without hovering. */
+  .grip {
+    border-radius: 3px;
+    background: var(--border);
+    opacity: 0.9;
+  }
+  .div.x .grip {
+    width: 4px;
+    height: 32px;
+  }
+  .div.y .grip {
+    width: 32px;
+    height: 4px;
+  }
+  .div:hover .grip,
+  .div.dragging .grip,
+  .div:focus-visible .grip {
+    background: var(--accent);
+  }
+  .pct {
+    position: absolute;
+    white-space: nowrap;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: var(--fs-small);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    pointer-events: none;
+  }
+  .div.x .pct {
+    top: 40%;
+  }
+  .div.y .pct {
+    left: 40%;
   }
   .zone {
     position: absolute;

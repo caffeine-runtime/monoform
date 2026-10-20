@@ -13,6 +13,18 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 ## Architecture
 
 - **File bytes travel over HTTP, not JSON bindings.** Wails bindings JSON-encode everything; a 50 MB log or a PDF would be base64'd through `ExecJS`. Instead the Wails asset server routes `/__hia/*` to `internal/server` (Range-capable `GET /__hia/file`, `POST /__hia/save` → atomic write). Bindings are used only for small calls.
+- **File history is a local, content-addressed store, not Git.** Versioning must work for any file the app saves
+  (binary images and documents included), in any folder, without a repository or tools to install. Every app
+  write already ends in `fs.ReplaceFile` (temp file + rename), so `internal/history` hooks there: *Before* hard-links
+  the content about to be replaced into `history/pending` (after the rename that link is its only name — no bytes
+  copied while saving; a copy across volumes), *After* copies the new content (a link would follow in-place
+  rewrites by other programs). A background worker hashes (SHA-256) into `history/blobs` once per content (gzip
+  unless the format is already compressed) and keeps a JSON index per file (path, newest version first). Taking
+  both contents at save time keeps versions in save order. Paths under the settings folder, the cache and the
+  app's working copies are skipped. Limits: per-file count, total size (oldest dropped first, never a file's
+  newest), and a per-file size cap so a 4 GB video export isn't duplicated. Renames in the app move the index.
+  Rejected: Git (would need a repository per folder, binary blobs bloat it, and users' own repos must not be
+  touched); keeping full copies next to files (clutters folders).
 - **Per-launch token on `/__hia/*`.** Content rendered from user files (markdown, SVG, PDFs) can't reach the file system through the data channel without it. Cheap defence in depth.
 - **Content-Security-Policy in `index.html`** (`script-src 'self'`, no eval) for the same reason. pdf.js runs with `isEvalSupported: false`.
 - **Module state stays mounted while a tab is open** (hidden with `display:none`), so undo history and scroll survive tab switches. A tab's module only loads when the tab is first shown, so restoring a session with 20 tabs loads one module.

@@ -10,14 +10,14 @@
   import { theme } from '../../core/theme.svelte';
   import { semantic } from '../../core/semantic/semantic.svelte';
   import { workspace, type Tab } from '../../core/tabs.svelte';
-  import { basename, dirname, tildify } from '../../core/paths';
+  import { basename, dirname, formatBytes, tildify } from '../../core/paths';
   import { boot } from '../../core/boot';
   import { commands } from '../../core/commands';
   import { formatShortcut } from '../../core/keys';
   import { toastError, ui } from '../../core/ui.svelte';
 
   let { tab }: { tab: Tab } = $props();
-  let locations = $state<{ settings: string; cache: string } | null>(null);
+  let locations = $state<{ settings: string; cache: string; history: string } | null>(null);
 
   const s = $derived(settings.value);
   const THEMES = [
@@ -41,6 +41,9 @@
     void api.DataLocations().then((l) => (locations = l));
     void semantic.refresh();
   });
+
+  let historyUsage = $state<number | null>(null);
+  void api.HistoryUsage().then((n) => (historyUsage = n)).catch(() => {});
 
   let cliStatus = $state<{ installed: boolean; path: string; bundled: boolean } | null>(null);
   void api.CommandLineStatus().then((c) => (cliStatus = c)).catch(() => {});
@@ -118,6 +121,30 @@
   </section>
 
   <section class="card">
+    <h3>File history</h3>
+    <label class="row check">
+      <span class="lbl">Keep earlier versions of files saved in Hold It All, to compare or restore ({formatShortcut('Mod+Alt+Y')} shows a file's history)</span>
+      <input type="checkbox" checked={!s.historyOff} onchange={(e) => settings.update((x) => (x.historyOff = !(e.target as HTMLInputElement).checked))} />
+    </label>
+    <div class="row">
+      <label class="lbl" for="hmax">Space for kept versions (oldest go first)</label>
+      <select id="hmax" class="input" value={String(s.historyMaxMB || 2048)} onchange={(e) => settings.update((x) => (x.historyMaxMB = +(e.target as HTMLSelectElement).value))}>
+        {#each [512, 1024, 2048, 5120, 10240] as mb (mb)}<option value={String(mb)}>{mb < 1024 ? `${mb} MB` : `${mb / 1024} GB`}</option>{/each}
+      </select>
+    </div>
+    <div class="row">
+      <label class="lbl" for="hkeep">Versions kept per file</label>
+      <select id="hkeep" class="input" value={String(s.historyKeep || 100)} onchange={(e) => settings.update((x) => (x.historyKeep = +(e.target as HTMLSelectElement).value))}>
+        {#each [20, 50, 100, 250, 1000] as n (n)}<option value={String(n)}>{n}</option>{/each}
+      </select>
+    </div>
+    <div class="row buttons">
+      <span class="lbl muted">{historyUsage === null ? '' : `In use: ${formatBytes(historyUsage)}.`} Files over 256 MB aren't versioned.</span>
+      <button class="btn" onclick={() => commands.execute('history.all')}>Show all files</button>
+    </div>
+  </section>
+
+  <section class="card">
     <h3>Recent files</h3>
     <label class="row check">
       <span class="lbl">Remember recently opened files and folders</span>
@@ -158,6 +185,7 @@
       <span class="muted">Version</span><span class="selectable">{boot.version}</span>
       <span class="muted">Settings file</span><span class="selectable mono">{locations ? tildify(locations.settings, boot.home) : '…'}</span>
       <span class="muted">Cache</span><span class="selectable mono">{locations ? tildify(locations.cache, boot.home) : '…'}</span>
+      <span class="muted">File history</span><span class="selectable mono">{locations ? tildify(locations.history, boot.home) : '…'}</span>
     </div>
     <p class="muted small">Hold It All works offline, sends no telemetry and needs no account.</p>
   </section>
