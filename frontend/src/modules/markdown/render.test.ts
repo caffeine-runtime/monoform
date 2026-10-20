@@ -37,6 +37,12 @@ describe('markdown renderer', () => {
     expect(html).toContain('id="hello-world-1"');
     expect(html).toContain('data-line="3"');
   });
+  it('turns mermaid and dot fences into diagram placeholders', () => {
+    const html = md.render('text\n\n```mermaid\ngraph TD; A-->B\n```\n\n```dot\ndigraph { a -> b }\n```\n\n```js\nx<1\n```', env);
+    expect(html).toContain('<div class="diagram" data-kind="mermaid" data-line="3"><pre class="diagram-src">graph TD; A--&gt;B\n</pre></div>');
+    expect(html).toContain('data-kind="dot" data-line="7"');
+    expect(html).toContain('class="language-js">x&lt;1');
+  });
   it('slugifies unicode', () => {
     expect(slugify('Zażółć gęślą!')).toBe('zażółć-gęślą');
   });

@@ -641,6 +641,47 @@ try:
 except (OSError, subprocess.CalledProcessError) as _e:
     print("skipping certificate fixtures:", _e, file=sys.stderr)
 
+# ---- diagrams (M28) ----
+w("diagrams/build.dot", b"""// build pipeline
+digraph "Build" {
+  rankdir=LR; node [shape=box, style="rounded,filled", fillcolor="#eef"]
+  edge [color=gray40]
+  subgraph cluster_src {
+    label = "Sources"; style=dashed
+    lexer; parser [label="Parser\\n(LL)"]
+  }
+  lexer -> parser -> { checker emit } [label="ast"]
+  emit -> "out.o" [arrowhead=vee, style=bold]
+  checker -> lexer [dir=back]
+  "out.o" [shape=cylinder]
+}
+""")
+w("diagrams/flow.mmd", b"""flowchart TD
+  A[Open a file] --> B{Known type?}
+  B -- yes --> C[Module view]
+  B -- no --> D[Text or hex]
+  C --> E((Done))
+""")
+w("diagrams/notes.md", b"""# Diagrams in notes
+
+```mermaid
+sequenceDiagram
+  Alice->>Bob: Hello
+  Bob-->>Alice: Hi
+```
+
+Between the diagrams.
+
+```dot
+graph { a -- b -- c; a -- c }
+```
+
+```mermaid
+flowchart TD
+  A --> 
+```
+""")
+
 # ---- packages and disk images (M26) ----
 # deb/rpm/iso/msi samples were made with dpkg-deb, rpmbuild, xorriso and wixl
 # (see internal/archive/testdata); jar/apk are zip files under another name.

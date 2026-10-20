@@ -53,6 +53,12 @@ for path, info in lock.get("packages", {}).items():
         continue
     name = path.split("node_modules/")[-1]
     lic = info.get("license", "UNKNOWN")
+    if lic == "UNKNOWN":
+        # No license field in package.json: read the package's licence file.
+        d = os.path.join("frontend", path)
+        for f in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+            if re.match(r"(UN)?(LICEN[CS]E|COPYING)", f, re.I):
+                lic = classify(open(os.path.join(d, f), errors="ignore").read()); break
     rows.append(("npm", name, info.get("version", ""), lic))
 
 for kind, name, ver, lic in sorted(rows):

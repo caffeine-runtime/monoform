@@ -3,6 +3,7 @@
 // data attributes the preview uses to open files inside the app.
 import MarkdownIt from 'markdown-it';
 import { isAbsolute, resolveRelative } from '../../core/paths';
+import { kindOfFence } from '../diagram/fence';
 
 export interface RenderEnv {
   /** Absolute path of the note, for resolving relative links. */
@@ -52,6 +53,16 @@ export function createRenderer() {
       toks[i].attrSet('id', slug);
     }
   });
+
+  // Mermaid and Graphviz blocks become placeholders the preview draws.
+  const defaultFence = md.renderer.rules.fence!;
+  md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+    const t = tokens[idx];
+    const kind = kindOfFence(t.info);
+    if (!kind) return defaultFence(tokens, idx, options, env, self);
+    const line = t.map ? ` data-line="${t.map[0] + 1}"` : '';
+    return `<div class="diagram" data-kind="${kind}"${line}><pre class="diagram-src">${md.utils.escapeHtml(t.content)}</pre></div>\n`;
+  };
 
   const defaultImage = md.renderer.rules.image!;
   md.renderer.rules.image = (tokens, idx, options, envIn, self) => {

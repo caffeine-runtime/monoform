@@ -258,6 +258,13 @@
   that copies unedited cells byte for byte and keeps styles, column widths, merges, comments, header rows and
   anchored shapes (or saves as .xlsx). Renaming a sheet now also updates formulas that refer to it (for .xlsx too).
   Password-protected OpenDocument files are refused with a message.
+- **M28 — Graphviz and Mermaid.** .dot/.gv and .mmd/.mermaid open with the source (highlighted) beside the
+  drawing: zoom with the wheel, drag to pan, click a node, edge or cluster to select its line; errors name their line
+  (click to jump) and keep the last good drawing; export SVG or PNG. DOT is parsed by our own parser (subgraphs,
+  clusters, attribute scoping, edge chains, ports, HTML labels) and laid out with dagre in a worker, drawn in
+  Graphviz's style (its node shapes, records, arrowheads, colours incl. HSV and grayNN, rank direction). Mermaid
+  (all its diagram types) loads on first use. ```mermaid and ```dot / ```graphviz blocks in Markdown previews are
+  drawn too (cached, so typing elsewhere doesn't redraw them); a broken block shows its error and source.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -291,6 +298,12 @@ GTK/WebKitGTK process start-up before our page loads. Not yet measured on Window
 available here).
 
 ## Known issues
+- Mermaid draws on the main thread (it measures text through the DOM, so it can't run in a worker): a drawing is
+  one ~130 ms frame on the test VM. The diagram view waits for a pause in typing before redrawing.
+- Graphviz layout uses dagre, not Graphviz: results differ from `dot`'s, and dense graphs with many cycles are slow
+  (300 nodes / 600 random edges ≈ 10 s, in a worker with a progress note; typical dependency-style graphs of that
+  size take ~0.1–0.5 s). `neato`/`fdp`-style layouts, `splines=ortho` and HTML-label tables aren't supported
+  (HTML labels show their text).
 - OpenDocument: new paragraphs, headings and list items use the document's own styles, but there's no style
   picker beyond Normal/Heading 1–3; images, tables and sections can't be inserted (existing ones are kept). In .ods
   files, a cell that's edited loses rich text inside it (mixed formatting within one cell). Flat XML (.fodt/.fods)
