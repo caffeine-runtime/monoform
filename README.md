@@ -56,15 +56,16 @@ Download the latest version from the repository's **Releases** page (each releas
 
 ### Publishing a release
 
-Push a tag like `v2.0.0`, or run the **Build** workflow manually with a version. CI runs every check and self-test,
-builds the three packages with that version (shown in Settings), and publishes a GitHub release with the files and
-`SHA256SUMS`. Versions with a suffix (`2.1.0-beta.1`) are marked as pre-releases.
+Run the **Build** workflow with a version (or push a `v*` tag); CI tests, builds and publishes the release.
+Step-by-step: [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Build from source
 
+Full setup per OS, all commands, the project layout and its rules: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
 Prerequisites:
 
-- Go **1.25+**, Node.js **22+** with npm
+- Go **1.26.0+**, Node.js **22** with npm
 - Wails CLI **v2.17.0**: `go install github.com/wailsapp/wails/v2/cmd/wails@v2.17.0`
 - Linux: `sudo apt install libgtk-3-dev libwebkit2gtk-4.1-dev` (or your distro's equivalents)
 - Windows: the WebView2 runtime (preinstalled on Windows 10/11); [NSIS](https://nsis.sourceforge.io) for the installer
@@ -111,3 +112,5 @@ search indexes live in the OS cache folder and can be removed from the app.
 - [docs/DECISIONS.md](docs/DECISIONS.md): design decisions and the license of every dependency (all permissive;
   `scripts/licenses.py` audits the built binary and the bundled npm packages)
 - [docs/TESTING.md](docs/TESTING.md): automated scenarios and the manual checklist
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): tools to install, commands, layout and rules for contributors and coding agents ([CLAUDE.md](CLAUDE.md) is the short version)
+- [docs/RELEASING.md](docs/RELEASING.md): publishing a new version
