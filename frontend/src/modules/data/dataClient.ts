@@ -26,11 +26,15 @@ export class DataClient {
   }
 
   parse(text: string, format: string) {
-    return this.call<{ ok: boolean; error?: JsonError; root?: TreeNode; documents?: number }>({ type: 'parse', text, format });
+    return this.call<{ ok: boolean; error?: JsonError; root?: TreeNode; documents?: number; table?: string[] }>({ type: 'parse', text, format });
   }
 
   children(path: (string | number)[], offset = 0, limit = 500) {
     return this.call<{ nodes: TreeNode[]; total: number }>({ type: 'children', path, offset, limit });
+  }
+
+  rows(start: number, end: number) {
+    return this.call<{ rows: string[][] }>({ type: 'rows', start, end });
   }
 
   stringify(indent: number, path?: (string | number)[]) {

@@ -1,6 +1,7 @@
 <script lang="ts">
-  // JSON / JSONC / YAML: tree + raw editor, validation with line/column,
-  // pretty-print / minify, copy path, YAML → JSON.
+  // JSON / JSONC / YAML / TOML / XML / JSON Lines: tree + raw editor,
+  // validation with line/column, pretty-print / minify (JSON), copy path,
+  // view or save the others as JSON, and a table for lists of records.
   import { onMount } from 'svelte';
   import { EditorView } from '@codemirror/view';
   import { EditorState } from '@codemirror/state';
@@ -20,13 +21,22 @@
   import JsonTree from './JsonTree.svelte';
   import { formatPath, type JsonError } from './jsonparse';
   import { dataControllers } from './dataControllers';
+  import { XML_EXT } from './formatExt';
+  import Grid, { type GridColumn } from './Grid.svelte';
 
   let { tab }: { tab: Tab } = $props();
 
-  type View = 'tree' | 'raw' | 'json';
+  type View = 'tree' | 'raw' | 'json' | 'table';
   const ext = extname(tab.name);
-  const format = ext === 'yaml' || ext === 'yml' ? 'yaml' : ext === 'jsonc' ? 'jsonc' : 'json';
-  const isYaml = format === 'yaml';
+  const FORMATS: Record<string, string> = { yaml: 'yaml', yml: 'yaml', jsonc: 'jsonc', toml: 'toml', jsonl: 'jsonl', ndjson: 'jsonl', jsonlines: 'jsonl' };
+  const format = FORMATS[ext] ?? (XML_EXT.includes(ext) ? 'xml' : 'json');
+  const LABELS: Record<string, string> = { yaml: 'YAML', toml: 'TOML', xml: 'XML', jsonl: 'JSON Lines', json: 'JSON', jsonc: 'JSON' };
+  const label = LABELS[format];
+  /** Formats shown/saved "as JSON" (and not reformatted in place). */
+  const isYaml = format !== 'json' && format !== 'jsonc';
+  let table = $state<string[] | null>(null);
+  let tableCols = $state<GridColumn[]>([]);
+  let tableRows = $state(0);
 
   const client = new DataClient();
   let view = $state<View>((tab.restoredState as { view?: View } | undefined)?.view ?? 'tree');
@@ -54,8 +64,12 @@
       root = r.root;
       docs = r.documents ?? 1;
       version++;
+      table = r.table ?? null;
+      tableRows = r.table ? r.root.size : 0;
+      if (r.table && (tableCols.length !== r.table.length || tableCols.some((c, i) => c.name !== r.table![i]))) tableCols = r.table.map((name) => ({ name, width: Math.min(280, Math.max(90, name.length * 9 + 40)) }));
+      if (!r.table && view === 'table') view = 'tree';
     }
-    tab.status = { ...tab.status, info: error ? `Invalid ${isYaml ? 'YAML' : 'JSON'}: line ${error.line}, column ${error.col}` : `Valid ${isYaml ? 'YAML' : 'JSON'}` };
+    tab.status = { ...tab.status, info: error ? `Invalid ${label}: line ${error.line}, column ${error.col}` : `Valid ${label}` };
     if (view === 'json') void showJson();
   }
 
@@ -176,7 +190,8 @@
 <div class="toolbar">
   <div class="seg">
     <button class="btn ghost" class:on={view === 'tree'} onclick={() => setView('tree')}>Tree</button>
-    <button class="btn ghost" class:on={view === 'raw'} onclick={() => setView('raw')}>{isYaml ? 'YAML' : 'Raw'}</button>
+    {#if table}<button class="btn ghost" class:on={view === 'table'} title="The list of records as a table" onclick={() => setView('table')}>Table</button>{/if}
+    <button class="btn ghost" class:on={view === 'raw'} onclick={() => setView('raw')}>{isYaml ? label : 'Raw'}</button>
     {#if isYaml}<button class="btn ghost" class:on={view === 'json'} onclick={() => setView('json')}>As JSON</button>{/if}
   </div>
   <span class="sep"></span>
@@ -185,7 +200,7 @@
       <Icon icon={CircleX} size={15} /> Line {error.line}, column {error.col}: {error.message}
     </button>
   {:else if root}
-    <span class="status good"><Icon icon={CircleCheck} size={15} /> Valid {isYaml ? `YAML${docs > 1 ? ` (${docs} documents)` : ''}` : 'JSON'}</span>
+    <span class="status good"><Icon icon={CircleCheck} size={15} /> Valid {label}{format === 'yaml' && docs > 1 ? ` (${docs} documents)` : format === 'jsonl' ? ` (${docs.toLocaleString()} records)` : ''}</span>
   {:else if parsing}
     <span class="label">Checking…</span>
   {/if}
@@ -220,6 +235,9 @@
     </div>
   {/if}
   <div class="pane" class:hidden={view !== 'json'}><div class="jsonhost" bind:this={jsonHost}></div></div>
+  {#if view === 'table' && table}
+    <div class="pane grid"><Grid source={{ rows: async (s: number, e: number) => (await client.rows(s, e)).rows }} rowCount={tableRows} bind:columns={tableCols} {version} /></div>
+  {/if}
 </div>
 
 <style>
