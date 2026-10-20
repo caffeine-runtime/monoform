@@ -332,6 +332,15 @@
   drag it (the share is shown while dragging), double-click for 50/50, arrow keys to nudge; each kind remembers
   its ratio. The split view's dividers between tabs (2, 3 or 4 tabs) now have a visible handle, show the share
   while dragging, reset to equal sizes on double-click and move with the arrow keys when focused.
+- **M36 — A grouped app menu.** The ☰ menu listed every command (~50 lines). It now shows the everyday actions
+  (Go to file, Search, Open, Save…) and submenus: New, This file, Folder, Edit, the open file's own commands
+  (Image, PDF, Video…), Tools, View, Split view, Appearance, Tabs, Help — 18 lines with an image open. A file type
+  with many commands gets its tools, editing and viewing commands grouped again (Image › Tools › Brush), and
+  submenu items drop a prefix that repeats the submenu ("Split view › Two side by side"). Commands not placed
+  explicitly still appear under their category, so new ones never go missing. Any menu can now have submenus:
+  they open on hover (short delay), click, Enter or →; ← / Esc go back a level; near the screen edge they open
+  to the left. Fixed on the way: with a menu open, arrow keys were also handled by the app's shortcuts (← / →
+  switched images in the image editor) — open menus now own the keyboard.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
