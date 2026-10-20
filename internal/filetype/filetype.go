@@ -105,6 +105,8 @@ var byExt = map[string]entry{
 	"docx": {Document, "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}, "doc": {Document, "application/msword"},
 	"xlsx": {Sheet, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}, "xlsm": {Sheet, "application/vnd.ms-excel.sheet.macroEnabled.12"},
 	"xls": {Sheet, "application/vnd.ms-excel"},
+	"odt": {Document, "application/vnd.oasis.opendocument.text"}, "ott": {Document, "application/vnd.oasis.opendocument.text-template"},
+	"ods": {Sheet, "application/vnd.oasis.opendocument.spreadsheet"}, "ots": {Sheet, "application/vnd.oasis.opendocument.spreadsheet-template"},
 	// checksum lists
 	"sha256": {Checksum, "text/plain"}, "sha1": {Checksum, "text/plain"}, "md5": {Checksum, "text/plain"},
 	"sha512": {Checksum, "text/plain"}, "b3": {Checksum, "text/plain"}, "sha256sum": {Checksum, "text/plain"},

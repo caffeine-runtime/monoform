@@ -150,15 +150,15 @@ export function registerBuiltinModules() {
   modules.register({
     id: 'sheet',
     name: 'Spreadsheet',
-    extensions: ['xlsx', 'xlsm', 'xltx', 'xltm', 'xls'],
-    mimeTypes: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'],
+    extensions: ['xlsx', 'xlsm', 'xltx', 'xltm', 'xls', 'ods', 'ots'],
+    mimeTypes: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'application/vnd.oasis.opendocument.spreadsheet'],
     load: () => import('./office/sheet'),
   });
   modules.register({
     id: 'doc',
     name: 'Document',
-    extensions: ['docx', 'doc'],
-    mimeTypes: ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'],
+    extensions: ['docx', 'doc', 'odt', 'ott'],
+    mimeTypes: ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword', 'application/vnd.oasis.opendocument.text'],
     load: () => import('./office/doc'),
   });
   modules.register({

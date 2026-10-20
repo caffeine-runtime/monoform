@@ -247,6 +247,17 @@
   from the embedded cabinets). Zip-based packages — .jar .war .ear .aar .apk .xapk .apks .ipa .xpi .vsix .nupkg .whl
   .appx .msix (+ bundles) — open in the archive view too, also from the sidebar tree. Packages and disk images are
   read-only.
+- **M27 — OpenDocument text and spreadsheets.** .odt (and .ott) open in the document editor: headings, paragraph
+  alignment and spacing, bold/italic/underline/strike from automatic and named text styles, colours and sizes,
+  links, bullet, nested and numbered lists, tables, pictures, footnotes, fields, tabs, line breaks and runs of
+  spaces; sections, indexes and other blocks the editor can't change are shown read-only and kept. Saving writes
+  content.xml back into the .odt (every other part untouched): original paragraphs, spans and list elements are
+  reused, formatting changes become automatic styles, Enter in a list adds an item. .ods (and .ots) open in the
+  spreadsheet with values shown as LibreOffice shows them (currency, dates, percentages), OpenFormula formulas
+  converted to the recalculating engine and back, sheets added/renamed, rows inserted/deleted; saving writes an .ods
+  that copies unedited cells byte for byte and keeps styles, column widths, merges, comments, header rows and
+  anchored shapes (or saves as .xlsx). Renaming a sheet now also updates formulas that refer to it (for .xlsx too).
+  Password-protected OpenDocument files are refused with a message.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -280,6 +291,10 @@ GTK/WebKitGTK process start-up before our page loads. Not yet measured on Window
 available here).
 
 ## Known issues
+- OpenDocument: new paragraphs, headings and list items use the document's own styles, but there's no style
+  picker beyond Normal/Heading 1–3; images, tables and sections can't be inserted (existing ones are kept). In .ods
+  files, a cell that's edited loses rich text inside it (mixed formatting within one cell). Flat XML (.fodt/.fods)
+  isn't supported.
 - Disk images: .dmg isn't browsable. A DMG is a UDIF container (zlib/bzip2/LZFSE/LZMA chunks) holding an HFS+ or
   APFS file system, so it needs three readers, two of them large (APFS especially); no permissively licensed Go
   library covers them. ISO images that keep their files only in UDF (Windows/Blu-ray media) show just their small

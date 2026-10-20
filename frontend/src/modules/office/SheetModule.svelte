@@ -1,5 +1,5 @@
 <script lang="ts">
-  // .xlsx / .xlsm / .xls: cells are read and written by Go (excelize), the
+  // .xlsx / .xlsm / .xls / .ods: cells are read and written by Go (excelize), the
   // grid only fetches what's on screen.
   import { onMount, tick } from 'svelte';
   import Icon from '../../shell/Icon.svelte';
@@ -103,7 +103,7 @@
 
   function updateStatus() {
     if (!book) return;
-    tab.status = { ...tab.status, type: book.format.toUpperCase(), position: selStats || `${colName(cursor.col)}${cursor.row + 1}`, info: `${sheet} · ${info?.rows ?? 0} rows` };
+    tab.status = { ...tab.status, type: book.format.startsWith('o') ? 'OpenDocument spreadsheet' : book.format.toUpperCase(), position: selStats || `${colName(cursor.col)}${cursor.row + 1}`, info: `${sheet} · ${info?.rows ?? 0} rows` };
   }
 
   /** Write a batch (Go recalculates once) and record it for undo. */
@@ -266,9 +266,12 @@
   async function saveAs(): Promise<boolean> {
     if (!book) return false;
     const def = saveAsTarget || tab.filePath || tab.title;
-    const p = await api.SaveFileDialog('Save workbook as', def, [{ name: 'Excel workbook', patterns: '*.xlsx' }]);
+    const ods = book.format === 'ods' || book.format === 'ots';
+    const filters = [{ name: 'Excel workbook', patterns: '*.xlsx' }];
+    if (ods) filters.unshift({ name: 'OpenDocument spreadsheet', patterns: '*.ods' });
+    const p = await api.SaveFileDialog('Save workbook as', def, filters);
     if (!p) return false;
-    return writeTo(/\.xls[xm]$/i.test(p) ? p : `${p}.xlsx`, true);
+    return writeTo(/\.xls[xm]$/i.test(p) || (ods && /\.ods$/i.test(p)) ? p : `${p}.${ods ? 'ods' : 'xlsx'}`, true);
   }
 
   async function writeTo(path: string, retarget: boolean): Promise<boolean> {
@@ -277,7 +280,7 @@
     if (retarget && path !== tab.filePath) {
       tab.retarget(path);
       saveAsTarget = '';
-      book = { ...book!, format: 'xlsx', saveAs: '', note: '' } as office.BookInfo;
+      book = { ...book!, format: /\.ods$/i.test(path) ? 'ods' : 'xlsx', saveAs: '', note: '' } as office.BookInfo;
     }
     const e = await api.Stat(path);
     tab.size = e.size;
