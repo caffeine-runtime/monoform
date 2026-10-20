@@ -1,5 +1,55 @@
 export namespace app {
 	
+	export class AnimFrame {
+	    path: string;
+	    delay: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new AnimFrame(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.delay = source["delay"];
+	    }
+	}
+	export class AnimInfo {
+	    width: number;
+	    height: number;
+	    loop: number;
+	    frames: AnimFrame[];
+	
+	    static createFrom(source: any = {}) {
+	        return new AnimInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.width = source["width"];
+	        this.height = source["height"];
+	        this.loop = source["loop"];
+	        this.frames = this.convertValues(source["frames"], AnimFrame);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class AudioOpened {
 	    id: string;
 	    info?: audio.Info;
@@ -170,6 +220,26 @@ export namespace app {
 	        this.patterns = source["patterns"];
 	    }
 	}
+	export class IconEntry {
+	    width: number;
+	    height: number;
+	    format: string;
+	    kind: string;
+	    path: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new IconEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.width = source["width"];
+	        this.height = source["height"];
+	        this.format = source["format"];
+	        this.kind = source["kind"];
+	        this.path = source["path"];
+	    }
+	}
 	export class Locations {
 	    settings: string;
 	    cache: string;
@@ -262,6 +332,20 @@ export namespace app {
 	        this.modelBytes = source["modelBytes"];
 	        this.dims = source["dims"];
 	        this.modelDir = source["modelDir"];
+	    }
+	}
+	export class SystemImage {
+	    path: string;
+	    tool: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SystemImage(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.tool = source["tool"];
 	    }
 	}
 	export class VideoOpened {

@@ -66,11 +66,30 @@ w("img/photo.png", png_fn(400, 300, lambda x, y: (0, 0, 0) if x < 200 and (x // 
 # A photo-like image (smooth gradients + texture): stored losslessly it compresses badly.
 w("img/big.png", png_fn(1200, 900, lambda x, y: (int(128 + 90 * math.sin(x / 41)) , int(128 + 80 * math.cos(y / 29)), (x * 7 + y * 3) % 256)))
 w("img/vector.svg", b'<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80" viewBox="0 0 120 80"><rect width="120" height="80" rx="12" fill="#d97757"/><circle cx="60" cy="40" r="22" fill="#fff"/></svg>')
-# A 2-frame GIF (built by hand: 2x2 pixels, global palette of 2 colours).
+# A 2-frame GIF (built by hand: 2x2 pixels, global palette of 2 colours). LZW: a clear
+# code before every pixel keeps the code size at 3 bits.
+def _lzw(pixels):
+    codes = []
+    for p in pixels:
+        codes += [4, p]
+    codes.append(5)
+    bits = 0
+    nbits = 0
+    out = bytearray()
+    for c in codes:
+        bits |= c << nbits
+        nbits += 3
+        while nbits >= 8:
+            out.append(bits & 255)
+            bits >>= 8
+            nbits -= 8
+    if nbits:
+        out.append(bits & 255)
+    return bytes([2, len(out)]) + bytes(out) + b"\x00"
 gif = (b"GIF89a\x02\x00\x02\x00\x80\x00\x00" + bytes([255, 0, 0, 0, 0, 255]) +
        b"!\xff\x0bNETSCAPE2.0\x03\x01\x00\x00\x00" +
-       b"!\xf9\x04\x00\x0a\x00\x00\x00" + b",\x00\x00\x00\x00\x02\x00\x02\x00\x00\x02\x02\x84\x51\x00" +
-       b"!\xf9\x04\x00\x0a\x00\x00\x00" + b",\x00\x00\x00\x00\x02\x00\x02\x00\x00\x02\x02\x0c\x0a\x00" + b";")
+       b"!\xf9\x04\x00\x0a\x00\x00\x00" + b",\x00\x00\x00\x00\x02\x00\x02\x00\x00" + _lzw([0, 1, 1, 0]) +
+       b"!\xf9\x04\x00\x0a\x00\x00\x00" + b",\x00\x00\x00\x00\x02\x00\x02\x00\x00" + _lzw([1, 0, 0, 1]) + b";")
 w("img/anim.gif", gif)
 
 # PDFs
@@ -593,6 +612,11 @@ for i in range(3000):
         _log.append("    at com.example.Main.run(Main.java:42)")
 _log.append('time="2026-10-20T13:00:00Z" level=fatal msg="disk full"')
 w("logs/app.log", ("\n".join(_log) + "\n").encode())
+
+# ---- more image formats (M24): HEIC (made once with libheif; see internal/imaging/testdata), fonts ----
+w("img/sample.heic", open(os.path.join(_here, "..", "internal", "imaging", "testdata", "sample.heic"), "rb").read())
+for _f in ("test.ttf", "test.woff"):
+    w("fonts/" + _f, open(os.path.join(_here, "..", "frontend", "src", "modules", "font", "testdata", _f), "rb").read())
 
 _pos, _nor, _uv, _idx = _cube()
 def _stl():

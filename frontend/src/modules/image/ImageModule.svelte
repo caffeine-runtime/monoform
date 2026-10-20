@@ -33,7 +33,7 @@
   import PaintBucket from '@lucide/svelte/icons/paint-bucket';
   import SquaresUnite from '@lucide/svelte/icons/squares-unite';
   import Save from '@lucide/svelte/icons/save';
-  import { api, endpoint, saveFile } from '../../core/backend';
+  import { api, endpoint, fileUrl, saveFile } from '../../core/backend';
   import { basename, extname, stem, dirname, join } from '../../core/paths';
   import { workspace, type Tab } from '../../core/tabs.svelte';
   import { settings } from '../../core/settings.svelte';
@@ -50,10 +50,15 @@
   import { readOra, writeOra, blendToOra } from './ora';
   import LayersPanel from './LayersPanel.svelte';
   import AdjustPanel from './AdjustPanel.svelte';
+  import AnimEditor from './AnimEditor.svelte';
+  import IconView from './IconView.svelte';
 
   let { tab }: { tab: Tab } = $props();
 
-  const SAVE_FORMATS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'ora'];
+  const SAVE_FORMATS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'ora', 'ico', 'icns'];
+  /** Formats the webview may not decode: converted by the operating system's own decoder. */
+  const VIA_SYSTEM = ['heic', 'heif', 'avif'];
+  const ICON_EXT = ['ico', 'cur', 'icns'];
   const COLORS = ['#e5484d', '#f5a524', '#30a46c', '#3e8ed0', '#8e4ec6', '#ffffff', '#1a1a1a'];
 
   let stageHost = $state<HTMLDivElement>();
@@ -87,6 +92,12 @@
   let fonts = $state<string[]>([]);
   let objectPoints: { x: number; y: number; positive: boolean }[] = [];
   let mergedWarned = false;
+  // Animated GIF/WebP and icon files get their own views.
+  let anim = $state.raw<{ width: number; height: number; loop: number; frames: { path: string; delay: number }[] } | null>(null);
+  let icons = $state.raw<{ width: number; height: number; format: string; kind: string; path: string }[] | null>(null);
+  let animEd = $state<AnimEditor>();
+  /** The system tool that decoded this image (HEIC…), shown in the status bar. */
+  let viaSystem = '';
   /** Last internal copy, to paste back at the same position. */
   let clip: { canvas: HTMLCanvasElement; x: number; y: number; at: number } | null = null;
 
@@ -153,9 +164,32 @@
         .Siblings(tab.filePath, ['image', 'svg'])
         .then((l) => (siblings = l ?? []))
         .catch(() => {});
+    anim = null;
+    icons = null;
+    viaSystem = '';
     try {
       const url = tab.url();
-      if (isSvg || ext === 'gif') {
+      if (ICON_EXT.includes(ext) && tab.filePath) {
+        destroyEditor();
+        icons = await api.IconOpen(tab.filePath);
+        return;
+      }
+      if ((ext === 'gif' || ext === 'webp') && tab.filePath && (await api.AnimFrameCount(tab.filePath)) > 1) {
+        destroyEditor();
+        try {
+          imgMode = false;
+          anim = await api.AnimOpen(tab.filePath);
+          tab.status = { ...tab.status, type: `Animated ${ext.toUpperCase()}`, position: `${anim.width} × ${anim.height} px`, info: `${anim.frames.length} frames` };
+          return;
+        } catch (e) {
+          // Damaged frames that browsers still play: show it animating, without frame editing.
+          imgMode = true;
+          src = url;
+          ui.toast(`Frames can't be edited: ${String((e as Error)?.message ?? e)}`, 'warning');
+          return;
+        }
+      }
+      if (isSvg) {
         imgMode = true;
         src = url;
         destroyEditor();
@@ -171,7 +205,16 @@
         editor!.loadLayers(ora.width, ora.height, await Promise.all(layers.map(async (l, i) => (l.objects.length ? { ...l, canvas: await rawLayer(i) ?? l.canvas } : l))));
         return;
       }
-      const canvas = await decode(url);
+      let canvas: HTMLCanvasElement;
+      try {
+        canvas = await decode(url);
+      } catch (e) {
+        if (!VIA_SYSTEM.includes(ext) || !tab.filePath) throw e;
+        // The webview can't decode HEIC/AVIF here: let the OS convert it.
+        const r = await api.ImageViaSystem(tab.filePath);
+        viaSystem = r.tool;
+        canvas = await decode(fileUrl(r.path));
+      }
       await tick();
       if (editor) editor.load(canvas);
       else createEditor(canvas);
@@ -230,7 +273,7 @@
     const selInfo = es?.pixelSelection ? ` · selection ${es.pixelSelection.width} × ${es.pixelSelection.height}` : '';
     tab.status = {
       ...tab.status,
-      type: isSvg ? 'SVG image (view-only)' : ext === 'ora' ? 'OpenRaster image' : `${ext.toUpperCase()} image`,
+      type: isSvg ? 'SVG image (view-only)' : ext === 'ora' ? 'OpenRaster image' : `${ext.toUpperCase()} image${viaSystem ? ` (decoded by ${viaSystem})` : ''}`,
       position: w ? `${w} × ${h} px${selInfo}` : undefined,
       info: `${Math.round(zoom * 100)}%${es && es.layers.length > 1 ? ` · ${es.layers.length} layers` : ''}`,
     };
@@ -406,8 +449,8 @@
     tool: (t: string) => setTool(t as Tool),
     rotate: (cw: boolean) => editor?.rotate(cw),
     flip: (h: boolean) => editor?.flip(h),
-    undo: () => editor?.undo(),
-    redo: () => editor?.redo(),
+    undo: () => (anim ? animEd?.undo() : editor?.undo()),
+    redo: () => (anim ? animEd?.redo() : editor?.redo()),
     apply: () => editor?.applyRegion(),
     escape: () => {
       if (resizeOpen) resizeOpen = false;
@@ -417,10 +460,11 @@
       else setTool('hand');
     },
     deleteSelection: () => {
+      if (anim) return void animEd?.remove();
       if (es?.hasSelection) editor?.deleteSelection();
       else if (es?.pixelSelection) editor?.clearSelectionPixels();
     },
-    navigate: (dir: 1 | -1) => void navigate(dir),
+    navigate: (dir: 1 | -1) => (anim ? animEd?.step(dir) : void navigate(dir)),
     resize: () => openResize(),
     rotateAngle: () => openRotate(),
     copy: (merged: boolean) => copy(false, merged),
@@ -568,10 +612,23 @@
     if (!editor) return false;
     let format = extname(path);
     if (!SAVE_FORMATS.includes(format)) {
-      ui.toast(`Can't save .${format}. Choose PNG, JPEG, WebP, GIF, BMP or ORA.`, 'warning');
+      ui.toast(`Can't save .${format}. Choose PNG, JPEG, WebP, GIF, BMP, ICO, ICNS or ORA.`, 'warning');
       return false;
     }
     if (format === 'ora') return writeOraFile(path);
+    if (format === 'ico' || format === 'icns') {
+      // An icon with every standard size, from the flattened image.
+      const tmp = await api.TempPath('icon-source.png');
+      await saveFile(tmp, await raster.toPNG(editor.composite()));
+      try {
+        await api.IconWrite(tmp, path, format, []);
+      } finally {
+        void api.RemoveTemp(tmp);
+      }
+      tab.size = (await api.Stat(path)).size;
+      editor.markSaved();
+      return true;
+    }
     if (format === 'jpeg') format = 'jpg';
     if (editor.layerCount > 1 && !mergedWarned) {
       mergedWarned = true;
@@ -588,7 +645,7 @@
   async function copyPath(): Promise<string> {
     const p = tab.filePath ?? join(dirname(tab.path ?? ''), tab.title);
     const dir = dirname(p);
-    const e = SAVE_FORMATS.includes(extname(p)) ? extname(p) : 'png';
+    const e = SAVE_FORMATS.includes(extname(p)) ? extname(p) : VIA_SYSTEM.includes(extname(p)) ? 'jpg' : 'png';
     const base = stem(p).replace(/ \(edited( \d+)?\)$/, '');
     const names = Array.from({ length: 50 }, (_, i) => join(dir, `${base} (edited${i ? ` ${i + 1}` : ''}).${e}`));
     const taken = await api.Exists(names);
@@ -607,6 +664,8 @@
   }
 
   async function save(): Promise<boolean> {
+    if (anim) return animEd?.save() ?? false;
+    if (icons) return false;
     if (isSvg) {
       ui.toast('SVG files are view-only.', 'info');
       return false;
@@ -615,10 +674,13 @@
     if (!tab.filePath || tab.readOnly) return saveAs();
     // Keep originals: the first save of an opened image goes to a copy.
     if (settings.value.imageKeepOriginal && !/ \(edited( \d+)?\)$/.test(stem(tab.filePath))) return saveCopy();
+    // HEIC/AVIF can't be written: the edit goes to a JPEG copy next to it.
+    if (!SAVE_FORMATS.includes(extname(tab.filePath))) return saveCopy();
     return writeImage(tab.filePath);
   }
 
   async function saveAs(): Promise<boolean> {
+    if (anim) return animEd?.saveAs() ?? false;
     if (imgMode || !editor) {
       ui.toast(isSvg ? 'SVG files are view-only.' : 'Start editing to save a copy.', 'info');
       return false;
@@ -630,6 +692,8 @@
       { name: 'WebP (lossless)', patterns: '*.webp' },
       { name: 'GIF', patterns: '*.gif' },
       { name: 'BMP', patterns: '*.bmp' },
+      { name: 'Windows icon (all sizes)', patterns: '*.ico' },
+      { name: 'macOS icon (all sizes)', patterns: '*.icns' },
       { name: 'OpenRaster with layers', patterns: '*.ora' },
     ]);
     if (!path) return false;
@@ -895,6 +959,11 @@
   </div>
 {/if}
 
+{#if anim}
+  <AnimEditor bind:this={animEd} {tab} info={anim} />
+{:else if icons}
+  <IconView {tab} entries={icons} onreload={() => void load()} />
+{:else}
 <div class="body">
   {#if editable}
     <div class="tools" role="toolbar" aria-orientation="vertical" aria-label="Tools">
@@ -958,6 +1027,7 @@
     </aside>
   {/if}
 </div>
+{/if}
 
 <style>
   .body {

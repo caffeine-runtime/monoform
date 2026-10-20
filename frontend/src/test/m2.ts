@@ -124,12 +124,16 @@ export default async function m2(dir: string) {
   assert(!tab.dirty, 'clean after save');
   await workspace.close(tab, { force: true });
 
+  // An animated GIF opens in the frame editor (M24).
+  const gifTab = (await workspace.openPath(join(dir, 'img', 'anim.gif')))!;
+  await waitFor(() => ((gifTab as any).animTest?.frames().length === 2 ? true : null), 'animated GIF opens in the frame editor');
+  await workspace.close(gifTab, { force: true });
+
   // Folder navigation: next image replaces the tab content.
-  const nav = (await workspace.openPath(join(dir, 'img', 'anim.gif')))!;
-  await waitFor(() => hooks(nav)?.imgMode() && hooks(nav).natural().w === 2, 'gif shown as <img>');
+  const { tab: nav } = await openImage(join(dir, 'img', 'photo.png'));
   commands.execute('image.next');
-  await waitFor(() => nav.title !== 'anim.gif', 'navigated');
-  log(`next after anim.gif: ${nav.title}`);
+  await waitFor(() => nav.title !== 'photo.png', 'navigated');
+  log(`next after photo.png: ${nav.title}`);
   await workspace.close(nav, { force: true });
 
   // SVG files open in the SVG editor (M10), not the raster editor.

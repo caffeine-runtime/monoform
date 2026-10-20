@@ -215,6 +215,19 @@
   stack traces, belong to the line above), a text or regex filter listing the matching lines below (click to jump),
   next/previous error (F8 / Shift+F8), and Follow: new lines appear as the file grows — only the added bytes are
   read, a shrunk (rotated) file is reloaded.
+- **M24 — More image formats.** HEIC/HEIF (iPhone photos) and AVIF open in the image editor: when the webview
+  can't decode them, the operating system's own decoder converts them — sips on macOS, Windows Imaging Component
+  (with Microsoft's free HEIF extension) on Windows, libheif's heif-convert/heif-dec, ImageMagick or ffmpeg on
+  Linux; nothing is bundled (every HEVC decoder is LGPL or patent-encumbered). Edits save as a JPEG copy next to the
+  original; the file tree offers "Convert to JPG / PNG". Animated GIF and WebP open in a frame editor: play/pause,
+  step (← →), preview speed, select frames (Shift/Ctrl), delete, duplicate, move, reverse, per-frame timing, whole
+  animation faster/slower, drop every other frame, loop count, undo; saved as GIF (median-cut palette per frame,
+  dithered) or lossless animated WebP; export a frame as PNG. ICO/CUR/ICNS show every size inside (PNG, BMP with
+  masks, legacy RLE) and can be exported per size, rebuilt from any image, or converted to the other format; any
+  image can be saved as ICO (16–256) or ICNS (16–1024, @2x). Font files (TTF, OTF, TTC, WOFF, WOFF2) open in a
+  preview: names, version, designer, copyright and licence, weight, glyph count, variable axes with sliders, your
+  own sample text at any size, a size waterfall, paragraphs, and every covered character by Unicode block (click
+  to copy).
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -275,6 +288,7 @@ available here).
 - 3D: on the software-rendered Linux VM (llvmpipe) a floor-grid line passing under the camera can show as a wide grey bar; the same scene renders correctly in Chromium's software renderer, so it looks like a llvmpipe/WebKitGTK rasterisation bug. Toggle the grid (G) if it appears.
 - 3D: glTF files with KTX2/Basis textures (`KHR_texture_basisu`) aren't supported yet (clear error); FBX files with external textures need them next to the model; USD support is three.js's (USDA/USDC/USDZ geometry and materials, no variants or skeletal animation).
 - Applying a large blur (40 px, lens/motion) on the software-rendered VM is one 40–150 ms frame (WebGL on llvmpipe); real GPUs render it in a few ms.
+- HEIC/HEIF depends on a decoder the system has (see M24); without one the app says what to install. HEIC can't be written. Animated WebP is saved losslessly (larger than lossy originals); GIF frames are re-quantised on save. Font preview reads names from WOFF2 only through the browser (no metadata panel for WOFF2).
 - CAD: binary DXF and DWG aren't supported (DWG is a closed format; save as ASCII DXF). Dimensions, hatches' patterns, multileaders, tables, images and 3D solids are shown but not edited (dimensions can be deleted, recoloured or moved to another layer; moving one needs its block regenerated). Text uses a sans-serif stand-in for SHX/TTF styles. Selecting or moving thousands of objects at once costs one 55–60 ms frame on the test VM.
 - Object selection analyses the whole image once (~15–18 s on the test VM, single-threaded WASM); clicks are fast afterwards. Background removal uses a small model (U²-Netp) — fine hair and glass are approximate. Edge refinement fixes edges within a few pixels of the model's outline; if the model picks the wrong region (e.g. part of a second person), add/exclude with Shift-/Alt-click.
 - Grid: one rectangular selection at a time (no Ctrl+click multi-ranges); a CSV paste wider than the table is cut
