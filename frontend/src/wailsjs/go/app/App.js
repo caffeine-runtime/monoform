@@ -50,6 +50,10 @@ export function CancelJob(arg1) {
   return window['go']['app']['App']['CancelJob'](arg1);
 }
 
+export function CertInspect(arg1, arg2) {
+  return window['go']['app']['App']['CertInspect'](arg1, arg2);
+}
+
 export function ConfirmQuit() {
   return window['go']['app']['App']['ConfirmQuit']();
 }

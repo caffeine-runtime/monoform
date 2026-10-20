@@ -28,6 +28,23 @@ export function registerBuiltinModules() {
     load: () => import('./markdown'),
   });
   modules.register({
+    id: 'cert',
+    name: 'Certificate',
+    extensions: ['pem', 'crt', 'cer', 'der', 'p12', 'pfx', 'p7b', 'p7c', 'csr', 'crl'],
+    mimeTypes: ['application/x-x509-ca-cert', 'application/pkix-cert', 'application/x-pkcs12', 'application/pkcs10', 'application/x-pkcs7-certificates'],
+    priority: 10,
+    load: () => import('./cert'),
+  });
+  modules.register({
+    id: 'config',
+    name: 'Config',
+    extensions: ['ini', 'cfg', 'properties', 'env', 'desktop', 'inf', 'reg'],
+    fileNames: /^\.env(\..+)?$/i,
+    mimeTypes: [],
+    priority: 5,
+    load: () => import('./config'),
+  });
+  modules.register({
     id: 'font',
     name: 'Font',
     extensions: ['ttf', 'otf', 'ttc', 'otc', 'woff', 'woff2'],

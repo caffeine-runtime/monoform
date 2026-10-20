@@ -618,6 +618,29 @@ w("img/sample.heic", open(os.path.join(_here, "..", "internal", "imaging", "test
 for _f in ("test.ttf", "test.woff"):
     w("fonts/" + _f, open(os.path.join(_here, "..", "frontend", "src", "modules", "font", "testdata", _f), "rb").read())
 
+# ---- config files and certificates (M25) ----
+w("config/app.ini", b"; app\n[server]\nhost = localhost ; inline\nport = 8080\n[database]\nurl = \"postgres://db/app\"\nport=1\nport = 2\n")
+w("config/.env", b"# local\nexport APP_NAME=demo\nDB_PASSWORD=hunter2\nAPI_TOKEN=\"abc def\"\nDEBUG=true\n")
+w("config/app.properties", b"# props\ngreeting = Hello\\u0020World\nlong = one \\\n   two\n")
+import subprocess, tempfile as _tf
+def _openssl(*args, cwd):
+    subprocess.run(["openssl", *args], cwd=cwd, check=True, capture_output=True)
+try:
+    _cd = _tf.mkdtemp()
+    _openssl("req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", "ca.key", "-out", "ca.pem", "-days", "3650", "-subj", "/CN=Hia Test CA/O=Hold It All/C=PL", cwd=_cd)
+    _openssl("req", "-newkey", "rsa:2048", "-nodes", "-keyout", "site.key", "-out", "site.csr", "-subj", "/CN=www.hia.test", "-addext", "subjectAltName=DNS:www.hia.test,DNS:hia.test", cwd=_cd)
+    open(os.path.join(_cd, "ext.cnf"), "w").write("subjectAltName=DNS:www.hia.test,DNS:hia.test\nextendedKeyUsage=serverAuth\n")
+    _openssl("x509", "-req", "-in", "site.csr", "-CA", "ca.pem", "-CAkey", "ca.key", "-CAcreateserial", "-out", "site.pem", "-days", "10", "-extfile", "ext.cnf", cwd=_cd)
+    _openssl("pkcs12", "-export", "-inkey", "site.key", "-in", "site.pem", "-certfile", "ca.pem", "-out", "site.p12", "-passout", "pass:hia-pw", cwd=_cd)
+    _openssl("x509", "-in", "site.pem", "-outform", "DER", "-out", "site.cer", cwd=_cd)
+    rd = lambda f: open(os.path.join(_cd, f), "rb").read()
+    w("certs/chain.pem", rd("site.pem") + rd("ca.pem"))
+    w("certs/site.cer", rd("site.cer"))
+    w("certs/site.csr", rd("site.csr"))
+    w("certs/site.p12", rd("site.p12"))
+except (OSError, subprocess.CalledProcessError) as _e:
+    print("skipping certificate fixtures:", _e, file=sys.stderr)
+
 _pos, _nor, _uv, _idx = _cube()
 def _stl():
     tris = [(_idx[i], _idx[i + 1], _idx[i + 2]) for i in range(0, len(_idx), 3)]

@@ -19,6 +19,7 @@ require (
 	golang.org/x/text v0.43.0
 	lukechampine.com/blake3 v1.4.1
 	modernc.org/sqlite v1.60.1
+	software.sslmate.com/src/go-pkcs12 v0.7.4
 )
 
 require (

@@ -193,7 +193,13 @@ export async function languageFor(name: string): Promise<Extension | null> {
   languagesPromise ??= import('@codemirror/language-data').then((m) => m.languages);
   const langs = await languagesPromise;
   const base = name.split(/[\\/]/).pop() ?? name;
-  const desc = LanguageDescription.matchFilename(langs, base) ?? (/\.(jsonc|webmanifest|geojson)$/i.test(base) ? LanguageDescription.matchLanguageName(langs, 'json') : null);
+  const desc =
+    LanguageDescription.matchFilename(langs, base) ??
+    (/\.(jsonc|webmanifest|geojson)$/i.test(base)
+      ? LanguageDescription.matchLanguageName(langs, 'json')
+      : /^\.env(\..+)?$|\.env$|\.(cfg|conf|editorconfig|npmrc|gitconfig)$|^\.(editorconfig|npmrc|gitconfig)$/i.test(base)
+        ? LanguageDescription.matchLanguageName(langs, 'properties')
+        : null);
   if (!desc) return null;
   const support = await desc.load();
   return support;

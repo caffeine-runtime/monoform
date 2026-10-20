@@ -228,6 +228,17 @@
   preview: names, version, designer, copyright and licence, weight, glyph count, variable axes with sliders, your
   own sample text at any size, a size waterfall, paragraphs, and every covered character by Unicode block (click
   to copy).
+- **M25 — Config files and certificates.** INI (.ini, .cfg, .desktop, .inf, .reg), Java .properties and .env files
+  (opened by name: .env, .env.local, …) get a Table view next to the text: settings by section, problems listed
+  (a key set twice, malformed lines) with a jump to the line, secret-looking .env values (passwords, tokens, keys)
+  masked until revealed; editing a value in the table rewrites just that value (quotes, escapes, continuations,
+  inline comments kept) as one undo step; .env and .cfg/.conf-style files are highlighted. Certificates and keys
+  (.pem .crt .cer .der .p12 .pfx .p7b .csr .crl) open in a certificate view: subject and issuer, validity with a
+  warning when it expires within 30 days (or has), names (SANs), key type and size, signature, usages, serial,
+  SHA-256/SHA-1 fingerprints and the public-key pin (click to copy), OCSP/CA issuer/CRL URLs, root/intermediate/end-
+  entity roles and whether each certificate is signed by the next one in the file; CSRs (signature checked),
+  private keys (type only — never shown), public keys and CRLs; .p12/.pfx ask for their password (modern
+  AES-encrypted files from OpenSSL 3 too); copy or save any certificate as PEM.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
