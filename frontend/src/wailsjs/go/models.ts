@@ -265,6 +265,7 @@ export namespace app {
 	export class Locations {
 	    settings: string;
 	    cache: string;
+	    history: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Locations(source);
@@ -274,6 +275,7 @@ export namespace app {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.settings = source["settings"];
 	        this.cache = source["cache"];
+	        this.history = source["history"];
 	    }
 	}
 	export class OcrLanguage {
@@ -1031,6 +1033,87 @@ export namespace fs {
 
 }
 
+export namespace history {
+	
+	export class Entry {
+	    t: number;
+	    h: string;
+	    s: number;
+	    k: string;
+	    n?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Entry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.t = source["t"];
+	        this.h = source["h"];
+	        this.s = source["s"];
+	        this.k = source["k"];
+	        this.n = source["n"];
+	    }
+	}
+	export class File {
+	    path: string;
+	    exists: boolean;
+	    current?: string;
+	    entries: Entry[];
+	
+	    static createFrom(source: any = {}) {
+	        return new File(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.exists = source["exists"];
+	        this.current = source["current"];
+	        this.entries = this.convertValues(source["entries"], Entry);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class Summary {
+	    path: string;
+	    exists: boolean;
+	    versions: number;
+	    last: number;
+	    bytes: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Summary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.exists = source["exists"];
+	        this.versions = source["versions"];
+	        this.last = source["last"];
+	        this.bytes = source["bytes"];
+	    }
+	}
+
+}
+
 export namespace newfile {
 	
 	export class Options {
@@ -1525,6 +1608,9 @@ export namespace settings {
 	    signatures: string[];
 	    ocrLangs: string[];
 	    openInPreview: boolean;
+	    historyOff: boolean;
+	    historyMaxMB: number;
+	    historyKeep: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -1552,6 +1638,9 @@ export namespace settings {
 	        this.signatures = source["signatures"];
 	        this.ocrLangs = source["ocrLangs"];
 	        this.openInPreview = source["openInPreview"];
+	        this.historyOff = source["historyOff"];
+	        this.historyMaxMB = source["historyMaxMB"];
+	        this.historyKeep = source["historyKeep"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

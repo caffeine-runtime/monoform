@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PaneDivider, { savedRatio } from '../../shell/PaneDivider.svelte';
   import { fitBar } from '../../core/fit';
   // SVG: edit visually (Design: select, move, scale, rotate, draw shapes,
   // change colours and attributes — every change is a minimal edit of the
@@ -25,6 +26,7 @@
 
   const restored = (tab.restoredState as { view?: ViewMode } | undefined)?.view;
   let view = $state<ViewMode>(restored ?? 'design');
+  let ratio = $state(savedRatio('svg'));
   // Design view state: the source text it edits, its elements and the selection.
   let docText = $state('');
   let selected = $state<number | null>(null);
@@ -302,7 +304,8 @@
 </div>
 {#if error}<div class="banner err">SVG error: {error}</div>{/if}
 <div class="panes" data-view={view}>
-  <div class="src"><TextEditor {tab} {options} onready={ready} /></div>
+  <div class="src" style:flex={view === 'split' ? `0 0 ${ratio * 100}%` : null}><TextEditor {tab} {options} onready={ready} /></div>
+  {#if view === 'split'}<PaneDivider bind:ratio key="svg" />{/if}
   {#if view === 'design'}
     <SvgDesign bind:this={design} text={docText} {els} bind:selected style={shapeStyle} onchange={applyChanges} {bg} />
     <SvgInspector text={docText} {els} bind:selected bind:style={shapeStyle} onchange={applyChanges} />

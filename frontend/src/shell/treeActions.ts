@@ -96,6 +96,7 @@ export function treeContextMenu(e: MouseEvent, item: TreeItem) {
     items.push(
       { separator: true },
       { label: 'Rename…', run: () => renameItem(item) },
+      ...(item.isDir ? [] : [{ label: 'Show history', run: () => workspace.openTool('history', item.path) }]),
       { label: 'Copy path', run: () => copyText(item.path) },
       { label: 'Copy name', run: () => copyText(basename(item.path), 'Name') },
     );

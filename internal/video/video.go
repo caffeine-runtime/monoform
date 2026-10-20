@@ -16,6 +16,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+
+	hfs "github.com/caffeine-runtime/hold-it-all/internal/fs"
 )
 
 // Info describes a video file for the player and editor.
@@ -201,7 +203,7 @@ func Export(ctx context.Context, src string, plan Plan, dest string, progress fu
 	if err := tmp.Close(); err != nil {
 		return nil, err
 	}
-	if err := os.Rename(tmp.Name(), dest); err != nil {
+	if err := hfs.ReplaceFile(tmp.Name(), dest); err != nil {
 		return nil, err
 	}
 	ok = true

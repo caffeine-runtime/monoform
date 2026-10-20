@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PaneDivider, { savedRatio } from '../../shell/PaneDivider.svelte';
   import ExternalLink from '@lucide/svelte/icons/external-link';
   import RefreshCw from '@lucide/svelte/icons/refresh-cw';
   import Globe from '@lucide/svelte/icons/globe';
@@ -28,6 +29,7 @@
 
   const restored = (tab.restoredState as { view?: ViewMode; scripts?: boolean; remote?: boolean } | undefined) ?? {};
   let view = $state<ViewMode>(restored.view ?? 'preview');
+  let ratio = $state(savedRatio('html'));
   let scripts = $state(!!restored.scripts);
   let remote = $state(!!restored.remote);
   let srcdoc = $state('');
@@ -122,7 +124,8 @@
   </div>
 {/if}
 <div class="panes" data-view={view}>
-  <div class="src"><TextEditor {tab} {options} onready={ready} /></div>
+  <div class="src" style:flex={view === 'split' ? `0 0 ${ratio * 100}%` : null}><TextEditor {tab} {options} onready={ready} /></div>
+  {#if view === 'split'}<PaneDivider bind:ratio key="html" />{/if}
   {#if view !== 'source'}
     <div class="page">
       {#key `${scripts}`}

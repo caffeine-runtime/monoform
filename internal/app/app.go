@@ -20,6 +20,7 @@ import (
 
 	"github.com/caffeine-runtime/hold-it-all/internal/filetype"
 	"github.com/caffeine-runtime/hold-it-all/internal/fs"
+	"github.com/caffeine-runtime/hold-it-all/internal/history"
 	"github.com/caffeine-runtime/hold-it-all/internal/jobs"
 	"github.com/caffeine-runtime/hold-it-all/internal/office"
 	"github.com/caffeine-runtime/hold-it-all/internal/search"
@@ -37,6 +38,8 @@ type App struct {
 	Jobs     *jobs.Manager
 	watcher  *fs.Watcher
 	books    *office.Books
+	// History keeps earlier versions of saved files (nil if unavailable).
+	History *history.Store
 	// Assets is the frontend bundle (set by main): bundled OCR language data is read from it.
 	Assets iofs.FS
 
@@ -66,6 +69,7 @@ func New(start time.Time, launchFiles []string, launchMode string) *App {
 	if err != nil {
 		log.Printf("settings: %v", err)
 	}
+	a.openHistory(path)
 	a.Jobs = jobs.NewManager(jobs.EmitterFunc(a.emit))
 	a.Server.OnWrite = func(p string) {
 		if a.watcher != nil {
@@ -102,6 +106,9 @@ func (a *App) Shutdown(ctx context.Context) {
 	cleanupTemp()
 	if a.watcher != nil {
 		a.watcher.Close()
+	}
+	if a.History != nil {
+		a.History.Close()
 	}
 }
 
@@ -213,7 +220,13 @@ func (a *App) Quit(code int) {
 
 // --- settings ---
 
-func (a *App) SaveSettings(s settings.Settings) error { return a.Settings.Set(s) }
+func (a *App) SaveSettings(s settings.Settings) error {
+	if err := a.Settings.Set(s); err != nil {
+		return err
+	}
+	a.configureHistory(s)
+	return nil
+}
 
 // --- files ---
 
@@ -251,7 +264,13 @@ func (a *App) Rename(from, to string) error {
 	if _, err := os.Lstat(to); err == nil {
 		return os.ErrExist
 	}
-	return os.Rename(from, to)
+	if err := os.Rename(from, to); err != nil {
+		return err
+	}
+	if a.History != nil {
+		a.History.Moved(from, to)
+	}
+	return nil
 }
 
 func (a *App) WatchFile(p string) error {

@@ -201,6 +201,14 @@ export function registerBuiltinModules() {
     load: () => import('./compare'),
   });
   modules.register({
+    id: 'history',
+    name: 'History',
+    extensions: [],
+    mimeTypes: [],
+    tool: true,
+    load: () => import('./history'),
+  });
+  modules.register({
     id: 'settings',
     name: 'Settings',
     extensions: [],

@@ -41,6 +41,8 @@ const scenarios: Record<string, () => Promise<{ default: (arg: string) => Promis
   m32: () => import('./m32'),
   m32peek: () => import('./m32peek'),
   m33: () => import('./m33'),
+  m34: () => import('./m34'),
+  m35: () => import('./m35'),
   uiaudit: () => import('./uiaudit'),
   imgshot: () => import('./imgshot'),
   bakeenv: () => import('./bakeenv'),

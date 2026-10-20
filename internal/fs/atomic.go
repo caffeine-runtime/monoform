@@ -100,10 +100,36 @@ func (f *AtomicFile) Commit() (err error) {
 			return err
 		}
 	}
-	if err = os.Rename(tmpName, f.target); err != nil {
+	return ReplaceFile(tmpName, f.target)
+}
+
+// Versioner keeps the history of files the app replaces: Before sees a file
+// just before it is replaced (its content is about to disappear), After the
+// file that replaced it.
+type Versioner interface {
+	Before(path string)
+	After(path string)
+}
+
+var versioner Versioner
+
+// SetVersioner installs the file history (nil turns it off).
+func SetVersioner(v Versioner) { versioner = v }
+
+// ReplaceFile renames a finished temp file over dest, keeping the history of
+// dest. Writers that make their own temp file (video, audio) use this too.
+func ReplaceFile(tmp, dest string) error {
+	v := versioner
+	if v != nil {
+		v.Before(dest)
+	}
+	if err := os.Rename(tmp, dest); err != nil {
 		return err
 	}
-	syncDir(filepath.Dir(f.target))
+	syncDir(filepath.Dir(dest))
+	if v != nil {
+		v.After(dest)
+	}
 	return nil
 }
 

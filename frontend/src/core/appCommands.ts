@@ -86,6 +86,15 @@ export function registerAppCommands() {
         await tree.reveal(workspace.folder, workspace.active!.filePath!);
       },
     },
+    {
+      id: 'file.history',
+      title: 'Show file history (earlier versions)',
+      category: 'File',
+      shortcut: 'Mod+Alt+Y',
+      when: hasFile,
+      run: () => workspace.openTool('history', workspace.active!.filePath!),
+    },
+    { id: 'history.all', title: 'File history: all files', category: 'File', run: () => workspace.openTool('history') },
     { id: 'folder.close', title: 'Close folder', category: 'File', when: () => !!workspace.folder, run: () => workspace.closeFolder() },
     { id: 'folder.refresh', title: 'Refresh folder', category: 'File', when: () => !!workspace.folder, run: () => tree.refreshAll() },
 

@@ -87,6 +87,7 @@ export class Tab {
       case 'archive-entry':
         return basename(s.entry);
       case 'tool':
+        if (s.tool === 'history' && s.path) return `History · ${basename(s.path)}`;
         return modules.get(s.tool)?.name ?? s.tool;
       case 'untitled':
         return s.name;
@@ -284,7 +285,9 @@ class Workspace {
   }
 
   openTool(tool: string, path?: string, opts: OpenOptions = {}): Tab {
-    const existing = this.tabs.find((t) => t.source.kind === 'tool' && t.source.tool === tool && (!path || t.source.path === path));
+    // History is one tab per file plus one for all files; other tools reuse their tab.
+    const same = (p?: string) => (tool === 'history' ? (p ?? '') === (path ?? '') : !path || p === path);
+    const existing = this.tabs.find((t) => t.source.kind === 'tool' && t.source.tool === tool && same(t.source.path));
     if (existing) {
       if (path && existing.source.kind === 'tool') existing.source = { kind: 'tool', tool, path };
       this.activate(existing);

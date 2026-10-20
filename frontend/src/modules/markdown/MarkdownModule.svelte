@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PaneDivider, { savedRatio } from '../../shell/PaneDivider.svelte';
   import Eye from '@lucide/svelte/icons/eye';
   import Columns2 from '@lucide/svelte/icons/columns-2';
   import Icon from '../../shell/Icon.svelte';
@@ -22,6 +23,7 @@
 
   const restored = (tab.restoredState as { view?: ViewMode } | undefined)?.view;
   let view = $state<ViewMode>(restored ?? 'split');
+  let ratio = $state(savedRatio('markdown'));
   let html = $state('');
   let previewEl = $state<HTMLDivElement>();
   let ctl: TextController | null = null;
@@ -135,7 +137,8 @@
   </div>
 </div>
 <div class="panes" data-view={view}>
-  <div class="src"><TextEditor {tab} {options} onready={ready} /></div>
+  <div class="src" style:flex={view === 'split' ? `0 0 ${ratio * 100}%` : null}><TextEditor {tab} {options} onready={ready} /></div>
+  {#if view === 'split'}<PaneDivider bind:ratio key="markdown" />{/if}
   {#if view !== 'source'}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="preview selectable" bind:this={previewEl} onclick={click}>

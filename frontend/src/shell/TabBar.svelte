@@ -71,6 +71,7 @@
             { label: settings.isPinned(t.filePath) ? 'Unpin' : 'Pin', run: () => settings.togglePin(t.filePath!) },
             { label: 'Copy path', run: () => copyText(t.filePath!) },
             { label: 'Compare with…', run: () => void import('../core/compare').then((m) => m.compareWith(t.filePath!)) },
+            { label: 'Show history', run: () => workspace.openTool('history', t.filePath!) },
             { label: 'Reveal in sidebar', run: () => commands.execute('file.reveal') },
           ]
         : []),

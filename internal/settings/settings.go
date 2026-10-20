@@ -82,6 +82,12 @@ type Settings struct {
 	OcrLangs []string `json:"ocrLangs"`
 	// OpenInPreview opens files read-only until the user chooses Edit.
 	OpenInPreview bool `json:"openInPreview"`
+	// HistoryOff stops keeping earlier versions of saved files.
+	HistoryOff bool `json:"historyOff"`
+	// HistoryMaxMB caps the space kept versions take (0: 2 GB).
+	HistoryMaxMB int `json:"historyMaxMB"`
+	// HistoryKeep is how many versions each file keeps at most (0: 100).
+	HistoryKeep int `json:"historyKeep"`
 }
 
 func Defaults() Settings {
