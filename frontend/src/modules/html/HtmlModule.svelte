@@ -1,4 +1,13 @@
 <script lang="ts">
+  import ExternalLink from '@lucide/svelte/icons/external-link';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+  import Globe from '@lucide/svelte/icons/globe';
+  import SquareCode from '@lucide/svelte/icons/square-code';
+  import Eye from '@lucide/svelte/icons/eye';
+  import Columns2 from '@lucide/svelte/icons/columns-2';
+  import Icon from '../../shell/Icon.svelte';
+  import Code from '@lucide/svelte/icons/code';
+  import { fitBar } from '../../core/fit';
   // HTML pages: a sandboxed live preview next to the source. Scripts are off
   // and remote content is blocked unless the user turns them on; even then
   // the page runs in an opaque origin with no access to the app or files
@@ -91,20 +100,20 @@
   (tab as unknown as { htmlTest: unknown }).htmlTest = { srcdoc: () => srcdoc, info: () => info, toggle, render, base: () => base };
 </script>
 
-<div class="toolbar">
+<div class="toolbar" use:fitBar>
   <div class="seg" role="group" aria-label="View">
-    <button class="btn ghost" class:on={view === 'source'} onclick={() => htmlViews.get(tab.id)?.set('source')}>Source</button>
-    <button class="btn ghost" class:on={view === 'split'} onclick={() => htmlViews.get(tab.id)?.set('split')}>Split</button>
-    <button class="btn ghost" class:on={view === 'preview'} onclick={() => htmlViews.get(tab.id)?.set('preview')}>Page</button>
+    <button class="btn ghost" class:on={view === 'source'} onclick={() => htmlViews.get(tab.id)?.set('source')}><Icon icon={Code} size={14} /> Source</button>
+    <button class="btn ghost" class:on={view === 'split'} onclick={() => htmlViews.get(tab.id)?.set('split')}><Icon icon={Columns2} size={14} /> Split</button>
+    <button class="btn ghost" class:on={view === 'preview'} onclick={() => htmlViews.get(tab.id)?.set('preview')}><Icon icon={Eye} size={14} /> Page</button>
   </div>
   <span class="spacer"></span>
   {#if view !== 'source'}
-    <button class="btn ghost" class:on={scripts} title="Run the page's JavaScript (sandboxed, no access to your files or the app)" onclick={() => toggle('scripts')}>{scripts ? '✓ ' : ''}Scripts</button>
-    <button class="btn ghost" class:on={remote} title="Load images, fonts and styles from the internet" onclick={() => toggle('remote')}>{remote ? '✓ ' : ''}Remote content</button>
-    <button class="btn ghost" title="Reload" onclick={render}>Reload</button>
+    <button class="btn ghost" class:on={scripts} title="Run the page's JavaScript (sandboxed, no access to your files or the app)" onclick={() => toggle('scripts')}><Icon icon={SquareCode} size={14} /> Scripts</button>
+    <button class="btn ghost" class:on={remote} title="Load images, fonts and styles from the internet" onclick={() => toggle('remote')}><Icon icon={Globe} size={14} /> Remote content</button>
+    <button class="btn ghost" title="Reload" onclick={render}><Icon icon={RefreshCw} size={14} /> Reload</button>
     <span class="sep"></span>
   {/if}
-  {#if tab.filePath}<button class="btn ghost" title="Open in your web browser" onclick={() => api.OpenInBrowser(tab.filePath!).catch((e) => toastError(e))}>Open in browser</button>{/if}
+  {#if tab.filePath}<button class="btn ghost" title="Open in your web browser" onclick={() => api.OpenInBrowser(tab.filePath!).catch((e) => toastError(e))}><Icon icon={ExternalLink} size={14} /> Open in browser</button>{/if}
 </div>
 {#if view !== 'source' && !remote && info.remoteRefs > 0}
   <div class="banner">

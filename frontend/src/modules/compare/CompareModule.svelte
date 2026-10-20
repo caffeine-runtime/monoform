@@ -1,4 +1,7 @@
 <script lang="ts">
+  import Diff from '@lucide/svelte/icons/diff';
+  import Columns2 from '@lucide/svelte/icons/columns-2';
+  import { fitBar } from '../../core/fit';
   // Compare two files side by side: text and code (line + word diff), data
   // (JSON/YAML: changed paths, optionally normalised; CSV: rows matched by a
   // key column), images (side by side, swipe, onion skin, difference) and
@@ -196,7 +199,7 @@
   });
 </script>
 
-<div class="toolbar">
+<div class="toolbar" use:fitBar>
   <button class="file" title="{a} — click to choose another file" onclick={() => choose('a')}><span class="tag">A</span>{a ? basename(a) : 'Choose a file…'}<Icon icon={FolderOpen} size={13} /></button>
   <button class="icon-btn" title="Swap left and right" onclick={swap}><Icon icon={ArrowLeftRight} /></button>
   <button class="file" title="{b} — click to choose another file" onclick={() => choose('b')}><span class="tag">B</span>{b ? basename(b) : 'Choose a file…'}<Icon icon={FolderOpen} size={13} /></button>
@@ -211,8 +214,8 @@
   {:else}
     {#if (kind === 'data' || kind === 'csv') && text}
       <div class="seg" role="radiogroup" aria-label="View">
-        <button role="radio" aria-checked={view === 'side'} class:on={view === 'side'} onclick={() => (view = 'side')}>Side by side</button>
-        <button role="radio" aria-checked={view === 'changes'} class:on={view === 'changes'} onclick={() => (view = 'changes')}>Changes ({(text.changes ?? text.rowChanges ?? []).length})</button>
+        <button role="radio" aria-checked={view === 'side'} class:on={view === 'side'} onclick={() => (view = 'side')}><Icon icon={Columns2} size={14} /> Side by side</button>
+        <button role="radio" aria-checked={view === 'changes'} class:on={view === 'changes'} onclick={() => (view = 'changes')}><Icon icon={Diff} size={14} /> Changes ({(text.changes ?? text.rowChanges ?? []).length})</button>
       </div>
     {/if}
     <label class="opt" title="Hide unchanged lines (3 lines of context around each change)"><input type="checkbox" bind:checked={onlyChanges} /> Only changes</label>
@@ -320,6 +323,9 @@
     overflow: hidden;
   }
   .seg button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     border: none;
     background: none;
     color: var(--text-muted);

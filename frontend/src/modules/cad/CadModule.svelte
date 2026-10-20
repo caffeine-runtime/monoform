@@ -1,4 +1,7 @@
 <script lang="ts">
+  import PanelRight from '@lucide/svelte/icons/panel-right';
+  import { isNarrow } from '../../core/fit';
+  import { fitBar } from '../../core/fit';
   // DXF viewer and light CAD editor. The drawing lives in a worker (parse,
   // edit, rebuild); this view draws the scene on a canvas and runs the tools:
   // select (click, window, crossing), pan/zoom, line, polyline, rectangle,
@@ -62,6 +65,11 @@
   }
 
   const client = new CadClient();
+  // A narrow pane (split view, small window): the panel floats over the
+  // content, opened from the toolbar.
+  let bodyW = $state(0);
+  const narrow = $derived(isNarrow(bodyW));
+  let panelOpen = $state(false);
   let info = $state<CadInfo | null>(null);
   let scene: Scene | null = null;
   let painter: Painter | null = null;
@@ -1122,7 +1130,8 @@
   });
 </script>
 
-<div class="toolbar">
+<div class="toolbar" use:fitBar>
+  {#if narrow && info}<button class="icon-btn" class:on={panelOpen} title="Properties and layers" onclick={() => (panelOpen = !panelOpen)}><Icon icon={PanelRight} /></button>{/if}
   {#if editable}
     <button class="icon-btn" title="Undo ({formatShortcut('Mod+Z')})" disabled={!info?.canUndo} onclick={() => doOp('undo')}><Icon icon={Undo2} /></button>
     <button class="icon-btn" title="Redo ({formatShortcut('Mod+Shift+Z')})" disabled={!info?.canRedo} onclick={() => doOp('redo')}><Icon icon={Redo2} /></button>
@@ -1160,7 +1169,7 @@
   <button class="icon-btn" title="Open as text" onclick={() => ((tab.moduleId = 'text'), workspace.touch())}><Icon icon={FileText} /></button>
 </div>
 
-<div class="body">
+<div class="body" bind:clientWidth={bodyW}>
   <div class="tools" role="toolbar" aria-orientation="vertical" aria-label="CAD tools">
     {#each toolGroups as group, gi (gi)}
       {#if gi}<span class="hsep"></span>{/if}
@@ -1230,8 +1239,8 @@
     {#if loading && !error}<div class="empty-state overlay"><span class="spinner"></span></div>{/if}
     {#if info && !info.entities && !loading}<div class="empty-state overlay hint">This drawing is empty. Pick a drawing tool on the left to start.</div>{/if}
   </div>
-  {#if info}
-    <aside class="panel">
+  {#if info && (!narrow || panelOpen)}
+    <aside class="panel" class:floating={narrow} class:right={narrow}>
       <div class="ptabs">
         <button class:on={panel === 'props'} onclick={() => (panel = 'props')}>Properties</button>
         <button class:on={panel === 'layers'} onclick={() => (panel = 'layers')}>Layers</button>
@@ -1301,6 +1310,7 @@
     flex: 1;
     min-height: 0;
     display: flex;
+    position: relative;
   }
   .tools {
     display: flex;

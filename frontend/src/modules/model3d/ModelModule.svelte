@@ -1,4 +1,12 @@
 <script lang="ts">
+  import Camera from '@lucide/svelte/icons/camera';
+  import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
+  import Sun from '@lucide/svelte/icons/sun';
+  import Moon from '@lucide/svelte/icons/moon';
+  import Grid3x3 from '@lucide/svelte/icons/grid-3x3';
+  import Lightbulb from '@lucide/svelte/icons/lightbulb';
+  import Box from '@lucide/svelte/icons/box';
+  import { fitBar } from '../../core/fit';
   import { onMount } from 'svelte';
   import Icon from '../../shell/Icon.svelte';
   import Play from '@lucide/svelte/icons/play';
@@ -142,22 +150,22 @@
   (tab as unknown as { modelTest: unknown }).modelTest = { viewer: () => viewer, stats: () => stats, anims: () => anims, anim: () => anim, loading: () => loading, error: () => error, loadInfo: () => loadInfo, toggle };
 </script>
 
-<div class="toolbar">
-  <button class="btn ghost" class:on={wireframe} title="Wireframe (W)" onclick={() => toggle('wireframe')}>Wireframe</button>
-  <button class="btn ghost" class:on={lighting} title="Lighting on/off (L) — off shows flat, unlit colours" onclick={() => toggle('lighting')}>Lighting</button>
-  <button class="btn ghost" class:on={grid} title="Floor grid (G)" onclick={() => toggle('grid')}>Grid</button>
+<div class="toolbar" use:fitBar>
+  <button class="btn ghost" class:on={wireframe} title="Wireframe (W)" onclick={() => toggle('wireframe')}><Icon icon={Box} size={14} /> Wireframe</button>
+  <button class="btn ghost" class:on={lighting} title="Lighting on/off (L) — off shows flat, unlit colours" onclick={() => toggle('lighting')}><Icon icon={Lightbulb} size={14} /> Lighting</button>
+  <button class="btn ghost" class:on={grid} title="Floor grid (G)" onclick={() => toggle('grid')}><Icon icon={Grid3x3} size={14} /> Grid</button>
   <span class="sep"></span>
   <div class="seg" role="group" aria-label="Background">
-    <button class="btn ghost" class:on={bg === 'dark'} title="Dark background" onclick={() => viewer?.setBackground((bg = 'dark'))}>☾</button>
-    <button class="btn ghost" class:on={bg === 'light'} title="Light background" onclick={() => viewer?.setBackground((bg = 'light'))}>☀</button>
+    <button class="btn ghost" class:on={bg === 'dark'} title="Dark background" onclick={() => viewer?.setBackground((bg = 'dark'))}><Icon icon={Moon} size={14} /></button>
+    <button class="btn ghost" class:on={bg === 'light'} title="Light background" onclick={() => viewer?.setBackground((bg = 'light'))}><Icon icon={Sun} size={14} /></button>
   </div>
   <span class="spacer"></span>
   {#if stats}
     <span class="label">{stats.meshes ? `${stats.meshes} mesh${stats.meshes === 1 ? '' : 'es'} · ${stats.vertices.toLocaleString()} vertices` : ''}{stats.points ? ` · ${stats.points.toLocaleString()} points` : ''}{stats.materials ? ` · ${stats.materials} material${stats.materials === 1 ? '' : 's'}` : ''}{stats.bones ? ` · ${stats.bones} bones` : ''}</span>
     <span class="sep"></span>
   {/if}
-  <button class="btn ghost" title="Reset view (0)" onclick={() => viewer?.frame()}>Reset view</button>
-  <button class="btn ghost" title="Save the current view as PNG" onclick={screenshot}>Screenshot…</button>
+  <button class="btn ghost" title="Reset view (0)" onclick={() => viewer?.frame()}><Icon icon={RotateCcw} size={14} /> Reset view</button>
+  <button class="btn ghost" title="Save the current view as PNG" onclick={screenshot}><Icon icon={Camera} size={14} /> Screenshot…</button>
 </div>
 
 <div class="body">

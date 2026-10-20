@@ -1,4 +1,10 @@
 <script lang="ts">
+  import ImageDown from '@lucide/svelte/icons/image-down';
+  import FileDown from '@lucide/svelte/icons/file-down';
+  import Eye from '@lucide/svelte/icons/eye';
+  import Columns2 from '@lucide/svelte/icons/columns-2';
+  import Code from '@lucide/svelte/icons/code';
+  import { fitBar } from '../../core/fit';
   // Graphviz (.dot/.gv) and Mermaid (.mmd) diagrams: the source in the
   // editor, the drawing beside it (zoom with the wheel, drag to pan, click a
   // node or edge to jump to its line). Errors point at their line and keep
@@ -251,11 +257,11 @@
   });
 </script>
 
-<div class="toolbar">
+<div class="toolbar" use:fitBar>
   <div class="seg" role="group" aria-label="View">
-    <button class="btn ghost" class:on={view === 'source'} onclick={() => diagramViews.get(tab.id)?.set('source')}>Source</button>
-    <button class="btn ghost" class:on={view === 'split'} onclick={() => diagramViews.get(tab.id)?.set('split')}>Split</button>
-    <button class="btn ghost" class:on={view === 'preview'} onclick={() => diagramViews.get(tab.id)?.set('preview')}>Preview</button>
+    <button class="btn ghost" class:on={view === 'source'} onclick={() => diagramViews.get(tab.id)?.set('source')}><Icon icon={Code} size={14} /> Source</button>
+    <button class="btn ghost" class:on={view === 'split'} onclick={() => diagramViews.get(tab.id)?.set('split')}><Icon icon={Columns2} size={14} /> Split</button>
+    <button class="btn ghost" class:on={view === 'preview'} onclick={() => diagramViews.get(tab.id)?.set('preview')}><Icon icon={Eye} size={14} /> Preview</button>
   </div>
   <span class="sep"></span>
   <button class="icon-btn" title="Zoom out" onclick={() => zoomBy(1 / 1.25)} disabled={view === 'source'}><Icon icon={ZoomOut} /></button>
@@ -264,8 +270,8 @@
   <button class="icon-btn" title="Fit" onclick={fit} disabled={view === 'source'}><Icon icon={Maximize} /></button>
   <span class="spacer"></span>
   {#if stats}<span class="label">{stats}</span>{/if}
-  <button class="btn ghost" onclick={exportSvg} disabled={!svg}>Export SVG…</button>
-  <button class="btn ghost" onclick={exportPng} disabled={!svg}>Export PNG…</button>
+  <button class="btn ghost" onclick={exportSvg} disabled={!svg}><Icon icon={FileDown} size={14} /> Export SVG…</button>
+  <button class="btn ghost" onclick={exportPng} disabled={!svg}><Icon icon={ImageDown} size={14} /> Export PNG…</button>
 </div>
 <div class="panes" data-view={view}>
   <div class="src"><TextEditor {tab} {options} onready={ready} /></div>

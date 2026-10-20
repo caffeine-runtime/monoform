@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fitBar } from '../../core/fit';
   import { onMount } from 'svelte';
   import Icon from '../../shell/Icon.svelte';
   import Search from '@lucide/svelte/icons/search';
@@ -264,7 +265,7 @@
   });
 </script>
 
-<div class="toolbar">
+<div class="toolbar" use:fitBar>
   <div class="filter">
     <Icon icon={Search} size={14} />
     <input class="input" data-tab-filter={tab.id} placeholder="Filter rows" bind:value={filter} oninput={onFilter} onkeydown={(e) => e.key === 'Escape' && ((filter = ''), onFilter())} />

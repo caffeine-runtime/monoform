@@ -1,4 +1,11 @@
 <script lang="ts">
+  import { fitBar } from '../../core/fit';
+  import ImageDown from '@lucide/svelte/icons/image-down';
+  import Gauge from '@lucide/svelte/icons/gauge';
+  import Timer from '@lucide/svelte/icons/timer';
+  import Repeat2 from '@lucide/svelte/icons/repeat-2';
+  import ArrowRight from '@lucide/svelte/icons/arrow-right';
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   // Animated GIF / WebP: play, step through frames, and edit the animation —
   // select frames (click, Shift, Ctrl), delete, duplicate, reverse, move,
   // change their timing (or the speed of everything), loop count; save as
@@ -240,7 +247,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="anim" onkeydown={key} tabindex="-1">
-  <div class="bar">
+  <div class="bar" use:fitBar>
     <button class="icon-btn" title="Previous frame (←)" onclick={() => ((playing = false), (cur = (cur + frames.length - 1) % frames.length))}><Icon icon={StepBack} /></button>
     <button class="icon-btn" title="{playing ? 'Pause' : 'Play'} (Space)" onclick={() => (playing = !playing)}><Icon icon={playing ? Pause : Play} /></button>
     <button class="icon-btn" title="Next frame (→)" onclick={() => ((playing = false), (cur = (cur + 1) % frames.length))}><Icon icon={StepForward} /></button>
@@ -253,10 +260,10 @@
     <button class="icon-btn" title="Redo ({formatShortcut('Mod+Shift+Z')})" disabled={!future.length} onclick={redo}><Icon icon={Redo2} /></button>
     <button class="icon-btn" title="Delete selected frames (Del)" onclick={remove}><Icon icon={Trash} /></button>
     <button class="icon-btn" title="Duplicate selected frames" onclick={duplicate}><Icon icon={Copy} /></button>
-    <button class="btn ghost" title="Move selected frames earlier" onclick={() => move(-1)}>◀ Move</button>
-    <button class="btn ghost" title="Move selected frames later" onclick={() => move(1)}>Move ▶</button>
-    <button class="btn ghost" title="Reverse the selected frames (or all)" onclick={reverse}>Reverse</button>
-    <button class="btn ghost" title="How long the selected frames show" onclick={setDelay}>Timing…</button>
+    <button class="btn ghost" title="Move selected frames earlier" onclick={() => move(-1)}><Icon icon={ArrowLeft} size={14} /> Move</button>
+    <button class="btn ghost" title="Move selected frames later" onclick={() => move(1)}><Icon icon={ArrowRight} size={14} /> Move</button>
+    <button class="btn ghost" title="Reverse the selected frames (or all)" onclick={reverse}><Icon icon={Repeat2} size={14} /> Reverse</button>
+    <button class="btn ghost" title="How long the selected frames show" onclick={setDelay}><Icon icon={Timer} size={14} /> Timing…</button>
     <button class="btn ghost" title="Make the whole animation faster or slower" onclick={(e) => {
       const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
       import('../../core/ui.svelte').then(({ menu }) => menu.show({ clientX: r.left, clientY: r.bottom + 4 }, [
@@ -267,7 +274,7 @@
         { separator: true },
         { label: 'Drop every other frame (smaller file)', run: dropEveryOther },
       ]));
-    }}>Speed…</button>
+    }}><Icon icon={Gauge} size={14} /> Speed…</button>
     <label class="opt" title="How many times the animation plays">Loop
       <select class="input sm" value={loop} onchange={(e) => commit(frames, +(e.currentTarget as HTMLSelectElement).value)}>
         <option value={0}>Forever</option>
@@ -276,7 +283,7 @@
       </select>
     </label>
     <span class="spacer"></span>
-    <button class="btn ghost" title="Save the shown frame as a PNG" onclick={exportFrame}>Export frame…</button>
+    <button class="btn ghost" title="Save the shown frame as a PNG" onclick={exportFrame}><Icon icon={ImageDown} size={14} /> Export frame…</button>
   </div>
   <div class="stage">
     <img class="checker" src={fileUrl(frames[cur].path)} alt="Frame {cur + 1}" style:aspect-ratio="{info.width} / {info.height}" />
@@ -306,7 +313,6 @@
     gap: 4px;
     padding: 4px 10px;
     border-bottom: 1px solid var(--border-soft);
-    flex-wrap: wrap;
   }
   .label {
     color: var(--text-muted);

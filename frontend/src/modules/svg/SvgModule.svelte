@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fitBar } from '../../core/fit';
   // SVG: edit visually (Design: select, move, scale, rotate, draw shapes,
   // change colours and attributes — every change is a minimal edit of the
   // source) or edit the source with a live preview. The preview renders the
@@ -263,7 +264,7 @@
   };
 </script>
 
-<div class="toolbar">
+<div class="toolbar" use:fitBar>
   <div class="seg" role="group" aria-label="View">
     <button class="btn ghost" class:on={view === 'design'} title="Edit visually: select, move, scale, rotate, draw shapes, change colours" onclick={() => svgViews.get(tab.id)?.set('design')}>Design</button>
     <button class="btn ghost" class:on={view === 'source'} onclick={() => svgViews.get(tab.id)?.set('source')}>Source</button>

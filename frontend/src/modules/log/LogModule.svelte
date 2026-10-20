@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fitBar } from '../../core/fit';
   // Log files: the code editor with level colouring, level chips with counts,
   // a text/regex filter whose matches are listed below (click to jump), next
   // error (F8), and Follow — new lines are appended as the file grows (only
@@ -264,7 +265,7 @@
   });
 </script>
 
-<div class="toolbar">
+<div class="toolbar" use:fitBar>
   {#each GROUPS as g (g.id)}
     <button class="chip {g.id}" class:off={!shown[g.id]} aria-pressed={shown[g.id]} title="{shown[g.id] ? 'Hide' : 'Show'} {g.label.toLowerCase()} in the filtered list" onclick={() => ((shown = { ...shown, [g.id]: !shown[g.id] }), scheduleFilter())}>
       {g.label} <b>{groupCount(g).toLocaleString()}</b>

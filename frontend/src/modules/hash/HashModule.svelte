@@ -407,8 +407,10 @@
   }
   .summary {
     display: flex;
-    gap: 14px;
+    flex-wrap: wrap;
+    gap: 4px 14px;
     font-weight: 600;
+    white-space: nowrap;
   }
   .vlist {
     display: flex;

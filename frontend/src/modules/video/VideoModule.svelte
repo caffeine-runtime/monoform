@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Save from '@lucide/svelte/icons/save';
+  import { fitBar } from '../../core/fit';
   import { onMount } from 'svelte';
   import Icon from '../../shell/Icon.svelte';
   import Play from '@lucide/svelte/icons/play';
@@ -991,7 +993,7 @@
   </div>
 {/if}
 
-<div class="toolbar controls">
+<div class="toolbar controls" use:fitBar>
   <button class="icon-btn play" title="{playing ? 'Pause' : 'Play'} (Space)" onclick={toggle} disabled={!!playError}><Icon icon={playing ? Pause : Play} size={16} /></button>
   <button class="icon-btn" title="Previous frame (,)" onclick={() => frame(-1)}><Icon icon={StepBack} size={15} /></button>
   <button class="icon-btn" title="Next frame (.)" onclick={() => frame(1)}><Icon icon={StepForward} size={15} /></button>
@@ -1011,7 +1013,7 @@
     <button class="icon-btn" title="Cut out selection (Del)" onclick={() => doEdit('cut')}><Icon icon={Scissors} size={15} /></button>
     <button class="icon-btn" title="Keep only selection (T)" onclick={() => doEdit('keep')}><Icon icon={Crop} size={15} /></button>
     <button class="icon-btn" class:on={edit.rotate !== 0} title="Rotate 90° (R)" onclick={() => doEdit('rotate')}><Icon icon={RotateCw} size={15} /></button>
-    <button class="btn ghost" class:on={edit.mute} title="Save without the audio track" onclick={() => doEdit('removeAudio')}>{edit.mute ? 'Audio removed' : 'Remove audio'}</button>
+    <button class="btn ghost" class:on={edit.mute} title="Save without the audio track" onclick={() => doEdit('removeAudio')}><Icon icon={VolumeX} size={14} /> {edit.mute ? 'Audio removed' : 'Remove audio'}</button>
     <button class="icon-btn" title="Undo ({formatShortcut('Mod+Z')})" disabled={!canUndo} onclick={() => doEdit('undo')}><Icon icon={Undo2} size={15} /></button>
     <button class="icon-btn" title="Redo ({formatShortcut('Mod+Shift+Z')})" disabled={!canRedo} onclick={() => doEdit('redo')}><Icon icon={Redo2} size={15} /></button>
     <span class="sep"></span>
@@ -1019,7 +1021,7 @@
     <button class="icon-btn" title="Blur an area (faces, plates…); it can follow a moving object" onclick={addBlur}><Icon icon={Droplet} size={15} /></button>
     <button class="icon-btn" class:on={fx.speeds.length > 0} title="Speed up or slow down the selection (or the whole video)" onclick={speedMenu}><Icon icon={Gauge} size={15} /></button>
     <button class="icon-btn" class:on={fxPanel} title="Effects panel: overlays, keyframes, curves, fades, transitions" onclick={() => (fxPanel = !fxPanel)}><Icon icon={Wand} size={15} /></button>
-    <button class="btn ghost" onclick={saveMenu}>{fxOn ? 'Render ▾' : 'Save ▾'}</button>
+    <button class="btn ghost" onclick={saveMenu}><Icon icon={Save} size={14} /> {fxOn ? 'Render ▾' : 'Save ▾'}</button>
   {/if}
 </div>
 {#if snapped && changed && !fxOn}

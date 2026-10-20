@@ -1,4 +1,15 @@
 <script lang="ts">
+  import Save from '@lucide/svelte/icons/save';
+  import Minimize2 from '@lucide/svelte/icons/minimize-2';
+  import IndentIncrease from '@lucide/svelte/icons/indent-increase';
+  import ClipboardCopy from '@lucide/svelte/icons/clipboard-copy';
+  import ChevronsDownUp from '@lucide/svelte/icons/chevrons-down-up';
+  import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
+  import Braces from '@lucide/svelte/icons/braces';
+  import Code from '@lucide/svelte/icons/code';
+  import Table from '@lucide/svelte/icons/table';
+  import ListTree from '@lucide/svelte/icons/list-tree';
+  import { fitBar } from '../../core/fit';
   // JSON / JSONC / YAML / TOML / XML / JSON Lines: tree + raw editor,
   // validation with line/column, pretty-print / minify (JSON), copy path,
   // view or save the others as JSON, and a table for lists of records.
@@ -187,12 +198,12 @@
   const options = { onDocChanged: () => scheduleParse(), onLoaded: () => void reparse() };
 </script>
 
-<div class="toolbar">
+<div class="toolbar" use:fitBar>
   <div class="seg">
-    <button class="btn ghost" class:on={view === 'tree'} onclick={() => setView('tree')}>Tree</button>
-    {#if table}<button class="btn ghost" class:on={view === 'table'} title="The list of records as a table" onclick={() => setView('table')}>Table</button>{/if}
-    <button class="btn ghost" class:on={view === 'raw'} onclick={() => setView('raw')}>{isYaml ? label : 'Raw'}</button>
-    {#if isYaml}<button class="btn ghost" class:on={view === 'json'} onclick={() => setView('json')}>As JSON</button>{/if}
+    <button class="btn ghost" class:on={view === 'tree'} onclick={() => setView('tree')}><Icon icon={ListTree} size={14} /> Tree</button>
+    {#if table}<button class="btn ghost" class:on={view === 'table'} title="The list of records as a table" onclick={() => setView('table')}><Icon icon={Table} size={14} /> Table</button>{/if}
+    <button class="btn ghost" class:on={view === 'raw'} onclick={() => setView('raw')}><Icon icon={Code} size={14} /> {isYaml ? label : 'Raw'}</button>
+    {#if isYaml}<button class="btn ghost" class:on={view === 'json'} onclick={() => setView('json')}><Icon icon={Braces} size={14} /> As JSON</button>{/if}
   </div>
   <span class="sep"></span>
   {#if error}
@@ -206,17 +217,17 @@
   {/if}
   <span class="spacer"></span>
   {#if view === 'tree' && root}
-    <button class="btn ghost" onclick={() => tree?.expandAll()}>Expand all</button>
-    <button class="btn ghost" onclick={() => tree?.collapseAll()}>Collapse</button>
+    <button class="btn ghost" onclick={() => tree?.expandAll()}><Icon icon={ChevronsUpDown} size={14} /> Expand all</button>
+    <button class="btn ghost" onclick={() => tree?.collapseAll()}><Icon icon={ChevronsDownUp} size={14} /> Collapse</button>
     <button class="btn ghost" title="Copy the path of the selected node" onclick={copyPath}><Icon icon={Copy} size={14} /> {formatPath(selectedPath)}</button>
-    <button class="btn ghost" onclick={copyValue}>Copy value</button>
+    <button class="btn ghost" onclick={copyValue}><Icon icon={ClipboardCopy} size={14} /> Copy value</button>
   {/if}
   {#if !isYaml && !tab.readOnly}
-    <button class="btn ghost" onclick={() => reformat(2)}>Format</button>
-    <button class="btn ghost" onclick={() => reformat(0)}>Minify</button>
+    <button class="btn ghost" onclick={() => reformat(2)}><Icon icon={IndentIncrease} size={14} /> Format</button>
+    <button class="btn ghost" onclick={() => reformat(0)}><Icon icon={Minimize2} size={14} /> Minify</button>
   {/if}
   {#if isYaml && view === 'json'}
-    <button class="btn ghost" onclick={saveAsJson}>Save as JSON…</button>
+    <button class="btn ghost" onclick={saveAsJson}><Icon icon={Save} size={14} /> Save as JSON…</button>
   {/if}
 </div>
 

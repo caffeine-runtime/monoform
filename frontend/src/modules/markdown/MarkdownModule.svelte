@@ -1,4 +1,9 @@
 <script lang="ts">
+  import Eye from '@lucide/svelte/icons/eye';
+  import Columns2 from '@lucide/svelte/icons/columns-2';
+  import Icon from '../../shell/Icon.svelte';
+  import Code from '@lucide/svelte/icons/code';
+  import { fitBar } from '../../core/fit';
   import { onMount } from 'svelte';
   import { markdown } from '@codemirror/lang-markdown';
   import { languages } from '@codemirror/language-data';
@@ -122,11 +127,11 @@
   });
 </script>
 
-<div class="toolbar">
+<div class="toolbar" use:fitBar>
   <div class="seg" role="group" aria-label="View">
-    <button class="btn ghost" class:on={view === 'source'} onclick={() => markdownViews.get(tab.id)?.set('source')}>Source</button>
-    <button class="btn ghost" class:on={view === 'split'} onclick={() => markdownViews.get(tab.id)?.set('split')}>Split</button>
-    <button class="btn ghost" class:on={view === 'preview'} onclick={() => markdownViews.get(tab.id)?.set('preview')}>Preview</button>
+    <button class="btn ghost" class:on={view === 'source'} onclick={() => markdownViews.get(tab.id)?.set('source')}><Icon icon={Code} size={14} /> Source</button>
+    <button class="btn ghost" class:on={view === 'split'} onclick={() => markdownViews.get(tab.id)?.set('split')}><Icon icon={Columns2} size={14} /> Split</button>
+    <button class="btn ghost" class:on={view === 'preview'} onclick={() => markdownViews.get(tab.id)?.set('preview')}><Icon icon={Eye} size={14} /> Preview</button>
   </div>
 </div>
 <div class="panes" data-view={view}>

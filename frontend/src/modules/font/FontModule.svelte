@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fitBar } from '../../core/fit';
   // Font files (TTF, OTF, TTC, WOFF, WOFF2): the font's names and licence,
   // your own sample text at a chosen size, a size waterfall, a paragraph, and
   // every character it covers grouped by Unicode block (click one to copy it).
@@ -79,7 +80,7 @@
   });
 </script>
 
-<div class="toolbar">
+<div class="toolbar" use:fitBar>
   <input class="input sample" bind:value={sample} placeholder="Type to preview" aria-label="Sample text" />
   <label class="opt">Size <input type="range" min="8" max="200" bind:value={size} /><span class="v">{size}px</span></label>
   {#each info?.axes ?? [] as a (a.tag)}

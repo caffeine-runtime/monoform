@@ -199,8 +199,17 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    flex-wrap: wrap;
+    gap: 6px 16px;
     min-height: 30px;
+  }
+  /* A label keeps a readable width; when the row is too narrow its control
+     moves under it instead of squeezing the label into a column. */
+  .row > .lbl {
+    flex: 1 1 14em;
+  }
+  .row.check > .lbl {
+    flex-basis: 0;
   }
   .row.check {
     cursor: pointer;
@@ -222,6 +231,7 @@
   .seg button {
     border: none;
     background: transparent;
+    white-space: nowrap;
     padding: 4px 14px;
     border-radius: 6px;
     cursor: pointer;

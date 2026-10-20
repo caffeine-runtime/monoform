@@ -1,4 +1,7 @@
 <script lang="ts">
+  import FileText from '@lucide/svelte/icons/file-text';
+  import Table from '@lucide/svelte/icons/table';
+  import { fitBar } from '../../core/fit';
   // INI / .properties / .env: the text editor plus a table of the settings
   // (by section), problems (duplicate keys, malformed lines) and, for .env,
   // secret-looking values masked until revealed. Editing a value in the table
@@ -93,10 +96,10 @@
   (tab as unknown as { configTest: unknown }).configTest = { entries: () => entries, issues: () => issues, edit, text: () => ctl?.view.state.doc.toString() ?? '', setView: (v: 'table' | 'text') => (view = v), setReveal: (r: boolean) => (reveal = r) };
 </script>
 
-<div class="toolbar">
+<div class="toolbar" use:fitBar>
   <div class="seg">
-    <button class="btn ghost" class:on={view === 'table'} onclick={() => ((view = 'table'), workspace.touch())}>Table</button>
-    <button class="btn ghost" class:on={view === 'text'} onclick={() => ((view = 'text'), workspace.touch(), queueMicrotask(() => ctl?.view.requestMeasure()))}>Text</button>
+    <button class="btn ghost" class:on={view === 'table'} onclick={() => ((view = 'table'), workspace.touch())}><Icon icon={Table} size={14} /> Table</button>
+    <button class="btn ghost" class:on={view === 'text'} onclick={() => ((view = 'text'), workspace.touch(), queueMicrotask(() => ctl?.view.requestMeasure()))}><Icon icon={FileText} size={14} /> Text</button>
   </div>
   {#if view === 'table'}
     <input class="input filter" placeholder="Filter settings" bind:value={filter} aria-label="Filter settings" />
