@@ -122,6 +122,16 @@ export function registerAppCommands() {
         sidebar.mode = 'files';
       } },
     { id: 'app.settings', title: 'Settings', category: 'View', shortcut: 'Mod+,', run: () => workspace.openTool('settings') },
+    { id: 'view.splitColumns', title: 'Split view: two side by side', category: 'View', shortcut: 'Mod+\\', run: () => split('columns', 2) },
+    { id: 'view.splitRows', title: 'Split view: two stacked', category: 'View', run: () => split('rows', 2) },
+    { id: 'view.splitThree', title: 'Split view: three', category: 'View', run: () => split('grid', 3) },
+    { id: 'view.splitGrid', title: 'Split view: four (grid)', category: 'View', run: () => split('grid', 4) },
+    { id: 'view.unsplit', title: 'Split view: one tab', category: 'View', when: () => !!workspace.split, run: () => workspace.setSplit(null) },
+    { id: 'view.nextPane', title: 'Split view: focus next pane', category: 'View', shortcut: 'Mod+Alt+]', when: () => !!workspace.split, run: () => focusPane(1) },
+    { id: 'view.prevPane', title: 'Split view: focus previous pane', category: 'View', shortcut: 'Mod+Alt+[', when: () => !!workspace.split, run: () => focusPane(-1) },
+    { id: 'view.uiBigger', title: 'Interface: larger', category: 'View', shortcut: ['Mod+Alt+=', 'Mod+Alt+Shift+='], run: () => scaleUI(1) },
+    { id: 'view.uiSmaller', title: 'Interface: smaller', category: 'View', shortcut: 'Mod+Alt+-', run: () => scaleUI(-1) },
+    { id: 'view.uiReset', title: 'Interface: normal size (100%)', category: 'View', run: () => scaleUI(0) },
     { id: 'view.toggleTheme', title: 'Toggle dark / light theme', category: 'View', shortcut: 'Mod+Alt+T', run: () => theme.toggle() },
     { id: 'view.themeSystem', title: 'Theme: follow system', category: 'View', run: () => theme.set('system') },
     { id: 'view.themeDark', title: 'Theme: dark', category: 'View', run: () => theme.set('dark') },
@@ -141,4 +151,32 @@ export function registerAppCommands() {
       },
     },
   );
+}
+
+/** Interface size steps (Settings → Interface size). */
+export const UI_SCALES = [0.8, 0.9, 1, 1.1, 1.25, 1.4, 1.6, 1.8, 2];
+
+function scaleUI(dir: 1 | -1 | 0) {
+  const cur = settings.value.uiScale || 1;
+  let next = 1;
+  if (dir > 0) next = UI_SCALES.find((v) => v > cur + 1e-3) ?? UI_SCALES[UI_SCALES.length - 1];
+  else if (dir < 0) next = [...UI_SCALES].reverse().find((v) => v < cur - 1e-3) ?? UI_SCALES[0];
+  settings.update((s) => (s.uiScale = next));
+  ui.toast(`Interface size ${Math.round(next * 100)}%`, 'info', undefined, 1500);
+}
+
+function split(layout: 'columns' | 'rows' | 'grid', count: number) {
+  // Mod+\ toggles: pressing it again in a two-pane split goes back to one tab.
+  const s = workspace.split;
+  if (s && s.layout === layout && s.panes.length === count) return workspace.setSplit(null);
+  if (!workspace.splitView(layout, count)) ui.toast(`Open ${count > 2 ? `${count} tabs` : 'another tab'} to split the view.`, 'info');
+}
+
+function focusPane(dir: 1 | -1) {
+  const s = workspace.split;
+  if (!s) return;
+  const i = s.panes.indexOf(workspace.activeId ?? '');
+  const id = s.panes[(i + dir + s.panes.length) % s.panes.length];
+  const t = workspace.tabs.find((x) => x.id === id);
+  if (t) workspace.activate(t);
 }

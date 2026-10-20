@@ -2,6 +2,7 @@
   import Sidebar from './Sidebar.svelte';
   import TabBar from './TabBar.svelte';
   import TabView from './TabView.svelte';
+  import SplitOverlay from './SplitOverlay.svelte';
   import StatusBar from './StatusBar.svelte';
   import Palette from './Palette.svelte';
   import Overlays from './Overlays.svelte';
@@ -52,8 +53,12 @@
   $effect(() => {
     void api.SetDirtyCount(workspace.dirtyCount);
   });
+  // Interface scale: design tokens, text, controls and icons follow --ui-scale. (CSS zoom
+  // would be simpler but breaks pointer maths in canvas editors in WebKitGTK.)
   $effect(() => {
-    document.documentElement.style.setProperty('--editor-font-size', `${settings.value.fontSize}px`);
+    const z = settings.value.uiScale || 1;
+    document.documentElement.style.setProperty('--ui-scale', String(z));
+    document.documentElement.style.setProperty('--editor-font-size', `${Math.round(settings.value.fontSize * z * 10) / 10}px`);
   });
 </script>
 
@@ -63,7 +68,7 @@
   {/if}
   <main class="main">
     <TabBar />
-    <div class="views">
+    <div class="views" class:split={!!workspace.split}>
       {#each workspace.tabs as tab (tab.id)}
         {#if tab.mounted}
           <TabView {tab} />
@@ -72,6 +77,7 @@
       {#if workspace.tabs.length === 0}
         <Welcome />
       {/if}
+      <SplitOverlay />
     </div>
   </main>
   <div class="statusbar"><StatusBar /></div>
@@ -109,6 +115,11 @@
     flex: 1;
     min-height: 0;
     background: var(--bg);
+  }
+
+  /* The gap colour between panes in split view. */
+  .views.split {
+    background: var(--bg-sidebar);
   }
   .statusbar {
     grid-column: 1 / -1;

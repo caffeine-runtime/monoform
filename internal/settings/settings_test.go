@@ -59,6 +59,27 @@ func TestNormalize(t *testing.T) {
 	}
 }
 
+func TestNormalizeScaleAndSplit(t *testing.T) {
+	tabs := []SessionTab{{Kind: "file"}, {Kind: "file"}, {Kind: "file"}}
+	n := normalize(Settings{UIScale: 9, Session: Session{Tabs: tabs, Split: &SessionSplit{Layout: "columns", Panes: []int{0, 2}, X: 0.99}}})
+	if n.UIScale != 1 || n.Session.Split == nil || n.Session.Split.X != 0.85 || n.Session.Split.Y != 0.5 {
+		t.Fatalf("normalize = %+v %+v", n.UIScale, n.Session.Split)
+	}
+	for _, bad := range []*SessionSplit{
+		{Layout: "spiral", Panes: []int{0, 1}},
+		{Layout: "grid", Panes: []int{0}},
+		{Layout: "grid", Panes: []int{0, 5}},
+		{Layout: "rows", Panes: []int{1, 1}},
+	} {
+		if n := normalize(Settings{Session: Session{Tabs: tabs, Split: bad}}); n.Session.Split != nil {
+			t.Errorf("kept invalid split %+v", bad)
+		}
+	}
+	if n := normalize(Settings{UIScale: 1.25}); n.UIScale != 1.25 {
+		t.Errorf("scale %v", n.UIScale)
+	}
+}
+
 func TestAddRecent(t *testing.T) {
 	l := []string{"a", "b", "c"}
 	l = AddRecent(l, "b")

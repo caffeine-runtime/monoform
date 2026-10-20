@@ -14,6 +14,7 @@ class SettingsState {
     showHidden: false,
     wordWrap: false,
     fontSize: 14,
+    uiScale: 1,
     session: { folder: '', tabs: [], active: 0, expanded: [] },
   } as unknown as Settings);
   private timer: ReturnType<typeof setTimeout> | undefined;

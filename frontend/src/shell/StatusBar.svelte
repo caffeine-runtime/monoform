@@ -93,7 +93,7 @@
     text-overflow: ellipsis;
   }
   .bar {
-    width: 120px;
+    width: calc(120px * var(--ui-scale));
     height: 4px;
     border-radius: 4px;
     background: var(--bg-active);
@@ -110,8 +110,8 @@
     color: var(--text-muted);
   }
   .icon-btn.xs {
-    width: 18px;
-    height: 18px;
+    width: calc(18px * var(--ui-scale));
+    height: calc(18px * var(--ui-scale));
     border-radius: 5px;
   }
 </style>

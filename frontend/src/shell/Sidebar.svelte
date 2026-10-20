@@ -180,7 +180,7 @@
     flex-direction: column;
     height: 100%;
     background: var(--bg-sidebar);
-    min-width: 180px;
+    min-width: calc(180px * var(--ui-scale));
     flex: none;
   }
   .head {
@@ -202,7 +202,7 @@
   }
   .title {
     margin: 0;
-    font-size: 17px;
+    font-size: calc(17px * var(--ui-scale));
     color: var(--text);
     white-space: nowrap;
   }
@@ -217,7 +217,7 @@
   }
   section.folder.has {
     flex: 1;
-    min-height: 120px;
+    min-height: calc(120px * var(--ui-scale));
     display: flex;
     flex-direction: column;
   }
@@ -243,7 +243,7 @@
   }
   .row-label {
     padding: 4px 8px 4px 16px;
-    min-height: 28px;
+    min-height: calc(28px * var(--ui-scale));
   }
   .label-text {
     flex: 1;
@@ -261,8 +261,8 @@
     opacity: 1;
   }
   .icon-btn.sm {
-    width: 22px;
-    height: 22px;
+    width: calc(22px * var(--ui-scale));
+    height: calc(22px * var(--ui-scale));
   }
   .toggle {
     border: none;
@@ -286,7 +286,7 @@
     align-items: center;
     gap: 8px;
     width: 100%;
-    height: 28px;
+    height: calc(28px * var(--ui-scale));
     padding: 0 10px;
     border: none;
     border-radius: var(--radius);

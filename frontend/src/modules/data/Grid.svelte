@@ -22,6 +22,7 @@
 </script>
 
 <script lang="ts">
+  import { settings } from '../../core/settings.svelte';
   // Virtualized, keyboard-driven table with spreadsheet behaviour: range
   // selection (mouse, Shift+keys, row/column headers), copy/cut/paste as
   // tab-separated text, clear, undo, drag-to-move, fill handle with series,
@@ -77,8 +78,9 @@
 
   const id = ++gridSeq;
   const NUMERIC = /^\s*[-+]?(\d{1,3}([ ,]\d{3})*|\d+)([.,]\d+)?([eE][-+]?\d+)?\s*%?\s*$/;
-  const ROW = 28;
-  const HEAD = 32;
+  // Row height follows the interface scale; CSS reads it from --row.
+  const ROW = $derived(Math.round(28 * (settings.value.uiScale || 1)));
+  const HEAD = $derived(Math.round(32 * (settings.value.uiScale || 1)));
   const BLOCK = 200;
   const MAX_PX = 8_000_000;
   const MAX_EDIT_CELLS = 1_000_000;
@@ -883,6 +885,8 @@
 <div
   class="grid"
   bind:this={scroller}
+  style:--row="{ROW}px"
+  style:--head="{HEAD}px"
   bind:clientHeight={viewH}
   bind:clientWidth={viewW}
   style:cursor={hoverCursor || null}
@@ -1003,7 +1007,7 @@
     overflow: auto;
     height: 100%;
     outline: none;
-    font-size: 12.5px;
+    font-size: calc(12.5px * var(--ui-scale));
     font-variant-numeric: tabular-nums;
     user-select: none;
     -webkit-user-select: none;
@@ -1054,7 +1058,7 @@
     border: none;
     background: transparent;
     color: var(--text-faint);
-    font-size: 10px;
+    font-size: calc(10px * var(--ui-scale));
     padding: 2px 3px;
     border-radius: 3px;
     cursor: pointer;
@@ -1089,7 +1093,7 @@
   .tr {
     position: absolute;
     left: 0;
-    height: 28px;
+    height: var(--row);
     display: flex;
     border-bottom: 1px solid var(--border-soft);
   }
@@ -1102,7 +1106,7 @@
     text-align: right;
     color: var(--text-faint);
     background: var(--bg-sidebar);
-    line-height: 28px;
+    line-height: var(--row);
     position: sticky;
     left: 0;
     z-index: 2;
@@ -1117,7 +1121,7 @@
     background: var(--accent-soft);
   }
   .corner {
-    line-height: 32px;
+    line-height: var(--head);
     cursor: pointer;
   }
   .td {
@@ -1189,7 +1193,7 @@
   }
   .editor {
     position: absolute;
-    height: 28px;
+    height: var(--row);
     z-index: 3;
     padding: 0 9px;
     border: 2px solid var(--accent);

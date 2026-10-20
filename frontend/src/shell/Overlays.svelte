@@ -155,7 +155,7 @@
   }
   .dialog h2 {
     margin: 0 0 8px;
-    font-size: 18px;
+    font-size: calc(18px * var(--ui-scale));
   }
   .msg {
     margin: 0 0 14px;
@@ -188,7 +188,7 @@
   .menu {
     position: fixed;
     z-index: 301;
-    min-width: 200px;
+    min-width: calc(200px * var(--ui-scale));
     max-height: calc(100vh - 16px);
     overflow-y: auto;
     padding: 5px;
@@ -204,7 +204,7 @@
     justify-content: space-between;
     gap: 24px;
     width: 100%;
-    height: 28px;
+    height: calc(28px * var(--ui-scale));
     padding: 0 10px;
     border: none;
     border-radius: 6px;

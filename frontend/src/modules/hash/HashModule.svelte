@@ -376,7 +376,7 @@
   .digest {
     flex: 1;
     word-break: break-all;
-    font-size: 12.5px;
+    font-size: calc(12.5px * var(--ui-scale));
   }
   .exp {
     display: flex;
@@ -390,7 +390,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 15px;
+    font-size: calc(15px * var(--ui-scale));
     font-weight: 600;
   }
   .good {

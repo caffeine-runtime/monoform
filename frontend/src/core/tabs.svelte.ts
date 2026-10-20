@@ -1,5 +1,6 @@
 // Tabs and the workspace: which files are open, which one is active, and how
 // a file is routed to a module.
+import { makeSplit, without, type Split, type SplitLayout } from './split';
 import { api, errorMessage, fileUrl, readFile, saveFile, endpoint, type Body, type Entry, type SessionTab } from './backend';
 import { modules } from './modules';
 import { basename, dirname } from './paths';
@@ -158,7 +159,10 @@ export interface OpenOptions {
 
 class Workspace {
   tabs = $state<Tab[]>([]);
+  /** The focused tab (in split view: the focused pane's tab). */
   activeId = $state<string | null>(null);
+  /** Split view: tabs shown side by side, or null for one tab. */
+  split = $state<Split | null>(null);
   folder = $state<string>('');
   /** Bumped whenever something worth persisting in the session changes. */
   version = $state(0);
@@ -170,6 +174,40 @@ class Workspace {
 
   touch() {
     this.version++;
+  }
+
+  /** Is the tab on screen (the active one, or a pane of the split)? */
+  isShown(id: string): boolean {
+    return this.split ? this.split.panes.includes(id) : this.activeId === id;
+  }
+
+  /** Change the split; panes get mounted and told they're shown (their size changed). */
+  setSplit(s: Split | null) {
+    this.split = s;
+    for (const id of s?.panes ?? []) {
+      const t = this.tabs.find((x) => x.id === id);
+      if (t) t.mounted = true;
+    }
+    if (s && this.activeId && !s.panes.includes(this.activeId)) this.activeId = s.panes[0];
+    this.touch();
+    this.notifyShown();
+  }
+
+  /** Split the window: the focused tab plus the next tabs. */
+  splitView(layout: SplitLayout, count: number): boolean {
+    if (!this.activeId) return false;
+    const i = this.tabs.findIndex((t) => t.id === this.activeId);
+    const others = [...this.tabs.slice(i + 1), ...this.tabs.slice(0, i)].map((t) => t.id);
+    const s = makeSplit(layout, count, this.activeId, this.split, others);
+    if (!s) return false;
+    this.setSplit(s);
+    return true;
+  }
+
+  private notifyShown() {
+    queueMicrotask(() => {
+      for (const t of this.tabs) if (this.isShown(t.id)) t.handlers.onShow?.();
+    });
   }
 
   findByPath(path: string): Tab | undefined {
@@ -266,6 +304,14 @@ class Workspace {
   }
 
   activate(tab: Tab) {
+    // In split view, a tab that isn't shown takes the focused pane's place.
+    const s = this.split;
+    if (s && !s.panes.includes(tab.id)) {
+      const at = Math.max(0, s.panes.indexOf(this.activeId ?? ''));
+      const panes = [...s.panes];
+      panes[at] = tab.id;
+      this.split = { ...s, panes };
+    }
     this.activeId = tab.id;
     tab.mounted = true;
     this.touch();
@@ -314,11 +360,16 @@ class Workspace {
     this.tabs.splice(idx, 1);
     if (tab.filePath) void api.UnwatchFile(tab.filePath);
     if (tab.source.kind !== 'untitled') this.closed.push($state.snapshot(tab.source) as TabSource);
+    const wasSplit = this.split;
+    this.split = without(this.split, tab.id);
     if (this.activeId === tab.id) {
-      const next = this.tabs[Math.min(idx, this.tabs.length - 1)];
+      // Focus a remaining pane, else the neighbouring tab.
+      const pane = wasSplit?.panes.find((p) => p !== tab.id && this.tabs.some((t) => t.id === p));
+      const next = (pane && this.tabs.find((t) => t.id === pane)) || this.tabs[Math.min(idx, this.tabs.length - 1)];
       this.activeId = null;
       if (next) this.activate(next);
     }
+    if (wasSplit !== this.split) this.notifyShown();
     this.touch();
     return true;
   }
@@ -392,11 +443,13 @@ class Workspace {
     }
     const persisted = this.tabs.filter((t) => t.source.kind !== 'untitled');
     const active = Math.max(0, persisted.findIndex((t) => t.id === this.activeId));
-    return { folder: this.folder, tabs, active, expanded };
+    const panes = this.split?.panes.map((id) => persisted.findIndex((t) => t.id === id)).filter((i) => i >= 0) ?? [];
+    const split = this.split && panes.length >= 2 ? { layout: this.split.layout, panes, x: this.split.x, y: this.split.y } : undefined;
+    return { folder: this.folder, tabs, active, expanded, split };
   }
 
   /** Recreate tabs from the session without loading their contents. */
-  async restore(session: { folder: string; tabs: SessionTab[]; active: number }) {
+  async restore(session: { folder: string; tabs: SessionTab[]; active: number; split?: { layout: string; panes: number[]; x: number; y: number } }) {
     if (session.folder) this.folder = session.folder;
     const paths = session.tabs.map((t) => t.path ?? '');
     let exists: boolean[] = paths.map(() => true);
@@ -406,6 +459,7 @@ class Workspace {
       /* assume they exist */
     }
     let activeTab: Tab | undefined;
+    const byIndex = new Map<number, Tab>();
     session.tabs.forEach((st, i) => {
       if (st.kind !== 'tool' && !exists[i]) return;
       let state: unknown;
@@ -425,7 +479,11 @@ class Workspace {
       this.tabs.push(tab);
       if (source.kind === 'file') void api.WatchFile(source.path).catch(() => {});
       if (i === session.active) activeTab = tab;
+      byIndex.set(i, tab);
     });
+    const sp = session.split;
+    const panes = (sp?.panes ?? []).map((i) => byIndex.get(i)?.id).filter((x): x is string => !!x);
+    if (sp && panes.length >= 2) this.setSplit({ layout: sp.layout as SplitLayout, panes, x: sp.x || 0.5, y: sp.y || 0.5 });
     const first = activeTab ?? this.tabs[0];
     if (first) this.activate(first);
   }

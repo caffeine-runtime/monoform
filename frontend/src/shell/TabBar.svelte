@@ -7,7 +7,10 @@
   import { commands } from '../core/commands';
   import { menu } from '../core/ui.svelte';
   import { boot } from '../core/boot';
+  import { formatShortcut } from '../core/keys';
   import { copyText } from './treeActions';
+  import Columns2 from '@lucide/svelte/icons/columns-2';
+  import { dropInto } from '../core/split';
 
   let dragIndex = -1;
   let dropIndex = $state(-1);
@@ -25,11 +28,43 @@
     }
   }
 
+  /** Show t next to the focused tab (or add it to the split). */
+  function splitWith(t: Tab, edge: 'right' | 'bottom') {
+    const target = workspace.activeId && workspace.activeId !== t.id ? workspace.activeId : workspace.tabs.find((x) => x.id !== t.id)?.id;
+    if (!target) return;
+    workspace.setSplit(dropInto(workspace.split, t.id, target, edge));
+    workspace.activate(t);
+  }
+
+  function layoutMenu(e: MouseEvent) {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const s = workspace.split;
+    const n = s?.panes.length ?? 1;
+    menu.show({ clientX: r.left, clientY: r.bottom + 4 }, [
+      { label: `${!s ? '✓ ' : ''}One tab`, shortcut: '', run: () => commands.execute('view.unsplit') },
+      { label: `${s?.layout === 'columns' && n === 2 ? '✓ ' : ''}Two side by side`, run: () => commands.execute('view.splitColumns') },
+      { label: `${s?.layout === 'rows' && n === 2 ? '✓ ' : ''}Two stacked`, run: () => commands.execute('view.splitRows') },
+      { label: `${s?.layout === 'grid' && n === 3 ? '✓ ' : ''}Three`, run: () => commands.execute('view.splitThree') },
+      { label: `${n === 4 ? '✓ ' : ''}Four (grid)`, run: () => commands.execute('view.splitGrid') },
+      { separator: true },
+      { label: 'Tip: drag a tab onto the edge of a view to split', disabled: true, run: () => {} },
+    ]);
+  }
+
   function tabMenu(e: MouseEvent, t: Tab) {
+    const inSplit = !!workspace.split?.panes.includes(t.id);
     menu.show(e, [
       { label: 'Close', run: () => workspace.close(t) },
       { label: 'Close others', run: () => workspace.closeAll(t) },
       { label: 'Close all', run: () => workspace.closeAll() },
+      { separator: true },
+      ...(workspace.tabs.length > 1 && !inSplit
+        ? [
+            { label: 'Open side by side (split right)', run: () => splitWith(t, 'right') },
+            { label: 'Open below (split down)', run: () => splitWith(t, 'bottom') },
+          ]
+        : []),
+      ...(inSplit ? [{ label: 'Remove from split view', run: () => workspace.setSplit(workspace.split!.panes.length > 2 ? { ...workspace.split!, panes: workspace.split!.panes.filter((p) => p !== t.id) } : null) }] : []),
       { separator: true },
       ...(t.filePath
         ? [
@@ -59,6 +94,7 @@
       <div
         class="tab"
         class:active={workspace.activeId === t.id}
+        class:in-split={!!workspace.split?.panes.includes(t.id)}
         class:drop-before={dropIndex === i}
         data-tab={t.id}
         role="tab"
@@ -73,6 +109,8 @@
         ondragstart={(e) => {
           dragIndex = i;
           e.dataTransfer?.setData('text/plain', t.id);
+          // Dropping on a view splits it (see SplitOverlay).
+          e.dataTransfer?.setData('application/x-hia-tab', t.id);
         }}
         ondragover={(e) => {
           if (dragIndex < 0) return;
@@ -89,6 +127,7 @@
       >
         <span class="ico"><Icon icon={iconFor(t.name, kindOf(t))} size={14} /></span>
         <span class="name">{t.title}</span>
+        {#if workspace.split?.panes.includes(t.id)}<span class="pane-no" title="Shown in split view, pane {workspace.split.panes.indexOf(t.id) + 1}">{workspace.split.panes.indexOf(t.id) + 1}</span>{/if}
         {#if t.readOnly}<span class="ro" title="Read-only"><Icon icon={Lock} size={11} /></span>{/if}
         <button
           class="close"
@@ -105,6 +144,9 @@
       </div>
     {/each}
   </div>
+  {#if workspace.tabs.length > 1}
+    <button class="icon-btn layout" class:on={!!workspace.split} title="Split view: show 2–4 tabs side by side ({formatShortcut('Mod+\\')})" onclick={layoutMenu}><Icon icon={Columns2} size={15} /></button>
+  {/if}
 </div>
 
 <style>
@@ -138,14 +180,35 @@
   .strip::-webkit-scrollbar {
     display: none;
   }
+  .layout {
+    margin: 0 0 5px 4px;
+    --wails-draggable: no-drag;
+  }
+  .layout.on {
+    color: var(--accent-text);
+    background: var(--accent-soft);
+  }
+  .tab.in-split {
+    box-shadow: inset 0 -2px 0 var(--accent-soft);
+  }
+  .pane-no {
+    font-size: calc(10px * var(--ui-scale));
+    font-weight: 600;
+    min-width: 1.4em;
+    text-align: center;
+    border-radius: 4px;
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    padding: 0 3px;
+  }
   .tab {
     position: relative;
     display: flex;
     align-items: center;
     gap: 6px;
-    height: 31px;
+    height: calc(31px * var(--ui-scale));
     max-width: 220px;
-    min-width: 90px;
+    min-width: calc(90px * var(--ui-scale));
     padding: 0 6px 0 12px;
     border-radius: var(--radius) var(--radius) 0 0;
     color: var(--text-muted);
@@ -189,8 +252,8 @@
   }
   .close {
     position: relative;
-    width: 20px;
-    height: 20px;
+    width: calc(20px * var(--ui-scale));
+    height: calc(20px * var(--ui-scale));
     border: none;
     padding: 0;
     border-radius: 6px;

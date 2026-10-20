@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../core/settings.svelte';
   // Virtualized JSON/YAML tree. Children load lazily from the data worker;
   // big arrays/objects page in 500 entries at a time.
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
@@ -7,7 +8,8 @@
 
   let { client, root, version = 0, onselect }: { client: DataClient; root: TreeNode; version?: number; onselect?: (n: TreeNode) => void } = $props();
 
-  const ROW = 24;
+  // Row height follows the interface scale; CSS reads it from --row.
+  const ROW = $derived(Math.round(24 * (settings.value.uiScale || 1)));
   const PAGE = 500;
   type Row = { kind: 'node'; node: TreeNode; depth: number } | { kind: 'more'; parent: string; depth: number; remaining: number; path: (string | number)[] };
 
@@ -125,7 +127,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-<div class="tree selectable" bind:this={box} bind:clientHeight={height} onscroll={() => (scrollTop = box!.scrollTop)} tabindex="0" role="tree" onkeydown={key}>
+<div class="tree selectable" style:--row="{ROW}px" bind:this={box} bind:clientHeight={height} onscroll={() => (scrollTop = box!.scrollTop)} tabindex="0" role="tree" onkeydown={key}>
   <div class="spacer" style:height="{rows.length * ROW}px">
     {#each rows.slice(start, end) as r, i (r.kind === 'node' ? keyOf(r.node.path) : 'more' + r.parent)}
       {#if r.kind === 'node'}
@@ -168,7 +170,7 @@
     overflow: auto;
     outline: none;
     font-family: var(--font-mono);
-    font-size: 12.5px;
+    font-size: calc(12.5px * var(--ui-scale));
     padding: 6px 0;
   }
   .spacer {
@@ -179,7 +181,7 @@
     position: absolute;
     left: 0;
     right: 0;
-    height: 24px;
+    height: var(--row);
     display: flex;
     align-items: center;
     gap: 4px;

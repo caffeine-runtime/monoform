@@ -175,7 +175,7 @@
     left: 0;
     bottom: 100%;
     margin-bottom: 3px;
-    font-size: 10.5px;
+    font-size: calc(10.5px * var(--ui-scale));
     background: var(--accent);
     color: #fff;
     padding: 0 5px;

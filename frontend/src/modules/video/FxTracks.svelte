@@ -128,7 +128,7 @@
     left: 4px;
     top: 2px;
     z-index: 2;
-    font-size: 10.5px;
+    font-size: calc(10.5px * var(--ui-scale));
     color: var(--text-muted);
     pointer-events: none;
     white-space: nowrap;

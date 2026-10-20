@@ -93,12 +93,12 @@
     cursor: grab;
   }
   .lbl {
-    font-size: 10px;
+    font-size: calc(10px * var(--ui-scale));
     fill: var(--text-faint);
   }
   .vals {
     font-family: var(--font-mono);
-    font-size: 10.5px;
+    font-size: calc(10.5px * var(--ui-scale));
     color: var(--text-muted);
   }
 </style>

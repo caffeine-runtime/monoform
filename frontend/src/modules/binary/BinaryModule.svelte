@@ -49,7 +49,7 @@
     flex: 1;
     overflow: auto;
     padding: 14px 18px;
-    font-size: 12.5px;
+    font-size: calc(12.5px * var(--ui-scale));
     line-height: 1.6;
     white-space: pre;
     color: var(--text-muted);

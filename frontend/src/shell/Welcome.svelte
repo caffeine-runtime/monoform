@@ -93,13 +93,13 @@
     padding: 10vh 28px 40px;
   }
   h1 {
-    font-size: 34px;
+    font-size: calc(34px * var(--ui-scale));
     margin: 0 0 6px;
   }
   .tag {
     color: var(--text-muted);
     margin: 0 0 8px;
-    font-size: 14px;
+    font-size: calc(14px * var(--ui-scale));
   }
   .sechead {
     display: flex;
@@ -108,7 +108,7 @@
     margin: 28px 0 10px;
   }
   h3 {
-    font-size: 15px;
+    font-size: calc(15px * var(--ui-scale));
     margin: 0;
     color: var(--text-muted);
   }
@@ -128,7 +128,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    height: 42px;
+    height: calc(42px * var(--ui-scale));
     padding: 0 14px;
     border: none;
     border-radius: var(--radius-lg);
@@ -161,7 +161,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    height: 42px;
+    height: calc(42px * var(--ui-scale));
     padding: 0 14px;
     border: none;
     border-radius: var(--radius-lg);
@@ -220,7 +220,7 @@
     display: flex;
     align-items: baseline;
     gap: 10px;
-    height: 30px;
+    height: calc(30px * var(--ui-scale));
     padding: 0 10px;
     margin: 0 -10px;
     width: calc(100% + 20px);
