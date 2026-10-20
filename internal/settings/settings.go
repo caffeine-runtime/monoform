@@ -76,6 +76,8 @@ type Settings struct {
 	// ImageKeepOriginal makes Save write an edited image to a copy next to
 	// the original instead of overwriting it.
 	ImageKeepOriginal bool `json:"imageKeepOriginal"`
+	// Signatures are saved PDF signatures (PNG data URLs, newest first).
+	Signatures []string `json:"signatures"`
 }
 
 func Defaults() Settings {
@@ -85,6 +87,7 @@ func Defaults() Settings {
 		Recents:        []string{},
 		RecentFolders:  []string{},
 		Pinned:         []string{},
+		Signatures:     []string{},
 		SidebarVisible: true,
 		SidebarWidth:   260,
 		FontSize:       14,
@@ -200,6 +203,12 @@ func normalize(v Settings) Settings {
 	}
 	if v.Pinned == nil {
 		v.Pinned = []string{}
+	}
+	if v.Signatures == nil {
+		v.Signatures = []string{}
+	}
+	if len(v.Signatures) > 12 {
+		v.Signatures = v.Signatures[:12]
 	}
 	if len(v.Recents) > MaxRecents {
 		v.Recents = v.Recents[:MaxRecents]

@@ -14,6 +14,12 @@
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import XIcon from '@lucide/svelte/icons/x';
   import Ellipsis from '@lucide/svelte/icons/ellipsis';
+  import SignatureIcon from '@lucide/svelte/icons/signature';
+  import Redact from '@lucide/svelte/icons/square-slash';
+  import PdfMarks from './PdfMarks.svelte';
+  import SignaturePad from './SignaturePad.svelte';
+  import { markPolygon, matchRects, stampMatrix, type Mark, type TextRun } from './marks';
+  import { buildFromImages, IMAGE_PATTERNS, pickPageSize, renderPage, scaleFor, toBlob } from './tools';
   import { pdfjs, openDocument } from './pdfjs';
   import Thumbs from './Thumbs.svelte';
   import { pdfControllers } from './controllers';
@@ -27,7 +33,7 @@
 
   let { tab }: { tab: Tab } = $props();
 
-  const { AnnotationEditorType, AnnotationMode } = pdfjs;
+  const { AnnotationEditorType, AnnotationMode, AnnotationEditorParamsType } = pdfjs;
   type ToolId = 'none' | 'highlight' | 'freetext' | 'ink';
   const MODES: Record<ToolId, number> = {
     none: AnnotationEditorType.NONE,
@@ -62,11 +68,22 @@
   let opsDirty = $state(false);
   let annotDirty = $state(false);
   let pageInput = $state('1');
+  // Pending signatures / redactions (applied to the file with Apply or on Save).
+  let marks = $state<Mark[]>([]);
+  let markMode = $state<'redact' | 'sign' | null>(null);
+  let placing = $state<{ src: string; aspect: number } | null>(null);
+  let signOpen = $state(false);
+  let layout = $state(0);
+  let busy = $state('');
+  // Colour and size for text boxes, drawing and highlights.
+  let inkColor = $state('#d0021b');
+  let textSize = $state(14);
+  let inkWidth = $state(2);
   /** Time from load start to first page drawn (performance budget). */
   let firstPageMs = 0;
 
   $effect(() => {
-    tab.dirty = opsDirty || annotDirty;
+    tab.dirty = opsDirty || annotDirty || marks.length > 0;
   });
 
   function updateStatus() {
@@ -108,7 +125,10 @@
     eventBus.on('scalechanging', (e: { scale: number }) => {
       scale = e.scale;
       updateStatus();
+      requestAnimationFrame(() => layout++);
     });
+    eventBus.on('pagesinit', () => requestAnimationFrame(() => layout++));
+    eventBus.on('rotationchanging', () => requestAnimationFrame(() => layout++));
     eventBus.on('pagerendered', (e: { pageNumber: number }) => {
       if (!firstPageMs && e.pageNumber >= 1) {
         firstPageMs = performance.now() - loadStart;
@@ -124,6 +144,7 @@
     eventBus.on('annotationeditormodechanged', (e: { mode: number }) => {
       const t = (Object.keys(MODES) as ToolId[]).find((k) => MODES[k] === e.mode);
       if (t) tool = t;
+      applyParams();
     });
   }
 
@@ -218,6 +239,7 @@
 
   async function writeTo(target: string): Promise<boolean> {
     if (!doc) return false;
+    if (marks.length && !(await applyMarks())) return false;
     const view = keepView();
     if (annotDirty) {
       const bytes = await doc.saveDocument();
@@ -241,7 +263,231 @@
   function setTool(t: ToolId) {
     if (!viewer || !doc) return;
     tool = t;
+    if (t !== 'none') {
+      markMode = null;
+      placing = null;
+    }
     viewer.annotationEditorMode = { mode: MODES[t] };
+    applyParams();
+  }
+
+  /** Colour/size for the active pdf.js editor (new text boxes, drawings and highlights use them). */
+  function applyParams() {
+    if (!viewer || tool === 'none') return;
+    const set = (type: number, value: unknown) => {
+      try {
+        (viewer as unknown as { annotationEditorParams: unknown }).annotationEditorParams = { type, value };
+      } catch {
+        /* not in this mode */
+      }
+    };
+    if (tool === 'freetext') {
+      set(AnnotationEditorParamsType.FREETEXT_COLOR, inkColor);
+      set(AnnotationEditorParamsType.FREETEXT_SIZE, textSize);
+    } else if (tool === 'ink') {
+      set(AnnotationEditorParamsType.INK_COLOR, inkColor);
+      set(AnnotationEditorParamsType.INK_THICKNESS, inkWidth);
+    } else if (tool === 'highlight') set(AnnotationEditorParamsType.HIGHLIGHT_COLOR, inkColor);
+  }
+
+  // ---------- signatures and redaction ----------
+
+  function startRedact() {
+    if (!doc) return;
+    setTool('none');
+    placing = null;
+    markMode = markMode === 'redact' ? null : 'redact';
+  }
+
+  function startSign() {
+    if (!doc) return;
+    setTool('none');
+    markMode = null;
+    signOpen = true;
+  }
+
+  function signaturePicked(src: string, aspect: number) {
+    signOpen = false;
+    placing = { src, aspect };
+    markMode = 'sign';
+    ui.toast('Click on the page where the signature goes. You can move and resize it afterwards.', 'info');
+  }
+
+  /** Redaction boxes over every match of the find query, on every page. */
+  async function redactMatches() {
+    if (!doc || !query) return;
+    busy = 'Finding matches…';
+    let n = 0;
+    const add: Mark[] = [];
+    try {
+      for (let p = 1; p <= doc.numPages; p++) {
+        const page = await doc.getPage(p);
+        const tc = await page.getTextContent();
+        for (const r of matchRects(tc.items as unknown as TextRun[], query, caseSensitive, page.getViewport({ scale: 1 }))) {
+          add.push({ id: Date.now() + ++n, kind: 'redact', page: p, ...r });
+        }
+      }
+    } finally {
+      busy = '';
+    }
+    marks = [...marks, ...add];
+    ui.toast(add.length ? `Marked ${add.length} match${add.length === 1 ? '' : 'es'} for redaction. Check them, then Apply.` : 'No matches to redact.', add.length ? 'success' : 'info');
+  }
+
+  /** Write pending marks into the working copy: redacted pages become images, then signatures are stamped. */
+  async function applyMarks(): Promise<boolean> {
+    if (!doc || !marks.length) return true;
+    const redactPages = [...new Set(marks.filter((m) => m.kind === 'redact').map((m) => m.page))].sort((a, b) => a - b);
+    if (redactPages.length && !(await ui.confirm('Apply redactions?', `The content under the black boxes is removed for good: ${redactPages.length === 1 ? `page ${redactPages[0]} becomes` : `${redactPages.length} pages become`} an image (its text can no longer be selected or searched; comments and form fields on it are flattened).`, 'Redact', true))) return false;
+    const view = keepView();
+    const temps: string[] = [];
+    try {
+      let src = await materialize();
+      if (redactPages.length) {
+        const rdoc = await openDocument({ url: fileUrl(src) }).promise;
+        try {
+          const pagesOut: { page: number; image: string; m: number[] }[] = [];
+          for (const [i, n] of redactPages.entries()) {
+            busy = `Redacting page ${n} (${i + 1} of ${redactPages.length})…`;
+            const page = await rdoc.getPage(n);
+            const [x0, y0, x1, y1] = page.view;
+            const s = scaleFor(200, x1 - x0, y1 - y0);
+            const c = await renderPage(rdoc, n, s, 0);
+            const ctx = c.getContext('2d')!;
+            ctx.fillStyle = '#000';
+            const shown = page.getViewport({ scale: 1 });
+            const flat = page.getViewport({ scale: s, rotation: 0 });
+            for (const m of marks.filter((k) => k.kind === 'redact' && k.page === n)) {
+              const poly = markPolygon(m, shown, flat);
+              ctx.beginPath();
+              poly.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+              ctx.closePath();
+              ctx.fill();
+            }
+            const tmp = await api.TempPath(`redact-${n}.jpg`);
+            await saveFile(tmp, await toBlob(c, 'image/jpeg', 0.92));
+            temps.push(tmp);
+            pagesOut.push({ page: n, image: tmp, m: [x1 - x0, 0, 0, y1 - y0, x0, y0] });
+          }
+          src = await api.PdfReplacePages(src, pagesOut as never);
+          temps.push(src);
+        } finally {
+          void rdoc.loadingTask.destroy();
+        }
+      }
+      const signs = marks.filter((m) => m.kind === 'sign' && m.src);
+      if (signs.length) {
+        busy = 'Placing signatures…';
+        const stamps: { page: number; image: string; m: number[] }[] = [];
+        for (const m of signs) {
+          const page = await doc.getPage(m.page);
+          const tmp = await api.TempPath('signature.png');
+          await saveFile(tmp, await (await fetch(m.src!)).blob());
+          temps.push(tmp);
+          stamps.push({ page: m.page, image: tmp, m: stampMatrix(m, page.getViewport({ scale: 1 })) });
+        }
+        src = await api.PdfStamp(src, stamps as never);
+      }
+      if (working && working !== tab.filePath && working !== src) void api.RemoveTemp(working);
+      working = src;
+      opsDirty = true;
+      marks = [];
+      markMode = null;
+      placing = null;
+      await load(fileUrl(src), view);
+      return true;
+    } catch (e) {
+      toastError(e, 'Couldn’t apply the changes');
+      return false;
+    } finally {
+      busy = '';
+      for (const t of temps) if (t !== working) void api.RemoveTemp(t);
+    }
+  }
+
+  // ---------- compress, export, insert images ----------
+
+  async function compress() {
+    const choice = await ui.pick('Compress PDF', [
+      { id: '75:2000', label: 'Smaller — images as good-quality JPEG, up to 2000 px' },
+      { id: '55:1200', label: 'Smallest — stronger compression, up to 1200 px' },
+      { id: '0:0', label: 'Lossless — only clean up the file structure' },
+    ]);
+    if (!choice) return;
+    const [q, px] = choice.split(':').map(Number);
+    busy = 'Compressing…';
+    try {
+      const src = await materialize();
+      const r = await api.PdfCompress(src, q, px);
+      if (r.after >= r.before) {
+        void api.RemoveTemp(r.path);
+        ui.toast('This PDF is already as small as these settings can make it.', 'info');
+        return;
+      }
+      if (working && working !== tab.filePath) void api.RemoveTemp(working);
+      working = r.path;
+      opsDirty = true;
+      await load(fileUrl(r.path), keepView());
+      const mb = (b: number) => (b > 1 << 20 ? `${(b / (1 << 20)).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`);
+      ui.toast(`${mb(r.before)} → ${mb(r.after)} (${Math.round((1 - r.after / r.before) * 100)}% smaller${r.recompressed ? `, ${r.recompressed} image${r.recompressed === 1 ? '' : 's'} recompressed` : ''}). Save to keep it.`, 'success');
+    } catch (e) {
+      toastError(e, 'Compress failed');
+    } finally {
+      busy = '';
+    }
+  }
+
+  async function exportImages() {
+    if (!doc) return;
+    const fmt = await ui.pick('Export pages as images', [
+      { id: 'png:150', label: 'PNG, 150 dpi' },
+      { id: 'png:300', label: 'PNG, 300 dpi (print)' },
+      { id: 'jpeg:150', label: 'JPEG, 150 dpi (smaller files)' },
+      { id: 'jpeg:300', label: 'JPEG, 300 dpi' },
+      { id: 'png:72', label: 'PNG, 72 dpi (screen)' },
+    ]);
+    if (!fmt) return;
+    const [type, dpiS] = fmt.split(':');
+    const list = selected.length ? [...selected].sort((a, b) => a - b) : Array.from({ length: pages }, (_, i) => i + 1);
+    const dir = await api.OpenFolderDialog(`Save ${list.length} image${list.length === 1 ? '' : 's'} in`);
+    if (!dir) return;
+    const src = annotDirty ? await openDocument({ url: fileUrl(await materialize()) }).promise : doc;
+    const ext = type === 'png' ? 'png' : 'jpg';
+    const digits = String(pages).length;
+    try {
+      for (const [i, n] of list.entries()) {
+        busy = `Exporting page ${n} (${i + 1} of ${list.length})…`;
+        const page = await src.getPage(n);
+        const [x0, y0, x1, y1] = page.view;
+        const c = await renderPage(src, n, scaleFor(+dpiS, x1 - x0, y1 - y0));
+        await saveFile(join(dir, `${stem(tab.name)}-${String(n).padStart(digits, '0')}.${ext}`), await toBlob(c, `image/${type}`, 0.9));
+      }
+      ui.toast(`Exported ${list.length} page${list.length === 1 ? '' : 's'} to ${basename(dir)}`, 'success');
+    } catch (e) {
+      toastError(e, 'Export failed');
+    } finally {
+      busy = '';
+      if (src !== doc) void src.loadingTask.destroy();
+    }
+  }
+
+  async function insertImages() {
+    const files = await api.OpenFilesDialog('Images to add as pages', [{ name: 'Images', patterns: IMAGE_PATTERNS }]);
+    if (!files?.length) return;
+    const size = await pickPageSize();
+    if (!size) return;
+    busy = 'Adding images…';
+    try {
+      const tmp = await api.TempPath('images.pdf');
+      const made = await buildFromImages([...files].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), tmp, size);
+      await pageOp({ kind: 'merge', others: [made] });
+      void api.RemoveTemp(made);
+      ui.toast(`Added ${files.length} page${files.length === 1 ? '' : 's'} at the end. Save to keep them.`, 'success');
+    } catch (e) {
+      toastError(e, 'Couldn’t add the images');
+    } finally {
+      busy = '';
+    }
   }
 
   function zoom(dir: 1 | -1 | 0) {
@@ -362,7 +608,11 @@
       },
       { separator: true },
       { label: 'Append PDFs…', run: merge },
+      { label: 'Add images as pages…', run: insertImages },
       { label: 'Split into files…', run: split },
+      { separator: true },
+      { label: 'Compress…', run: compress },
+      { label: 'Export pages as images…', run: exportImages },
     ]);
   }
 
@@ -396,10 +646,18 @@
     split: () => void split(),
     toggleThumbs: () => (thumbsOpen = !thumbsOpen),
     escape: () => {
-      if (findOpen) closeFind();
+      if (signOpen) signOpen = false;
+      else if (markMode) {
+        markMode = null;
+        placing = null;
+      } else if (findOpen) closeFind();
       else if (tool !== 'none') setTool('none');
       return true;
     },
+    sign: startSign,
+    redact: startRedact,
+    compress: () => void compress(),
+    exportImages: () => void exportImages(),
   });
 
   // Hooks for the self-test harness.
@@ -415,6 +673,28 @@
     },
     matches: () => matches,
     working: () => working,
+    marks: () => marks,
+    setMarks: (m: Mark[]) => (marks = m),
+    applyMarks,
+    redactMatches,
+    signaturePicked,
+    startSign,
+    signOpen: () => signOpen,
+    compressWith: async (q: number, px: number) => {
+      const r = await api.PdfCompress(await materialize(), q, px);
+      working = r.path;
+      opsDirty = true;
+      await load(fileUrl(r.path), keepView());
+      return r;
+    },
+    exportTo: async (dir: string, dpi: number) => {
+      for (let n = 1; n <= pages; n++) await saveFile(join(dir, `p${n}.png`), await toBlob(await renderPage(doc!, n, dpi / 72), 'image/png'));
+    },
+    insertImages: async (files: string[], size: string) => {
+      const made = await buildFromImages(files, await api.TempPath('images.pdf'), size);
+      await pageOp({ kind: 'merge', others: [made] });
+    },
+    busy: () => busy,
   };
 
   onMount(() => {
@@ -471,6 +751,17 @@
   {#each tools as t (t.id)}
     <button class="icon-btn" class:on={tool === t.id} title={t.label} disabled={tab.readOnly && t.id !== 'none'} onclick={() => setTool(t.id)}><Icon icon={t.icon} /></button>
   {/each}
+  <button class="icon-btn" class:on={markMode === 'sign' || signOpen} title="Sign — draw, type or import your signature and place it on the page" disabled={tab.readOnly} onclick={startSign}><Icon icon={SignatureIcon} /></button>
+  <button class="icon-btn" class:on={markMode === 'redact'} title="Redact — drag black boxes over what must go, then Apply (the content underneath is removed, not just covered)" disabled={tab.readOnly} onclick={startRedact}><Icon icon={Redact} /></button>
+  {#if tool !== 'none'}
+    <span class="sep"></span>
+    <input class="color" type="color" title="Colour for new {tool === 'freetext' ? 'text' : tool === 'ink' ? 'drawings' : 'highlights'}" bind:value={inkColor} onchange={applyParams} />
+    {#if tool === 'freetext'}
+      <label class="opt" title="Text size">Size <input class="input num" type="number" min="4" max="100" bind:value={textSize} onchange={applyParams} /></label>
+    {:else if tool === 'ink'}
+      <label class="opt" title="Line thickness">Width <input type="range" min="1" max="20" bind:value={inkWidth} onchange={applyParams} /></label>
+    {/if}
+  {/if}
   <span class="spacer"></span>
   <button class="icon-btn" class:on={findOpen} title="Find ({formatShortcut('Mod+F')})" onclick={() => (findOpen ? closeFind() : openFind())}><Icon icon={Search} /></button>
   <button class="icon-btn" title="Page operations" disabled={tab.readOnly} onclick={opsMenu}><Icon icon={Ellipsis} /></button>
@@ -496,10 +787,24 @@
     <span class="label">
       {#if query && matches}{matches.total ? `${matches.current} of ${matches.total}` : 'No matches'}{/if}
     </span>
+    {#if query && matches?.total && !tab.readOnly}<button class="btn ghost" title="Put a redaction box over every match (you can check and adjust them before applying)" onclick={redactMatches}><Icon icon={Redact} size={14} /> Redact all matches</button>{/if}
     <span class="spacer"></span>
     <button class="icon-btn" title="Close (Esc)" onclick={closeFind}><Icon icon={XIcon} /></button>
   </div>
 {/if}
+
+{#if marks.length}
+  {@const ns = marks.filter((m) => m.kind === 'sign').length}
+  {@const nr = marks.length - ns}
+  <div class="banner">
+    <span class="grow">{[ns ? `${ns} signature${ns === 1 ? '' : 's'}` : '', nr ? `${nr} redaction${nr === 1 ? '' : 's'}` : ''].filter(Boolean).join(' and ')} not applied yet — move or resize them, then Apply (Save applies them too).</span>
+    <button class="btn ghost" onclick={() => ((marks = []), (markMode = null), (placing = null))}>Discard</button>
+    <button class="btn primary" onclick={() => applyMarks()}>Apply</button>
+  </div>
+{:else if markMode === 'redact'}
+  <div class="banner"><span class="grow">Drag boxes over what to remove. Find (Ctrl+F) can mark every match at once.</span><button class="btn ghost" onclick={() => (markMode = null)}>Done</button></div>
+{/if}
+{#if busy}<div class="banner"><span class="spinner inline"></span><span class="grow">{busy}</span></div>{/if}
 
 {#if opsDirty}
   <div class="banner">
@@ -515,13 +820,35 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="container" bind:this={container} onwheel={wheel} onclick={linkClick}>
       <div class="pdfViewer selectable" bind:this={viewerEl}></div>
+      {#if container && doc}<PdfMarks {container} bind:marks mode={markMode} {placing} {layout} onplaced={() => ((placing = null), (markMode = null))} />{/if}
     </div>
     {#if error}<div class="empty-state overlay">{error}</div>{/if}
     {#if loading && !doc}<div class="empty-state overlay"><span class="spinner"></span></div>{/if}
   </div>
 </div>
 
+{#if signOpen}<SignaturePad onpick={signaturePicked} oncancel={() => (signOpen = false)} />{/if}
+
 <style>
+  .color {
+    width: 28px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: none;
+    cursor: pointer;
+  }
+  .opt {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--fs-small);
+    color: var(--text-muted);
+  }
+  .num {
+    width: 56px;
+  }
   .page {
     width: 52px;
     text-align: center;

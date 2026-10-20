@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Create self-test fixtures: scripts/fixtures.py <dir>"""
+import math
 import os, sys, struct, zlib, shutil
 
 d = sys.argv[1]
@@ -62,6 +63,8 @@ def _subject(x, y):
     return (235, 232, 226)
 w("img/subject.png", png_fn(400, 300, _subject))
 w("img/photo.png", png_fn(400, 300, lambda x, y: (0, 0, 0) if x < 200 and (x // 2) % 2 == 0 else ((255, 255, 255) if x < 200 else (40, 80, 200))))
+# A photo-like image (smooth gradients + texture): stored losslessly it compresses badly.
+w("img/big.png", png_fn(1200, 900, lambda x, y: (int(128 + 90 * math.sin(x / 41)) , int(128 + 80 * math.cos(y / 29)), (x * 7 + y * 3) % 256)))
 w("img/vector.svg", b'<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80" viewBox="0 0 120 80"><rect width="120" height="80" rx="12" fill="#d97757"/><circle cx="60" cy="40" r="22" fill="#fff"/></svg>')
 # A 2-frame GIF (built by hand: 2x2 pixels, global palette of 2 colours).
 gif = (b"GIF89a\x02\x00\x02\x00\x80\x00\x00" + bytes([255, 0, 0, 0, 0, 255]) +
@@ -99,6 +102,8 @@ def pdf(pages, extra_objs=None, catalog_extra="", page_annots=None):
 w("pdf/hundred.pdf", pdf(100))
 w("pdf/three.pdf", pdf(3))
 w("pdf/two.pdf", pdf(2))
+# Page 2 is shown rotated 90° (signatures must land upright on it).
+w("pdf/tools.pdf", pdf(3, None, "", lambda i: "/Rotate 90" if i == 1 else ""))
 # Form: one text field and one checkbox on page 1 (objects 6 and 7 for a 1-page doc).
 form_objs = [
     "<< /Type /Annot /Subtype /Widget /FT /Tx /T (name) /Rect [72 600 372 624] /F 4 /DA (/Helv 12 Tf 0 g) /MK << /BC [0 0 0] >> /P 4 0 R >>",

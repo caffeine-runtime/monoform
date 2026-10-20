@@ -14,6 +14,10 @@ export interface PdfController {
   split(): void;
   toggleThumbs(): void;
   escape(): boolean;
+  sign(): void;
+  redact(): void;
+  compress(): void;
+  exportImages(): void;
 }
 
 export const pdfControllers = new Map<string, PdfController>();

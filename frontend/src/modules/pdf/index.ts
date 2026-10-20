@@ -27,6 +27,10 @@ const cmds: Command[] = [
   { id: 'pdf.extract', title: 'Extract pages to new PDF…', category: 'PDF', when: has, run: run((c) => c.extract()) },
   { id: 'pdf.merge', title: 'Append PDFs…', category: 'PDF', when: has, run: run((c) => c.merge()) },
   { id: 'pdf.split', title: 'Split into files…', category: 'PDF', when: has, run: run((c) => c.split()) },
+  { id: 'pdf.sign', title: 'Sign…', category: 'PDF', when: has, run: run((c) => c.sign()) },
+  { id: 'pdf.redact', title: 'Tool: redact (remove content under boxes)', category: 'PDF', when: has, run: run((c) => c.redact()) },
+  { id: 'pdf.compress', title: 'Compress…', category: 'PDF', when: has, run: run((c) => c.compress()) },
+  { id: 'pdf.exportImages', title: 'Export pages as images…', category: 'PDF', when: has, run: run((c) => c.exportImages()) },
   { id: 'pdf.escape', title: 'Back to select tool', category: 'PDF', shortcut: 'Escape', hidden: true, when: has, run: run((c) => c.escape()) },
 ];
 commands.register(...cmds);

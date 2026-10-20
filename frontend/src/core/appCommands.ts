@@ -47,6 +47,7 @@ export function registerAppCommands() {
     { id: 'file.newDocx', title: 'New Word document', category: 'File', run: () => void newFileOfKind(undefined, 'docx') },
     { id: 'file.newXlsx', title: 'New spreadsheet', category: 'File', run: () => void newFileOfKind(undefined, 'xlsx') },
     { id: 'file.newImage', title: 'New image…', category: 'File', run: () => void newFileOfKind(undefined, 'image') },
+    { id: 'file.imagesToPdf', title: 'Create PDF from images…', category: 'File', run: () => void import('../modules/pdf/tools').then((m) => m.imagesToPdf()) },
     { id: 'file.save', title: 'Save', category: 'File', shortcut: 'Mod+S', when: hasTab, run: () => workspace.save() },
     { id: 'file.saveAs', title: 'Save as…', category: 'File', shortcut: 'Mod+Shift+S', when: hasTab, run: () => workspace.save(workspace.active, true) },
     {

@@ -162,6 +162,14 @@ export function PageRoot(arg1) {
   return window['go']['app']['App']['PageRoot'](arg1);
 }
 
+export function PdfCompress(arg1, arg2, arg3) {
+  return window['go']['app']['App']['PdfCompress'](arg1, arg2, arg3);
+}
+
+export function PdfFromImages(arg1, arg2, arg3) {
+  return window['go']['app']['App']['PdfFromImages'](arg1, arg2, arg3);
+}
+
 export function PdfOp(arg1, arg2, arg3) {
   return window['go']['app']['App']['PdfOp'](arg1, arg2, arg3);
 }
@@ -170,8 +178,16 @@ export function PdfPageCount(arg1) {
   return window['go']['app']['App']['PdfPageCount'](arg1);
 }
 
+export function PdfReplacePages(arg1, arg2) {
+  return window['go']['app']['App']['PdfReplacePages'](arg1, arg2);
+}
+
 export function PdfSplit(arg1, arg2, arg3) {
   return window['go']['app']['App']['PdfSplit'](arg1, arg2, arg3);
+}
+
+export function PdfStamp(arg1, arg2) {
+  return window['go']['app']['App']['PdfStamp'](arg1, arg2);
 }
 
 export function QuickFiles(arg1, arg2) {
