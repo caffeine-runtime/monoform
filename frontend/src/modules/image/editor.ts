@@ -70,6 +70,7 @@ export interface ObjectProps {
   shadow?: boolean;
   strokeWidth?: number;
   filled?: boolean;
+  cornerRadius?: number;
 }
 
 export interface EditorState {
@@ -95,6 +96,7 @@ export interface ToolOptions {
   brushOpacity: number;
   strokeWidth: number; // 0 = automatic
   filled: boolean;
+  cornerRadius: number; // rectangles, px (0 = sharp corners)
   fontFamily: string;
   fontSize: number; // 0 = automatic
   bold: boolean;
@@ -149,6 +151,8 @@ export class ImageEditor {
   private world: Konva.Group;
   private docGroup: Konva.Group;
   private overlay: Konva.Shape;
+  private backdrop: Konva.Shape;
+  private checker: { key: string; fill: CanvasPattern | string; base: string; edge: string } | null = null;
   private region: KRect;
   private regionTr: Transformer;
   private tr: Transformer;
@@ -169,6 +173,7 @@ export class ImageEditor {
     brushOpacity: 1,
     strokeWidth: 0,
     filled: false,
+    cornerRadius: 0,
     fontFamily: 'Inter Variable',
     fontSize: 0,
     bold: true,
@@ -187,6 +192,7 @@ export class ImageEditor {
   private version = 0;
   private fitted = true;
   private ro: ResizeObserver;
+  private themeWatch: MutationObserver;
   onChange: (s: EditorState) => void = () => {};
   /** Asks the user for text (wired to the app's prompt dialog). */
   askText: (initial: string) => Promise<string | null> = async () => null;
@@ -202,6 +208,8 @@ export class ImageEditor {
     this.stage = new Konva.Stage({ container, width: container.clientWidth || 800, height: container.clientHeight || 600 });
     this.klayer = new Konva.Layer();
     this.stage.add(this.klayer);
+    this.backdrop = new Konva.Shape({ listening: false, sceneFunc: (ctx) => this.drawBackdrop(ctx) });
+    this.klayer.add(this.backdrop);
     this.world = new Konva.Group({ draggable: true });
     this.klayer.add(this.world);
     this.docGroup = new Konva.Group({ clipFunc: (ctx) => ctx.rect(0, 0, this.docW, this.docH) });
@@ -223,6 +231,9 @@ export class ImageEditor {
     this.bindEvents();
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(container);
+    // The backdrop's colours follow the app theme.
+    this.themeWatch = new MutationObserver(() => this.klayer.batchDraw());
+    this.themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     this.fit();
   }
 
@@ -380,7 +391,7 @@ export class ImageEditor {
       if (t === 'arrow') {
         this.draft = new Arrow({ points: [p.x, p.y, p.x, p.y], stroke: c, fill: c, strokeWidth: sw, pointerLength: sw * 4, pointerWidth: sw * 4, lineCap: 'round', lineJoin: 'round' });
       } else if (t === 'rect') {
-        this.draft = new KRect({ x: p.x, y: p.y, width: 0, height: 0, stroke: c, strokeWidth: sw, cornerRadius: sw, fill: this.opts.filled ? c : undefined });
+        this.draft = new KRect({ x: p.x, y: p.y, width: 0, height: 0, stroke: c, strokeWidth: sw, cornerRadius: this.opts.cornerRadius, fill: this.opts.filled ? c : undefined });
       } else if (t === 'oval') {
         this.draft = new KEllipse({ x: p.x, y: p.y, radiusX: 0, radiusY: 0, stroke: c, strokeWidth: sw, fill: this.opts.filled ? c : undefined });
       } else if (REGION_TOOLS.includes(t) || t === 'select' || t === 'ellipse') {
@@ -398,9 +409,9 @@ export class ImageEditor {
       if (this.draft) this.active.objs.add(this.draft as Konva.Shape);
     });
 
-    this.stage.on('mousemove touchmove', () => {
+    this.stage.on('mousemove touchmove', (e) => {
       if (!this.start && !this.lasso) return;
-      const p = this.pointer();
+      let p = this.pointer();
       if (this.stroke) {
         this.strokeTo(p);
         return;
@@ -415,6 +426,13 @@ export class ImageEditor {
         return;
       }
       const s = this.start!;
+      // Ctrl/Cmd (or Shift for shapes) keeps squares square and circles round.
+      const m = e.evt as MouseEvent;
+      const shape = this.draft instanceof KRect || this.draft instanceof KEllipse;
+      if ((m.ctrlKey || m.metaKey || (shape && m.shiftKey)) && !(this.draft instanceof Arrow)) {
+        const d = Math.max(Math.abs(p.x - s.x), Math.abs(p.y - s.y));
+        p = { x: s.x + (p.x < s.x ? -d : d), y: s.y + (p.y < s.y ? -d : d) };
+      }
       if (this.draft instanceof Arrow) this.draft.points([s.x, s.y, p.x, p.y]);
       else if (this.draft instanceof KRect) this.draft.setAttrs({ width: p.x - s.x, height: p.y - s.y });
       else if (this.draft instanceof KEllipse) this.draft.setAttrs({ x: (s.x + p.x) / 2, y: (s.y + p.y) / 2, radiusX: Math.abs(p.x - s.x) / 2, radiusY: Math.abs(p.y - s.y) / 2 });
@@ -540,6 +558,48 @@ export class ImageEditor {
     this.selection = s;
     this.klayer.batchDraw();
     this.emit();
+  }
+
+  /** Pasteboard view of the document: checkerboard inside, thin edge and soft shadow outside. */
+  private drawBackdrop(ctx: Konva.Context) {
+    const c = (ctx as unknown as { _context: CanvasRenderingContext2D })._context;
+    const look = this.backdropLook(c);
+    const { zoom } = this.view;
+    const x = Math.round(this.view.x);
+    const y = Math.round(this.view.y);
+    const w = Math.round(this.docW * zoom);
+    const h = Math.round(this.docH * zoom);
+    // A few faint rings instead of shadowBlur, which is slow on software-rendered canvases.
+    c.lineWidth = 1;
+    for (let i = 2; i <= 6; i += 2) {
+      c.strokeStyle = `rgba(0,0,0,${0.24 / i})`;
+      c.strokeRect(x - 0.5 - i, y - 0.5 - i, w + 1 + 2 * i, h + 1 + 2 * i);
+    }
+    c.fillStyle = look.base;
+    c.fillRect(x, y, w, h);
+    c.save();
+    c.translate(x, y); // checker squares stay put relative to the image while panning
+    c.fillStyle = look.fill;
+    c.fillRect(0, 0, w, h);
+    c.restore();
+    c.strokeStyle = look.edge;
+    c.strokeRect(x - 0.5, y - 0.5, w + 1, h + 1);
+  }
+
+  private backdropLook(c: CanvasRenderingContext2D) {
+    const key = document.documentElement.dataset.theme ?? '';
+    if (this.checker?.key === key) return this.checker;
+    const css = getComputedStyle(this.container);
+    const v = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
+    const a = v('--checker-a', '#2a2926');
+    const tile = document.createElement('canvas');
+    tile.width = tile.height = 20;
+    const g = tile.getContext('2d')!;
+    g.fillStyle = a;
+    g.fillRect(0, 0, 10, 10);
+    g.fillRect(10, 10, 10, 10);
+    this.checker = { key, fill: c.createPattern(tile, 'repeat') ?? a, base: v('--checker-b', '#1f1e1c'), edge: v('--canvas-edge', 'rgba(255,255,255,0.25)') };
+    return this.checker;
   }
 
   private drawSelection(ctx: Konva.Context) {
@@ -1055,7 +1115,7 @@ export class ImageEditor {
       };
     }
     if (n instanceof Arrow) return { kind: 'arrow', color: n.stroke() as string, strokeWidth: n.strokeWidth() };
-    if (n instanceof KRect) return { kind: 'rect', color: n.stroke() as string, strokeWidth: n.strokeWidth(), filled: !!n.fill() };
+    if (n instanceof KRect) return { kind: 'rect', color: n.stroke() as string, strokeWidth: n.strokeWidth(), filled: !!n.fill(), cornerRadius: n.cornerRadius() as number };
     if (n instanceof KEllipse) return { kind: 'oval', color: n.stroke() as string, strokeWidth: n.strokeWidth(), filled: !!n.fill() };
     return null;
   }
@@ -1100,6 +1160,7 @@ export class ImageEditor {
       }
       if (p.strokeWidth) n.strokeWidth(p.strokeWidth);
       if (p.filled !== undefined) n.fill(p.filled ? (n.stroke() as string) : '');
+      if (p.cornerRadius !== undefined && n instanceof KRect) n.cornerRadius(Math.max(0, p.cornerRadius));
     }
     this.tr.forceUpdate();
     this.commit();
@@ -1347,6 +1408,7 @@ export class ImageEditor {
   destroy() {
     this.cancelAdjust();
     this.ro.disconnect();
+    this.themeWatch.disconnect();
     this.stage.destroy();
   }
 }

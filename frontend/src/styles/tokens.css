@@ -24,6 +24,8 @@
   --shadow: 0 12px 40px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
   --checker-a: #2a2926;
   --checker-b: #1f1e1c;
+  --pasteboard: #121110;
+  --canvas-edge: rgba(236, 233, 228, 0.28);
 }
 
 :root[data-theme='light'] {
@@ -50,6 +52,8 @@
   --shadow: 0 12px 40px rgba(60, 50, 30, 0.16), 0 2px 8px rgba(60, 50, 30, 0.08);
   --checker-a: #ebe8de;
   --checker-b: #f6f4ee;
+  --pasteboard: #d6d2c6;
+  --canvas-edge: rgba(43, 42, 39, 0.35);
 }
 
 :root {

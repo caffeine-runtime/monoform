@@ -301,11 +301,15 @@
     if (!key) return;
     if (mode === 'replace') objectPoints = [];
     objectPoints.push({ x, y, positive: mode !== 'subtract' });
+    const slow = setTimeout(() => (busy = 'Finding the object’s edges…'), 300);
     try {
       const r = await vision.selectObject(key, objectPoints);
       editor.setPixelSelection(selection.fromMask(maskCanvas(r), r.bounds, { canvas: r.edges, scale: r.edgeScale }), 'replace');
     } catch (e) {
       toastError(e, 'Object selection failed');
+    } finally {
+      clearTimeout(slow);
+      busy = '';
     }
   }
 
@@ -717,33 +721,34 @@
     fonts: () => availableFonts(),
   };
 
-  type ToolDef = { id: Tool; icon: any; label: string; key?: string };
+  /** label: name; help: how to use it (shown on hover). */
+  type ToolDef = { id: Tool; icon: any; label: string; help: string; key?: string };
   const toolGroups: ToolDef[][] = [
     [
-      { id: 'hand', icon: Hand, label: 'Hand: pan, select markup', key: 'H' },
-      { id: 'move', icon: Move, label: 'Move, rotate or scale the layer', key: 'V' },
+      { id: 'hand', icon: Hand, label: 'Hand', help: 'Drag to pan the view; click an arrow, shape or text to select and edit it. Scroll to zoom.', key: 'H' },
+      { id: 'move', icon: Move, label: 'Move layer', help: 'Drag to move the active layer; drag the handles to scale or rotate it.', key: 'V' },
     ],
     [
-      { id: 'select', icon: SquareDashed, label: 'Rectangle select', key: 'M' },
-      { id: 'ellipse', icon: CircleDashed, label: 'Ellipse select' },
-      { id: 'lasso', icon: Lasso, label: 'Lasso select', key: 'L' },
-      { id: 'wand', icon: Wand, label: 'Magic wand (similar colours)', key: 'W' },
-      { id: 'object', icon: ScanEye, label: 'Select object (click it)', key: 'O' },
+      { id: 'select', icon: SquareDashed, label: 'Rectangle select', help: 'Drag to select a rectangle. Hold Ctrl for a square, Shift to add, Alt to subtract.', key: 'M' },
+      { id: 'ellipse', icon: CircleDashed, label: 'Ellipse select', help: 'Drag to select an ellipse. Hold Ctrl for a circle, Shift to add, Alt to subtract.' },
+      { id: 'lasso', icon: Lasso, label: 'Lasso select', help: 'Drag around an area to select it freehand. Shift adds, Alt subtracts.', key: 'L' },
+      { id: 'wand', icon: Wand, label: 'Magic wand', help: 'Click to select pixels of a similar colour. Set Tolerance in the toolbar; Shift adds, Alt subtracts.', key: 'W' },
+      { id: 'object', icon: ScanEye, label: 'Select object', help: 'Click an object to select it, with edges snapped to the pixels. Shift-click adds, Alt-click excludes a part.', key: 'O' },
     ],
-    [{ id: 'crop', icon: Crop, label: 'Crop', key: 'C' }],
+    [{ id: 'crop', icon: Crop, label: 'Crop', help: 'Drag the area to keep (Ctrl for a square), adjust the handles, then press Enter.', key: 'C' }],
     [
-      { id: 'brush', icon: Brush, label: 'Brush', key: 'B' },
-      { id: 'eraser', icon: Eraser, label: 'Eraser (to transparent)', key: 'E' },
-    ],
-    [
-      { id: 'text', icon: Type, label: 'Text', key: 'T' },
-      { id: 'arrow', icon: MoveUpRight, label: 'Arrow', key: 'A' },
-      { id: 'rect', icon: Square, label: 'Rectangle', key: 'R' },
-      { id: 'oval', icon: CircleIcon, label: 'Ellipse' },
+      { id: 'brush', icon: Brush, label: 'Brush', help: 'Drag to paint on the active layer. Set size, opacity and colour in the toolbar.', key: 'B' },
+      { id: 'eraser', icon: Eraser, label: 'Eraser', help: 'Drag to erase the active layer to transparency.', key: 'E' },
     ],
     [
-      { id: 'blur', icon: Droplets, label: 'Blur region', key: 'U' },
-      { id: 'pixelate', icon: Grid, label: 'Pixelate region', key: 'P' },
+      { id: 'text', icon: Type, label: 'Text', help: 'Click where the text should go and type it. Double-click text later to edit it.', key: 'T' },
+      { id: 'arrow', icon: MoveUpRight, label: 'Arrow', help: 'Drag from the tail to the tip to draw an arrow.', key: 'A' },
+      { id: 'rect', icon: Square, label: 'Rectangle', help: 'Drag to draw a rectangle. Hold Ctrl (or Shift) for a square; set Corners in the toolbar for rounded or sharp corners.', key: 'R' },
+      { id: 'oval', icon: CircleIcon, label: 'Ellipse', help: 'Drag to draw an ellipse. Hold Ctrl (or Shift) for a circle.' },
+    ],
+    [
+      { id: 'blur', icon: Droplets, label: 'Blur region', help: 'Drag over an area (faces, plates…), adjust it, then press Enter to blur it.', key: 'U' },
+      { id: 'pixelate', icon: Grid, label: 'Pixelate region', help: 'Drag over an area, adjust it, then press Enter to pixelate it.', key: 'P' },
     ],
   ];
   const shapeTool = $derived(['arrow', 'rect', 'oval'].includes(tool));
@@ -774,8 +779,8 @@
       <input class="input num sm" type="number" min="0" max="2000" value={opts.fontSize || ''} placeholder="auto" title="Size (empty = automatic)" onchange={(e) => setOpt('fontSize', +(e.target as HTMLInputElement).value || 0)} />
       <button class="btn ghost b" class:on={opts.bold} title="Bold" onclick={() => setOpt('bold', !opts!.bold)}>B</button>
       <button class="btn ghost i" class:on={opts.italic} title="Italic" onclick={() => setOpt('italic', !opts!.italic)}>I</button>
-      <button class="btn ghost" class:on={opts.outline} onclick={() => setOpt('outline', !opts!.outline)}>Outline</button>
-      <button class="btn ghost" class:on={opts.shadow} onclick={() => setOpt('shadow', !opts!.shadow)}>Shadow</button>
+      <button class="btn ghost" class:on={opts.outline} title="Outline around the letters" onclick={() => setOpt('outline', !opts!.outline)}>Outline</button>
+      <button class="btn ghost" class:on={opts.shadow} title="Soft shadow behind the text" onclick={() => setOpt('shadow', !opts!.shadow)}>Shadow</button>
       <span class="sep"></span>
     {:else if SELECT_TOOLS.includes(tool)}
       <div class="seg" role="radiogroup" aria-label="Selection mode">
@@ -788,7 +793,7 @@
         <label class="opt chk"><input type="checkbox" checked={opts.wandContiguous} onchange={(e) => setOpt('wandContiguous', (e.target as HTMLInputElement).checked)} /> Contiguous</label>
       {:else if tool === 'object'}
         <span class="hint">Click an object · Shift-click to add · Alt-click to exclude</span>
-        <button class="btn ghost" onclick={selectSubject}><Icon icon={Sparkles} size={14} /> Select subject</button>
+        <button class="btn ghost" title="Select the main subject of the image automatically" onclick={selectSubject}><Icon icon={Sparkles} size={14} /> Select subject</button>
       {/if}
       <span class="sep"></span>
     {:else if tool === 'brush' || tool === 'eraser'}
@@ -796,9 +801,13 @@
       {#if tool === 'brush'}<label class="opt">Opacity <input type="range" min="5" max="100" value={Math.round(opts.brushOpacity * 100)} oninput={(e) => setOpt('brushOpacity', +(e.target as HTMLInputElement).value / 100)} /></label>{/if}
       <span class="sep"></span>
     {:else if shapeTool || obj}
-      <label class="opt">Width <input type="range" min="1" max="60" value={obj?.strokeWidth ?? (opts.strokeWidth || 6)} oninput={(e) => (obj ? editor?.updateObject({ strokeWidth: +(e.target as HTMLInputElement).value }) : setOpt('strokeWidth', +(e.target as HTMLInputElement).value))} /></label>
+      <label class="opt" title="Line width">Width <input type="range" min="1" max="60" value={obj?.strokeWidth ?? (opts.strokeWidth || 6)} oninput={(e) => (obj ? editor?.updateObject({ strokeWidth: +(e.target as HTMLInputElement).value }) : setOpt('strokeWidth', +(e.target as HTMLInputElement).value))} /></label>
       {#if tool === 'rect' || tool === 'oval' || obj?.kind === 'rect' || obj?.kind === 'oval'}
-        <label class="opt chk"><input type="checkbox" checked={obj ? !!obj.filled : opts.filled} onchange={(e) => (obj ? editor?.updateObject({ filled: (e.target as HTMLInputElement).checked }) : setOpt('filled', (e.target as HTMLInputElement).checked))} /> Filled</label>
+        <label class="opt chk" title="Fill the shape with the colour"><input type="checkbox" checked={obj ? !!obj.filled : opts.filled} onchange={(e) => (obj ? editor?.updateObject({ filled: (e.target as HTMLInputElement).checked }) : setOpt('filled', (e.target as HTMLInputElement).checked))} /> Filled</label>
+      {/if}
+      {#if tool === 'rect' || obj?.kind === 'rect'}
+        {@const radius = obj ? (obj.cornerRadius ?? 0) : opts.cornerRadius}
+        <label class="opt" title="Corner radius: 0 = sharp corners, higher = rounder">Corners <input type="range" min="0" max="200" value={radius} oninput={(e) => (obj ? editor?.updateObject({ cornerRadius: +(e.target as HTMLInputElement).value }) : setOpt('cornerRadius', +(e.target as HTMLInputElement).value))} /><span class="v">{radius}</span></label>
       {/if}
       <span class="sep"></span>
     {/if}
@@ -816,7 +825,7 @@
   {:else if isSvg}
     <span class="label">SVG — view only here</span>
   {:else if imgMode && ext === 'gif'}
-    <button class="btn ghost" onclick={startEditingGif}><Icon icon={Pencil} size={14} /> Edit (first frame)</button>
+    <button class="btn ghost" title="Open the first frame in the editor" onclick={startEditingGif}><Icon icon={Pencil} size={14} /> Edit (first frame)</button>
   {:else if tab.readOnly}
     <span class="label">Read-only — use Save as to edit a copy</span>
   {/if}
@@ -848,7 +857,7 @@
     <label class="chk"><input type="checkbox" bind:checked={lockAspect} /> Keep aspect ratio</label>
     <span class="muted">from {editor.width} × {editor.height}</span>
     <span class="grow"></span>
-    <button class="btn" onclick={() => (resizeOpen = false)}>Cancel</button>
+    <button class="btn" title="Close without resizing" onclick={() => (resizeOpen = false)}>Cancel</button>
     <button class="btn primary" onclick={applyResize}>Resize</button>
   </div>
 {/if}
@@ -866,7 +875,7 @@
 {#if es?.hasRegion}
   <div class="banner">
     <span class="grow">{tool === 'crop' ? 'Adjust the crop area' : tool === 'blur' ? 'Adjust the area to blur' : 'Adjust the area to pixelate'}, then apply.</span>
-    <button class="btn ghost" onclick={() => editor?.cancelRegion()}><Icon icon={XIcon} size={14} /> Cancel</button>
+    <button class="btn ghost" title="Discard the area (Esc)" onclick={() => editor?.cancelRegion()}><Icon icon={XIcon} size={14} /> Cancel</button>
     <button class="btn primary" onclick={() => editor?.applyRegion()}><Icon icon={Check} size={14} /> Apply (Enter)</button>
   </div>
 {:else if es?.pixelSelection && editable}
@@ -892,14 +901,14 @@
       {#each toolGroups as group, gi (gi)}
         {#if gi}<span class="hsep"></span>{/if}
         {#each group as t (t.id)}
-          <button class="icon-btn" class:on={tool === t.id} title="{t.label}{t.key ? ` (${formatShortcut(t.key)})` : ''}" aria-label={t.label} onclick={() => setTool(t.id)}><Icon icon={t.icon} /></button>
+          <button class="icon-btn" class:on={tool === t.id} title="{t.label}{t.key ? ` (${formatShortcut(t.key)})` : ''} — {t.help}" aria-label={t.label} onclick={() => setTool(t.id)}><Icon icon={t.icon} /></button>
         {/each}
       {/each}
     </div>
   {/if}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
-    class="area checker"
+    class="area"
     bind:this={area}
     onwheel={imgMode ? imgWheel : undefined}
     onpointerdown={(e) => {
@@ -926,6 +935,8 @@
         onerror={() => (error = 'This image could not be displayed.')}
         style:transform="translate({imgView.x}px, {imgView.y}px) scale({imgView.zoom})"
         style:width="{natural.w || undefined}px"
+        style:--z={imgView.zoom}
+        class="checker"
         class:pixelated={imgView.zoom >= 2 && !isSvg}
       />
     {/if}
@@ -977,12 +988,19 @@
     overflow: hidden;
     touch-action: none;
   }
+  .area {
+    background: var(--pasteboard);
+  }
+  /* The image itself carries the checkerboard and a 1 px edge, so its bounds
+     stay visible against the pasteboard (sizes undo the zoom transform). */
   .checker {
+    --cs: calc(10px / var(--z, 1));
     background-color: var(--checker-b);
     background-image: linear-gradient(45deg, var(--checker-a) 25%, transparent 25%), linear-gradient(-45deg, var(--checker-a) 25%, transparent 25%),
       linear-gradient(45deg, transparent 75%, var(--checker-a) 75%), linear-gradient(-45deg, transparent 75%, var(--checker-a) 75%);
-    background-size: 20px 20px;
-    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    background-size: calc(var(--cs) * 2) calc(var(--cs) * 2);
+    background-position: 0 0, 0 var(--cs), var(--cs) calc(var(--cs) * -1), calc(var(--cs) * -1) 0;
+    box-shadow: 0 0 0 calc(1px / var(--z, 1)) var(--canvas-edge), 0 calc(2px / var(--z, 1)) calc(14px / var(--z, 1)) rgba(0, 0, 0, 0.35);
   }
   .stage {
     position: absolute;

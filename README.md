@@ -12,7 +12,7 @@ works offline, collects no telemetry and needs no account, and saves everything 
 |---|---|
 | **Text & Markdown** | CodeMirror editor with byte-exact round-trips across encodings and line endings, find/replace, split/preview Markdown, image paste into `assets/`, folder search. |
 | **PDF** | Fast viewer with search and thumbnails; highlight, comment and ink annotations; form filling; reorder, rotate, delete, extract, merge, split. |
-| **Images** | Layered editor: transparency, selections (rectangle, lasso, magic wand, click an object, select subject) with copy/paste, brush/eraser, text in any installed font, free rotation, colour adjustments, one-click background removal, "save a copy", layers saved as OpenRaster (.ora). |
+| **Images** | Layered editor: transparency, selections (rectangle, lasso, magic wand, click an object, select subject — edges snapped to the pixels) with copy/paste, brush/eraser, text in any installed font, free rotation, colour adjustments, one-click background removal, "save a copy", layers saved as OpenRaster (.ora). |
 | **SVG & web pages** | Edit SVG with a live preview and export PNG at any size; open HTML files in a safe preview (scripts and internet content off until you allow them) next to their source. |
 | **3D models** | glTF/GLB (incl. Draco), FBX, OBJ+MTL, STL, PLY, 3MF, Collada, 3DS, USDZ, VRML, AMF, PCD, XYZ, VTK — orbit view, clickable animation list with play/pause/scrub/speed, wireframe and lighting toggles, floor grid, PNG snapshot. |
 | **Audio** | Play MP3, WAV, FLAC, OGG (and Opus/AAC where the system can) with cover art and tags; waveform editor: select, cut/copy/paste, delete, trim, silence, fade in/out, volume, normalize, undo; save as WAV or FLAC — or as MP3 without re-encoding after cuts. |
