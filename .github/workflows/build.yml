@@ -73,7 +73,7 @@ jobs:
       - name: System packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev gstreamer1.0-plugins-good xvfb openbox qpdf poppler-utils p7zip-full unzip libheif-examples libheif-plugin-libde265
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev gstreamer1.0-plugins-good xvfb openbox qpdf poppler-utils p7zip-full unzip libheif-examples libheif-plugin-libde265 scrot
       - name: Build
         run: |
           go install "github.com/wailsapp/wails/v2/cmd/wails@${WAILS_VERSION}"
@@ -86,7 +86,7 @@ jobs:
           M0=$RUNNER_TEMP/m0 && mkdir -p "$M0" && printf a >"$M0/a.txt" && printf b >"$M0/b.md" && printf c >"$M0/c.txt"
           scripts/selftest.sh m0-setup "$M0" "$RUNNER_TEMP/m0.json"
           scripts/selftest.sh m0-restore "$M0" "$RUNNER_TEMP/m0.json"
-          for s in m1 m2 m3 m4 m4b m5 m6 m8 m10 m11 m12 m13 m14 m15 m16 m18 m19 m20 m21 m22 m23 m24 m25 m26 m27 m28 m29 m30; do scripts/selftest.sh "$s" "$FX"; done
+          for s in m1 m2 m3 m4 m4b m5 m6 m8 m10 m11 m12 m13 m14 m15 m16 m18 m19 m20 m21 m22 m23 m24 m25 m26 m27 m28 m29 m30 m31; do scripts/selftest.sh "$s" "$FX"; done
           HIA_TIMEOUT=400 scripts/selftest.sh m9 "$FX"
           # Pointer maths with a scaled interface (rows and controls at 125 %).
           python3 scripts/fixtures.py "$RUNNER_TEMP/fx125" && echo '{"uiScale":1.25}' > "$RUNNER_TEMP/scale.json" && scripts/selftest.sh m14 "$RUNNER_TEMP/fx125" "$RUNNER_TEMP/scale.json"

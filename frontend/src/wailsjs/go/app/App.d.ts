@@ -11,6 +11,7 @@ import {filetype} from '../models';
 import {fs} from '../models';
 import {pdf} from '../models';
 import {settings} from '../models';
+import {capture} from '../models';
 import {search} from '../models';
 import {semantic} from '../models';
 import {office} from '../models';
@@ -147,6 +148,8 @@ export function Rename(arg1:string,arg2:string):Promise<void>;
 export function SaveFileDialog(arg1:string,arg2:string,arg3:Array<app.FileFilter>):Promise<string>;
 
 export function SaveSettings(arg1:settings.Settings):Promise<void>;
+
+export function ScreenCapture(arg1:string,arg2:number,arg3:boolean):Promise<capture.Result>;
 
 export function SearchFolder(arg1:string,arg2:search.Options):Promise<string>;
 

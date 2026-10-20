@@ -635,6 +635,27 @@ export namespace audio {
 
 }
 
+export namespace capture {
+	
+	export class Result {
+	    path: string;
+	    interactive: boolean;
+	    method: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Result(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.interactive = source["interactive"];
+	        this.method = source["method"];
+	    }
+	}
+
+}
+
 export namespace certs {
 	
 	export class Name {

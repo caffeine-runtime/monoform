@@ -27,6 +27,7 @@ export { default as Sun } from '@lucide/svelte/icons/sun';
 export { default as Moon } from '@lucide/svelte/icons/moon';
 export { default as Command } from '@lucide/svelte/icons/command';
 export { default as Hash } from '@lucide/svelte/icons/hash';
+export { default as Camera } from '@lucide/svelte/icons/camera';
 export { default as Circle } from '@lucide/svelte/icons/circle';
 export { default as AlertTriangle } from '@lucide/svelte/icons/triangle-alert';
 export { default as Info } from '@lucide/svelte/icons/info';

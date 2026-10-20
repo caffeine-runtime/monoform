@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Component } from 'svelte';
   import Icon from './Icon.svelte';
-  import { Braces, Command, FileSpreadsheet, FileText, FolderOpen, Globe, Hash, ImageIcon, NotebookPen, PenTool, Table, Type, X } from '../core/icons';
+  import { Braces, Camera, Command, FileSpreadsheet, FileText, FolderOpen, Globe, Hash, ImageIcon, NotebookPen, PenTool, Table, Type, X } from '../core/icons';
   import { commands } from '../core/commands';
   import { formatShortcut } from '../core/keys';
   import { NEW_KINDS, newFileOfKind } from '../core/newfile';
@@ -28,6 +28,7 @@
     { id: 'file.open', label: 'Open file', icon: FileText },
     { id: 'file.openFolder', label: 'Open folder', icon: FolderOpen },
     { id: 'tools.hash', label: 'Check a file hash', icon: Hash },
+    { id: 'screenshot.region', label: 'Take a screenshot', icon: Camera },
     { id: 'app.palette', label: 'All commands', icon: Command },
   ];
 </script>
