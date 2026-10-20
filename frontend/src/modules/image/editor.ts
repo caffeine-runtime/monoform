@@ -162,7 +162,14 @@ export class ImageEditor {
   private draft: KNode | null = null;
   private start: { x: number; y: number } | null = null;
   private lasso: number[] | null = null;
-  private stroke: { canvas: HTMLCanvasElement; g: CanvasRenderingContext2D; last: { x: number; y: number }; before: HTMLCanvasElement } | null = null;
+  private stroke: {
+    canvas: HTMLCanvasElement;
+    g: CanvasRenderingContext2D;
+    last: { x: number; y: number };
+    before: HTMLCanvasElement;
+    /** With a selection: the bare stroke, shown through the mask into `canvas` as it grows. */
+    paint: HTMLCanvasElement | null;
+  } | null = null;
   private docW: number;
   private docH: number;
   view: View = { zoom: 1, x: 0, y: 0 };
@@ -985,18 +992,23 @@ export class ImageEditor {
     this.bake(L);
     const before = L.canvas;
     const canvas = raster.clone(before);
-    const g = canvas.getContext('2d')!;
+    const eraser = this.tool === 'eraser';
+    // Inside a selection the stroke is drawn on its own canvas and shown only
+    // through the selection mask, so painting never leaks outside it.
+    const paint = this.selection ? raster.makeCanvas(before.width, before.height) : null;
+    const g = (paint ?? canvas).getContext('2d')!;
     g.lineCap = 'round';
     g.lineJoin = 'round';
     g.lineWidth = this.brushSize();
     g.strokeStyle = this.opts.color;
     g.fillStyle = this.opts.color;
-    g.globalAlpha = this.tool === 'eraser' ? 1 : this.opts.brushOpacity;
-    g.globalCompositeOperation = this.tool === 'eraser' ? 'destination-out' : 'source-over';
+    g.globalAlpha = eraser ? 1 : this.opts.brushOpacity;
+    g.globalCompositeOperation = eraser && !paint ? 'destination-out' : 'source-over';
     g.beginPath();
     g.arc(p.x, p.y, g.lineWidth / 2, 0, Math.PI * 2);
     g.fill();
-    this.stroke = { canvas, g, last: p, before };
+    this.stroke = { canvas, g, last: p, before, paint };
+    this.showStroke(p, p);
     this.setCanvas(L, canvas);
     this.klayer.batchDraw();
   }
@@ -1007,17 +1019,39 @@ export class ImageEditor {
     s.g.moveTo(s.last.x, s.last.y);
     s.g.lineTo(p.x, p.y);
     s.g.stroke();
+    this.showStroke(s.last, p);
     s.last = p;
     this.active.img.image(s.canvas);
     this.klayer.batchDraw();
+  }
+
+  /** Recompose the area a segment touched: before + stroke ∩ selection (only with a selection). */
+  private showStroke(a: { x: number; y: number }, b: { x: number; y: number }) {
+    const s = this.stroke!;
+    if (!s.paint || !this.selection) return;
+    const pad = Math.ceil(s.g.lineWidth / 2) + 2;
+    const x = Math.max(0, Math.floor(Math.min(a.x, b.x) - pad));
+    const y = Math.max(0, Math.floor(Math.min(a.y, b.y) - pad));
+    const w = Math.min(s.canvas.width, Math.ceil(Math.max(a.x, b.x) + pad)) - x;
+    const h = Math.min(s.canvas.height, Math.ceil(Math.max(a.y, b.y) + pad)) - y;
+    if (w <= 0 || h <= 0) return;
+    const t = raster.makeCanvas(w, h);
+    const tg = t.getContext('2d')!;
+    tg.drawImage(s.paint, x, y, w, h, 0, 0, w, h);
+    tg.globalCompositeOperation = 'destination-in';
+    tg.drawImage(this.selection.mask, x, y, w, h, 0, 0, w, h);
+    const g = s.canvas.getContext('2d')!;
+    g.clearRect(x, y, w, h);
+    g.drawImage(s.before, x, y, w, h, x, y, w, h);
+    g.globalCompositeOperation = this.tool === 'eraser' ? 'destination-out' : 'source-over';
+    g.drawImage(t, x, y);
+    g.globalCompositeOperation = 'source-over';
   }
 
   private endStroke() {
     const s = this.stroke;
     if (!s) return;
     this.stroke = null;
-    const L = this.active;
-    if (this.selection) this.setCanvas(L, sel.blendThroughMask(s.before, s.canvas, this.selection.mask));
     this.commit();
   }
 

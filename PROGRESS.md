@@ -69,7 +69,9 @@
   removal; "Save a copy" (and an option to always keep originals); save/open layered OpenRaster (.ora).
   Object selection and select subject snap their edges to the pixels (colour-based edge refinement); the canvas
   has a visible edge on a plain pasteboard; Ctrl keeps rectangles/ellipses square/round; rectangles have
-  adjustable corner radius; tool tooltips explain how to use each tool.
+  adjustable corner radius; tool tooltips explain how to use each tool. Blur kinds in Adjust → Blur (Gaussian,
+  motion, zoom, spin, lens, tilt-shift, surface), all limited to the selection like every other adjustment; the
+  brush and eraser are clipped to the selection while painting.
 - **M10 — SVG.** Source and live preview side by side (preview through `<img>`, so scripts and external
   references in the file never run), zoom/pan, transparent/light/dark background, XML errors with line and
   column while the last good render stays, PNG export at 1×/2×/4×/custom width, open in browser.
@@ -172,6 +174,7 @@ available here).
 - 3D: the first model opened in a session has one ~90–115 ms frame on the software-rendered VM (creating the WebGL context and compiling shaders, which WebKitGTK does synchronously even with `KHR_parallel_shader_compile`); later opens stay ≤ 55 ms.
 - 3D: on the software-rendered Linux VM (llvmpipe) a floor-grid line passing under the camera can show as a wide grey bar; the same scene renders correctly in Chromium's software renderer, so it looks like a llvmpipe/WebKitGTK rasterisation bug. Toggle the grid (G) if it appears.
 - 3D: glTF files with KTX2/Basis textures (`KHR_texture_basisu`) aren't supported yet (clear error); FBX files with external textures need them next to the model; USD support is three.js's (USDA/USDC/USDZ geometry and materials, no variants or skeletal animation).
+- Applying a large blur (40 px, lens/motion) on the software-rendered VM is one 40–150 ms frame (WebGL on llvmpipe); real GPUs render it in a few ms.
 - Object selection analyses the whole image once (~15–18 s on the test VM, single-threaded WASM); clicks are fast afterwards. Background removal uses a small model (U²-Netp) — fine hair and glass are approximate. Edge refinement fixes edges within a few pixels of the model's outline; if the model picks the wrong region (e.g. part of a second person), add/exclude with Shift-/Alt-click.
 - Grid: one rectangular selection at a time (no Ctrl+click multi-ranges); a CSV paste wider than the table is cut
   at the last column (with a notice) — add columns first; rows can't be reordered by dragging their numbers.
