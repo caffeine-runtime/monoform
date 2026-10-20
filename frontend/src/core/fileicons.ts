@@ -13,6 +13,7 @@ export function iconFor(name: string, kind?: string): Component<any> {
       return FileText;
     case 'image':
     case 'svg':
+    case 'cad':
       return FileImage;
     case 'json':
     case 'yaml':

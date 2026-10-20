@@ -30,6 +30,7 @@ const (
 	Audio    Kind = "audio"
 	Video    Kind = "video"
 	Database Kind = "database"
+	CAD      Kind = "cad"
 	Binary   Kind = "binary"
 	Unknown  Kind = ""
 )
@@ -76,6 +77,8 @@ var byExt = map[string]entry{
 	"weba": {Audio, "audio/webm"}, "mka": {Audio, "audio/x-matroska"}, "aif": {Audio, "audio/aiff"}, "aiff": {Audio, "audio/aiff"},
 	"mp4": {Video, "video/mp4"}, "m4v": {Video, "video/mp4"}, "mov": {Video, "video/quicktime"}, "webm": {Video, "video/webm"},
 	"mkv": {Video, "video/x-matroska"}, "ogv": {Video, "video/ogg"}, "avi": {Video, "video/x-msvideo"},
+	// CAD drawings
+	"dxf": {CAD, "image/vnd.dxf"},
 	// SQLite databases
 	"db": {Database, "application/vnd.sqlite3"}, "sqlite": {Database, "application/vnd.sqlite3"}, "sqlite3": {Database, "application/vnd.sqlite3"},
 	"db3": {Database, "application/vnd.sqlite3"}, "s3db": {Database, "application/vnd.sqlite3"}, "sl3": {Database, "application/vnd.sqlite3"},

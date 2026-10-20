@@ -452,6 +452,85 @@ w("db/shop.db", _shopdb())
 for _f in ("clip.webm", "clip.mp4", "h264.mp4", "clip.mkv", "track.webm"):
     w("video/" + _f, open(os.path.join(_here, "..", "internal", "video", "testdata", _f), "rb").read())
 
+# ---- CAD drawings (DXF) ----
+def _dxf(groups, eol="\n", pad=False):
+    out = []
+    for c, v in groups:
+        out.append(f"{c:>3}" if pad else str(c))
+        out.append(str(v))
+    return (eol.join(out) + eol).encode("cp1252")
+
+def _plan():
+    g = [(0, "SECTION"), (2, "HEADER"), (9, "$ACADVER"), (1, "AC1015"), (9, "$DWGCODEPAGE"), (3, "ANSI_1252"),
+         (9, "$INSUNITS"), (70, 4), (9, "$HANDSEED"), (5, "2000"), (0, "ENDSEC"),
+         (0, "SECTION"), (2, "TABLES"), (0, "TABLE"), (2, "LAYER"), (5, "2"), (100, "AcDbSymbolTable"), (70, 4)]
+    for h, name, color in (("10", "0", 7), ("11", "Walls", 1), ("12", "Furniture", 3), ("13", "Notes", 5), ("14", "Hidden", -8)):
+        g += [(0, "LAYER"), (5, h), (100, "AcDbSymbolTableRecord"), (100, "AcDbLayerTableRecord"), (2, name), (70, 0), (62, color), (6, "CONTINUOUS")]
+    g += [(0, "ENDTAB"), (0, "TABLE"), (2, "BLOCK_RECORD"), (5, "1"), (70, 2),
+          (0, "BLOCK_RECORD"), (5, "1F"), (2, "*Model_Space"), (0, "BLOCK_RECORD"), (5, "20"), (2, "Chair"), (0, "ENDTAB"), (0, "ENDSEC")]
+    # A chair block: seat square and a back arc (BYBLOCK colour).
+    g += [(0, "SECTION"), (2, "BLOCKS"), (0, "BLOCK"), (5, "30"), (8, "0"), (2, "Chair"), (70, 0), (10, 0.0), (20, 0.0), (30, 0.0), (3, "Chair"),
+          (0, "LWPOLYLINE"), (5, "31"), (100, "AcDbEntity"), (8, "0"), (62, 0), (100, "AcDbPolyline"), (90, 4), (70, 1),
+          (10, -200.0), (20, -200.0), (10, 200.0), (20, -200.0), (10, 200.0), (20, 200.0), (10, -200.0), (20, 200.0),
+          (0, "ARC"), (5, "32"), (100, "AcDbEntity"), (8, "0"), (62, 0), (100, "AcDbCircle"), (10, 0.0), (20, 0.0), (30, 0.0), (40, 260.0), (100, "AcDbArc"), (50, 45.0), (51, 135.0),
+          (0, "ENDBLK"), (5, "33"), (8, "0"), (0, "ENDSEC")]
+    E = [(0, "SECTION"), (2, "ENTITIES")]
+    hd = [0x100]
+    def ent(t, layer, *rest, sub=()):
+        hd[0] += 1
+        e = [(0, t), (5, format(hd[0], "X")), (330, "1F"), (100, "AcDbEntity"), (8, layer)]
+        for s in sub:
+            e.append((100, s)) if isinstance(s, str) else e.append(s)
+        return e + list(rest)
+    # Outer walls: a closed polyline 10 m × 6 m (mm), inner wall lines.
+    E += ent("LWPOLYLINE", "Walls", (90, 4), (70, 1), (43, 0.0), (10, 0.0), (20, 0.0), (10, 10000.0), (20, 0.0), (10, 10000.0), (20, 6000.0), (10, 0.0), (20, 6000.0), sub=["AcDbPolyline"])
+    E += ent("LINE", "Walls", (10, 6000.0), (20, 0.0), (30, 0.0), (11, 6000.0), (21, 6000.0), (31, 0.0), sub=["AcDbLine"])
+    E += ent("LINE", "Walls", (10, 0.0), (20, 3000.0), (30, 0.0), (11, 4000.0), (21, 3000.0), (31, 0.0), sub=["AcDbLine"])
+    # A table (circle), a door swing (arc with bulged polyline) and a spline.
+    E += ent("CIRCLE", "Furniture", (10, 8000.0), (20, 3000.0), (30, 0.0), (40, 600.0), sub=["AcDbCircle"])
+    E += ent("ARC", "Walls", (10, 6000.0), (20, 1000.0), (30, 0.0), (40, 900.0), (50, 90.0), (51, 180.0), sub=["AcDbCircle", "AcDbArc"])
+    E += ent("LWPOLYLINE", "Furniture", (90, 3), (70, 0), (10, 1000.0), (20, 4000.0), (42, 1.0), (10, 2000.0), (20, 4000.0), (10, 2500.0), (20, 5000.0), sub=["AcDbPolyline"])
+    E += ent("SPLINE", "Notes", (210, 0.0), (220, 0.0), (230, 1.0), (70, 8), (71, 3), (72, 8), (73, 4), (74, 0),
+             (40, 0.0), (40, 0.0), (40, 0.0), (40, 0.0), (40, 1.0), (40, 1.0), (40, 1.0), (40, 1.0),
+             (10, 500.0), (20, 500.0), (30, 0.0), (10, 1500.0), (20, 2500.0), (30, 0.0), (10, 2500.0), (20, -500.0), (30, 0.0), (10, 3500.0), (20, 1500.0), (30, 0.0), sub=["AcDbSpline"])
+    # Four chairs around the table (INSERTs, BYBLOCK colour green / blue).
+    for i, (x, y, r) in enumerate(((8000, 2100, 0), (8900, 3000, 90), (8000, 3900, 180), (7100, 3000, 270))):
+        E += ent("INSERT", "Furniture", (62, 3 if i % 2 else 5), (2, "Chair"), (10, float(x)), (20, float(y)), (30, 0.0), (50, float(r)), sub=["AcDbBlockReference"])
+    # Texts (one with a cp1252 character), MTEXT, a solid hatch, a point.
+    E += ent("TEXT", "Notes", (10, 500.0), (20, 5500.0), (30, 0.0), (40, 250.0), (1, "Living room – 60 m²"), sub=["AcDbText"]) + [(100, "AcDbText")]
+    E += ent("MTEXT", "Notes", (10, 6500.0), (20, 5500.0), (30, 0.0), (40, 200.0), (41, 3000.0), (71, 1), (1, "Kitchen\\Pnorth side"), sub=["AcDbMText"])
+    E += ent("HATCH", "Furniture", (10, 0.0), (20, 0.0), (30, 0.0), (210, 0.0), (220, 0.0), (230, 1.0), (2, "SOLID"), (70, 1), (71, 0), (91, 1),
+             (92, 2), (72, 0), (73, 1), (93, 4), (10, 9000.0), (20, 500.0), (10, 9800.0), (20, 500.0), (10, 9800.0), (20, 1200.0), (10, 9000.0), (20, 1200.0), (97, 0),
+             (75, 0), (76, 1), (98, 1), (10, 9400.0), (20, 800.0), sub=["AcDbHatch"])
+    E += ent("POINT", "Notes", (10, 5000.0), (20, 5000.0), (30, 0.0), sub=["AcDbPoint"])
+    E += ent("LINE", "Hidden", (10, 0.0), (20, 0.0), (30, 0.0), (11, 10000.0), (21, 6000.0), (31, 0.0), sub=["AcDbLine"])
+    E += [(0, "ENDSEC"), (0, "SECTION"), (2, "OBJECTS"), (0, "DICTIONARY"), (5, "C"), (330, "0"), (100, "AcDbDictionary"), (3, "ACAD_GROUP"), (350, "D"),
+          (0, "DICTIONARY"), (5, "D"), (330, "C"), (100, "AcDbDictionary"), (0, "ENDSEC"), (0, "EOF")]
+    return _dxf(g + E, eol="\r\n")
+w("cad/plan.dxf", _plan())
+
+# R12: right-aligned codes, POLYLINE/VERTEX/SEQEND, no handles.
+w("cad/r12.dxf", _dxf([(0, "SECTION"), (2, "HEADER"), (9, "$ACADVER"), (1, "AC1009"), (0, "ENDSEC"), (0, "SECTION"), (2, "ENTITIES"),
+    (0, "POLYLINE"), (8, "0"), (66, 1), (10, 0.0), (20, 0.0), (30, 0.0), (70, 1),
+    (0, "VERTEX"), (8, "0"), (10, 0.0), (20, 0.0), (30, 0.0), (0, "VERTEX"), (8, "0"), (10, 100.0), (20, 0.0), (30, 0.0),
+    (0, "VERTEX"), (8, "0"), (10, 100.0), (20, 50.0), (30, 0.0), (0, "SEQEND"), (8, "0"),
+    (0, "CIRCLE"), (8, "PARTS"), (62, 1), (10, 50.0), (20, 25.0), (30, 0.0), (40, 10.0),
+    (0, "ENDSEC"), (0, "EOF")], pad=True))
+
+# A big drawing for speed: 40k lines, 10k circles, 2k texts.
+def _bigdxf():
+    g = [(0, "SECTION"), (2, "HEADER"), (9, "$ACADVER"), (1, "AC1009"), (0, "ENDSEC"), (0, "SECTION"), (2, "ENTITIES")]
+    for i in range(40000):
+        x, y = (i % 200) * 50.0, (i // 200) * 50.0
+        g += [(0, "LINE"), (8, f"L{i % 8}"), (10, x), (20, y), (11, x + 40.0), (21, y + 30.0)]
+    for i in range(10000):
+        g += [(0, "CIRCLE"), (8, "C"), (62, i % 7 + 1), (10, (i % 100) * 100.0 + 25), (20, (i // 100) * 100.0 + 25), (40, 18.0)]
+    for i in range(2000):
+        g += [(0, "TEXT"), (8, "T"), (10, (i % 40) * 250.0), (20, (i // 40) * 200.0), (40, 20.0), (1, f"P{i}")]
+    g += [(0, "ENDSEC"), (0, "EOF")]
+    return _dxf(g)
+w("cad/big.dxf", _bigdxf())
+
 _pos, _nor, _uv, _idx = _cube()
 def _stl():
     tris = [(_idx[i], _idx[i + 1], _idx[i + 2]) for i in range(0, len(_idx), 3)]

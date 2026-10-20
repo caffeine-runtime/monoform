@@ -169,6 +169,22 @@
   undo — written in one transaction with Save (or dropped with Revert); a Structure view (columns, keys, defaults,
   indexes, the CREATE statement); an SQL console with highlighting and schema-aware completion, Ctrl+Enter runs
   the selection or the script, a result per statement; CSV export of a filtered table; read-only mode.
+- **M20 — DXF viewer and light CAD editor.** .dxf drawings (ASCII, R12 to 2018) open in a CAD view: lines,
+  polylines with arcs and widths, circles, arcs, ellipses, splines (NURBS), texts and MTEXT, points, solids, hatches,
+  leaders, blocks (nested, rotated, scaled, arrays, BYBLOCK/BYLAYER colours) and dimensions (via their blocks), in
+  the drawing's colours on a dark or light background; layers can be hidden for viewing, made current, or used to
+  select everything on them. Tools: select (click, Shift+click, window left→right, crossing right→left, drag a
+  selection to move it), pan/zoom (wheel, middle-drag, Space+drag), measure (distance, ΔX, ΔY, angle), line,
+  polyline (click the start to close), rectangle (Ctrl/Shift = square), circle, 3-point arc, text, move, copy
+  (repeated), rotate (Shift = 15° steps), scale, delete, duplicate; object snaps (ends, midpoints, centres,
+  quadrants, insertion points), grid snap, ortho, and typed input like AutoCAD ("x,y", "@dx,dy", "len<angle", a
+  length along the cursor, a radius, an angle, a factor). Properties panel: layer, colour (ACI), coordinates,
+  radius, angles, heights, text, closed flag, block scale/rotation, length and area. Undo/redo; export SVG (real
+  arcs, units kept) or PNG. Saving patches the original text: only changed values are rewritten, new objects get
+  handles from $HANDSEED and R13+ subclass markers (R12 files get POLYLINE/VERTEX records in their padded-code
+  style), code page and line endings are kept, and everything the editor doesn't understand survives byte for
+  byte. Parsing, editing and drawing run in a worker (OffscreenCanvas); the page only scales the last frame while
+  the next one renders, so a 52,000-object drawing zooms without stalls.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -193,6 +209,7 @@
 | 3D model open (small models) | no freeze | first 3D tab of a session 460–540 ms, worst UI frame 87–115 ms (WebGL context + three.js + shader compiles, once); later tabs 160–300 ms, worst frame 30–55 ms; parse in the worker 33–67 ms | same |
 | Audio open | playable at once, waveform streams in | 3 s WAV: 195–240 ms to open, waveform complete after 140–190 ms; 10-min WAV: open 225 ms, waveform 165–175 ms, worst UI frame 35–50 ms; 10-min MP3 waveform 2.5 s (4 cores; 9.6 s on one), OGG 0.4 s, FLAC 2.4 s | same |
 | Video open / save | playable at once; save ≈ copy speed | 6 s WebM: open ~200 ms; saving remuxes without decoding (bounded by disk speed); Go tests remux 4 formats in < 1 s | same |
+| DXF (52,000 objects, 2.6 MB) | no freeze | opens in 0.5–0.8 s, worst UI frame 41–58 ms; zooming worst frame 38 ms (frames render in the worker in ~0.5 s each on llvmpipe; the page shows the previous one scaled meanwhile); moving 2,000 objects 60 ms | same |
 | 100-page PDF: first page visible | < 300 ms | 133–287 ms once the PDF module is loaded; 490–570 ms for the first PDF of a session (worker + fonts cold) | same |
 
 The Linux numbers are from a headless VM with software rendering; ~350 ms of each start is
@@ -227,6 +244,7 @@ available here).
 - 3D: on the software-rendered Linux VM (llvmpipe) a floor-grid line passing under the camera can show as a wide grey bar; the same scene renders correctly in Chromium's software renderer, so it looks like a llvmpipe/WebKitGTK rasterisation bug. Toggle the grid (G) if it appears.
 - 3D: glTF files with KTX2/Basis textures (`KHR_texture_basisu`) aren't supported yet (clear error); FBX files with external textures need them next to the model; USD support is three.js's (USDA/USDC/USDZ geometry and materials, no variants or skeletal animation).
 - Applying a large blur (40 px, lens/motion) on the software-rendered VM is one 40–150 ms frame (WebGL on llvmpipe); real GPUs render it in a few ms.
+- CAD: binary DXF and DWG aren't supported (DWG is a closed format; save as ASCII DXF). Dimensions, hatches' patterns, multileaders, tables, images and 3D solids are shown but not edited (dimensions can be deleted, recoloured or moved to another layer; moving one needs its block regenerated). Text uses a sans-serif stand-in for SHX/TTF styles. Selecting or moving thousands of objects at once costs one 55–60 ms frame on the test VM.
 - Object selection analyses the whole image once (~15–18 s on the test VM, single-threaded WASM); clicks are fast afterwards. Background removal uses a small model (U²-Netp) — fine hair and glass are approximate. Edge refinement fixes edges within a few pixels of the model's outline; if the model picks the wrong region (e.g. part of a second person), add/exclude with Shift-/Alt-click.
 - Grid: one rectangular selection at a time (no Ctrl+click multi-ranges); a CSV paste wider than the table is cut
   at the last column (with a notice) — add columns first; rows can't be reordered by dragging their numbers.

@@ -74,6 +74,14 @@ export function registerBuiltinModules() {
     load: () => import('./database'),
   });
   modules.register({
+    id: 'cad',
+    name: 'CAD drawing',
+    extensions: ['dxf'],
+    mimeTypes: ['image/vnd.dxf'],
+    priority: 10,
+    load: () => import('./cad'),
+  });
+  modules.register({
     id: 'video',
     name: 'Video',
     extensions: ['mp4', 'm4v', 'mov', 'webm', 'mkv', 'ogv', 'avi'],

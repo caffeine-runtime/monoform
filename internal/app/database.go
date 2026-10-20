@@ -32,8 +32,8 @@ func dbConn(id int) (*db.Conn, error) {
 
 // DBOpened is an open database: its handle and schema.
 type DBOpened struct {
-	ID       int         `json:"id"`
-	ReadOnly bool        `json:"readOnly"`
+	ID       int               `json:"id"`
+	ReadOnly bool              `json:"readOnly"`
 	Objects  []db.SchemaObject `json:"objects"`
 }
 
