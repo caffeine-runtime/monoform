@@ -27,6 +27,8 @@ const (
 	Document Kind = "document"
 	Sheet    Kind = "spreadsheet"
 	Model    Kind = "model"
+	Audio    Kind = "audio"
+	Video    Kind = "video"
 	Binary   Kind = "binary"
 	Unknown  Kind = ""
 )
@@ -67,6 +69,12 @@ var byExt = map[string]entry{
 	"usd": {Model, "application/octet-stream"}, "usda": {Model, "text/plain"}, "usdc": {Model, "application/octet-stream"},
 	"wrl": {Model, "model/vrml"}, "vrml": {Model, "model/vrml"}, "amf": {Model, "application/octet-stream"},
 	"pcd": {Model, "application/octet-stream"}, "xyz": {Model, "text/plain"}, "vtk": {Model, "application/octet-stream"}, "vtp": {Model, "application/octet-stream"},
+	// media
+	"mp3": {Audio, "audio/mpeg"}, "wav": {Audio, "audio/wav"}, "flac": {Audio, "audio/flac"}, "ogg": {Audio, "audio/ogg"},
+	"oga": {Audio, "audio/ogg"}, "opus": {Audio, "audio/ogg"}, "m4a": {Audio, "audio/mp4"}, "aac": {Audio, "audio/aac"},
+	"weba": {Audio, "audio/webm"}, "aif": {Audio, "audio/aiff"}, "aiff": {Audio, "audio/aiff"},
+	"mp4": {Video, "video/mp4"}, "m4v": {Video, "video/mp4"}, "mov": {Video, "video/quicktime"}, "webm": {Video, "video/webm"},
+	"mkv": {Video, "video/x-matroska"}, "ogv": {Video, "video/ogg"}, "avi": {Video, "video/x-msvideo"},
 	// data
 	"json": {JSON, "application/json"}, "jsonc": {JSON, "application/json"}, "geojson": {JSON, "application/geo+json"}, "webmanifest": {JSON, "application/manifest+json"},
 	"yaml": {YAML, "application/yaml"}, "yml": {YAML, "application/yaml"},

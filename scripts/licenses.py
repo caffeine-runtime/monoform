@@ -42,7 +42,7 @@ for i, line in enumerate(lines):
         lic = "UNKNOWN"
         if os.path.isdir(d):
             for f in sorted(os.listdir(d)):
-                if re.match(r"(LICEN[CS]E|COPYING)", f, re.I):
+                if re.match(r"(UN)?(LICEN[CS]E|COPYING)", f, re.I):
                     lic = classify(open(os.path.join(d, f), errors="ignore").read()); break
         rows.append(("go", mod.replace('"', ''), ver, lic))
 

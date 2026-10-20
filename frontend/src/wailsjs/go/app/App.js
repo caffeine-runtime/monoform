@@ -14,6 +14,22 @@ export function ArchiveList(arg1) {
   return window['go']['app']['App']['ArchiveList'](arg1);
 }
 
+export function AudioAnalyze(arg1, arg2) {
+  return window['go']['app']['App']['AudioAnalyze'](arg1, arg2);
+}
+
+export function AudioClose(arg1) {
+  return window['go']['app']['App']['AudioClose'](arg1);
+}
+
+export function AudioExport(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['AudioExport'](arg1, arg2, arg3, arg4);
+}
+
+export function AudioOpen(arg1) {
+  return window['go']['app']['App']['AudioOpen'](arg1);
+}
+
 export function Boot() {
   return window['go']['app']['App']['Boot']();
 }
@@ -84,6 +100,14 @@ export function Log(arg1) {
 
 export function MarkReady(arg1) {
   return window['go']['app']['App']['MarkReady'](arg1);
+}
+
+export function MediaRelease(arg1) {
+  return window['go']['app']['App']['MediaRelease'](arg1);
+}
+
+export function MediaURL(arg1) {
+  return window['go']['app']['App']['MediaURL'](arg1);
 }
 
 export function OpenExternal(arg1) {

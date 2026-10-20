@@ -70,6 +70,7 @@ func New(start time.Time, launchFiles []string) *App {
 	}
 	a.registerRoutes()
 	a.registerModelRoute()
+	a.registerAudioRoutes()
 	return a
 }
 

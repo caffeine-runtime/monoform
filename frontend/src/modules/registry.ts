@@ -58,6 +58,14 @@ export function registerBuiltinModules() {
     load: () => import('./model3d'),
   });
   modules.register({
+    id: 'audio',
+    name: 'Audio',
+    extensions: ['mp3', 'wav', 'flac', 'ogg', 'oga', 'opus', 'm4a', 'aac', 'weba', 'aif', 'aiff'],
+    mimeTypes: ['audio/*'],
+    priority: 10,
+    load: () => import('./audio'),
+  });
+  modules.register({
     id: 'pdf',
     name: 'PDF',
     extensions: ['pdf'],

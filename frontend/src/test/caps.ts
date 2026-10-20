@@ -33,6 +33,18 @@ export default async function caps() {
     }
     enc = r.join(' ');
   }
+  // WebCodecs audio (the OS's encoders; used to decide export formats).
+  const audioCodecs: string[] = [];
+  for (const codec of ['opus', 'mp3', 'mp4a.40.2', 'flac', 'vorbis']) {
+    let e = 'n/a';
+    try {
+      if (g.AudioEncoder) e = String((await g.AudioEncoder.isConfigSupported({ codec, sampleRate: 48000, numberOfChannels: 2, bitrate: 128000 })).supported);
+    } catch {
+      e = 'err';
+    }
+    audioCodecs.push(`${codec}:${e}`);
+  }
+  log(`caps: audio encoders ${audioCodecs.join(' ')}`);
   let dec = 'n/a';
   if (g.VideoDecoder) {
     try {
