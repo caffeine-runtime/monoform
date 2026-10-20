@@ -14,6 +14,10 @@ describe('ModuleRegistry', () => {
     expect(r.forPath('/a/x.txt')?.id).toBe('text');
     expect(r.forPath('/a/b.tar.gz')?.id).toBe('arc');
     expect(r.forPath('/a/noext')).toBeUndefined();
+    r.register({ id: 'cfg', name: 'Config', extensions: ['env'], fileNames: /^\.env(\..+)?$/i, mimeTypes: [], load: fake });
+    expect(r.forPath('/a/.env')?.id).toBe('cfg');
+    expect(r.forPath('C:\\a\\.env.local')?.id).toBe('cfg');
+    expect(r.forPath('/a/x.local')).toBeUndefined();
   });
 
   it('matches MIME types with wildcards', () => {

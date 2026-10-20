@@ -3,6 +3,7 @@
 import {app} from '../models';
 import {archive} from '../models';
 import {audio} from '../models';
+import {certs} from '../models';
 import {server} from '../models';
 import {newfile} from '../models';
 import {db} from '../models';
@@ -38,6 +39,8 @@ export function AudioOpen(arg1:string):Promise<app.AudioOpened>;
 export function Boot():Promise<app.BootInfo>;
 
 export function CancelJob(arg1:string):Promise<boolean>;
+
+export function CertInspect(arg1:string,arg2:string):Promise<certs.Result>;
 
 export function ConfirmQuit():Promise<void>;
 

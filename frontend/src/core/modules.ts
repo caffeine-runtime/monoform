@@ -21,6 +21,8 @@ export interface ModuleDef {
   extensions: string[];
   /** MIME types (wildcards like "text/*" allowed) matched after detection. */
   mimeTypes: string[];
+  /** File names claimed regardless of extension (e.g. /^\.env(\..+)?$/ for .env.local). */
+  fileNames?: RegExp;
   /** Higher wins when several modules claim the same extension. */
   priority?: number;
   /** Tool modules (hash, ...) are opened by commands, not by file type. */
@@ -50,6 +52,9 @@ export class ModuleRegistry {
 
   /** Pick a module by file extension; undefined when no module claims it. */
   forPath(path: string): ModuleDef | undefined {
+    const name = path.split(/[\\/]/).pop() ?? path;
+    const byName = this.best(this.defs.filter((d) => !d.tool && d.fileNames?.test(name)));
+    if (byName) return byName;
     const ext = extname(path);
     if (!ext) return undefined;
     return this.best(this.defs.filter((d) => !d.tool && d.extensions.includes(ext)));
