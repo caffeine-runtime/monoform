@@ -1,7 +1,7 @@
 # Hold It All
 
 One fast desktop window for the everyday files that usually need five small apps: notes and Markdown, PDFs,
-images, SVG and web pages, 3D models, music and other audio, JSON/YAML/CSV, Word and Excel files, archives, and file hashes. It runs on Windows, macOS and Linux,
+images, SVG and web pages, 3D models, music and other audio, videos, JSON/YAML/CSV, Word and Excel files, archives, and file hashes. It runs on Windows, macOS and Linux,
 works offline, collects no telemetry and needs no account, and saves everything as plain files.
 
 ![Markdown in split view](docs/screenshots/markdown.png)
@@ -16,6 +16,7 @@ works offline, collects no telemetry and needs no account, and saves everything 
 | **SVG & web pages** | Edit SVG with a live preview and export PNG at any size; open HTML files in a safe preview (scripts and internet content off until you allow them) next to their source. |
 | **3D models** | glTF/GLB (incl. Draco), FBX, OBJ+MTL, STL, PLY, 3MF, Collada, 3DS, USDZ, VRML, AMF, PCD, XYZ, VTK — orbit view, clickable animation list with play/pause/scrub/speed, wireframe and lighting toggles, floor grid, PNG snapshot. |
 | **Audio** | Play MP3, WAV, FLAC, OGG (and Opus/AAC where the system can) with cover art and tags; waveform editor: select, cut/copy/paste, delete, trim, silence, fade in/out, volume, normalize, undo; save as WAV or FLAC — or as MP3 without re-encoding after cuts. |
+| **Video** | Play MP4, MOV, WebM and MKV (whatever the system can decode) with a thumbnail timeline, frame stepping, speed, A–B loop, full screen and PNG snapshots; cut out parts, trim, rotate (MP4/MOV), remove or extract the audio — saved without re-encoding, so instantly and without quality loss. |
 | **Data** | JSON/YAML trees with exact error positions; CSV/TSV grid that stays smooth at a million rows, with sort, filter and edits. |
 | **Word & Excel** | Edit `.docx` and `.xlsx` in place (formulas recalculate). Legacy `.doc`/`.xls` open too and save as `.docx`/`.xlsx`. |
 | **Archives** | Browse ZIP, TAR(.gz/.bz2/.xz/.zst), 7z and RAR like folders, open files inside, extract safely, create ZIPs. |
@@ -31,6 +32,7 @@ Everything is keyboard-reachable: press **Ctrl+K** (**⌘K** on macOS) and type.
 | ![Image editor with layers and a magic-wand selection](docs/screenshots/image-layers.png) | ![Colour adjustments on a selection](docs/screenshots/image-adjust.png) |
 | ![SVG editing](docs/screenshots/svg.png) | ![HTML page preview](docs/screenshots/html.png) |
 | ![3D model viewer](docs/screenshots/model3d.png) | ![Audio editor with a fade](docs/screenshots/audio.png) |
+| ![Video with a cut part](docs/screenshots/video.png) | |
 | ![Settings](docs/screenshots/settings.png) | ![Archive browser](docs/screenshots/archive.png) |
 | ![Search box](docs/screenshots/palette.png) | ![Checksum verification](docs/screenshots/checksums.png) |
 | ![Search by meaning](docs/screenshots/search-by-meaning.png) | ![Search by meaning: consent](docs/screenshots/search-by-meaning-consent.png) |

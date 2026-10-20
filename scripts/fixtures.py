@@ -4,7 +4,7 @@ import os, sys, struct, zlib, shutil
 
 d = sys.argv[1]
 # Outputs written by earlier self-test runs; operations refuse to overwrite.
-for rel in ("audio", "pdf/out", "archives/out", "newfiles", "img/out", "img/subject (edited).png", "img/red (edited).png"):
+for rel in ("audio", "video", "pdf/out", "archives/out", "newfiles", "img/out", "img/subject (edited).png", "img/red (edited).png"):
     q = os.path.join(d, rel)
     if os.path.isdir(q): shutil.rmtree(q, ignore_errors=True)
     elif os.path.exists(q): os.remove(q)
@@ -408,6 +408,10 @@ _here = os.path.dirname(os.path.abspath(__file__))
 for _f in ("tone.mp3", "tone.flac", "tone.ogg", "tone.opus"):
     w("audio/" + _f, open(os.path.join(_here, "..", "internal", "audio", "testdata", _f), "rb").read())
 w("audio/tone.m4a", open(os.path.join(_here, "fixture-data", "tone.m4a"), "rb").read())
+
+# ---- video (small clips made with ffmpeg; see internal/video/testdata) ----
+for _f in ("clip.webm", "clip.mp4", "h264.mp4", "clip.mkv"):
+    w("video/" + _f, open(os.path.join(_here, "..", "internal", "video", "testdata", _f), "rb").read())
 
 _pos, _nor, _uv, _idx = _cube()
 def _stl():

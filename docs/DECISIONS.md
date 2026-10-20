@@ -139,6 +139,12 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 - **Waveform peaks** (min/max per 256 frames, per channel) are computed by Go in the background and polled by the module (`/__hia/audio/peaks?from=`), so the file plays immediately and the waveform fills left to right. Long files are split into chunks decoded on all cores and emitted in order (MP3 4× faster); FLAC stays sequential because its first seek in a file without a seek table scans the whole file. MP3 seeks decode 10 frames early and drop them (bit reservoir and filter state), so chunk edges are exact.
 - **Formats the Go decoders can't read** (Opus, AAC/M4A, WebM audio, AIFF) open as play-only with tags and cover (where `dhowden/tag` reads them); whether they play depends on the system's media stack (GStreamer on Linux has no AAC by default).
 
+- **Video editing is lossless remuxing in Go** (`internal/video`), never re-encoding: there is no permissively licensed H.264/HEVC encoder in pure Go (x264/x265/ffmpeg are GPL/LGPL and need cgo), and WebCodecs encoders differ by platform (WebKitGTK offers VP8/VP9 only, WebView2 adds H.264, WKWebView differs again), so a re-encode path couldn't behave the same everywhere. Remuxing is also what a "light" editor needs to be fast: saving a 2-hour file is a copy, not a render. The trade-off — cuts land on keyframes — is made visible: the timeline shows the snapped ranges and a hint explains it; a keyframe within 50 ms of a cut point is taken as the cut point.
+  - **MP4/MOV** with `Eyevinn/mp4ff` (MIT): the sample tables of each track are flattened, the kept samples are chosen (video by whole GOPs, audio by time and re-aligned to the video at every range start), sample tables (stts/ctts/stss/stsz/stsc/stco or co64) and edit lists are rebuilt, and samples are copied in 0.5 s interleaved chunks with `moov` before `mdat` (fast start). Rotation is the track matrix; muting/extracting drops tracks. Fragmented MP4 is refused for now.
+  - **WebM/MKV** with our own ~600-line EBML reader/writer: block headers are indexed without reading payloads (unknown-size segments/clusters from browser recorders are handled), kept blocks are copied with only their 2-byte relative timestamp patched, clusters are rebuilt, and Cues + SeekHead are written so the result seeks well. Chapters are dropped (their times would be wrong); tags and attachments are kept.
+  - Every output is checked in tests by our own prober and, when available, decoded by ffmpeg with no errors and exact frame counts.
+- **The video module plays through the same loopback media server as audio**, with `crossorigin` so frames can be drawn to a canvas (thumbnail strip from a second, hidden `<video>` seeking ~20 positions; PNG snapshots). Cut parts are skipped during playback by watching `currentTime` each frame.
+
 ## Look & feel
 
 - **Darker palette than the brief's starting tokens** (user request): dark `--bg #1f1e1c`, sidebar `#181716`; light `--bg #f6f4ee`.
@@ -176,6 +182,7 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 | three (incl. example loaders; bundled libs fflate MIT, chevrotain Apache-2.0 for VRML, meshopt decoder MIT) | MIT | 3D viewer |
 | Draco decoder (`three/examples/jsm/libs/draco`, from google/draco) | Apache-2.0 | 3D: Draco-compressed glTF |
 | github.com/hajimehoshi/go-mp3 | Apache-2.0 | MP3 decoding |
+| github.com/Eyevinn/mp4ff | MIT | MP4/MOV parsing and writing (lossless video edits) |
 | github.com/mewkiz/flac (+ mewkiz/pkg Unlicense, mewpkg/term Unlicense, icza/bitio Apache-2.0) | Unlicense | FLAC decoding and encoding |
 | github.com/jfreymuth/oggvorbis, jfreymuth/vorbis | MIT | Ogg Vorbis decoding |
 | github.com/dhowden/tag | BSD-2-Clause | audio tags and cover art |

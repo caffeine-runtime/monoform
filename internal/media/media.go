@@ -156,7 +156,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 var types = map[string]string{
 	".mp3": "audio/mpeg", ".wav": "audio/wav", ".flac": "audio/flac", ".ogg": "audio/ogg", ".oga": "audio/ogg",
-	".opus": "audio/ogg", ".m4a": "audio/mp4", ".aac": "audio/aac", ".weba": "audio/webm", ".aif": "audio/aiff", ".aiff": "audio/aiff",
+	".opus": "audio/ogg", ".m4a": "audio/mp4", ".aac": "audio/aac", ".weba": "audio/webm", ".mka": "audio/x-matroska", ".aif": "audio/aiff", ".aiff": "audio/aiff",
 	".mp4": "video/mp4", ".m4v": "video/mp4", ".mov": "video/quicktime", ".webm": "video/webm", ".mkv": "video/x-matroska",
 	".ogv": "video/ogg", ".avi": "video/x-msvideo",
 }

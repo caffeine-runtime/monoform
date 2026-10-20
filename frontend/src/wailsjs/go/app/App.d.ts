@@ -12,6 +12,7 @@ import {settings} from '../models';
 import {search} from '../models';
 import {semantic} from '../models';
 import {office} from '../models';
+import {video} from '../models';
 
 export function ArchiveCreateZip(arg1:Array<string>,arg2:string):Promise<string>;
 
@@ -158,6 +159,10 @@ export function TestWriteFile(arg1:string,arg2:string):Promise<void>;
 export function UnwatchDir(arg1:string):Promise<void>;
 
 export function UnwatchFile(arg1:string):Promise<void>;
+
+export function VideoExport(arg1:string,arg2:video.Plan,arg3:string):Promise<string>;
+
+export function VideoOpen(arg1:string):Promise<app.VideoOpened>;
 
 export function WatchDir(arg1:string):Promise<void>;
 
