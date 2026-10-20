@@ -14,7 +14,7 @@
   import { boot } from '../../core/boot';
   import { commands } from '../../core/commands';
   import { formatShortcut } from '../../core/keys';
-  import { ui } from '../../core/ui.svelte';
+  import { toastError, ui } from '../../core/ui.svelte';
 
   let { tab }: { tab: Tab } = $props();
   let locations = $state<{ settings: string; cache: string } | null>(null);
@@ -41,6 +41,18 @@
     void api.DataLocations().then((l) => (locations = l));
     void semantic.refresh();
   });
+
+  let cliStatus = $state<{ installed: boolean; path: string; bundled: boolean } | null>(null);
+  void api.CommandLineStatus().then((c) => (cliStatus = c)).catch(() => {});
+  async function installCli() {
+    try {
+      const p = await api.InstallCommandLine();
+      ui.toast(`Installed ${p}`, 'success');
+      cliStatus = await api.CommandLineStatus();
+    } catch (e) {
+      toastError(e);
+    }
+  }
 </script>
 
 <div class="wrap">
@@ -91,6 +103,14 @@
       <span class="lbl">Keep originals: save edited images as a copy next to them</span>
       <input type="checkbox" checked={s.imageKeepOriginal} onchange={(e) => settings.update((x) => (x.imageKeepOriginal = (e.target as HTMLInputElement).checked))} />
     </label>
+    <label class="row check">
+      <span class="lbl">Open files in preview mode (read-only until you choose Edit in the status bar, or {formatShortcut('Mod+Alt+E')})</span>
+      <input type="checkbox" checked={s.openInPreview} onchange={(e) => settings.update((x) => (x.openInPreview = (e.target as HTMLInputElement).checked))} />
+    </label>
+    <div class="row">
+      <span class="lbl">Command line: <code>holdit FILE</code> opens files, <code>holdit hash *.iso</code>, <code>verify</code>, <code>info</code> and <code>convert</code> work in scripts{cliStatus?.installed ? ` (installed: ${cliStatus.path})` : ''}</span>
+      {#if cliStatus && !cliStatus.installed && cliStatus.bundled}<button class="btn" onclick={installCli}>Install the holdit command</button>{/if}
+    </div>
     <div class="row">
       <span class="lbl">New files</span>
       <button class="btn" onclick={() => commands.execute('file.newOf')}>New document, spreadsheet, image… <span class="kbd">{formatShortcut('Mod+Alt+N')}</span></button>

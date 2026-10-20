@@ -294,6 +294,20 @@
   HEX/RGB/HSL (click to copy, or use it to draw) and the image's palette (5/8/12 dominant colours by share; copy
   the list or CSS variables, save a .gpl palette) in a Colours panel. After reading an image's text (M30), "Hide
   text" pixelates every recognised word (passwords, names, numbers) in one undoable step.
+- **M32 — Command line, quick peek, preview mode.** `holdit` (a small console program shipped with the app; the
+  app binary accepts the same commands): `holdit FILE…` opens files (a running window takes them), `--peek` and
+  `--preview`; `holdit hash [-a md5,sha1,sha256,sha512,blake3|all] FILE…` prints sha256sum-/BSD-style lines,
+  `holdit verify LIST…` checks SHA256SUMS-style lists (names relative to the list or the current folder),
+  `holdit info` shows type, size, pages / image size, `holdit convert IN OUT` converts images (HEIC via the system);
+  patterns the shell didn't expand (Windows) are globbed; exit codes 0 / 1 (a check failed) / 2. Packaging: Linux
+  tarball + install.sh, the Windows installer (a `holdit` shim in the per-user WindowsApps folder, which is on
+  PATH, and a "Quick peek" context-menu verb), the macOS bundle (Settings → Install the holdit command links it into
+  /usr/local/bin). Quick peek (`--peek`, Open With → Quick peek): a 960×680 window with just the file, read-only,
+  no sidebar or tabs; Esc closes it, "Open in editor" makes the window full size, the file editable and brings back
+  the last session (peeking never overwrites it). Preview mode: any file tab can be switched between preview
+  (read-only) and editing from the status bar or Ctrl+Alt+E (the view is rebuilt; unsaved changes are asked about);
+  "Open files in preview mode" makes it the default. Read-only text editors are now really non-editable (before,
+  typing into a read-only tab — e.g. a file inside an archive — changed the text on screen).
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -327,6 +341,9 @@ GTK/WebKitGTK process start-up before our page loads. Not yet measured on Window
 available here).
 
 ## Known issues
+- Quick peek can't be opened with Space in Finder or Explorer: that takes a native Quick Look extension (Swift,
+  signed) or a Windows preview handler (COM, C++), both outside this app's no-native-code rules; it's in Open With /
+  the context menu instead. A running app shows peeked files as preview tabs (one window per app in Wails v2).
 - Screenshots: on Windows the whole screen is taken and opened with Crop (no area picker without a native
   overlay); on Linux without the portal or any screenshot tool it says what to install. macOS asks once for the
   Screen Recording permission. The colour picker reads from a screenshot of the screen, not live.

@@ -80,6 +80,8 @@ type Settings struct {
 	Signatures []string `json:"signatures"`
 	// OcrLangs are the languages text recognition uses (Tesseract codes, e.g. "eng", "pol").
 	OcrLangs []string `json:"ocrLangs"`
+	// OpenInPreview opens files read-only until the user chooses Edit.
+	OpenInPreview bool `json:"openInPreview"`
 }
 
 func Defaults() Settings {

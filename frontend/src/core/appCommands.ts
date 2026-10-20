@@ -5,6 +5,7 @@ import { commands } from './commands';
 import { formatShortcut } from './keys';
 import { settings } from './settings.svelte';
 import { sidebar } from './sidebar.svelte';
+import { peek } from './peek.svelte';
 import { workspace } from './tabs.svelte';
 import { theme } from './theme.svelte';
 import { tree } from './tree.svelte';
@@ -117,6 +118,16 @@ export function registerAppCommands() {
       },
     },
 
+    {
+      id: 'view.togglePreview',
+      title: 'Switch between preview and editing',
+      category: 'View',
+      shortcut: 'Mod+Alt+E',
+      when: () => workspace.active?.source.kind === 'file',
+      run: () => void (workspace.active && workspace.setPreview(workspace.active, !workspace.active.preview)),
+    },
+    { id: 'view.previewByDefault', title: 'Open files in preview mode (on/off)', category: 'View', run: () => settings.update((s) => (s.openInPreview = !s.openInPreview)) },
+    { id: 'peek.expand', title: 'Open in the full editor', category: 'View', when: () => peek.on, run: () => void peek.expand() },
     { id: 'view.toggleSidebar', title: 'Toggle sidebar', category: 'View', shortcut: 'Mod+B', run: () => settings.update((s) => (s.sidebarVisible = !s.sidebarVisible)) },
     { id: 'view.showFiles', title: 'Show files', category: 'View', shortcut: 'Mod+Shift+E', run: () => {
         settings.update((s) => (s.sidebarVisible = true));

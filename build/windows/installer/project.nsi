@@ -155,6 +155,17 @@ Section "${INFO_PRODUCTNAME} (required)" SecApp
     SetOutPath $INSTDIR
 
     !insertmacro wails.files
+    File "..\..\bin\holdit.exe"
+
+    # The holdit command: a shim in the per-user WindowsApps folder, which is on PATH.
+    FileOpen $0 "$LOCALAPPDATA\Microsoft\WindowsApps\holdit.cmd" w
+    FileWrite $0 '@"$INSTDIR\holdit.exe" %*$\r$\n'
+    FileClose $0
+
+    # Right-click → "Quick peek with Hold It All" on every file.
+    WriteRegStr SHELL_CONTEXT "Software\Classes\*\shell\HoldItAll.Peek" "" "Quick peek with ${INFO_PRODUCTNAME}"
+    WriteRegStr SHELL_CONTEXT "Software\Classes\*\shell\HoldItAll.Peek" "Icon" '"$INSTDIR\${PRODUCT_EXECUTABLE}"'
+    WriteRegStr SHELL_CONTEXT "Software\Classes\*\shell\HoldItAll.Peek\command" "" '"$INSTDIR\${PRODUCT_EXECUTABLE}" --peek "%1"'
 
     CreateShortcut "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
 
@@ -204,6 +215,8 @@ Section "uninstall"
     ${EndIf}
     DeleteRegKey SHELL_CONTEXT "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}"
     DeleteRegKey SHELL_CONTEXT "Software\Classes\Applications\${PRODUCT_EXECUTABLE}"
+    DeleteRegKey SHELL_CONTEXT "Software\Classes\*\shell\HoldItAll.Peek"
+    Delete "$LOCALAPPDATA\Microsoft\WindowsApps\holdit.cmd"
     !insertmacro wails.unassociateCustomProtocols
 
     !insertmacro wails.deleteUninstaller

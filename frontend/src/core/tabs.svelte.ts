@@ -47,6 +47,10 @@ export class Tab {
   moduleId = $state('');
   dirty = $state(false);
   readOnly = $state(false);
+  /** Preview mode: a file on disk shown read-only until the user chooses Edit. */
+  preview = $state(false);
+  /** Bumped to remount the module (switching between preview and editing). */
+  mountKey = $state(0);
   /** Set when the file changed or vanished on disk while open. */
   external = $state<null | 'changed' | 'deleted'>(null);
   status = $state<StatusFields>({});
@@ -150,6 +154,8 @@ export class Tab {
 
 export interface OpenOptions {
   activate?: boolean;
+  /** Open read-only until the user chooses Edit (default: the setting). */
+  preview?: boolean;
   moduleId?: string;
   reveal?: Tab['reveal'];
   state?: unknown;
@@ -257,6 +263,7 @@ class Workspace {
     tab.size = entry.size;
     tab.reveal = opts.reveal ?? null;
     tab.restoredState = opts.state;
+    if (opts.preview ?? settings.value.openInPreview) tab.preview = tab.readOnly = true;
     this.add(tab, opts.activate !== false);
     void api.WatchFile(path).catch(() => {});
     if (!opts.quiet) settings.addRecent(path);
@@ -287,6 +294,30 @@ class Workspace {
     tab.restoredState = opts.state;
     this.add(tab, opts.activate !== false);
     return tab;
+  }
+
+  /** Switch a file tab between preview (read-only) and editing; its view is rebuilt. */
+  async setPreview(tab: Tab, on: boolean): Promise<boolean> {
+    if (tab.source.kind !== 'file' || tab.preview === on) return false;
+    if (on && tab.dirty) {
+      const r = await ui.ask({
+        title: 'Save changes first?',
+        message: `${tab.title} has unsaved changes. Preview mode shows the file as it is on disk.`,
+        buttons: [
+          { id: 'cancel', label: 'Cancel' },
+          { id: 'discard', label: 'Discard changes', danger: true },
+          { id: 'save', label: 'Save' },
+        ],
+      });
+      if (r.button === 'cancel') return false;
+      if (r.button === 'save' && !(await this.save(tab))) return false;
+      tab.dirty = false;
+    }
+    tab.preview = on;
+    tab.readOnly = on;
+    tab.restoredState = undefined;
+    tab.mountKey++;
+    return true;
   }
 
   newUntitled(moduleId = 'text'): Tab {

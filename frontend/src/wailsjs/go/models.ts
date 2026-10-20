@@ -92,6 +92,7 @@ export namespace app {
 	    platform: string;
 	    version: string;
 	    launchFiles: string[];
+	    launchMode: string;
 	    home: string;
 	    pathSep: string;
 	    testScript: string;
@@ -108,6 +109,7 @@ export namespace app {
 	        this.platform = source["platform"];
 	        this.version = source["version"];
 	        this.launchFiles = source["launchFiles"];
+	        this.launchMode = source["launchMode"];
 	        this.home = source["home"];
 	        this.pathSep = source["pathSep"];
 	        this.testScript = source["testScript"];
@@ -131,6 +133,22 @@ export namespace app {
 		    }
 		    return a;
 		}
+	}
+	export class CommandLine {
+	    installed: boolean;
+	    path: string;
+	    bundled: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new CommandLine(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.installed = source["installed"];
+	        this.path = source["path"];
+	        this.bundled = source["bundled"];
+	    }
 	}
 	export class DBOpened {
 	    id: number;
@@ -1506,6 +1524,7 @@ export namespace settings {
 	    imageKeepOriginal: boolean;
 	    signatures: string[];
 	    ocrLangs: string[];
+	    openInPreview: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -1532,6 +1551,7 @@ export namespace settings {
 	        this.imageKeepOriginal = source["imageKeepOriginal"];
 	        this.signatures = source["signatures"];
 	        this.ocrLangs = source["ocrLangs"];
+	        this.openInPreview = source["openInPreview"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

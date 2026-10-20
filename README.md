@@ -63,6 +63,26 @@ Download the latest version from the repository's **Releases** page (each releas
   for its file types, and `./install.sh --uninstall` removes it. It needs WebKitGTK 4.1 (`libwebkit2gtk-4.1-0`;
   Ubuntu 24.04+, Debian 13, Fedora 40+).
 
+### Command line, quick peek and preview mode
+
+`holdit` ships with the app (the Windows installer puts it on the PATH, `install.sh` installs it on Linux; on macOS
+use **Settings → Install the holdit command**):
+
+```sh
+holdit report.pdf notes.md          # open in the app (a running window takes them)
+holdit --peek photo.heic            # a small read-only preview window; "Open in editor" expands it
+holdit --preview *.csv              # open in preview mode (read-only until you click Edit)
+holdit hash *.iso                   # SHA-256 like sha256sum; -a md5,sha1,sha512,blake3 or -a all
+holdit verify SHA256SUMS            # exit code 1 if anything is missing or differs
+holdit info scan.pdf                # type, size, pages / image size
+holdit convert IMG_0042.HEIC photo.jpg
+```
+
+**Quick peek** is also in the file manager: *Open With → Quick peek* on Linux, *Quick peek with Hold It All* in the
+Windows Explorer context menu. Pressing Space in Finder or Explorer can't open it — that needs a native Quick Look /
+preview-handler plug-in. **Preview mode** (status bar: *Preview · Edit*, `Ctrl+Alt+E`, or *Settings → Open files in
+preview mode*) shows any file read-only until you choose to edit it.
+
 ### Publishing a release
 
 Run the **Build** workflow with a version (or push a `v*` tag); CI tests, builds and publishes the release.

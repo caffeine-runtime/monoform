@@ -15,6 +15,7 @@
   import { ui } from '../core/ui.svelte';
   import { api } from '../core/backend';
   import { boot } from '../core/boot';
+  import { peek } from '../core/peek.svelte';
 
   // Apply the theme whenever it changes.
   $effect(() => {
@@ -32,8 +33,10 @@
     void tree.setRoot(root, expanded);
   });
 
-  // Persist the session whenever tabs, the active tab, folder or tree change.
+  // Persist the session whenever tabs, the active tab, folder or tree change
+  // (not while quick-peeking: that would replace the user's session).
   $effect(() => {
+    if (peek.on) return;
     void workspace.version;
     void workspace.tabs.length;
     void workspace.folder;
@@ -62,12 +65,22 @@
   });
 </script>
 
-<div class="app" data-platform={boot.platform}>
-  {#if settings.value.sidebarVisible}
+<svelte:window onkeydown={(e) => peek.on && e.key === 'Escape' && !e.defaultPrevented && !document.querySelector('.modal, .palette, .quickpick') && void api.Quit(0)} />
+<div class="app" data-platform={boot.platform} class:peek={peek.on}>
+  {#if settings.value.sidebarVisible && !peek.on}
     <Sidebar />
   {/if}
   <main class="main">
-    <TabBar />
+    {#if peek.on}
+      <div class="peekbar">
+        <span class="pt">{workspace.active?.title ?? ''}</span>
+        <span class="pd">Quick peek · Esc closes</span>
+        <span class="spacer"></span>
+        <button class="btn primary" onclick={() => void peek.expand()}>Open in editor</button>
+      </div>
+    {:else}
+      <TabBar />
+    {/if}
     <div class="views" class:split={!!workspace.split}>
       {#each workspace.tabs as tab (tab.id)}
         {#if tab.mounted}
@@ -92,6 +105,27 @@
 <Overlays />
 
 <style>
+  .peekbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--bg-sidebar);
+  }
+  .peekbar .pt {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .peekbar .pd {
+    color: var(--text-muted);
+    font-size: var(--fs-small);
+  }
+  .peekbar .spacer {
+    flex: 1;
+  }
   .app {
     display: grid;
     grid-template-columns: auto 1fr;

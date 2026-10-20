@@ -64,7 +64,9 @@
       <div class="empty-state">{error}</div>
     {:else if mod}
       {@const C = mod.default}
-      <C {tab} />
+      {#key tab.mountKey}
+        <C {tab} />
+      {/key}
     {:else if slow}
       <div class="empty-state"><span class="spinner"></span></div>
     {/if}

@@ -54,6 +54,10 @@ export function CertInspect(arg1, arg2) {
   return window['go']['app']['App']['CertInspect'](arg1, arg2);
 }
 
+export function CommandLineStatus() {
+  return window['go']['app']['App']['CommandLineStatus']();
+}
+
 export function ConfirmQuit() {
   return window['go']['app']['App']['ConfirmQuit']();
 }
@@ -130,6 +134,10 @@ export function Exists(arg1) {
   return window['go']['app']['App']['Exists'](arg1);
 }
 
+export function ExpandWindow() {
+  return window['go']['app']['App']['ExpandWindow']();
+}
+
 export function HashFile(arg1, arg2) {
   return window['go']['app']['App']['HashFile'](arg1, arg2);
 }
@@ -148,6 +156,10 @@ export function IconWrite(arg1, arg2, arg3, arg4) {
 
 export function ImageViaSystem(arg1) {
   return window['go']['app']['App']['ImageViaSystem'](arg1);
+}
+
+export function InstallCommandLine() {
+  return window['go']['app']['App']['InstallCommandLine']();
 }
 
 export function ListDir(arg1) {
@@ -192,6 +204,10 @@ export function OpenFiles(arg1) {
 
 export function OpenFilesDialog(arg1, arg2) {
   return window['go']['app']['App']['OpenFilesDialog'](arg1, arg2);
+}
+
+export function OpenFilesMode(arg1, arg2) {
+  return window['go']['app']['App']['OpenFilesMode'](arg1, arg2);
 }
 
 export function OpenFolderDialog(arg1) {

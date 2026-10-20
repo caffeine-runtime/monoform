@@ -9,6 +9,7 @@ import { boot } from './core/boot';
 import { commands } from './core/commands';
 import { registerAppCommands } from './core/appCommands';
 import { settings } from './core/settings.svelte';
+import { peek } from './core/peek.svelte';
 import { workspace } from './core/tabs.svelte';
 import { theme } from './core/theme.svelte';
 import { tree } from './core/tree.svelte';
@@ -52,8 +53,9 @@ function wireEvents() {
     if (ev.dir) void tree.refreshDir(ev.path);
     else workspace.onExternalChange(ev.path, ev.op);
   });
-  on<string[]>('app:open-files', (paths) => {
-    for (const p of paths) void workspace.openPath(p);
+  on<string[] | { paths: string[]; preview: boolean }>('app:open-files', (req) => {
+    const { paths, preview } = Array.isArray(req) ? { paths: req, preview: false } : req;
+    for (const p of paths ?? []) void workspace.openPath(p, preview ? { preview: true } : {});
   });
   on<number>('app:confirm-quit', async (n) => {
     const r = await ui.ask({
@@ -104,8 +106,14 @@ async function start() {
       void api.Log(`startup breakdown: script ${tScript.toFixed(0)} ms, boot ${tBoot.toFixed(0)}, mounted ${tMount.toFixed(0)}, first frame ${t.toFixed(0)}`);
     }),
   );
-  await workspace.restore(info.settings.session);
-  for (const p of info.launchFiles ?? []) await workspace.openPath(p);
+  if (info.launchMode === 'peek' && info.launchFiles?.length) {
+    // Quick peek: just the file, read-only; the session is left alone.
+    peek.on = true;
+    for (const p of info.launchFiles) await workspace.openPath(p, { preview: true, quiet: true });
+  } else {
+    await workspace.restore(info.settings.session);
+    for (const p of info.launchFiles ?? []) await workspace.openPath(p, info.launchMode === 'preview' ? { preview: true } : {});
+  }
   semantic.start();
 
   if (info.testScript) {

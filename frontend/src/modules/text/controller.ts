@@ -7,7 +7,7 @@ import { api } from '../../core/backend';
 import { settings } from '../../core/settings.svelte';
 import type { Tab } from '../../core/tabs.svelte';
 import { ui } from '../../core/ui.svelte';
-import { baseExtensions, heavyFeatures, languageFor, LARGE_FILE, makeCompartments, minimapExt, whitespaceExt, type Compartments } from './setup';
+import { baseExtensions, heavyFeatures, languageFor, LARGE_FILE, makeCompartments, minimapExt, readOnlyExt, whitespaceExt, type Compartments } from './setup';
 import { canWrite, EOL_LABELS, eolString, labelOf, type Encoding, type Eol } from './encoding';
 import { decodeStream, saveDoc, EncodeError } from './textio';
 import { sessionToken } from '../../core/backend';
@@ -121,7 +121,7 @@ export class TextController {
     );
     if (first) this.view.setState(this.makeState(''));
     this.loading = false;
-    timed('reconfigure', () => this.view.dispatch({ effects: this.c.readOnly.reconfigure(EditorState.readOnly.of(tab.readOnly)) }));
+    timed('reconfigure', () => this.view.dispatch({ effects: this.c.readOnly.reconfigure(readOnlyExt(tab.readOnly)) }));
     this.saved = this.view.state.doc;
     tab.dirty = false;
     this.updateStatus();
@@ -213,7 +213,7 @@ export class TextController {
     const ok = await this.writeTo(path);
     if (ok) {
       this.tab.retarget(path);
-      this.view.dispatch({ effects: this.c.readOnly.reconfigure(EditorState.readOnly.of(false)) });
+      this.view.dispatch({ effects: this.c.readOnly.reconfigure(readOnlyExt(false)) });
       if (!this.opts.language) void this.applyLanguage();
     }
     return ok;
