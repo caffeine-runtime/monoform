@@ -3,6 +3,7 @@ module github.com/caffeine-runtime/hold-it-all
 go 1.26.0
 
 require (
+	github.com/Eyevinn/mp4ff v0.60.0
 	github.com/HugoSmits86/nativewebp v1.3.0
 	github.com/dhowden/tag v0.0.0-20240417053706-3d75831295e8
 	github.com/fsnotify/fsnotify v1.10.1

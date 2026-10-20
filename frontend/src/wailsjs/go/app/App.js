@@ -294,6 +294,14 @@ export function UnwatchFile(arg1) {
   return window['go']['app']['App']['UnwatchFile'](arg1);
 }
 
+export function VideoExport(arg1, arg2, arg3) {
+  return window['go']['app']['App']['VideoExport'](arg1, arg2, arg3);
+}
+
+export function VideoOpen(arg1) {
+  return window['go']['app']['App']['VideoOpen'](arg1);
+}
+
 export function WatchDir(arg1) {
   return window['go']['app']['App']['WatchDir'](arg1);
 }

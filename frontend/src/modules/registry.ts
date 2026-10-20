@@ -60,10 +60,18 @@ export function registerBuiltinModules() {
   modules.register({
     id: 'audio',
     name: 'Audio',
-    extensions: ['mp3', 'wav', 'flac', 'ogg', 'oga', 'opus', 'm4a', 'aac', 'weba', 'aif', 'aiff'],
+    extensions: ['mp3', 'wav', 'flac', 'ogg', 'oga', 'opus', 'm4a', 'aac', 'weba', 'mka', 'aif', 'aiff'],
     mimeTypes: ['audio/*'],
     priority: 10,
     load: () => import('./audio'),
+  });
+  modules.register({
+    id: 'video',
+    name: 'Video',
+    extensions: ['mp4', 'm4v', 'mov', 'webm', 'mkv', 'ogv', 'avi'],
+    mimeTypes: ['video/*'],
+    priority: 10,
+    load: () => import('./video'),
   });
   modules.register({
     id: 'pdf',

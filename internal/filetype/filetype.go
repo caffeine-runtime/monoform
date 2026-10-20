@@ -72,7 +72,7 @@ var byExt = map[string]entry{
 	// media
 	"mp3": {Audio, "audio/mpeg"}, "wav": {Audio, "audio/wav"}, "flac": {Audio, "audio/flac"}, "ogg": {Audio, "audio/ogg"},
 	"oga": {Audio, "audio/ogg"}, "opus": {Audio, "audio/ogg"}, "m4a": {Audio, "audio/mp4"}, "aac": {Audio, "audio/aac"},
-	"weba": {Audio, "audio/webm"}, "aif": {Audio, "audio/aiff"}, "aiff": {Audio, "audio/aiff"},
+	"weba": {Audio, "audio/webm"}, "mka": {Audio, "audio/x-matroska"}, "aif": {Audio, "audio/aiff"}, "aiff": {Audio, "audio/aiff"},
 	"mp4": {Video, "video/mp4"}, "m4v": {Video, "video/mp4"}, "mov": {Video, "video/quicktime"}, "webm": {Video, "video/webm"},
 	"mkv": {Video, "video/x-matroska"}, "ogv": {Video, "video/ogg"}, "avi": {Video, "video/x-msvideo"},
 	// data
