@@ -34,6 +34,9 @@ building.
 1. Open the repository on GitHub → **Actions** → **Build** (left list) → **Run workflow** (right side).
 2. **Use workflow from:** the branch to release (today: `claude/hold-it-all-v1-er4dqs`, the default branch).
 3. **Version:** e.g. `2.1.0`. Leave it empty and the run only builds and tests, without publishing.
+   **Skip macOS** leaves the macOS package out (use it when GitHub has no macOS runner for the account — the
+   job then waits and is cancelled, and nothing is published). The release notes then say there is no macOS
+   package. Agents pass `"skip_macos": true` with the inputs.
 4. **Run workflow.** It takes about 10–15 minutes.
 5. When the run is green, the release is on the repository's **Releases** page with:
    - `hold-it-all-amd64-installer.exe` — Windows installer

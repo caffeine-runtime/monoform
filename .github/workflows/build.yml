@@ -11,6 +11,11 @@ on:
         description: "Publish a GitHub release with this version (e.g. 2.0.0 or 2.0.0-beta.1). Empty: build only."
         required: false
         default: ""
+      skip_macos:
+        description: "Leave out the macOS package (e.g. when no macOS runner is available)"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -103,14 +108,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - name: linux-amd64
-            os: ubuntu-24.04
-          - name: windows-amd64
-            os: windows-latest
-          - name: macos-universal
-            os: macos-latest
-    runs-on: ${{ matrix.os }}
+        name: [linux-amd64, windows-amd64, macos-universal]
+        # skip_macos drops that job entirely (no macOS runner is requested).
+        exclude:
+          - name: ${{ inputs.skip_macos == true && 'macos-universal' || 'none' }}
+    runs-on: ${{ fromJSON('{"linux-amd64":"ubuntu-24.04","windows-amd64":"windows-latest","macos-universal":"macos-latest"}')[matrix.name] }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -202,10 +204,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           INPUT_VERSION: ${{ inputs.version }}
+          SKIP_MACOS: ${{ inputs.skip_macos == true }}
         run: |
           v="$INPUT_VERSION"
           [ -z "$v" ] && v="${GITHUB_REF#refs/tags/v}"
           flags=()
           case "$v" in *-*) flags+=(--prerelease) ;; esac
           sed "s/{{VERSION}}/$v/g" .github/release-notes.md > notes.md
+          if [ "$SKIP_MACOS" = true ]; then
+            sed -i '/macos-universal/d' notes.md
+            printf '\n**No macOS package in this release** — use the previous release on macOS.\n' >> notes.md
+          fi
           gh release create "v$v" $(find dist -maxdepth 1 -type f | sort) --target "$GITHUB_SHA" --title "Hold It All $v" --notes-file notes.md --generate-notes "${flags[@]}"
