@@ -84,6 +84,8 @@ var byExt = map[string]entry{
 	// SQLite databases
 	"db": {Database, "application/vnd.sqlite3"}, "sqlite": {Database, "application/vnd.sqlite3"}, "sqlite3": {Database, "application/vnd.sqlite3"},
 	"db3": {Database, "application/vnd.sqlite3"}, "s3db": {Database, "application/vnd.sqlite3"}, "sl3": {Database, "application/vnd.sqlite3"},
+	// drawings (opened by the board module; the kind is what they are underneath)
+	"excalidraw": {JSON, "application/vnd.excalidraw+json"}, "drawio": {Text, "application/vnd.jgraph.mxfile"}, "dio": {Text, "application/vnd.jgraph.mxfile"},
 	// data
 	"json": {JSON, "application/json"}, "jsonc": {JSON, "application/json"}, "geojson": {JSON, "application/geo+json"}, "webmanifest": {JSON, "application/manifest+json"},
 	"yaml": {YAML, "application/yaml"}, "yml": {YAML, "application/yaml"},

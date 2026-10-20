@@ -64,7 +64,7 @@
     clearTimeout(timer);
     // Mermaid draws on the main thread (~100 ms on slow machines): wait for a pause in typing.
     const wait = kind === 'mermaid' ? 400 : (ctl?.view.state.doc.length ?? 0) > 50_000 ? 500 : 200;
-    timer = setTimeout(() => (window.requestIdleCallback ? requestIdleCallback(() => void draw(), { timeout: 500 }) : void draw()), wait);
+    timer = setTimeout(() => ('requestIdleCallback' in window ? requestIdleCallback(() => void draw(), { timeout: 500 }) : void draw()), wait);
   }
 
   async function draw() {

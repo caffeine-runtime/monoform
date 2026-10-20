@@ -37,6 +37,14 @@ export function registerBuiltinModules() {
     load: () => import('./diagram'),
   });
   modules.register({
+    id: 'board',
+    name: 'Drawing',
+    extensions: ['excalidraw', 'drawio', 'dio'],
+    mimeTypes: ['application/vnd.excalidraw+json', 'application/vnd.jgraph.mxfile'],
+    priority: 10,
+    load: () => import('./board'),
+  });
+  modules.register({
     id: 'cert',
     name: 'Certificate',
     extensions: ['pem', 'crt', 'cer', 'der', 'p12', 'pfx', 'p7b', 'p7c', 'csr', 'crl'],

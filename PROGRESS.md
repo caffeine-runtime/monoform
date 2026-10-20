@@ -265,6 +265,17 @@
   Graphviz's style (its node shapes, records, arrowheads, colours incl. HSV and grayNN, rank direction). Mermaid
   (all its diagram types) loads on first use. ```mermaid and ```dot / ```graphviz blocks in Markdown previews are
   drawn too (cached, so typing elsewhere doesn't redraw them); a broken block shows its error and source.
+- **M29 — Excalidraw and draw.io.** .excalidraw and .drawio/.dio open on one drawing canvas. Excalidraw is drawn the
+  way Excalidraw draws it (roughjs with each element's seed, perfect-freehand pen strokes, its fill styles, rounded
+  corners, arrowheads and the hand-drawn Virgil font, bundled); draw.io pages (compressed or not) show their common
+  shapes, swimlanes and containers, HTML labels and edges routed straight, orthogonally or curved with draw.io's
+  arrowheads and labels. Editing: select (click, shift-click, marquee; groups select together), drag to move (bound
+  labels and connected arrows/edges follow), resize with handles (shift keeps proportions), draw rectangles, ellipses,
+  diamonds, lines, freehand and text, arrows that connect the shapes they start and end on, double-click to edit a
+  label (or add text on an empty spot in Excalidraw), stroke/fill colours, line width and style (and Excalidraw's
+  fill style and sloppiness), duplicate, front/back, delete, undo/redo, arrow-key nudges, tool keys (V R D O A L P
+  T / 1–8), pan (space/middle drag, wheel) and zoom (Ctrl+wheel), draw.io pages, SVG/PNG export (the font
+  embedded). Only the elements/cells an edit touches change; everything else in the file is kept.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -298,6 +309,11 @@ GTK/WebKitGTK process start-up before our page loads. Not yet measured on Window
 available here).
 
 ## Known issues
+- Drawings: shapes can't be rotated on the canvas (rotated ones are shown rotated); draw.io stencil shapes
+  (`mxgraph.*` libraries: AWS, network, UML icons…) show as labelled boxes, and images must be embedded (linked
+  ones show a placeholder, as the app stays offline); edited HTML labels become plain text; compressed draw.io
+  pages are saved uncompressed. Excalidraw's Excalifont text uses the bundled Virgil (its predecessor) because
+  Excalifont's licence isn't stated in the font. Dragging on the test VM has the odd 50–70 ms frame.
 - Mermaid draws on the main thread (it measures text through the DOM, so it can't run in a worker): a drawing is
   one ~130 ms frame on the test VM. The diagram view waits for a pause in typing before redrawing.
 - Graphviz layout uses dagre, not Graphviz: results differ from `dot`'s, and dense graphs with many cycles are slow
