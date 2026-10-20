@@ -41,8 +41,23 @@ export default async function m8(dir: string) {
     ['json', 'Untitled.json', 'data'],
     ['text', 'Untitled.txt', 'text'],
   ];
+  // The start page has one tile per kind; the first file is made by clicking it.
+  const tiles = await waitFor(() => {
+    const t = document.querySelectorAll<HTMLButtonElement>('.welcome .kind');
+    return t.length ? t : null;
+  }, 'new-file tiles on the start page');
+  assertEq([...tiles].map((t) => t.dataset.kind).join(','), 'markdown,docx,xlsx,csv,image,svg,html,json,text', 'a tile per kind');
+  for (const t of tiles) assert(t.scrollWidth <= t.clientWidth + 1, `tile "${t.textContent?.trim()}" fits its text`);
+  let first = true;
   for (const [kind, name, mod] of expect) {
-    const p = newFileOfKind(undefined, kind);
+    let p: Promise<string | null>;
+    if (first) {
+      let done!: (v: string | null) => void;
+      p = new Promise((r) => (done = r));
+      document.querySelector<HTMLButtonElement>(`.welcome .kind[data-kind="${kind}"]`)!.click();
+      void waitFor(() => (workspace.active?.title === name ? true : null), 'tile-created file').then(() => done(join(D, name)));
+      first = false;
+    } else p = newFileOfKind(undefined, kind);
     const d = await waitFor(() => ui.dialog, `name prompt for ${kind}`);
     assertEq((d as any).input?.value ?? (d as any).value, name, `default name for ${kind}`);
     await answerPrompt(name);
