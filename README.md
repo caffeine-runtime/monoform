@@ -11,7 +11,7 @@ works offline, collects no telemetry and needs no account, and saves everything 
 | | |
 |---|---|
 | **Text & Markdown** | Code editor with Sublime-style editing — minimap, Go to symbol (Ctrl+R), multiple cursors (Ctrl+D, Ctrl+Alt+↑/↓, Ctrl+Shift+L), select/duplicate/join/sort lines, case changes, auto-closed brackets, word completion, indent guides — and byte-exact round-trips across encodings and line endings, find/replace, split/preview Markdown, image paste into `assets/`, folder search. |
-| **PDF** | Fast viewer with search and thumbnails; highlight, comment and ink annotations; form filling; reorder, rotate, delete, extract, merge, split. |
+| **PDF** | Fast viewer with search and thumbnails; highlight, text and drawing annotations in any colour; form filling; sign (draw, type or import a signature, place and resize it); redact for real (boxes or every search match); compress; reorder, rotate, delete, extract, merge, split; export pages as images; create a PDF from images or add images as pages. |
 | **CAD drawings** | DXF viewer and light editor: layers, blocks, hatches, splines, texts; select (window/crossing), measure, draw lines, polylines, rectangles, circles, arcs and text, move/copy/rotate/scale, object snaps, grid, ortho, typed coordinates (`@dx,dy`, `len<angle`); edit properties; saves only what changed; export SVG/PNG. |
 | **Databases** | SQLite files: browse tables and views (100k+ rows), sort, search, filter with WHERE, edit cells and rows with Save/Revert in one transaction, see the structure, run SQL with completion, export CSV. |
 | **Workspace** | Split view: 2–4 tabs side by side (Ctrl+\\, the split button, or drag a tab onto a view's edge); interface size 80–200 % (Ctrl+Alt+= / −). |

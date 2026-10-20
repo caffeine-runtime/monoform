@@ -218,6 +218,26 @@ export namespace app {
 		    return a;
 		}
 	}
+	export class PdfCompressed {
+	    path: string;
+	    before: number;
+	    after: number;
+	    images: number;
+	    recompressed: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new PdfCompressed(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.before = source["before"];
+	        this.after = source["after"];
+	        this.images = source["images"];
+	        this.recompressed = source["recompressed"];
+	    }
+	}
 	export class SemanticInfo {
 	    installed: boolean;
 	    modelId: string;
@@ -872,6 +892,38 @@ export namespace pdf {
 	        this.others = source["others"];
 	    }
 	}
+	export class PageImage {
+	    page: number;
+	    image: string;
+	    m: number[];
+	
+	    static createFrom(source: any = {}) {
+	        return new PageImage(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.page = source["page"];
+	        this.image = source["image"];
+	        this.m = source["m"];
+	    }
+	}
+	export class Stamp {
+	    page: number;
+	    image: string;
+	    m: number[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Stamp(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.page = source["page"];
+	        this.image = source["image"];
+	        this.m = source["m"];
+	    }
+	}
 
 }
 
@@ -1161,6 +1213,7 @@ export namespace settings {
 	    semantic: Semantic;
 	    recentsOff: boolean;
 	    imageKeepOriginal: boolean;
+	    signatures: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -1185,6 +1238,7 @@ export namespace settings {
 	        this.semantic = this.convertValues(source["semantic"], Semantic);
 	        this.recentsOff = source["recentsOff"];
 	        this.imageKeepOriginal = source["imageKeepOriginal"];
+	        this.signatures = source["signatures"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

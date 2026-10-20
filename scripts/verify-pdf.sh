@@ -35,4 +35,18 @@ ex=$(pdftotext "$OUT/extract.pdf" - | tr -d "\f" | grep -o "^Page [0-9]*" | tr '
 [ "$ex" = "Page 2,Page 50,Page 99," ] || fail "extract order $ex"
 total=0; for f in "$OUT"/split/*.pdf; do n=$(pdfinfo "$f" | awk '/^Pages:/{print $2}'); total=$((total+n)); done
 [ "$total" = 100 ] || fail "split pages $total"
+# M21 tools: compressed, redacted + signed, images → PDF.
+T=$1/pdf/out21
+if [ -d "$T" ]; then
+  for f in "$T"/*.pdf; do
+    qpdf --check "$f" >/dev/null 2>&1 || { qpdf --check "$f" | tail -3; fail "qpdf --check $f"; }
+  done
+  p1=$(pdftotext -f 1 -l 1 "$T/tools-done.pdf" - | tr -d "\f")
+  p2=$(pdftotext -f 2 -l 2 "$T/tools-done.pdf" - | tr -d "\f")
+  [[ "$p1" != *"quick brown"* ]] || fail "redacted text still extractable on page 1"
+  [[ "$p2" == *"quick brown"* ]] || fail "page 2 text lost"
+  [ "$(pdfinfo "$T/images.pdf" | awk '/^Pages:/{print $2}')" = 4 ] || fail "images.pdf pages"
+  pdfimages -list -f 2 -l 2 "$T/tools-done.pdf" | grep -q "smask" || fail "signature image with transparency missing on page 2"
+  echo "tools: redaction removes text (poppler), signature image has a soft mask, images.pdf has 4 pages"
+fi
 echo "PASS verify-pdf"

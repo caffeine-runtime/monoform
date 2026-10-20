@@ -185,6 +185,16 @@
   style), code page and line endings are kept, and everything the editor doesn't understand survives byte for
   byte. Parsing, editing and drawing run in a worker (OffscreenCanvas); the page only scales the last frame while
   the next one renders, so a 52,000-object drawing zooms without stalls.
+- **M21 — PDF tools.** Sign like Preview: draw a signature (mouse, trackpad or pen, pressure-aware), type it, or
+  import a photo/scan (the paper turns transparent); it's remembered for next time, placed with a click, then moved
+  and resized on the page, and stamped into the page content as a transparent image (upright on rotated pages).
+  Redact: drag black boxes, or mark every match of a search ("Redact all matches"); applying turns each redacted
+  page into an image of itself with the boxes burnt in, so the text, images and annotations underneath are really
+  gone (checked with poppler in CI). Text boxes, drawings and highlights get a colour, a text size and a line width.
+  Compress: images re-encoded as JPEG and downscaled (two strengths) plus a lossless structure clean-up, with the
+  size before → after. Export pages (or the selected ones) as PNG/JPEG at 72–300 dpi; add images as pages; File →
+  "Create PDF from images…" (one page per image, page size of the image or A4/Letter; GIF/BMP/AVIF/SVG converted on
+  the way). Everything works on the working copy, so Save writes it and closing without saving discards it.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -221,7 +231,7 @@ available here).
 - Opening a 50 MB file has one or two 80–120 ms frames on the software-rendered VM (budget 50 ms).
 - Markdown preview code blocks are not syntax-highlighted.
 - The first PDF opened in a session takes ~0.5 s to show page 1 (cold worker/fonts); later ones meet the 300 ms budget.
-- PDF annotation colours/thickness use pdf.js defaults (no colour picker yet).
+- PDF: applying a page operation, compression, signatures or redactions reloads the document; pdf.js's first repaint of it is one ~170–250 ms frame on the test VM. Redacted pages become images (by design: nothing under the boxes survives), so their text is no longer selectable — OCR (planned) can bring it back. Signatures are images, not cryptographic (certificate) signatures.
 - Word editing: creating new bullet/numbered lists, inserting images/tables and editing headers/footers aren't supported yet (existing ones are preserved). Legacy .doc conversion keeps text only; .xls conversion keeps values (not formulas/formatting).
 - Search by meaning is slow to index (single-threaded WebAssembly; the webview can't run WASM threads — see DECISIONS) — a large notes folder takes hours on slow hardware, though every file gets one passage early. A query waits for at most one in-flight indexing passage (a few seconds on slow machines).
 - A cold load of the search model produces one 50–75 ms UI frame on the test VM (budget 50 ms).

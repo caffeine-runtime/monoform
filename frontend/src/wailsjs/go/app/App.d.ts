@@ -95,11 +95,19 @@ export function OpenInBrowser(arg1:string):Promise<void>;
 
 export function PageRoot(arg1:string):Promise<string>;
 
+export function PdfCompress(arg1:string,arg2:number,arg3:number):Promise<app.PdfCompressed>;
+
+export function PdfFromImages(arg1:Array<string>,arg2:string,arg3:string):Promise<string>;
+
 export function PdfOp(arg1:string,arg2:string,arg3:pdf.Op):Promise<string>;
 
 export function PdfPageCount(arg1:string):Promise<number>;
 
+export function PdfReplacePages(arg1:string,arg2:Array<pdf.PageImage>):Promise<string>;
+
 export function PdfSplit(arg1:string,arg2:string,arg3:number):Promise<string>;
+
+export function PdfStamp(arg1:string,arg2:Array<pdf.Stamp>):Promise<string>;
 
 export function QuickFiles(arg1:string,arg2:number):Promise<Array<string>>;
 
