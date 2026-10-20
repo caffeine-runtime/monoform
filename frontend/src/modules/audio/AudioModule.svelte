@@ -5,6 +5,10 @@
 </script>
 
 <script lang="ts">
+  import Save from '@lucide/svelte/icons/save';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import MoveHorizontal from '@lucide/svelte/icons/move-horizontal';
+  import { fitBar } from '../../core/fit';
   import { onMount } from 'svelte';
   import Icon from '../../shell/Icon.svelte';
   import Play from '@lucide/svelte/icons/play';
@@ -651,7 +655,7 @@
   </div>
 </header>
 
-<div class="toolbar">
+<div class="toolbar" use:fitBar>
   <button class="icon-btn play" title="{playing ? 'Pause' : 'Play'} (Space)" onclick={toggle} disabled={!total}><Icon icon={playing ? Pause : Play} size={16} /></button>
   <button class="icon-btn" title="Stop" onclick={stop} disabled={!total}><Icon icon={Square} size={14} /></button>
   <button class="icon-btn" class:on={loopOn} title="Loop selection (L)" onclick={toggleLoop}><Icon icon={Repeat} size={14} /></button>
@@ -665,13 +669,13 @@
   <span class="sep"></span>
   <button class="icon-btn" title="Zoom out (-)" onclick={() => zoom(-1)}><Icon icon={ZoomOut} size={15} /></button>
   <button class="icon-btn" title="Zoom in (+)" onclick={() => zoom(1)}><Icon icon={ZoomIn} size={15} /></button>
-  <button class="btn ghost" title="Zoom to fit (0)" onclick={() => zoom(0)}>Fit</button>
+  <button class="btn ghost" title="Zoom to fit (0)" onclick={() => zoom(0)}><Icon icon={MoveHorizontal} size={14} /> Fit</button>
   {#if editable}
     <span class="sep"></span>
     <button class="icon-btn" title="Undo ({formatShortcut('Mod+Z')})" disabled={!canUndo} onclick={() => edit('undo')}><Icon icon={Undo2} size={15} /></button>
     <button class="icon-btn" title="Redo ({formatShortcut('Mod+Shift+Z')})" disabled={!canRedo} onclick={() => edit('redo')}><Icon icon={Redo2} size={15} /></button>
-    <button class="btn ghost" onclick={editMenu}>Edit ▾</button>
-    <button class="btn ghost" onclick={saveMenu}>Save ▾</button>
+    <button class="btn ghost" onclick={editMenu}><Icon icon={Pencil} size={14} /> Edit ▾</button>
+    <button class="btn ghost" onclick={saveMenu}><Icon icon={Save} size={14} /> Save ▾</button>
   {/if}
 </div>
 

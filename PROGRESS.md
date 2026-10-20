@@ -308,6 +308,15 @@
   (read-only) and editing from the status bar or Ctrl+Alt+E (the view is rebuilt; unsaved changes are asked about);
   "Open files in preview mode" makes it the default. Read-only text editors are now really non-editable (before,
   typing into a read-only tab — e.g. a file inside an archive — changed the text on screen).
+- **M33 — Layouts that fit any pane.** Toolbars no longer push buttons past the edge (they were cut off with a
+  hidden scrollbar) or squeeze button text into a column: when a toolbar doesn't fit, buttons show only their
+  icon and are named in the hover tooltip (with any description they had); if even that doesn't fit, the bar
+  wraps onto another row. Every toolbar button that had only text now has an icon. Side panels — the image
+  editor's Layers/Adjust/Colours, CAD properties, PDF thumbnails, the database's table list — float over the
+  content in a pane narrower than 600 px (split view, small window) instead of squeezing it, close when the pane
+  becomes narrow and open from the toolbar. Settings rows put their control under the label when narrow; the
+  hash checker's summary and time readouts don't break mid-phrase. Checked at 320–1100 px pane widths and the
+  640×400 minimum window (self-test `m33`; `uiaudit` lists wrapped labels and overflowing bars for every view).
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

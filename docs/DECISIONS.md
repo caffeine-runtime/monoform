@@ -176,6 +176,16 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 - **Accent: warm terracotta** (`#d97757` dark / `#c15f3c` light) for focus rings, selection and progress — the only saturated colour.
 - **Fonts via `@fontsource-variable/*`** (OFL), variable weight axis only, bundled as woff2 assets (not in the JS bundle). Unicode-range subsets mean only Latin loads for Latin text.
 - **Icons: `@lucide/svelte`** with deep imports and stroke width 1.6.
+- **Toolbars fit their pane, not the window** (`core/fit.ts`, `use:fitBar`). Panes can be ~300 px wide (2×2 split,
+  sidebar open), so media queries on the window can't decide; each bar measures itself (ResizeObserver, one forced
+  layout per frame, text changes rechecked at most 5×/s). Order of fallbacks: full labels → icons only (name in
+  the tooltip, `aria-label` kept) → wrap onto more rows. Hiding things behind a "…" menu was rejected: it moves
+  buttons people know where to find, and wrapping keeps every control one click away. Controls in a bar keep
+  their natural width (`flex-shrink: 0`) so a bar that doesn't fit is detected instead of quietly squeezing text;
+  only search fields give (down to 120 px). Every toolbar button with text also has an icon, so it can shrink.
+- **Side panels float in narrow panes** (< 600 px, `isNarrow`): over the content with a shadow, closed when the
+  pane becomes narrow, opened from the toolbar — a 260 px panel beside a 400 px pane would leave the canvas or
+  table unusable.
 
 ## Dependencies & licenses
 

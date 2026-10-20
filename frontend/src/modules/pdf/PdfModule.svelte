@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { isNarrow } from '../../core/fit';
+  import Maximize from '@lucide/svelte/icons/maximize';
+  import ArrowLeftRight from '@lucide/svelte/icons/arrow-left-right';
+  import { fitBar } from '../../core/fit';
   import { onMount, tick } from 'svelte';
   import 'pdfjs-dist/web/pdf_viewer.css';
   import { EventBus, PDFLinkService, PDFFindController, PDFViewer } from './viewer';
@@ -57,6 +61,13 @@
   let scale = $state(1);
   let tool = $state<ToolId>('none');
   let thumbsOpen = $state(true);
+  // A narrow pane (split view, small window): the panel floats over the
+  // content, closed when the pane becomes narrow.
+  let bodyW = $state(0);
+  const narrow = $derived(isNarrow(bodyW));
+  $effect(() => {
+    if (narrow) thumbsOpen = false;
+  });
   let selected = $state<number[]>([]);
   let error = $state('');
   let loading = $state(true);
@@ -829,7 +840,7 @@
   ];
 </script>
 
-<div class="toolbar">
+<div class="toolbar" use:fitBar>
   <button class="icon-btn" class:on={thumbsOpen} title="Page thumbnails" onclick={() => (thumbsOpen = !thumbsOpen)}><Icon icon={PanelLeft} /></button>
   <span class="sep"></span>
   <input
@@ -844,8 +855,8 @@
   <button class="btn ghost" title="Zoom out ({formatShortcut('Mod+-')})" onclick={() => zoom(-1)}>−</button>
   <button class="btn ghost zoomlabel" title="Actual size" onclick={() => zoom(0)}>{Math.round(scale * 100)}%</button>
   <button class="btn ghost" title="Zoom in ({formatShortcut('Mod+=')})" onclick={() => zoom(1)}>+</button>
-  <button class="btn ghost" onclick={() => viewer && (viewer.currentScaleValue = 'page-width')}>Fit width</button>
-  <button class="btn ghost" onclick={() => viewer && (viewer.currentScaleValue = 'page-fit')}>Fit page</button>
+  <button class="btn ghost" onclick={() => viewer && (viewer.currentScaleValue = 'page-width')}><Icon icon={ArrowLeftRight} size={14} /> Fit width</button>
+  <button class="btn ghost" onclick={() => viewer && (viewer.currentScaleValue = 'page-fit')}><Icon icon={Maximize} size={14} /> Fit page</button>
   <span class="sep"></span>
   {#each tools as t (t.id)}
     <button class="icon-btn" class:on={tool === t.id} title={t.label} disabled={tab.readOnly && t.id !== 'none'} onclick={() => setTool(t.id)}><Icon icon={t.icon} /></button>
@@ -920,9 +931,11 @@
   </div>
 {/if}
 
-<div class="body">
+<div class="body" bind:clientWidth={bodyW}>
   {#if thumbsOpen && doc}
-    <Thumbs {doc} current={page} bind:selected onnavigate={gotoPage} onreorder={(order) => pageOp({ kind: 'reorder', order })} onmenu={thumbMenu} />
+    <div class="thumbhost" class:floating={narrow} class:left={narrow}>
+    <Thumbs {doc} current={page} bind:selected onnavigate={(n) => (gotoPage(n), narrow && (thumbsOpen = false))} onreorder={(order) => pageOp({ kind: 'reorder', order })} onmenu={thumbMenu} />
+    </div>
   {/if}
   <div class="wrap">
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
@@ -1008,6 +1021,11 @@
     flex: 1;
     min-height: 0;
     display: flex;
+    position: relative;
+  }
+  .thumbhost {
+    display: flex;
+    min-height: 0;
   }
   .scope {
     height: 24px;

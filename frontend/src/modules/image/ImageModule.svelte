@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { isNarrow } from '../../core/fit';
+  import ImageIco from '@lucide/svelte/icons/image';
+  import { fitBar } from '../../core/fit';
   import { onMount, tick } from 'svelte';
   import Icon from '../../shell/Icon.svelte';
   import Hand from '@lucide/svelte/icons/hand';
@@ -142,6 +145,13 @@
   let expand = $state(true);
   let siblings = $state<string[] | null>(null);
   let panel = $state<'layers' | 'adjust' | 'colours' | null>(loadPanel());
+  // A narrow pane (split view, small window): the panel floats over the
+  // content, closed when the pane becomes narrow.
+  let bodyW = $state(0);
+  const narrow = $derived(isNarrow(bodyW));
+  $effect(() => {
+    if (narrow) panel = null;
+  });
   let adjustPanel = $state<AdjustPanel>();
   let fonts = $state<string[]>([]);
   let objectPoints: { x: number; y: number; positive: boolean }[] = [];
@@ -902,7 +912,7 @@
   const obj = $derived(es?.object ?? null);
 </script>
 
-<div class="toolbar">
+<div class="toolbar" use:fitBar>
   {#if editable && opts}
     <!-- Contextual options for the current tool / selected object -->
     {#if obj?.kind === 'text'}
@@ -968,7 +978,7 @@
     <button class="icon-btn" title="Undo ({formatShortcut('Mod+Z')})" disabled={!es?.canUndo} onclick={() => editor?.undo()}><Icon icon={Undo2} /></button>
     <button class="icon-btn" title="Redo ({formatShortcut('Mod+Shift+Z')})" disabled={!es?.canRedo} onclick={() => editor?.redo()}><Icon icon={Redo2} /></button>
     <span class="sep"></span>
-    <button class="btn ghost" title="Rotate, flip, resize, remove background…" onclick={imageMenu}>Image ▾</button>
+    <button class="btn ghost" title="Rotate, flip, resize, remove background…" onclick={imageMenu}><Icon icon={ImageIco} size={14} /> Image ▾</button>
   {:else if isSvg}
     <span class="label">SVG — view only here</span>
   {:else if imgMode && ext === 'gif'}
@@ -1050,7 +1060,7 @@
 {:else if icons}
   <IconView {tab} entries={icons} onreload={() => void load()} />
 {:else}
-<div class="body">
+<div class="body" bind:clientWidth={bodyW}>
   {#if editable}
     <div class="tools" role="toolbar" aria-orientation="vertical" aria-label="Tools">
       {#each toolGroups as group, gi (gi)}
@@ -1100,7 +1110,7 @@
     {#if busy}<div class="busy"><span class="spinner"></span> {busy}</div>{/if}
   </div>
   {#if editable && panel && editor && es}
-    <aside class="panel">
+    <aside class="panel" class:floating={narrow} class:right={narrow}>
       <div class="ptabs">
         <button class:on={panel === 'layers'} onclick={() => setPanel('layers')}>Layers</button>
         <button class:on={panel === 'adjust'} onclick={() => setPanel('adjust')}>Adjust</button>
@@ -1132,6 +1142,7 @@
     flex: 1;
     min-height: 0;
     display: flex;
+    position: relative;
   }
   .tools {
     display: flex;

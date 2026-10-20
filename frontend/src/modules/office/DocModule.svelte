@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fitBar } from '../../core/fit';
   // .docx and .odt editing on a page-like canvas; .doc is converted to .docx.
   import { onMount, tick } from 'svelte';
   import Icon from '../../shell/Icon.svelte';
@@ -194,7 +195,7 @@
 </script>
 
 {#if !tab.readOnly}
-  <div class="toolbar">
+  <div class="toolbar" use:fitBar>
     <select class="input sel" value={blockStyle} onchange={(e) => setStyle((e.currentTarget as HTMLSelectElement).value)} aria-label="Paragraph style">
       <option value="p">Normal text</option>
       <option value="h1">Heading 1</option>

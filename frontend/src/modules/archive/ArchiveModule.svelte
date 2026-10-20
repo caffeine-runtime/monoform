@@ -1,4 +1,7 @@
 <script lang="ts">
+  import FolderDown from '@lucide/svelte/icons/folder-down';
+  import FolderOutput from '@lucide/svelte/icons/folder-output';
+  import { fitBar } from '../../core/fit';
   // Browse an archive like a folder; open files in place, extract some or all.
   import { onMount } from 'svelte';
   import Icon from '../../shell/Icon.svelte';
@@ -84,7 +87,7 @@
   });
 </script>
 
-<div class="toolbar">
+<div class="toolbar" use:fitBar>
   <button class="icon-btn" title="Up (Backspace)" disabled={!dir} onclick={() => go(dir.includes('/') ? dir.slice(0, dir.lastIndexOf('/')) : '')}><Icon icon={ArrowUp} /></button>
   <nav class="crumbs">
     <button class="crumb" onclick={() => go('')}>{tab.title}</button>
@@ -96,8 +99,8 @@
   <span class="spacer"></span>
   <input class="input filter" placeholder="Find in archive" bind:value={filter} />
   <button class="btn ghost" disabled={!selected.length} onclick={() => extractTo(tab.path!, selected)}><Icon icon={Download} size={14} /> Extract {selected.length ? `${selected.length} selected` : 'selected'}…</button>
-  <button class="btn ghost" onclick={() => extractTo(tab.path!)}>Extract all…</button>
-  <button class="btn ghost" onclick={() => extractHere(tab.path!)}>Extract here</button>
+  <button class="btn ghost" onclick={() => extractTo(tab.path!)}><Icon icon={FolderOutput} size={14} /> Extract all…</button>
+  <button class="btn ghost" onclick={() => extractHere(tab.path!)}><Icon icon={FolderDown} size={14} /> Extract here</button>
 </div>
 
 {#if info?.meta && Object.keys(info.meta).length}

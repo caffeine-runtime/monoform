@@ -1,4 +1,7 @@
 <script lang="ts">
+  import ImageDown from '@lucide/svelte/icons/image-down';
+  import FileDown from '@lucide/svelte/icons/file-down';
+  import { fitBar } from '../../core/fit';
   // Excalidraw (.excalidraw) and draw.io (.drawio) drawings on one canvas:
   // select, move and resize (handles), draw shapes, connectors that attach to
   // shapes, freehand and text, double-click to edit a label, colours / line
@@ -664,7 +667,7 @@
   });
 </script>
 
-<div class="toolbar">
+<div class="toolbar" use:fitBar>
   {#if !ro}
     {#each board?.tools ?? [] as t (t)}
       <button class="icon-btn" class:on={tool === t} title="{TOOL_INFO[t].label} ({TOOL_INFO[t].key})" aria-label={TOOL_INFO[t].label} onclick={() => (tool = t)}><Icon icon={TOOL_INFO[t].icon} /></button>
@@ -689,8 +692,8 @@
   <span class="label zoom">{Math.round(view.zoom * 100)}%</span>
   <button class="icon-btn" title="Zoom in" onclick={() => zoomBy(1.25)}><Icon icon={ZoomIn} /></button>
   <button class="icon-btn" title="Fit" onclick={fit}><Icon icon={Maximize} /></button>
-  <button class="btn ghost" onclick={exportSvg} disabled={!board}>Export SVG…</button>
-  <button class="btn ghost" onclick={exportPng} disabled={!board}>Export PNG…</button>
+  <button class="btn ghost" onclick={exportSvg} disabled={!board}><Icon icon={FileDown} size={14} /> Export SVG…</button>
+  <button class="btn ghost" onclick={exportPng} disabled={!board}><Icon icon={ImageDown} size={14} /> Export PNG…</button>
 </div>
 
 {#if selStyle && !ro}

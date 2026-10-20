@@ -197,6 +197,68 @@ select {
   margin: 0 4px;
   white-space: nowrap;
 }
+/* Bars sized by core/fit.ts: controls keep their natural width (no squeezed,
+   wrapped labels) so a bar that doesn't fit is noticed; then icon buttons
+   show only their icon (name on hover), and if that's still too wide the
+   bar wraps onto another row. Search fields are the parts that give. */
+.fit > * {
+  flex-shrink: 0;
+}
+.fit > .spacer,
+.fit > .grow,
+.fit > .shrink,
+.fit > input,
+.fit > .input {
+  flex-shrink: 1;
+}
+.fit button,
+.fit .seg {
+  white-space: nowrap;
+}
+.fit.compact :is(.btn, .seg > button):has(> svg) {
+  font-size: 0;
+  gap: 0;
+  padding: 0 calc(7px * var(--ui-scale));
+}
+.fit.compact :is(.btn, .seg > button):has(> svg) > :not(svg) {
+  display: none;
+}
+.fit.wrapped {
+  flex-wrap: wrap;
+  row-gap: 4px;
+  overflow: visible;
+}
+.fit.wrapped > .spacer {
+  flex-basis: 0;
+}
+/* A side panel in a narrow pane floats over the content instead of
+   squeezing it (modules add .floating when their pane is narrow). */
+.floating {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 30;
+  max-width: 85%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+}
+.floating.left {
+  left: 0;
+}
+.floating.right {
+  right: 0;
+}
+/* Separators would start rows; groups keep a little space instead. */
+.fit.wrapped > .sep {
+  visibility: hidden;
+  margin: 0 2px;
+}
+/* Search fields stay usable; on a wrapped bar they take the rest of their row. */
+.fit input.input:not([type]) {
+  min-width: calc(120px * var(--ui-scale));
+}
+.fit.wrapped > input.input:not([type]) {
+  flex-grow: 1;
+}
 .banner {
   display: flex;
   align-items: center;

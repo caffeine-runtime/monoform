@@ -1,4 +1,18 @@
 <script lang="ts">
+  import { isNarrow } from '../../core/fit';
+  import PanelLeft from '@lucide/svelte/icons/panel-left';
+  import LockOpen from '@lucide/svelte/icons/lock-open';
+  import Lock from '@lucide/svelte/icons/lock';
+  import Download from '@lucide/svelte/icons/download';
+  import Ban from '@lucide/svelte/icons/ban';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Funnel from '@lucide/svelte/icons/funnel';
+  import Terminal from '@lucide/svelte/icons/terminal';
+  import TableProperties from '@lucide/svelte/icons/table-properties';
+  import Icon from '../../shell/Icon.svelte';
+  import Table from '@lucide/svelte/icons/table';
+  import { fitBar } from '../../core/fit';
   // SQLite browser and editor: schema on the left; a table's rows in the
   // spreadsheet grid (paged from Go, sort, search, WHERE filter) with edits
   // kept as pending changes until Save (one transaction) or Revert; the
@@ -56,6 +70,12 @@
   const completion = $derived(Object.fromEntries(objects.filter((o) => o.columns).map((o) => [o.name, o.columns!.map((c) => c.name)])));
 
   // ---- loading ----
+  // A narrow pane (split view, small window): the table list floats over the
+  // grid, opened from the toolbar, and closes when a table is picked.
+  let bodyW = $state(0);
+  const narrow = $derived(isNarrow(bodyW));
+  let schemaOpen = $state(false);
+
   async function open(ro: boolean) {
     loading = true;
     error = '';
@@ -155,6 +175,7 @@
   }
 
   async function selectTable(name: string, resetView = true) {
+    if (narrow) schemaOpen = false;
     current = name;
     gen++;
     blocks = new Map();
@@ -390,8 +411,9 @@
   };
 </script>
 
-<div class="db">
-  <aside class="schema" aria-label="Database objects">
+<div class="db" bind:clientWidth={bodyW}>
+  {#if !narrow || schemaOpen}
+  <aside class="schema" class:floating={narrow} class:left={narrow} aria-label="Database objects">
     <input class="input" placeholder="Filter tables" bind:value={sidebarFilter} aria-label="Filter tables" />
     <h4>Tables <span class="muted">{tables.length}</span></h4>
     {#each shownTables as o (o.name)}
@@ -412,22 +434,24 @@
       {/each}
     {/if}
   </aside>
+  {/if}
 
   <section class="main">
-    <div class="toolbar">
+    <div class="toolbar" use:fitBar>
+      {#if narrow}<button class="icon-btn" class:on={schemaOpen} title="Tables and views" onclick={() => (schemaOpen = !schemaOpen)}><Icon icon={PanelLeft} /></button>{/if}
       <div class="seg" role="tablist" aria-label="View">
-        <button class="btn ghost" class:on={pane === 'data'} role="tab" aria-selected={pane === 'data'} disabled={!current} onclick={() => (pane = 'data')}>Data</button>
-        <button class="btn ghost" class:on={pane === 'structure'} role="tab" aria-selected={pane === 'structure'} disabled={!current} onclick={() => (pane = 'structure')}>Structure</button>
-        <button class="btn ghost" class:on={pane === 'sql'} role="tab" aria-selected={pane === 'sql'} onclick={() => (pane = 'sql')}>SQL</button>
+        <button class="btn ghost" class:on={pane === 'data'} role="tab" aria-selected={pane === 'data'} disabled={!current} onclick={() => (pane = 'data')}><Icon icon={Table} size={14} /> Data</button>
+        <button class="btn ghost" class:on={pane === 'structure'} role="tab" aria-selected={pane === 'structure'} disabled={!current} onclick={() => (pane = 'structure')}><Icon icon={TableProperties} size={14} /> Structure</button>
+        <button class="btn ghost" class:on={pane === 'sql'} role="tab" aria-selected={pane === 'sql'} onclick={() => (pane = 'sql')}><Icon icon={Terminal} size={14} /> SQL</button>
       </div>
       {#if pane === 'data' && obj}
         <input class="input search" placeholder="Search rows…" bind:value={filterText} oninput={filterChanged} aria-label="Search rows" title="Find text in any column" />
-        <button class="btn ghost" class:on={showWhere} title="Filter with an SQL condition (WHERE …)" onclick={() => ((showWhere = !showWhere), reload())}>WHERE</button>
+        <button class="btn ghost" class:on={showWhere} title="Filter with an SQL condition (WHERE …)" onclick={() => ((showWhere = !showWhere), reload())}><Icon icon={Funnel} size={14} /> WHERE</button>
         <span class="sep"></span>
-        <button class="btn ghost" disabled={!editable} title="Add a row (saved with Save)" onclick={addRow}>+ Row</button>
-        <button class="btn ghost" disabled={!editable || !selection} title="Mark the selected rows for deletion (Delete)" onclick={deleteSelected}>Delete rows</button>
-        <button class="btn ghost" disabled={!editable || !selection} title="Set the selected cells to NULL (or type NULL)" onclick={setNull}>NULL</button>
-        <button class="btn ghost" title="Export these rows as CSV" onclick={() => void exportCsv()}>Export CSV…</button>
+        <button class="btn ghost" disabled={!editable} title="Add a row (saved with Save)" onclick={addRow}><Icon icon={Plus} size={14} /> Row</button>
+        <button class="btn ghost" disabled={!editable || !selection} title="Mark the selected rows for deletion (Delete)" onclick={deleteSelected}><Icon icon={Trash2} size={14} /> Delete rows</button>
+        <button class="btn ghost" disabled={!editable || !selection} title="Set the selected cells to NULL (or type NULL)" onclick={setNull}><Icon icon={Ban} size={14} /> NULL</button>
+        <button class="btn ghost" title="Export these rows as CSV" onclick={() => void exportCsv()}><Icon icon={Download} size={14} /> Export CSV…</button>
       {/if}
       <span class="spacer"></span>
       {#if changes}
@@ -435,7 +459,7 @@
         <button class="btn ghost" title="Drop all unsaved changes" onclick={revert}>Revert</button>
         <button class="btn primary" title="Write the changes in one transaction ({formatShortcut('Mod+S')})" onclick={() => void save()}>Save</button>
       {/if}
-      <button class="btn ghost" class:on={readOnly} title={readOnly ? 'Read-only: click to allow changes' : 'Click to open read-only (no changes possible)'} onclick={toggleReadOnly}>{readOnly ? '🔒 Read-only' : '🔓 Editable'}</button>
+      <button class="btn ghost" class:on={readOnly} title={readOnly ? 'Read-only: click to allow changes' : 'Click to open read-only (no changes possible)'} onclick={toggleReadOnly}><Icon icon={readOnly ? Lock : LockOpen} size={14} /> {readOnly ? 'Read-only' : 'Editable'}</button>
     </div>
     {#if pane === 'data' && showWhere && obj}
       <div class="where">
@@ -503,6 +527,7 @@
     flex: 1;
     min-height: 0;
     display: flex;
+    position: relative;
   }
   .schema {
     width: 220px;

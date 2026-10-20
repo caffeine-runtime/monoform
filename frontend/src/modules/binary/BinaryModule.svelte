@@ -1,4 +1,8 @@
 <script lang="ts">
+  import Hash from '@lucide/svelte/icons/hash';
+  import Icon from '../../shell/Icon.svelte';
+  import FileText from '@lucide/svelte/icons/file-text';
+  import { fitBar } from '../../core/fit';
   // Fallback for files no module understands: a hex preview and a way out.
   import type { Tab } from '../../core/tabs.svelte';
   import { workspace } from '../../core/tabs.svelte';
@@ -33,11 +37,11 @@
   }
 </script>
 
-<div class="toolbar">
+<div class="toolbar" use:fitBar>
   <span class="label">Binary file{tab.size != null ? ` · ${formatBytes(tab.size)}` : ''} — showing the first 4 KB</span>
   <span class="spacer"></span>
-  <button class="btn ghost" onclick={openAsText}>Open as text</button>
-  {#if tab.filePath}<button class="btn ghost" onclick={() => commands.execute('tools.hash', tab.filePath)}>Compute hash</button>{/if}
+  <button class="btn ghost" onclick={openAsText}><Icon icon={FileText} size={14} /> Open as text</button>
+  {#if tab.filePath}<button class="btn ghost" onclick={() => commands.execute('tools.hash', tab.filePath)}><Icon icon={Hash} size={14} /> Compute hash</button>{/if}
 </div>
 <div class="hex selectable mono">
   {#if error}<p>{error}</p>{/if}
