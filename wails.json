@@ -14,7 +14,7 @@
     "companyName": "Hold It All",
     "productName": "Hold It All",
     "productVersion": "1.0.0",
-    "copyright": "Copyright © 2026 Hold It All contributors",
+    "copyright": "Copyright \u00a9 2026 Hold It All contributors",
     "comments": "One window for your everyday files.",
     "fileAssociations": [
       {
@@ -217,6 +217,139 @@
         "ext": "md5",
         "name": "HoldItAll.md5",
         "description": "Checksum list",
+        "iconName": "fileicon",
+        "role": "Viewer"
+      },
+      {
+        "ext": "html",
+        "name": "HoldItAll.html",
+        "description": "Web page",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "htm",
+        "name": "HoldItAll.htm",
+        "description": "Web page",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "mp3",
+        "name": "HoldItAll.mp3",
+        "description": "MP3 audio",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "wav",
+        "name": "HoldItAll.wav",
+        "description": "WAV audio",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "flac",
+        "name": "HoldItAll.flac",
+        "description": "FLAC audio",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "ogg",
+        "name": "HoldItAll.ogg",
+        "description": "OGG audio",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "m4a",
+        "name": "HoldItAll.m4a",
+        "description": "M4A audio",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "opus",
+        "name": "HoldItAll.opus",
+        "description": "Opus audio",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "mp4",
+        "name": "HoldItAll.mp4",
+        "description": "MP4 video",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "mov",
+        "name": "HoldItAll.mov",
+        "description": "QuickTime video",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "webm",
+        "name": "HoldItAll.webm",
+        "description": "WebM video",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "mkv",
+        "name": "HoldItAll.mkv",
+        "description": "Matroska video",
+        "iconName": "fileicon",
+        "role": "Editor"
+      },
+      {
+        "ext": "glb",
+        "name": "HoldItAll.glb",
+        "description": "glTF 3D model",
+        "iconName": "fileicon",
+        "role": "Viewer"
+      },
+      {
+        "ext": "gltf",
+        "name": "HoldItAll.gltf",
+        "description": "glTF 3D model",
+        "iconName": "fileicon",
+        "role": "Viewer"
+      },
+      {
+        "ext": "stl",
+        "name": "HoldItAll.stl",
+        "description": "STL 3D model",
+        "iconName": "fileicon",
+        "role": "Viewer"
+      },
+      {
+        "ext": "obj",
+        "name": "HoldItAll.obj",
+        "description": "OBJ 3D model",
+        "iconName": "fileicon",
+        "role": "Viewer"
+      },
+      {
+        "ext": "fbx",
+        "name": "HoldItAll.fbx",
+        "description": "FBX 3D model",
+        "iconName": "fileicon",
+        "role": "Viewer"
+      },
+      {
+        "ext": "3mf",
+        "name": "HoldItAll.3mf",
+        "description": "3MF 3D model",
+        "iconName": "fileicon",
+        "role": "Viewer"
+      },
+      {
+        "ext": "ply",
+        "name": "HoldItAll.ply",
+        "description": "PLY 3D model",
         "iconName": "fileicon",
         "role": "Viewer"
       }
