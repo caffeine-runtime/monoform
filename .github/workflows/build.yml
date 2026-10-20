@@ -136,10 +136,10 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
           wails build -tags webkit2_41 -platform linux/amd64 -trimpath -ldflags "$HIA_LDFLAGS"
-          mkdir -p dist/hold-it-all
-          cp build/bin/hold-it-all build/linux/hold-it-all.desktop build/linux/install.sh dist/hold-it-all/
-          cp build/appicon.png dist/hold-it-all/hold-it-all.png
-          tar -C dist -czf dist/hold-it-all-linux-amd64.tar.gz hold-it-all
+          mkdir -p stage/hold-it-all dist
+          cp build/bin/hold-it-all build/linux/hold-it-all.desktop build/linux/install.sh stage/hold-it-all/
+          cp build/appicon.png stage/hold-it-all/hold-it-all.png
+          tar -C stage -czf dist/hold-it-all-linux-amd64.tar.gz hold-it-all
 
       - name: Build (Windows)
         if: runner.os == 'Windows'
@@ -182,7 +182,11 @@ jobs:
           path: dist
           merge-multiple: true
       - name: Checksums
-        run: cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
+        run: |
+          cd dist
+          ls -la
+          find . -maxdepth 1 -type f -printf '%f\n' | sort | xargs sha256sum > ../SHA256SUMS
+          mv ../SHA256SUMS . && cat SHA256SUMS
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
@@ -193,4 +197,4 @@ jobs:
           flags=()
           case "$v" in *-*) flags+=(--prerelease) ;; esac
           sed "s/{{VERSION}}/$v/g" .github/release-notes.md > notes.md
-          gh release create "v$v" dist/* --target "$GITHUB_SHA" --title "Hold It All $v" --notes-file notes.md --generate-notes "${flags[@]}"
+          gh release create "v$v" $(find dist -maxdepth 1 -type f | sort) --target "$GITHUB_SHA" --title "Hold It All $v" --notes-file notes.md --generate-notes "${flags[@]}"
