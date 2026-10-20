@@ -45,7 +45,7 @@ export default async function m23(dir: string) {
   const j = await openData(join(dir, 'data', 'events.jsonl'));
   log(`5,000-line JSONL parsed in ${Math.round(performance.now() - t0)} ms`);
   assertEq(j.h.root().size, 5000, 'one record per line');
-  await waitFor(() => (document.querySelector('.tabview.active .status.good')?.textContent?.includes('5,000 records') ? true : null), 'record count shown');
+  await waitFor(() => (document.querySelector('.tabview.active .status.good')?.textContent?.includes(`${(5000).toLocaleString()} records`) ? true : null), 'record count shown');
   const rows = (await j.h.client.rows(0, 2)).rows;
   assertEq(JSON.stringify(rows), JSON.stringify([['0', 'open', '0', '{"n":0}'], ['1', 'save', '7', '']]), 'table rows (columns id, kind, ms, extra)');
   j.h.setView('table');
