@@ -48,7 +48,7 @@ function acquire(): Shared {
     shared.users++;
     return shared;
   }
-  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: false });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -359,7 +359,10 @@ export class ModelViewer {
       this.renderer.render(this.scene, this.camera);
       this.dirty = false;
     }
-    if (moving || this.anim.playing) this.raf = requestAnimationFrame(() => this.loop());
+    // controls.update() above fires 'change', which may already have queued
+    // the next frame through kick(); queue it only once, or every camera move
+    // would add another loop (and another render) per frame.
+    if ((moving || this.anim.playing) && !this.raf) this.raf = requestAnimationFrame(() => this.loop());
   }
 
   /** PNG of the current view. */

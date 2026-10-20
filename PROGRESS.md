@@ -109,6 +109,11 @@
   AutoComplete proposes the one matching entry from the column while typing (Enter accepts, Delete/Backspace
   drops it). Every change, including paste/fill/move batches, is one undo step (Ctrl/Cmd+Z, Ctrl+Y /
   Ctrl+Shift+Z; toolbar buttons in CSV); context menu with cut/copy/paste/clear/insert/delete rows.
+- **Fix — 3D lag while orbiting during an animation.** Each camera move queued an extra render loop, so the
+  renders per frame multiplied while you dragged (worst with a playing, skinned animation). Now exactly one
+  render per frame (m11 checks this: 70 renders in 70 frames, longest frame ≤ 41 ms on the software-rendered VM).
+  The renderer also no longer keeps its drawing buffer between frames (an extra copy per frame); "Save view as
+  PNG" renders right before reading the canvas, which m11 now checks.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
