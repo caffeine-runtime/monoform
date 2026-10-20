@@ -14,6 +14,8 @@ if [ -z "${DISPLAY:-}" ]; then
   export DISPLAY=:99
   pgrep -f "Xvfb :99" >/dev/null || { Xvfb :99 -screen 0 1440x900x24 >/dev/null 2>&1 & sleep 1; }
   pgrep openbox >/dev/null || { openbox >/dev/null 2>&1 & sleep 0.5; }
+  # A bare X server has no desktop to answer the screenshot portal.
+  export HIA_NO_PORTAL=${HIA_NO_PORTAL:-1}
 fi
 LOG=$(mktemp)
 set +e

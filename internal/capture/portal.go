@@ -12,6 +12,9 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
+// callTimeout bounds starting a portal request (not the user's answer).
+var callTimeout = 10 * time.Second
+
 // portalScreenshot asks the desktop's screenshot portal for a shot (the
 // desktop shows its own UI when interactive) and returns the file URI.
 func portalScreenshot(ctx context.Context, interactive bool) (string, error) {
@@ -45,7 +48,12 @@ func portalScreenshot(ctx context.Context, interactive bool) (string, error) {
 	var handle dbus.ObjectPath
 	obj := conn.Object("org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop")
 	opts := map[string]dbus.Variant{"handle_token": dbus.MakeVariant(token), "interactive": dbus.MakeVariant(interactive), "modal": dbus.MakeVariant(true)}
-	if err := obj.CallWithContext(ctx, "org.freedesktop.portal.Screenshot.Screenshot", 0, "", opts).Store(&handle); err != nil {
+	// The call itself only starts the request: a portal that doesn't take it
+	// within seconds (none running, or no desktop to answer) won't answer at all.
+	cctx, cancel := context.WithTimeout(ctx, callTimeout)
+	err = obj.CallWithContext(cctx, "org.freedesktop.portal.Screenshot.Screenshot", 0, "", opts).Store(&handle)
+	cancel()
+	if err != nil {
 		return "", err
 	}
 	if handle != want {
