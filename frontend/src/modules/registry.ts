@@ -142,6 +142,14 @@ export function registerBuiltinModules() {
     load: () => import('./hash'),
   });
   modules.register({
+    id: 'compare',
+    name: 'Compare',
+    extensions: [],
+    mimeTypes: [],
+    tool: true,
+    load: () => import('./compare'),
+  });
+  modules.register({
     id: 'settings',
     name: 'Settings',
     extensions: [],

@@ -17,6 +17,7 @@ import { dropHandlers } from './core/drop';
 import { registerBuiltinModules } from './modules/registry';
 import { registerArchiveIntegration } from './core/archives';
 import { registerTools } from './core/tools';
+import { registerCompare } from './core/compare';
 import { semantic } from './core/semantic/semantic.svelte';
 import { OnFileDrop } from './wailsjs/runtime/runtime';
 
@@ -87,6 +88,7 @@ async function start() {
   registerAppCommands();
   registerArchiveIntegration();
   registerTools();
+  registerCompare();
   wireEvents();
 
   mount(App, { target: document.getElementById('app')! });
