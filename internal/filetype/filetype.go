@@ -93,6 +93,14 @@ var byExt = map[string]entry{
 	"tgz": {Archive, "application/gzip"}, "7z": {Archive, "application/x-7z-compressed"}, "rar": {Archive, "application/vnd.rar"},
 	"bz2": {Archive, "application/x-bzip2"}, "xz": {Archive, "application/x-xz"}, "zst": {Archive, "application/zstd"},
 	"tbz2": {Archive, "application/x-bzip2"}, "txz": {Archive, "application/x-xz"},
+	// packages and disk images, browsed like archives
+	"deb": {Archive, "application/vnd.debian.binary-package"}, "udeb": {Archive, "application/vnd.debian.binary-package"},
+	"rpm": {Archive, "application/x-rpm"}, "iso": {Archive, "application/x-iso9660-image"}, "msi": {Archive, "application/x-msi"},
+	"jar": {Archive, "application/java-archive"}, "war": {Archive, "application/java-archive"}, "ear": {Archive, "application/java-archive"},
+	"aar": {Archive, "application/zip"}, "apk": {Archive, "application/vnd.android.package-archive"}, "xapk": {Archive, "application/zip"},
+	"apks": {Archive, "application/zip"}, "ipa": {Archive, "application/zip"}, "xpi": {Archive, "application/x-xpinstall"},
+	"vsix": {Archive, "application/zip"}, "nupkg": {Archive, "application/zip"}, "whl": {Archive, "application/zip"},
+	"appx": {Archive, "application/zip"}, "msix": {Archive, "application/zip"}, "appxbundle": {Archive, "application/zip"}, "msixbundle": {Archive, "application/zip"},
 	// office
 	"docx": {Document, "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}, "doc": {Document, "application/msword"},
 	"xlsx": {Sheet, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}, "xlsm": {Sheet, "application/vnd.ms-excel.sheet.macroEnabled.12"},
@@ -217,6 +225,10 @@ func Sniff(b []byte) Info {
 		return m(Archive, "application/x-xz")
 	case bytes.HasPrefix(b, []byte{0x28, 0xB5, 0x2F, 0xFD}):
 		return m(Archive, "application/zstd")
+	case bytes.HasPrefix(b, []byte("!<arch>\ndebian-binary")):
+		return m(Archive, "application/vnd.debian.binary-package")
+	case bytes.HasPrefix(b, []byte{0xED, 0xAB, 0xEE, 0xDB}):
+		return m(Archive, "application/x-rpm")
 	case len(b) >= 262 && bytes.Equal(b[257:262], []byte("ustar")):
 		return m(Archive, "application/x-tar")
 	}

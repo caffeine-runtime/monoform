@@ -239,6 +239,14 @@
   entity roles and whether each certificate is signed by the next one in the file; CSRs (signature checked),
   private keys (type only — never shown), public keys and CRLs; .p12/.pfx ask for their password (modern
   AES-encrypted files from OpenSSL 3 too); copy or save any certificate as PEM.
+- **M26 — Packages and disk images.** .deb, .rpm, .iso and .msi browse like archives (open files inside, extract
+  some or all) with their package details above the list: Debian control fields, RPM header (name, version,
+  architecture, licence, summary…), ISO volume/publisher, MSI product name, version, manufacturer and product code.
+  Own readers: .deb (ar + gzip/xz/zstd/bzip2 tar), .rpm (header + cpio in any compression), .iso (ISO 9660 with Joliet
+  and Rock Ridge long names), .msi (files listed from the installer's tables with their real folder paths, extracted
+  from the embedded cabinets). Zip-based packages — .jar .war .ear .aar .apk .xapk .apks .ipa .xpi .vsix .nupkg .whl
+  .appx .msix (+ bundles) — open in the archive view too, also from the sidebar tree. Packages and disk images are
+  read-only.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -272,6 +280,11 @@ GTK/WebKitGTK process start-up before our page loads. Not yet measured on Window
 available here).
 
 ## Known issues
+- Disk images: .dmg isn't browsable. A DMG is a UDIF container (zlib/bzip2/LZFSE/LZMA chunks) holding an HFS+ or
+  APFS file system, so it needs three readers, two of them large (APFS especially); no permissively licensed Go
+  library covers them. ISO images that keep their files only in UDF (Windows/Blu-ray media) show just their small
+  ISO 9660 part with a note. MSI files whose cabinets use LZX or Quantum compression, or that keep them outside the
+  .msi, list their files but can't extract them (MSZIP and stored cabinets — what WiX and most tools write — work).
 - Start-up on the headless Linux VM is above the 500 ms budget; needs measuring on real hardware.
 - Opening a 50 MB file has one or two 80–120 ms frames on the software-rendered VM (budget 50 ms).
 - Markdown preview code blocks are not syntax-highlighted.

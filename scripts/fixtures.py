@@ -641,6 +641,18 @@ try:
 except (OSError, subprocess.CalledProcessError) as _e:
     print("skipping certificate fixtures:", _e, file=sys.stderr)
 
+# ---- packages and disk images (M26) ----
+# deb/rpm/iso/msi samples were made with dpkg-deb, rpmbuild, xorriso and wixl
+# (see internal/archive/testdata); jar/apk are zip files under another name.
+for _n in ("hia-test.deb", "hia-test.rpm", "hia-test.iso", "hia-test.msi"):
+    w("packages/" + _n, open(os.path.join(here, "..", "internal", "archive", "testdata", _n), "rb").read())
+with zipfile.ZipFile(os.path.join(d, "packages", "app.jar"), "w") as z:
+    zadd(z, "META-INF/MANIFEST.MF", b"Manifest-Version: 1.0\nMain-Class: test.Main\n")
+    zadd(z, "test/Main.class", b"\xca\xfe\xba\xbe\x00\x00\x00\x34")
+with zipfile.ZipFile(os.path.join(d, "packages", "app.apk"), "w") as z:
+    zadd(z, "AndroidManifest.xml", b"\x03\x00\x08\x00")
+    zadd(z, "res/values/strings.txt", b"hello from apk\n")
+
 _pos, _nor, _uv, _idx = _cube()
 def _stl():
     tris = [(_idx[i], _idx[i + 1], _idx[i + 2]) for i in range(0, len(_idx), 3)]

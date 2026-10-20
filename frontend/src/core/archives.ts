@@ -2,6 +2,7 @@
 // expanding archives in the sidebar tree, context-menu actions, and the
 // shared extract / create-zip flows.
 import { api } from './backend';
+import { ARCHIVE_EXT, PACKAGE_EXT } from './archiveExt';
 import { commands } from './commands';
 import { jobs } from './jobs.svelte';
 import { basename, dirname, extname, join, stem } from './paths';
@@ -20,8 +21,17 @@ export interface ExtractResult {
   skipped: { name: string; reason: string }[] | null;
 }
 
-export const ARCHIVE_EXT = ['zip', 'tar', 'gz', 'tgz', 'tar.gz', 'tar.bz2', 'tbz2', 'tar.xz', 'txz', 'tar.zst', 'bz2', 'xz', 'zst', '7z', 'rar'];
-const READ_ONLY = new Set(['rar', '7z']);
+export { ARCHIVE_EXT, PACKAGE_EXT };
+const READ_ONLY = new Set(['rar', '7z', 'deb', 'rpm', 'iso', 'msi']);
+const FORMAT_NAMES: Record<string, string> = { deb: 'Debian package', rpm: 'RPM package', iso: 'ISO disk image', msi: 'Windows Installer package' };
+
+/** "ZIP archive", "Debian package", "JAR package"… for the status bar. */
+export function formatName(format: string, path = ''): string {
+  if (FORMAT_NAMES[format]) return FORMAT_NAMES[format];
+  const ext = extname(path);
+  if (format === 'zip' && PACKAGE_EXT.includes(ext)) return `${ext.toUpperCase()} package`;
+  return `${format.toUpperCase()} archive`;
+}
 
 export function isArchive(p: string) {
   return ARCHIVE_EXT.includes(extname(p));
@@ -29,6 +39,7 @@ export function isArchive(p: string) {
 
 export function readOnlyReason(format: string): string {
   if (format === 'rar') return 'RAR archives are read-only: you can browse, open and extract files, but not create or change RAR files (RAR compression is proprietary).';
+  if (FORMAT_NAMES[format]) return `${FORMAT_NAMES[format]}s are read-only: you can browse, open and extract their files, but not change them.`;
   if (format === '7z') return '7z archives are read-only: you can browse, open and extract files, but creating or changing 7z files isn’t supported.';
   return '';
 }

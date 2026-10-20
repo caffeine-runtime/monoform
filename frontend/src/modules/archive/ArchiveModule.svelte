@@ -9,7 +9,7 @@
   import { iconFor } from '../../core/fileicons';
   import { formatBytes } from '../../core/paths';
   import { workspace, type Tab } from '../../core/tabs.svelte';
-  import { childrenOf, extractHere, extractTo, listArchive, readOnlyReason } from '../../core/archives';
+  import { childrenOf, extractHere, extractTo, formatName, listArchive, readOnlyReason } from '../../core/archives';
   import type { archive } from '../../wailsjs/go/models';
 
   let { tab }: { tab: Tab } = $props();
@@ -34,11 +34,14 @@
     error = '';
     try {
       info = await listArchive(tab.path!, true);
-      tab.status = { ...tab.status, type: `${info.format.toUpperCase()} archive`, info: `${totals?.files ?? 0} files · ${formatBytes(totals?.bytes ?? 0)} unpacked` };
+      tab.status = { ...tab.status, type: formatName(info.format, tab.path ?? ''), info: `${totals?.files ?? 0} files · ${formatBytes(totals?.bytes ?? 0)} unpacked` };
     } catch (e) {
       error = String((e as Error)?.message ?? e);
     }
   }
+
+  const META_ORDER = ['Type', 'Package', 'Volume', 'Version', 'Architecture', 'Summary', 'Manufacturer', 'Maintainer', 'Vendor', 'License'];
+  const metaRank = (k: string) => (META_ORDER.indexOf(k) + 1 || 50) + (k === 'Description' || k === 'Note' ? 100 : 0);
 
   function go(d: string) {
     dir = d;
@@ -97,6 +100,14 @@
   <button class="btn ghost" onclick={() => extractHere(tab.path!)}>Extract here</button>
 </div>
 
+{#if info?.meta && Object.keys(info.meta).length}
+  <dl class="meta">
+    {#each Object.entries(info.meta).sort(([a], [b]) => metaRank(a) - metaRank(b)) as [k, v] (k)}
+      <div class:wide={k === 'Description' || k === 'Note'}><dt>{k}</dt><dd title={v}>{v}</dd></div>
+    {/each}
+  </dl>
+{/if}
+
 {#if info && readOnlyReason(info.format)}
   <div class="banner"><Icon icon={Lock} /><span class="grow">{readOnlyReason(info.format)}</span></div>
 {/if}
@@ -128,6 +139,35 @@
 </div>
 
 <style>
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 18px;
+    margin: 0;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: var(--fs-small);
+  }
+  .meta div {
+    display: flex;
+    gap: 6px;
+    min-width: 0;
+    max-width: 420px;
+  }
+  .meta div.wide {
+    flex-basis: 100%;
+    max-width: none;
+  }
+  .meta dt {
+    color: var(--text-muted);
+    flex: none;
+  }
+  .meta dd {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .crumbs {
     display: flex;
     align-items: center;

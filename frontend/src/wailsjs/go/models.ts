@@ -409,6 +409,7 @@ export namespace archive {
 	    format: string;
 	    writable: boolean;
 	    entries: Entry[];
+	    meta?: Record<string, string>;
 	
 	    static createFrom(source: any = {}) {
 	        return new Info(source);
@@ -419,6 +420,7 @@ export namespace archive {
 	        this.format = source["format"];
 	        this.writable = source["writable"];
 	        this.entries = this.convertValues(source["entries"], Entry);
+	        this.meta = source["meta"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

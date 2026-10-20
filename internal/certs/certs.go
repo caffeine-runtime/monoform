@@ -66,7 +66,7 @@ type Item struct {
 	OCSP         []string  `json:"ocsp"`
 	CAIssuers    []string  `json:"caIssuers"`
 	CRLs         []string  `json:"crls"`
-	PEM          string    `json:"pem"`        // certificates, requests and public keys only
+	PEM          string    `json:"pem"`          // certificates, requests and public keys only
 	IssuedByNext bool      `json:"issuedByNext"` // signed by the next certificate in the file
 	Encrypted    bool      `json:"encrypted"`
 	Note         string    `json:"note"`
