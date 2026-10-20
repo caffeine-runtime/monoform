@@ -41,6 +41,8 @@ type Info struct {
 	// be browsed and extracted but never created or modified.
 	Writable bool    `json:"writable"`
 	Entries  []Entry `json:"entries"`
+	// Meta describes packages and disc images (name, version, volume label…).
+	Meta map[string]string `json:"meta,omitempty"`
 }
 
 var (
@@ -69,16 +71,33 @@ func formatName(f archives.Format) string {
 
 // walk calls fn for every entry of the archive at p. Single compressed files
 // (file.txt.gz) appear as one entry named after the file.
-func walk(ctx context.Context, p string, fn func(info archives.FileInfo, name string) error) (archives.Format, error) {
+// walkResult says what walk found: the format's name, whether the app can
+// write it, and package/disc metadata.
+type walkResult struct {
+	name     string
+	writable bool
+	meta     map[string]string
+}
+
+func walk(ctx context.Context, p string, fn func(info archives.FileInfo, name string) error) (walkResult, error) {
 	f, err := os.Open(p)
 	if err != nil {
-		return nil, err
+		return walkResult{}, err
 	}
 	defer f.Close()
+	if kind := customKind(f); kind != "" {
+		meta, err := walkCustom(ctx, kind, f, fn)
+		if errors.Is(err, ErrStop) {
+			err = nil
+		}
+		return walkResult{name: kind, meta: meta}, wrapErr(err)
+	}
 	format, err := identify(ctx, f)
 	if err != nil {
-		return nil, err
+		return walkResult{}, err
 	}
+	res := walkResult{name: formatName(format)}
+	_, res.writable = format.(archives.Zip)
 	if ex, ok := format.(archives.Extractor); ok {
 		err := ex.Extract(ctx, f, func(ctx context.Context, info archives.FileInfo) error {
 			if err := ctx.Err(); err != nil {
@@ -89,7 +108,7 @@ func walk(ctx context.Context, p string, fn func(info archives.FileInfo, name st
 		if errors.Is(err, ErrStop) {
 			err = nil
 		}
-		return format, wrapErr(err)
+		return res, wrapErr(err)
 	}
 	if dec, ok := format.(archives.Decompressor); ok {
 		st, _ := f.Stat()
@@ -112,9 +131,9 @@ func walk(ctx context.Context, p string, fn func(info archives.FileInfo, name st
 		if errors.Is(err, ErrStop) {
 			err = nil
 		}
-		return format, err
+		return res, err
 	}
-	return nil, ErrNotArchive
+	return walkResult{}, ErrNotArchive
 }
 
 func wrapErr(err error) error {
@@ -216,7 +235,7 @@ func List(ctx context.Context, p string) (Info, error) {
 			entries = append(entries, Entry{Name: d, IsDir: true, Size: 0})
 		}
 	}
-	format, err := walk(ctx, p, func(info archives.FileInfo, name string) error {
+	res, err := walk(ctx, p, func(info archives.FileInfo, name string) error {
 		if name == "" || seen[name] {
 			return nil
 		}
@@ -233,8 +252,7 @@ func List(ctx context.Context, p string) (Info, error) {
 		return Info{}, err
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Name < entries[j].Name })
-	info := Info{Format: formatName(format), Entries: entries}
-	_, info.Writable = format.(archives.Zip)
+	info := Info{Format: res.name, Writable: res.writable, Entries: entries, Meta: res.meta}
 	cacheMu.Lock()
 	cache[key] = info
 	order = append(order, key)

@@ -2,6 +2,7 @@
 // with a dynamic import() the first time a file of that type is opened.
 import { modules } from '../core/modules';
 import { XML_EXT } from './data/formatExt';
+import { ARCHIVE_EXT } from '../core/archiveExt';
 
 const TEXT_EXT = [
   'txt', 'log', 'ini', 'cfg', 'conf', 'toml', 'env', 'properties', 'xml', 'html', 'htm', 'css', 'scss', 'less',
@@ -163,8 +164,8 @@ export function registerBuiltinModules() {
   modules.register({
     id: 'archive',
     name: 'Archive',
-    extensions: ['zip', 'tar', 'gz', 'tgz', 'tar.gz', 'tar.bz2', 'tbz2', 'tar.xz', 'txz', 'tar.zst', 'bz2', 'xz', 'zst', '7z', 'rar'],
-    mimeTypes: ['application/zip', 'application/x-tar', 'application/gzip', 'application/x-7z-compressed', 'application/vnd.rar', 'application/x-bzip2', 'application/x-xz', 'application/zstd'],
+    extensions: ARCHIVE_EXT,
+    mimeTypes: ['application/zip', 'application/x-tar', 'application/gzip', 'application/x-7z-compressed', 'application/vnd.rar', 'application/x-bzip2', 'application/x-xz', 'application/zstd', 'application/vnd.debian.binary-package', 'application/x-rpm', 'application/x-iso9660-image', 'application/x-msi', 'application/java-archive', 'application/vnd.android.package-archive'],
     load: () => import('./archive'),
   });
   modules.register({
@@ -210,7 +211,7 @@ export function registerBuiltinModules() {
   modules.register({
     id: 'binary',
     name: 'Binary',
-    extensions: ['exe', 'dll', 'so', 'dylib', 'bin', 'o', 'a', 'class', 'pyc', 'wasm', 'iso', 'dmg', 'img'],
+    extensions: ['exe', 'dll', 'so', 'dylib', 'bin', 'o', 'a', 'class', 'pyc', 'wasm', 'dmg', 'img'],
     mimeTypes: ['application/octet-stream'],
     load: () => import('./binary'),
   });

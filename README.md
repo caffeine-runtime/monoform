@@ -26,7 +26,7 @@ works offline, collects no telemetry and needs no account, and saves everything 
 | **Video** | Play MP4, MOV, WebM and MKV (whatever the system can decode) with a thumbnail timeline, frame stepping, speed, A–B loop, full screen and PNG snapshots; cut out parts, trim, rotate (MP4/MOV), remove or extract the audio — saved without re-encoding, so instantly and without quality loss. Effects: image overlays and area blurs animated with keyframes and timing curves (or pinned to a moving object by tracking), speed changes, transitions and fades, previewed live and rendered to WebM. |
 | **Data** | JSON/YAML trees with exact error positions; CSV/TSV grid that stays smooth at a million rows, with sort, filter and Excel-style editing: range selection, copy/paste with Excel, drag to move, fill handle, AutoComplete, undo. |
 | **Word & Excel** | Edit `.docx` and `.xlsx` in place (formulas recalculate; the same Excel-style grid as CSV). Legacy `.doc`/`.xls` open too and save as `.docx`/`.xlsx`. |
-| **Archives** | Browse ZIP, TAR(.gz/.bz2/.xz/.zst), 7z and RAR like folders, open files inside, extract safely, create ZIPs. |
+| **Archives** | Browse ZIP, TAR(.gz/.bz2/.xz/.zst), 7z and RAR like folders, open files inside, extract safely, create ZIPs. Packages and disk images too: .deb, .rpm, .iso, .msi (with their package details), and .jar/.apk/.ipa/.whl/.nupkg/.vsix/.msix and other zip-based packages. |
 | **Hashes** | MD5, SHA-1, SHA-256, SHA-512, BLAKE3 in one pass; paste-to-compare; verify `SHA256SUMS`/`.md5` files. |
 | **Search everything** | Ctrl/Cmd+K finds commands, file names and text inside files. An optional **search by meaning** (off by default) runs the EmbeddingGemma 2 model locally on your computer. |
 
