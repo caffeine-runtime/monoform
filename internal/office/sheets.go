@@ -222,12 +222,28 @@ func (bs *Books) SetCell(id, sheet string, row, col int, input string) (string, 
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	b.indexFormulas()
+	disp, err := b.setOne(sheet, row, col, input)
+	if err != nil {
+		return "", err
+	}
+	if b.hasFormulas() {
+		b.needsCalc = true
+		b.recalc()
+		if rows := b.rows[sheet]; row < len(rows) && col < len(rows[row]) {
+			disp = rows[row][col]
+		}
+	}
+	return disp, nil
+}
+
+// setOne writes one cell (no recalculation) and returns its displayed value.
+func (b *book) setOne(sheet string, row, col int, input string) (string, error) {
 	ref, err := excelize.CoordinatesToCellName(col+1, row+1)
 	if err != nil {
 		return "", err
 	}
 	f := b.f
-	b.indexFormulas()
 	switch {
 	case strings.HasPrefix(input, "=") && len(input) > 1:
 		if err := f.SetCellFormula(sheet, ref, input[1:]); err != nil {
@@ -258,14 +274,155 @@ func (bs *Books) SetCell(id, sheet string, row, col int, input string) (string, 
 	}
 	disp, _ := f.GetCellValue(sheet, ref)
 	b.setCached(sheet, row, col, disp)
-	if b.hasFormulas() {
-		b.needsCalc = true
-		b.recalc()
-		if rows := b.rows[sheet]; row < len(rows) && col < len(rows[row]) {
-			disp = rows[row][col]
+	return disp, nil
+}
+
+// inputOf is what editing a cell shows: "=formula" or its raw value.
+func (b *book) inputOf(sheet string, row, col int) string {
+	ref, err := excelize.CoordinatesToCellName(col+1, row+1)
+	if err != nil {
+		return ""
+	}
+	if fm, _ := b.f.GetCellFormula(sheet, ref); fm != "" {
+		return "=" + fm
+	}
+	raw, _ := b.f.GetCellValue(sheet, ref, excelize.Options{RawCellValue: true})
+	return raw
+}
+
+// CellEdit is one cell's new (or previous) input.
+type CellEdit struct {
+	Row   int    `json:"row"`
+	Col   int    `json:"col"`
+	Value string `json:"value"`
+}
+
+// CellRange is an inclusive block of cells (0-based).
+type CellRange struct {
+	R0 int `json:"r0"`
+	C0 int `json:"c0"`
+	R1 int `json:"r1"`
+	C1 int `json:"c1"`
+}
+
+// maxBatch bounds one paste/fill/clear.
+const maxBatch = 1_000_000
+
+// SetCells applies a batch (cells to set, ranges to clear) with a single
+// recalculation and returns the previous inputs of every cell it changed,
+// so the caller can undo it.
+func (bs *Books) SetCells(id, sheet string, cells []CellEdit, clear []CellRange) ([]CellEdit, error) {
+	b, err := bs.get(id)
+	if err != nil {
+		return nil, err
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.indexFormulas()
+	type key struct{ r, c int }
+	seen := map[key]bool{}
+	var old []CellEdit
+	set := func(r, c int, v string) error {
+		prev := b.inputOf(sheet, r, c)
+		if prev == v {
+			return nil
+		}
+		if !seen[key{r, c}] {
+			seen[key{r, c}] = true
+			old = append(old, CellEdit{r, c, prev})
+		}
+		_, err := b.setOne(sheet, r, c, v)
+		return err
+	}
+	rows := b.rows[sheet]
+	n := len(cells)
+	for _, rg := range clear {
+		for r := rg.R0; r <= min(rg.R1, len(rows)-1); r++ {
+			for c := rg.C0; c <= min(rg.C1, len(rows[r])-1); c++ {
+				if n++; n > maxBatch {
+					return nil, fmt.Errorf("too many cells at once (more than %d)", maxBatch)
+				}
+				if rows[r][c] == "" && b.inputOf(sheet, r, c) == "" {
+					continue
+				}
+				if err := set(r, c, ""); err != nil {
+					return nil, err
+				}
+			}
 		}
 	}
-	return disp, nil
+	if len(cells) > maxBatch {
+		return nil, fmt.Errorf("too many cells at once (more than %d)", maxBatch)
+	}
+	for _, e := range cells {
+		if e.Row < 0 || e.Col < 0 {
+			continue
+		}
+		if err := set(e.Row, e.Col, e.Value); err != nil {
+			return nil, err
+		}
+	}
+	if len(old) > 0 && b.hasFormulas() {
+		b.needsCalc = true
+		b.recalc()
+	}
+	return old, nil
+}
+
+// Inputs returns the inputs ("=formula" or value) of a block of cells.
+func (bs *Books) Inputs(id, sheet string, r0, r1, c0, c1 int) ([][]string, error) {
+	b, err := bs.get(id)
+	if err != nil {
+		return nil, err
+	}
+	if (r1-r0+1)*(c1-c0+1) > 2*maxBatch {
+		return nil, errors.New("selection too large")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	rows := b.rows[sheet]
+	out := make([][]string, 0, max(0, r1-r0+1))
+	for r := r0; r <= r1; r++ {
+		row := make([]string, c1-c0+1)
+		if r < len(rows) {
+			for c := c0; c <= min(c1, len(rows[r])-1); c++ {
+				row[c-c0] = b.inputOf(sheet, r, c)
+			}
+		}
+		out = append(out, row)
+	}
+	return out, nil
+}
+
+// Complete is Excel's AutoComplete: the single text entry in the column that
+// starts with what was typed (case-insensitive), or "" if none or several.
+func (bs *Books) Complete(id, sheet string, col int, typed string) (string, error) {
+	b, err := bs.get(id)
+	if err != nil {
+		return "", err
+	}
+	if typed == "" || numberInput.MatchString(strings.TrimSpace(typed)) {
+		return "", nil
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	t := strings.ToLower(typed)
+	found := ""
+	for _, row := range b.rows[sheet] {
+		if col >= len(row) {
+			continue
+		}
+		v := row[col]
+		if len(v) <= len(typed) || numberInput.MatchString(strings.TrimSpace(v)) || !strings.HasPrefix(strings.ToLower(v), t) {
+			continue
+		}
+		if found == "" {
+			found = v
+		} else if !strings.EqualFold(found, v) {
+			return "", nil
+		}
+	}
+	return found, nil
 }
 
 // indexFormulas finds the formula cells of every sheet (once).

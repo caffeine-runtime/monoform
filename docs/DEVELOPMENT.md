@@ -95,7 +95,7 @@ served locally (see TESTING.md). CI runs them all except `m6b`.
 cd frontend && npm run check && npm test && cd ..
 ./scripts/build.sh
 go vet -tags webkit2_41 ./... && go test -tags webkit2_41 ./...
-python3 scripts/fixtures.py /tmp/fx && for s in m1 m2 m3 m4 m4b m5 m6 m8 m10 m11 m12 m13; do scripts/selftest.sh $s /tmp/fx || break; done
+python3 scripts/fixtures.py /tmp/fx && for s in m1 m2 m3 m4 m4b m5 m6 m8 m10 m11 m12 m13 m14; do scripts/selftest.sh $s /tmp/fx || break; done
 python3 scripts/licenses.py
 ```
 

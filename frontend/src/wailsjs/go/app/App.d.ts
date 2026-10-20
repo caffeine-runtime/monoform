@@ -132,7 +132,11 @@ export function SheetCell(arg1:string,arg2:string,arg3:number,arg4:number):Promi
 
 export function SheetClose(arg1:string):Promise<void>;
 
+export function SheetComplete(arg1:string,arg2:string,arg3:number,arg4:string):Promise<string>;
+
 export function SheetDeleteRow(arg1:string,arg2:string,arg3:number):Promise<void>;
+
+export function SheetInputs(arg1:string,arg2:string,arg3:number,arg4:number,arg5:number,arg6:number):Promise<Array<any>>;
 
 export function SheetInsertRow(arg1:string,arg2:string,arg3:number):Promise<void>;
 
@@ -145,6 +149,8 @@ export function SheetRows(arg1:string,arg2:string,arg3:number,arg4:number,arg5:n
 export function SheetSave(arg1:string,arg2:string):Promise<void>;
 
 export function SheetSet(arg1:string,arg2:string,arg3:number,arg4:number,arg5:string):Promise<string>;
+
+export function SheetSetCells(arg1:string,arg2:string,arg3:Array<office.CellEdit>,arg4:Array<office.CellRange>):Promise<Array<office.CellEdit>>;
 
 export function Siblings(arg1:string,arg2:Array<string>):Promise<Array<string>>;
 

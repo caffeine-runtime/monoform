@@ -205,7 +205,7 @@ func TestRenderGainSilenceAndPadding(t *testing.T) {
 	}
 	defer d.Close()
 	segs := []Segment{
-		{Start: 0, End: 100, Gains: []Ramp{{0, 1}}},             // fade in
+		{Start: 0, End: 100, Gains: []Ramp{{0, 1}}},               // fade in
 		{Start: 100, End: 200, Gains: []Ramp{{2, 2}, {0.5, 0.5}}}, // gains multiply
 		{Start: 0, End: 50, Silence: true},
 		{Start: 950, End: 1050}, // past the end: padded

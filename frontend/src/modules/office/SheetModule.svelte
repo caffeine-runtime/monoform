@@ -5,7 +5,10 @@
   import Icon from '../../shell/Icon.svelte';
   import Plus from '@lucide/svelte/icons/plus';
   import Info from '@lucide/svelte/icons/info';
-  import Grid, { type GridColumn } from '../data/Grid.svelte';
+  import Grid, { type GridColumn, type GridEdit } from '../data/Grid.svelte';
+  import { addStats, emptyStats, formatStats, rangeCells, rangeRows, type Range } from '../data/gridOps';
+  import { toNumber } from '../data/csv';
+  import { formatShortcut } from '../../core/keys';
   import { api } from '../../core/backend';
   import { basename } from '../../core/paths';
   import { workspace, type Tab } from '../../core/tabs.svelte';
@@ -47,7 +50,20 @@
     columns = Array.from({ length: n }, (_, i) => ({ name: colName(i), width: columns[i]?.width ?? 110 }));
   }
 
-  const source = { rows: (s: number, e: number) => api.SheetRows(book!.id, sheet, s, e, columns.length) };
+  const source = {
+    rows: (s: number, e: number) => api.SheetRows(book!.id, sheet, s, e, columns.length),
+    inputs: (r0: number, r1: number, c0: number, c1: number) => api.SheetInputs(book!.id, sheet, r0, r1, c0, c1),
+  };
+
+  // Undo in cell terms: each step keeps what it wrote and what was there before.
+  interface Step {
+    sheet: string;
+    forward: GridEdit;
+    back: office.CellEdit[];
+  }
+  let undoStack: Step[] = [];
+  let redoStack: Step[] = [];
+  let selStats = '';
 
   async function open() {
     error = '';
@@ -82,25 +98,92 @@
     } catch {
       formula = '';
     }
-    tab.status = { ...tab.status, type: book.format.toUpperCase(), position: `${colName(col)}${row + 1}`, info: `${sheet} · ${info?.rows ?? 0} rows` };
+    updateStatus();
+  }
+
+  function updateStatus() {
+    if (!book) return;
+    tab.status = { ...tab.status, type: book.format.toUpperCase(), position: selStats || `${colName(cursor.col)}${cursor.row + 1}`, info: `${sheet} · ${info?.rows ?? 0} rows` };
+  }
+
+  /** Write a batch (Go recalculates once) and record it for undo. */
+  async function write(e: GridEdit, record = true): Promise<boolean> {
+    if (!book) return false;
+    try {
+      const back = await api.SheetSetCells(book.id, sheet, e.cells as office.CellEdit[], e.clear as office.CellRange[]);
+      if (record && back.length) {
+        undoStack.push({ sheet, forward: e, back });
+        if (undoStack.length > 200) undoStack.shift();
+        redoStack = [];
+      }
+      await grown(e.cells);
+      tab.dirty = true;
+      version++;
+      await updateCursor(cursor.row, cursor.col);
+      return true;
+    } catch (err) {
+      toastError(err, 'Could not change the cells');
+      return false;
+    }
+  }
+
+  /** Cells written outside the used area extend the sheet. */
+  async function grown(cells: { row: number; col: number; value: string }[]) {
+    if (!info || !cells.length) return;
+    let r = info.rows;
+    let c = info.cols;
+    for (const x of cells) {
+      if (x.value === '') continue;
+      r = Math.max(r, x.row + 1);
+      c = Math.max(c, x.col + 1);
+    }
+    if (r !== info.rows || c !== info.cols) {
+      info.rows = r;
+      info.cols = c;
+      await refreshBook();
+      setColumns();
+    }
   }
 
   async function edit(row: number, col: number, value: string) {
-    if (!book) return;
-    try {
-      await api.SheetSet(book.id, sheet, row, col, value);
-      if (info && (row >= info.rows || col >= info.cols)) {
-        info.rows = Math.max(info.rows, row + 1);
-        info.cols = Math.max(info.cols, col + 1);
-        await refreshBook();
-        setColumns();
+    await write({ cells: [{ row, col, value }], clear: [] });
+  }
+
+  async function undoRedo(redo: boolean) {
+    const st = (redo ? redoStack : undoStack).pop();
+    if (!st || !book) return;
+    if (st.sheet !== sheet) await switchSheet(st.sheet);
+    await write(redo ? st.forward : { cells: st.back, clear: [] }, false);
+    (redo ? undoStack : redoStack).push(st);
+    const first = redo ? st.forward.cells[0] ?? { row: st.forward.clear[0]?.r0 ?? 0, col: st.forward.clear[0]?.c0 ?? 0 } : st.back[0];
+    return first ? { row: first.row, col: first.col } : undefined;
+  }
+
+  // Excel-style "Average · Count · Sum" for multi-cell selections.
+  let statsTimer: ReturnType<typeof setTimeout> | undefined;
+  let statsSeq = 0;
+  function onSelection(r: Range) {
+    clearTimeout(statsTimer);
+    if (rangeCells(r) <= 1 || !book) {
+      if (selStats) {
+        selStats = '';
+        updateStatus();
       }
-      tab.dirty = true;
-      version++;
-      if (row === cursor.row && col === cursor.col) await updateCursor(row, col);
-    } catch (e) {
-      toastError(e, 'Could not set the cell');
+      return;
     }
+    const seq = ++statsSeq;
+    statsTimer = setTimeout(async () => {
+      // Only the used area holds values.
+      const r1 = Math.min(r.r1, (info?.rows ?? 0) - 1);
+      const s = emptyStats();
+      if (r1 >= r.r0 && rangeRows({ ...r, r1 }) * (r.c1 - r.c0 + 1) <= 500_000) {
+        const rows = await api.SheetRows(book!.id, sheet, r.r0, r1 + 1, r.c1 + 1);
+        for (const row of rows) for (let c = r.c0; c <= r.c1; c++) addStats(s, row[c] ?? '', toNumber);
+      }
+      if (seq !== statsSeq) return;
+      selStats = formatStats(s);
+      updateStatus();
+    }, 120);
   }
 
   async function commitFormula() {
@@ -150,14 +233,21 @@
     if (!book || !info) return;
     await api.SheetInsertRow(book.id, sheet, cursor.row);
     info.rows++;
+    undoStack = [];
+    redoStack = [];
     tab.dirty = true;
     version++;
   }
 
+  /** Delete the selected rows (or the current one). */
   async function deleteRow() {
     if (!book || !info) return;
-    await api.SheetDeleteRow(book.id, sheet, cursor.row);
-    info.rows = Math.max(0, info.rows - 1);
+    const s = grid?.selection() ?? { r0: cursor.row, r1: cursor.row, c0: 0, c1: 0 };
+    const last = Math.min(s.r1, info.rows - 1);
+    for (let r = last; r >= s.r0; r--) await api.SheetDeleteRow(book.id, sheet, r);
+    info.rows = Math.max(0, info.rows - Math.max(0, last - s.r0 + 1));
+    undoStack = [];
+    redoStack = [];
     tab.dirty = true;
     version++;
   }
@@ -195,16 +285,22 @@
   }
 
   function cellMenu(e: MouseEvent) {
+    const s = grid?.selection();
+    const n = s ? rangeRows(s) : 1;
+    const ro = tab.readOnly;
     menu.show(e, [
-      { label: 'Insert row above', run: insertRow, disabled: tab.readOnly },
-      { label: 'Delete row', run: deleteRow, disabled: tab.readOnly },
+      { label: 'Cut', shortcut: formatShortcut('Mod+X'), run: () => void grid?.copy(true), disabled: ro },
+      { label: 'Copy', shortcut: formatShortcut('Mod+C'), run: () => void grid?.copy() },
+      { label: 'Paste', shortcut: formatShortcut('Mod+V'), run: async () => grid?.pasteText(await navigator.clipboard.readText()), disabled: ro },
+      { label: 'Clear contents', shortcut: 'Del', run: () => void grid?.clearSelection(), disabled: ro },
       { separator: true },
-      { label: 'Copy cell', run: async () => navigator.clipboard.writeText((await source.rows(cursor.row, cursor.row + 1))[0]?.[cursor.col] ?? '') },
+      { label: 'Insert row above', run: insertRow, disabled: ro },
+      { label: n > 1 ? `Delete ${n} rows` : 'Delete row', run: deleteRow, disabled: ro },
     ]);
   }
 
   officeControllers.set(tab.id, { insertRow, deleteRow });
-  (tab as unknown as { sheetTest: unknown }).sheetTest = { book: () => book, edit, rows: (s: number, e: number) => source.rows(s, e), cell: (r: number, c: number) => api.SheetCell(book!.id, sheet, r, c), switchSheet, save, writeTo };
+  (tab as unknown as { sheetTest: unknown }).sheetTest = { book: () => book, edit, rows: (s: number, e: number) => source.rows(s, e), cell: (r: number, c: number) => api.SheetCell(book!.id, sheet, r, c), switchSheet, save, writeTo, grid: () => grid, undoRedo, stats: () => selStats };
 
   onMount(() => {
     tab.handlers = {
@@ -252,7 +348,23 @@
     <div class="empty-state">{error}</div>
   {:else if book && sheet}
     {#key sheet}
-      <Grid bind:this={grid} {source} {rowCount} bind:columns {version} editable={!tab.readOnly} onedit={edit} oncursor={(r, c) => updateCursor(r, c)} oncontext={cellMenu} />
+      <Grid
+        bind:this={grid}
+        {source}
+        {rowCount}
+        bind:columns
+        {version}
+        editable={!tab.readOnly}
+        formulas
+        onedit={edit}
+        onapply={(e) => write(e)}
+        onundo={() => undoRedo(false)}
+        onredo={() => undoRedo(true)}
+        oncomplete={async (col, typed) => (book ? (await api.SheetComplete(book.id, sheet, col, typed)) || null : null)}
+        onselection={onSelection}
+        oncursor={(r, c) => updateCursor(r, c)}
+        oncontext={cellMenu}
+      />
     {/key}
   {:else}
     <div class="empty-state"><span class="spinner"></span></div>

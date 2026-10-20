@@ -68,6 +68,20 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 - **CSV saves are byte-exact for untouched rows**: each record is written back from its original text slice including its own line terminator; only edited rows are re-serialized (minimal quoting). Encoding, BOM and delimiter are preserved. Added rows use the file's dominant line ending.
 - **Header detection**: a first row is a header when it is non-empty, unique, and is text above numeric/date columns (or, for all-text tables, its values don't repeat below it). It can be toggled in the toolbar; the delimiter can be overridden.
 - **Very tall grids use a scaled scrollbar** (browsers cap element height at ~16–33 M px): above 8 M px of rows, the scrollbar position maps proportionally to rows. Rows sit at their virtual positions inside one container moved by a single transform, which keeps scrolling at roughly one paint per frame.
+- **Spreadsheet-style grid (M14)** is one component (`modules/data/Grid.svelte`) shared by CSV and .xlsx; the
+  pure logic (ranges, TSV, fill series, formula shifting, AutoComplete, stats) is in `gridOps.ts` with unit tests.
+  - **Selection is an anchor + active cell** (one rectangle), so it costs nothing at a million rows; its overlay is
+    clipped to the rows on screen. Stats for a selection are computed off the main thread (CSV worker; Go reads for
+    .xlsx, capped at 500k cells) after a 120 ms pause.
+  - **The clipboard carries TSV** — what Excel, LibreOffice and Sheets put there — written inside the key gesture
+    with a `ClipboardItem` promise (WebKit requires that). A copy also remembers the raw inputs, so pasting the same
+    text in the app keeps formulas (shifted) and turns a cut into a move.
+  - **Edits travel as one batch** (`cells` + `clear` ranges): one worker message or one Go call (`SheetSetCells`,
+    a single recalculation), and one undo step. CSV undo entries are keyed by **record index**, not view row, so
+    they survive sorting and filtering; .xlsx undo keeps the previous inputs Go returns for the cells it changed.
+  - **AutoComplete follows Excel**: only a unique case-insensitive prefix match among the column's text entries
+    (never numbers), proposed as a selected suffix so typing on simply replaces it.
+  - Clicking a header selects its column (as in spreadsheets); sorting moved to a small ▾ button in the header.
 
 - **Office documents (added on request, M4b) are editable, not read-only.**
   - **.xlsx/.xlsm** are edited through excelize (BSD-3) in Go: only cells you change are rewritten, so styles, number formats, other sheets, charts and defined names stay as they were. Input follows spreadsheet rules (`=…` formula, number, TRUE/FALSE, otherwise text). After every edit the sheet's formula cells are recomputed (excelize's calculation engine) so dependent values update live; on save the computed results are written into the formula cells' cached values **and** the workbook asks for full recalculation on load, so Excel, LibreOffice and file previews all show correct numbers.

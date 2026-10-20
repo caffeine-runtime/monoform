@@ -114,6 +114,8 @@ w("data/invalid.json", b'{\n  "a": 1,\n  "b": [1, 2,\n  "c": "missing bracket"\n
 w("data/sample.yaml", b"# config\nname: Hold It All\nports:\n  - 80\n  - 443\nowner:\n  name: Ann\n  active: true\n")
 w("data/invalid.yaml", b"name: ok\nlist:\n  - a\n - b\n")
 w("data/semi.csv", 'name;city;amount\r\n"Kowalski; Jan";Kraków;12,50\r\nAnn;"Paris\r\nFrance";7\r\nBob;Rome;100\r\n'.encode())
+# Spreadsheet-behaviour fixtures (selection, paste, fill, move, AutoComplete).
+w("data/grid.csv", b"name,city,qty\nAnna,Warsaw,1\nBartek,Wroclaw,2\nCelina,Berlin,3\nDawid,Warsaw,4\n")
 big_csv = os.path.join(d, "data", "million.csv")
 if not os.path.exists(big_csv):
     cities = ["Krakow", "Paris", "Rome", "Lisbon", "Oslo", "Tallinn", "Porto", "Gdansk"]
@@ -127,7 +129,7 @@ import shutil
 here = os.path.dirname(os.path.abspath(__file__))
 td = os.path.join(here, "..", "internal", "office", "testdata")
 os.makedirs(os.path.join(d, "office"), exist_ok=True)
-for src, dst in [("doc.docx", "report.docx"), ("doc.doc", "legacy.doc"), ("sheet.xlsx", "budget.xlsx"), ("sheet.xls", "legacy.xls")]:
+for src, dst in [("doc.docx", "report.docx"), ("doc.doc", "legacy.doc"), ("sheet.xlsx", "budget.xlsx"), ("sheet.xls", "legacy.xls"), ("sheet.xlsx", "grid.xlsx")]:
     shutil.copyfile(os.path.join(td, src), os.path.join(d, "office", dst))
 for stale in ("legacy.docx", "legacy.xlsx"):
     p = os.path.join(d, "office", stale)
