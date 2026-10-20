@@ -159,13 +159,50 @@ export default async function m9(dir: string) {
   const obJank = await measureJank(() => h.objectAt(200, 150, 'replace'));
   const ob = ed.state().pixelSelection;
   log(`object select ${Math.round(performance.now() - t0)} ms incl. analysis (longest UI frame ${Math.round(obJank.maxGap)} ms): ${JSON.stringify(ob)}`);
-  assert(ob && near(ob.x, 120, 20) && near(ob.y, 70, 20) && near(ob.width, 160, 30) && near(ob.height, 160, 30), 'object mask fits the disc');
+  assert(ob && near(ob.x, 120, 1) && near(ob.y, 70, 1) && near(ob.width, 161, 2) && near(ob.height, 161, 2), 'object mask snapped to the disc edge');
+  // Edges are refined to the pixels: compare the mask with the true disc.
+  const om = ed.selection!.mask.getContext('2d')!.getImageData(0, 0, ed.width, ed.height).data;
+  let wrong = 0;
+  for (let y = 0; y < ed.height; y++) for (let x = 0; x < ed.width; x++) if (om[(y * ed.width + x) * 4 + 3] > 127 !== (x - 200) ** 2 + (y - 150) ** 2 <= 80 ** 2) wrong++;
+  log(`object mask: ${wrong} pixels differ from the disc (edge ≈ 503 px)`);
+  assert(wrong <= 25, `object edge is pixel-accurate (${wrong} wrong pixels)`);
   t0 = performance.now();
   await h.objectAt(50, 50, 'replace');
   const ob2 = ed.state().pixelSelection;
   log(`second click ${Math.round(performance.now() - t0)} ms: ${JSON.stringify(ob2)}`);
-  assert(ob2 && ob2.x < 40 && ob2.width < 120, 'second object (square)');
+  assert(ob2 && near(ob2.x, 20, 1) && near(ob2.y, 20, 1) && near(ob2.width, 60, 2) && near(ob2.height, 60, 2), 'second object (square), exact edges');
   ed.deselect();
+
+  // ---- canvas edge: pasteboard outside, a thin border around the document ----
+  const priv = ed as unknown as { stage: { content: HTMLDivElement }; klayer: { getCanvas: () => { _canvas: HTMLCanvasElement; getPixelRatio: () => number } }; active: { objs: { getChildren: () => any[] } }; select: (n: unknown) => void };
+  const lc = priv.klayer.getCanvas();
+  const pr = lc.getPixelRatio();
+  const v = ed.view;
+  const stagePx = (x: number, y: number) => [...lc._canvas.getContext('2d')!.getImageData(Math.round(x * pr), Math.round(y * pr), 1, 1).data];
+  assert(stagePx(Math.round(v.x) - 1, Math.round(v.y) + 150 * v.zoom)[3] > 0, 'border drawn just outside the canvas');
+  assertEq(stagePx(2, 2)[3], 0, 'pasteboard (no checkerboard) far outside the canvas');
+
+  // ---- rectangle: Ctrl-drag makes a square; corner radius is adjustable ----
+  ed.setTool('rect');
+  ed.setOptions({ cornerRadius: 12, strokeWidth: 4 });
+  const box = priv.stage.content.getBoundingClientRect();
+  const mouse = (type: string, dx: number, dy: number, ctrlKey = false) =>
+    priv.stage.content.dispatchEvent(new MouseEvent(type, { bubbles: true, ctrlKey, button: 0, clientX: box.left + v.x + dx * v.zoom, clientY: box.top + v.y + dy * v.zoom }));
+  const objsBefore = ed.state().layers[0].objects;
+  mouse('mousedown', 100, 100);
+  mouse('mousemove', 160, 120, true);
+  mouse('mouseup', 160, 120, true);
+  assertEq(ed.state().layers[0].objects, objsBefore + 1, 'rectangle drawn');
+  const rect = priv.active.objs.getChildren().at(-1);
+  assert(near(rect.width(), 60, 1) && near(rect.height(), 60, 1), `Ctrl keeps it square (${rect.width()}×${rect.height()})`);
+  assertEq(rect.cornerRadius(), 12, 'rounded corners from the Corners option');
+  priv.select(rect);
+  ed.updateObject({ cornerRadius: 0 });
+  assertEq(ed.objectProps()?.cornerRadius, 0, 'sharp corners after editing');
+  ed.undo();
+  ed.undo();
+  assertEq(ed.state().layers[0].objects, objsBefore, 'undo rectangle');
+  ed.setTool('hand');
 
   // ---- free rotation ----
   ed.rotateBy(30, true);

@@ -67,6 +67,9 @@
   (exposure, brightness, contrast, highlights, shadows, saturation, vibrance, temperature, tint, hue, sharpen,
   blur, vignette, B&W, sepia, invert) with live preview, also limited to a selection; one-click background
   removal; "Save a copy" (and an option to always keep originals); save/open layered OpenRaster (.ora).
+  Object selection and select subject snap their edges to the pixels (colour-based edge refinement); the canvas
+  has a visible edge on a plain pasteboard; Ctrl keeps rectangles/ellipses square/round; rectangles have
+  adjustable corner radius; tool tooltips explain how to use each tool.
 - **M10 — SVG.** Source and live preview side by side (preview through `<img>`, so scripts and external
   references in the file never run), zoom/pan, transparent/light/dark background, XML errors with line and
   column while the last good render stays, PNG export at 1×/2×/4×/custom width, open in browser.
@@ -138,7 +141,7 @@
 | 1M-row CSV (40 MB) | smooth scroll, sort | loads in 1.1–2.1 s (worst frame 54–61 ms); scrolling worst frame 60 ms (100 frames, 4 above 50 ms, all on large jumps); sort 2.6 s in the worker with UI frames ≤ 40 ms; filter 0.7 s | same |
 | Hashing (page cache warm) | progress ≥ 4/s, UI responsive | SHA-256 308 MB/s, BLAKE3 3.2 GB/s, all five at once 258 MB/s; 3 GiB file: progress every ≤ 113 ms, worst UI frame 38–60 ms while hashing | same |
 | Search by meaning (optional) | no freeze; memory returned when idle | 25–45 tokens/s (single-threaded WASM), query 1.0–1.3 s, model load 8–9 s, ~0.8 GB extra while loaded (webview RSS 0.34 → 1.11 GB) and freed on unload; worst UI frame 23–40 ms while indexing, 50–73 ms during a cold model load | same |
-| Image editor v2 (400×300 test image) | no freeze | adjustments preview+apply worst frame 21–23 ms; background removal 4.3–5.5 s first time, ~2 s after (worker); object selection: 16–18 s one-time analysis, 0.19–0.23 s per click; magic wand on 12 MP 0.9 s in the worker with UI frames ≤ 22 ms | same |
+| Image editor v2 (400×300 test image) | no freeze | adjustments preview+apply worst frame 21–23 ms; background removal 4.3–5.5 s first time, ~2 s after (worker); object selection: 16–18 s one-time analysis, 0.23–0.26 s per click incl. edge refinement; magic wand on 12 MP 0.9 s in the worker with UI frames ≤ 22 ms | same |
 | 3D model open (small models) | no freeze | first 3D tab of a session 460–540 ms, worst UI frame 87–115 ms (WebGL context + three.js + shader compiles, once); later tabs 160–300 ms, worst frame 30–55 ms; parse in the worker 33–67 ms | same |
 | Audio open | playable at once, waveform streams in | 3 s WAV: 195–240 ms to open, waveform complete after 140–190 ms; 10-min WAV: open 225 ms, waveform 165–175 ms, worst UI frame 35–50 ms; 10-min MP3 waveform 2.5 s (4 cores; 9.6 s on one), OGG 0.4 s, FLAC 2.4 s | same |
 | Video open / save | playable at once; save ≈ copy speed | 6 s WebM: open ~200 ms; saving remuxes without decoding (bounded by disk speed); Go tests remux 4 formats in < 1 s | same |
@@ -169,7 +172,7 @@ available here).
 - 3D: the first model opened in a session has one ~90–115 ms frame on the software-rendered VM (creating the WebGL context and compiling shaders, which WebKitGTK does synchronously even with `KHR_parallel_shader_compile`); later opens stay ≤ 55 ms.
 - 3D: on the software-rendered Linux VM (llvmpipe) a floor-grid line passing under the camera can show as a wide grey bar; the same scene renders correctly in Chromium's software renderer, so it looks like a llvmpipe/WebKitGTK rasterisation bug. Toggle the grid (G) if it appears.
 - 3D: glTF files with KTX2/Basis textures (`KHR_texture_basisu`) aren't supported yet (clear error); FBX files with external textures need them next to the model; USD support is three.js's (USDA/USDC/USDZ geometry and materials, no variants or skeletal animation).
-- Object selection analyses the whole image once (~15–18 s on the test VM, single-threaded WASM); clicks are fast afterwards. Background removal uses a small model (U²-Netp) — fine hair and glass are approximate.
+- Object selection analyses the whole image once (~15–18 s on the test VM, single-threaded WASM); clicks are fast afterwards. Background removal uses a small model (U²-Netp) — fine hair and glass are approximate. Edge refinement fixes edges within a few pixels of the model's outline; if the model picks the wrong region (e.g. part of a second person), add/exclude with Shift-/Alt-click.
 - Grid: one rectangular selection at a time (no Ctrl+click multi-ranges); a CSV paste wider than the table is cut
   at the last column (with a notice) — add columns first; rows can't be reordered by dragging their numbers.
 - Grid: in .xlsx, editing a date-formatted cell shows the stored serial number (e.g. 46327), not the date.

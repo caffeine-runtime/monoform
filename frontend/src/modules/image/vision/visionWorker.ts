@@ -1,10 +1,12 @@
 // Image analysis off the main thread: magic-wand flood fill, background
-// removal (U²-Netp) and click-to-select objects (SlimSAM). Masks come back as
+// removal (U²-Netp) and click-to-select objects (SlimSAM). Model masks are
+// snapped to the image's real edges (refine.ts). Masks come back as
 // ImageBitmaps (white, alpha = selection) plus an edge outline, so the main
 // thread only draws bitmaps. Models are bundled assets loaded on first use.
 import * as ort from 'onnxruntime-web/wasm';
 import { initOrtWasm } from '../../../core/ortwasm';
 import { fetchBytes } from '../../../core/fetchbytes';
+import { refineMask, sample } from './refine';
 import u2netpUrl from '../models/u2netp.onnx?url';
 import samEncUrl from '../models/slimsam-77-vision_encoder_quantized.onnx?url';
 import samDecUrl from '../models/slimsam-77-prompt_encoder_mask_decoder_quantized.onnx?url';
@@ -175,71 +177,6 @@ function tensorFor(img: ImageBitmap, size: number): { tensor: ort.Tensor; scale:
   return { tensor: new ort.Tensor('float32', data, [1, 3, size, size]), scale };
 }
 
-/** Box filter (running sums) over a float image, radius r. */
-function boxFilter(src: Float32Array, w: number, h: number, r: number): Float32Array {
-  const tmp = new Float32Array(w * h);
-  const out = new Float32Array(w * h);
-  for (let y = 0; y < h; y++) {
-    let acc = 0;
-    const row = y * w;
-    for (let x = -r; x <= r; x++) acc += src[row + Math.min(w - 1, Math.max(0, x))];
-    for (let x = 0; x < w; x++) {
-      tmp[row + x] = acc / (2 * r + 1);
-      acc += src[row + Math.min(w - 1, x + r + 1)] - src[row + Math.max(0, x - r)];
-    }
-  }
-  for (let x = 0; x < w; x++) {
-    let acc = 0;
-    for (let y = -r; y <= r; y++) acc += tmp[Math.min(h - 1, Math.max(0, y)) * w + x];
-    for (let y = 0; y < h; y++) {
-      out[y * w + x] = acc / (2 * r + 1);
-      acc += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x];
-    }
-  }
-  return out;
-}
-
-/** Guided filter (He et al.): refines a coarse mask p along the edges of guide I. */
-function guided(I: Float32Array, p: Float32Array, w: number, h: number, r: number, eps: number): Float32Array {
-  const n = w * h;
-  const Ip = new Float32Array(n);
-  const II = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    Ip[i] = I[i] * p[i];
-    II[i] = I[i] * I[i];
-  }
-  const mI = boxFilter(I, w, h, r);
-  const mp = boxFilter(p, w, h, r);
-  const mIp = boxFilter(Ip, w, h, r);
-  const mII = boxFilter(II, w, h, r);
-  const a = new Float32Array(n);
-  const b = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    const cov = mIp[i] - mI[i] * mp[i];
-    const v = mII[i] - mI[i] * mI[i];
-    a[i] = cov / (v + eps);
-    b[i] = mp[i] - a[i] * mI[i];
-  }
-  const ma = boxFilter(a, w, h, r);
-  const mb = boxFilter(b, w, h, r);
-  const q = new Float32Array(n);
-  for (let i = 0; i < n; i++) q[i] = ma[i] * I[i] + mb[i];
-  return q;
-}
-
-/** Bilinear sample of a w×h float map at (x, y). */
-function sample(m: Float32Array, w: number, h: number, x: number, y: number): number {
-  const x0 = Math.max(0, Math.min(w - 1, Math.floor(x)));
-  const y0 = Math.max(0, Math.min(h - 1, Math.floor(y)));
-  const x1 = Math.min(w - 1, x0 + 1);
-  const y1 = Math.min(h - 1, y0 + 1);
-  const fx = Math.max(0, Math.min(1, x - x0));
-  const fy = Math.max(0, Math.min(1, y - y0));
-  const top = m[y0 * w + x0] * (1 - fx) + m[y0 * w + x1] * fx;
-  const bot = m[y1 * w + x0] * (1 - fx) + m[y1 * w + x1] * fx;
-  return top * (1 - fy) + bot * fy;
-}
-
 async function removeBg(img: ImageBitmap): Promise<MaskResult> {
   const t0 = performance.now();
   const S = 320;
@@ -255,36 +192,50 @@ async function removeBg(img: ImageBitmap): Promise<MaskResult> {
   }
   const W = img.width;
   const H = img.height;
-  // Refine at a working resolution (≤1024 px), guided by the image's luminance.
-  const ws = Math.min(1, 1024 / Math.max(W, H));
-  const ww = Math.max(1, Math.round(W * ws));
-  const wh = Math.max(1, Math.round(H * ws));
-  const px = pixels(img, ww, wh);
-  const guide = new Float32Array(ww * wh);
-  const coarse = new Float32Array(ww * wh);
-  const k = scale / ws; // working px → model px
-  for (let y = 0; y < wh; y++) {
-    for (let x = 0; x < ww; x++) {
-      const i = y * ww + x;
-      guide[i] = (0.299 * px[i * 4] + 0.587 * px[i * 4 + 1] + 0.114 * px[i * 4 + 2]) / 255;
-      coarse[i] = (sample(pred, S, S, (x + 0.5) * k - 0.5, (y + 0.5) * k - 0.5) - lo) / (hi - lo || 1);
-    }
+  const work = workPixels(img);
+  const k = scale / work.s; // working px → model px
+  const prior = new Float32Array(work.w * work.h);
+  for (let y = 0; y < work.h; y++) {
+    for (let x = 0; x < work.w; x++) prior[y * work.w + x] = (sample(pred, S, S, (x + 0.5) * k - 0.5, (y + 0.5) * k - 0.5) - lo) / (hi - lo || 1);
   }
-  const q = guided(guide, coarse, ww, wh, Math.max(2, Math.round(ww / 128)), 1e-3);
-  // Full-resolution alpha with a gentle contrast curve.
-  const alpha = new Uint8ClampedArray(W * H);
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const v = sample(q, ww, wh, (x + 0.5) * ws - 0.5, (y + 0.5) * ws - 0.5);
-      const c = Math.min(1, Math.max(0, (v - 0.15) / 0.7));
-      alpha[y * W + x] = Math.round(c * c * (3 - 2 * c) * 255);
-    }
-  }
+  // One model pixel is 1/k working pixels; the true edge is within ~2 of them.
+  const alpha = refined(work, prior, 2 / k, W, H);
   img.close();
   return finish(alpha, W, H, t0);
 }
 
-const samCache = new Map<string, { emb: ort.Tensor; pos: ort.Tensor; scale: number; w: number; h: number }>();
+/** Refinement runs at most this large (long side); bigger images get the result upscaled. */
+const WORK = 2048;
+
+interface Work {
+  px: Uint8ClampedArray;
+  w: number;
+  h: number;
+  s: number; // working px per image px
+}
+
+function workPixels(img: ImageBitmap): Work {
+  const s = Math.min(1, WORK / Math.max(img.width, img.height));
+  const w = Math.max(1, Math.round(img.width * s));
+  const h = Math.max(1, Math.round(img.height * s));
+  return { px: pixels(img, w, h), w, h, s };
+}
+
+/** Snap prior (working resolution) to the image's edges; alpha 0..255 at W×H. */
+function refined(work: Work, prior: Float32Array, band: number, W: number, H: number): Uint8ClampedArray {
+  const a = refineMask(work.px, work.w, work.h, prior, Math.max(2, band));
+  const alpha = new Uint8ClampedArray(W * H);
+  if (work.w === W && work.h === H) {
+    for (let i = 0; i < alpha.length; i++) alpha[i] = Math.round(a[i] * 255);
+    return alpha;
+  }
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) alpha[y * W + x] = Math.round(sample(a, work.w, work.h, (x + 0.5) * work.s - 0.5, (y + 0.5) * work.s - 0.5) * 255);
+  }
+  return alpha;
+}
+
+const samCache = new Map<string, { emb: ort.Tensor; pos: ort.Tensor; scale: number; w: number; h: number; work: Work }>();
 
 async function samEncode(img: ImageBitmap, key: string): Promise<{ millis: number }> {
   const t0 = performance.now();
@@ -292,7 +243,7 @@ async function samEncode(img: ImageBitmap, key: string): Promise<{ millis: numbe
   const { tensor, scale } = tensorFor(img, 1024);
   const out = await enc.run({ pixel_values: tensor });
   samCache.clear(); // one image at a time keeps memory bounded
-  samCache.set(key, { emb: out.image_embeddings, pos: out.image_positional_embeddings, scale, w: img.width, h: img.height });
+  samCache.set(key, { emb: out.image_embeddings, pos: out.image_positional_embeddings, scale, w: img.width, h: img.height, work: workPixels(img) });
   img.close();
   return { millis: Math.round(performance.now() - t0) };
 }
@@ -321,16 +272,17 @@ async function samDecode(key: string, points: { x: number; y: number; positive: 
   const masks = out.pred_masks.data as Float32Array; // [1,1,3,256,256] logits over the padded 1024² input
   const M = 256;
   const plane = masks.subarray(best * M * M, (best + 1) * M * M);
-  const k = (c.scale * M) / 1024; // image px → mask px
-  const alpha = new Uint8ClampedArray(c.w * c.h);
-  for (let y = 0; y < c.h; y++) {
-    for (let x = 0; x < c.w; x++) {
+  const { work } = c;
+  const k = (c.scale * M) / 1024 / work.s; // working px → mask px
+  const prior = new Float32Array(work.w * work.h);
+  for (let y = 0; y < work.h; y++) {
+    for (let x = 0; x < work.w; x++) {
       const v = sample(plane, M, M, (x + 0.5) * k - 0.5, (y + 0.5) * k - 0.5);
-      // Logit → soft edge over ±2 logits.
-      const a = Math.min(1, Math.max(0, (v + 2) / 4));
-      alpha[y * c.w + x] = Math.round(a * 255);
+      prior[y * work.w + x] = 1 / (1 + Math.exp(-v));
     }
   }
+  // One mask pixel is 1/k working pixels; the true edge is within ~1.5 of them.
+  const alpha = refined(work, prior, 1.5 / k, c.w, c.h);
   return finish(alpha, c.w, c.h, t0);
 }
 
