@@ -145,6 +145,15 @@
   move between panes; dividers drag; closing a tab removes its pane; the split is restored with the session.
   Interface size 80–200 % (Settings → Interface size, Ctrl+Alt+= / Ctrl+Alt+−, "Interface: normal size"):
   text, bars, buttons, icons, list rows and the editor font scale together.
+- **M17 — Visual SVG editor.** A Design view (now the default for SVG) next to Source / Split / Preview: select
+  shapes on the canvas (click picks the top-level shape, clicking again inside a group goes deeper, Ctrl+click
+  the deepest), move by dragging or with the arrow keys (Shift = 10), scale and rotate with handles (Shift snaps
+  to 15°), draw rectangles, ellipses, lines, freehand paths and text (Shift for squares/circles), duplicate
+  (Ctrl+D), delete, bring forward/back, select the parent group. The inspector edits fill and stroke (also when set
+  in a style attribute), stroke width, opacity, geometry, path data, text and every other attribute; an outline
+  lists all elements. The source stays the truth: each change rewrites only the attributes or element it touches
+  (comments and formatting survive) and goes through the editor's undo (Ctrl+Z works in either view). The canvas
+  shows a sanitized inline copy (no scripts, event handlers or outside references).
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

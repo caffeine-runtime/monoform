@@ -49,8 +49,8 @@ export async function demux(path: string): Promise<{ video?: StreamInfo; audio?:
 
 /**
  * Reads sample bytes in ~4 MB Range requests through the app's file route
- * (scripts can't fetch from the loopback media server in WebKitGTK; only
- * media elements can), keeping the last block.
+ * (the page's CSP connect-src leaves out the loopback media server, which is
+ * for media elements), keeping the last block.
  */
 export class SampleReader {
   private block: { start: number; data: Uint8Array } | null = null;
