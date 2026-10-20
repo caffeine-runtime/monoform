@@ -94,6 +94,7 @@
   }
 
   const options = {
+    minimap: false, // a preview sits beside the source
     language: xml(),
     onDocChanged: () => {
       schedule();

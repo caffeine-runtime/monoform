@@ -154,6 +154,14 @@
   lists all elements. The source stays the truth: each change rewrites only the attributes or element it touches
   (comments and formatting survive) and goes through the editor's undo (Ctrl+Z works in either view). The canvas
   shows a sanitized inline copy (no scripts, event handlers or outside references).
+- **M18 — Code editor, Sublime-style.** Minimap (click or drag to scroll; Settings or "Show / hide minimap"), Go to
+  symbol (Ctrl+R: functions, classes, methods, types, Markdown headings from the syntax tree), multiple cursors
+  beyond Ctrl+D: add a cursor above/below (Ctrl+Alt+↑/↓), split a selection into lines (Ctrl+Shift+L), select all
+  occurrences (Alt+F3); select line (Ctrl+L, again for the next), duplicate (Ctrl+Shift+D), join (Ctrl+J), insert
+  line above (Ctrl+Shift+Enter), jump to bracket (Ctrl+M); sort (F9) / natural sort / reverse / unique lines, trim
+  trailing whitespace; UPPER (Ctrl+K Ctrl+U), lower (Ctrl+K Ctrl+L), Title and swap case; brackets and quotes close
+  themselves; completion from the language plus words in the file; indent guides; show whitespace. The status bar
+  counts cursors. All of it is off for files over 8 MB (like highlighting).
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

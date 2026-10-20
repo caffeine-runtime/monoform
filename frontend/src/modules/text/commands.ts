@@ -4,6 +4,13 @@ import { settings } from '../../core/settings.svelte';
 import { ui } from '../../core/ui.svelte';
 import { activeController } from './controllers';
 import { ENCODING_LABELS, labelOf, WRITABLE, type Encoding } from './encoding';
+import { controllers } from './controllers';
+import { formatShortcut } from '../../core/keys';
+import { EditorSelection, type StateCommand } from '@codemirror/state';
+import { EditorView } from '@codemirror/view';
+import { copyLineDown } from '@codemirror/commands';
+import { selectSelectionMatches } from '@codemirror/search';
+import * as ed from './editing';
 
 let registered = false;
 
@@ -29,6 +36,47 @@ export function registerTextCommands() {
     },
     { id: 'text.zoomOut', title: 'Editor: smaller font', category: 'View', shortcut: 'Mod+-', when: has, run: () => settings.update((s) => (s.fontSize = Math.max(9, s.fontSize - 1))) },
     { id: 'text.zoomReset', title: 'Editor: reset font size', category: 'View', shortcut: 'Mod+0', when: has, run: () => settings.update((s) => (s.fontSize = 14)) },
+    // ---- Sublime-style editing (the keys also work inside the editor) ----
+    { id: 'text.gotoSymbol', title: 'Go to symbol in file…', category: 'Go', shortcut: 'Mod+R', when: has, run: run((c) => gotoSymbol(c.view)) },
+    ...(
+      [
+        ['text.splitLines', `Split selection into lines (${formatShortcut('Mod+Shift+L')})`, ed.splitIntoLines],
+        ['text.selectAllMatches', `Select all occurrences (${formatShortcut('Alt+F3')})`, selectSelectionMatches],
+        ['text.cursorAbove', `Add cursor above (${formatShortcut('Mod+Alt+ArrowUp')})`, ed.addCursorVertical(-1)],
+        ['text.cursorBelow', `Add cursor below (${formatShortcut('Mod+Alt+ArrowDown')})`, ed.addCursorVertical(1)],
+        ['text.selectLine', `Select line (${formatShortcut('Mod+L')})`, ed.expandToLine],
+        ['text.duplicateLine', `Duplicate line (${formatShortcut('Mod+Shift+D')})`, copyLineDown],
+        ['text.joinLines', `Join lines (${formatShortcut('Mod+J')})`, ed.joinLines],
+        ['text.lineAbove', `Insert line above (${formatShortcut('Mod+Shift+Enter')})`, ed.insertLineAbove],
+        ['text.sortLines', 'Sort lines (F9)', ed.sortLines],
+        ['text.sortLinesNatural', 'Sort lines (natural, ignore case)', ed.sortLinesNatural],
+        ['text.reverseLines', 'Reverse lines', ed.reverseLines],
+        ['text.uniqueLines', 'Remove duplicate lines', ed.uniqueLines],
+        ['text.trimTrailing', 'Trim trailing whitespace', ed.trimTrailing],
+        ['text.upper', `Convert to UPPERCASE (${formatShortcut('Mod+K')} ${formatShortcut('Mod+U')})`, ed.transformCase('upper')],
+        ['text.lower', `Convert to lowercase (${formatShortcut('Mod+K')} ${formatShortcut('Mod+L')})`, ed.transformCase('lower')],
+        ['text.title', 'Convert to Title Case', ed.transformCase('title')],
+        ['text.swapCase', 'Swap case', ed.transformCase('swap')],
+      ] as [string, string, StateCommand][]
+    ).map(([id, title, cmd]) => ({ id, title, category: 'Edit', when: has, run: run((c) => (c.view.focus(), cmd(c.view))) })),
+    {
+      id: 'text.toggleMinimap',
+      title: 'Show / hide minimap',
+      category: 'View',
+      run: () => {
+        settings.update((s) => (s.minimapOff = !s.minimapOff));
+        for (const c of controllers.values()) c.applyPrefs();
+      },
+    },
+    {
+      id: 'text.toggleWhitespace',
+      title: 'Show / hide whitespace (spaces and tabs)',
+      category: 'View',
+      run: () => {
+        settings.update((s) => (s.showWhitespace = !s.showWhitespace));
+        for (const c of controllers.values()) c.applyPrefs();
+      },
+    },
     {
       id: 'text.lineEndings',
       title: 'Change line endings…',
@@ -69,4 +117,21 @@ export function registerTextCommands() {
       }),
     },
   );
+}
+
+/** Pick a function/class/heading of the current file and jump there (Sublime: Ctrl+R). */
+async function gotoSymbol(view: EditorView) {
+  const syms = ed.symbols(view.state);
+  if (!syms.length) {
+    ui.toast('No symbols found in this file.', 'info');
+    return;
+  }
+  const id = await ui.pick(
+    'Go to symbol',
+    syms.map((s, i) => ({ id: String(i), label: `${'  '.repeat(s.depth)}${s.name}`, detail: `${s.kind} · line ${s.line}` })),
+  );
+  if (id === null) return;
+  const s = syms[+id];
+  view.focus();
+  view.dispatch({ selection: EditorSelection.cursor(s.from), effects: EditorView.scrollIntoView(s.from, { y: 'center' }) });
 }

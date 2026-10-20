@@ -966,6 +966,8 @@ export namespace settings {
 	    wordWrap: boolean;
 	    fontSize: number;
 	    uiScale: number;
+	    minimapOff: boolean;
+	    showWhitespace: boolean;
 	    session: Session;
 	    semantic: Semantic;
 	    recentsOff: boolean;
@@ -988,6 +990,8 @@ export namespace settings {
 	        this.wordWrap = source["wordWrap"];
 	        this.fontSize = source["fontSize"];
 	        this.uiScale = source["uiScale"];
+	        this.minimapOff = source["minimapOff"];
+	        this.showWhitespace = source["showWhitespace"];
 	        this.session = this.convertValues(source["session"], Session);
 	        this.semantic = this.convertValues(source["semantic"], Semantic);
 	        this.recentsOff = source["recentsOff"];
