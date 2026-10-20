@@ -170,6 +170,18 @@ export function MediaURL(arg1) {
   return window['go']['app']['App']['MediaURL'](arg1);
 }
 
+export function OcrAddLanguage(arg1) {
+  return window['go']['app']['App']['OcrAddLanguage'](arg1);
+}
+
+export function OcrLanguages() {
+  return window['go']['app']['App']['OcrLanguages']();
+}
+
+export function OcrRemoveLanguage(arg1) {
+  return window['go']['app']['App']['OcrRemoveLanguage'](arg1);
+}
+
 export function OpenExternal(arg1) {
   return window['go']['app']['App']['OpenExternal'](arg1);
 }
@@ -192,6 +204,10 @@ export function OpenInBrowser(arg1) {
 
 export function PageRoot(arg1) {
   return window['go']['app']['App']['PageRoot'](arg1);
+}
+
+export function PdfAddTextLayer(arg1, arg2) {
+  return window['go']['app']['App']['PdfAddTextLayer'](arg1, arg2);
 }
 
 export function PdfCompress(arg1, arg2, arg3) {

@@ -6,6 +6,7 @@ package app
 import (
 	"context"
 	"errors"
+	iofs "io/fs"
 	"log"
 	"net/url"
 	"os"
@@ -36,6 +37,8 @@ type App struct {
 	Jobs     *jobs.Manager
 	watcher  *fs.Watcher
 	books    *office.Books
+	// Assets is the frontend bundle (set by main): bundled OCR language data is read from it.
+	Assets iofs.FS
 
 	mu          sync.Mutex
 	ready       bool

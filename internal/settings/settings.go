@@ -78,6 +78,8 @@ type Settings struct {
 	ImageKeepOriginal bool `json:"imageKeepOriginal"`
 	// Signatures are saved PDF signatures (PNG data URLs, newest first).
 	Signatures []string `json:"signatures"`
+	// OcrLangs are the languages text recognition uses (Tesseract codes, e.g. "eng", "pol").
+	OcrLangs []string `json:"ocrLangs"`
 }
 
 func Defaults() Settings {
@@ -88,6 +90,7 @@ func Defaults() Settings {
 		RecentFolders:  []string{},
 		Pinned:         []string{},
 		Signatures:     []string{},
+		OcrLangs:       []string{"eng"},
 		SidebarVisible: true,
 		SidebarWidth:   260,
 		FontSize:       14,

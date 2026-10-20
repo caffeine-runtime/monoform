@@ -276,6 +276,14 @@
   fill style and sloppiness), duplicate, front/back, delete, undo/redo, arrow-key nudges, tool keys (V R D O A L P
   T / 1–8), pan (space/middle drag, wheel) and zoom (Ctrl+wheel), draw.io pages, SVG/PNG export (the font
   embedded). Only the elements/cells an edit touches change; everything else in the file is kept.
+- **M30 — Text recognition (OCR).** Offline Tesseract (tesseract.js, WASM, LSTM model) ships with the app with
+  English; more languages are Tesseract `.traineddata` files the user adds ("Add language file…", copied into the
+  app's data, never downloaded); the chosen languages are remembered. Images: the Recognise-text button (or "Text"
+  on a selection) opens a panel with the recognised text to edit and copy, and its confidence; a selection is read
+  on its own (cropped with a margin, enlarged when small). PDFs: read this page or all pages; scans are detected
+  (no text on the first pages) with a banner; "Make searchable" recognises every page without text at 300 dpi and
+  lays Tesseract's invisible text-only page over it (pdfcpu stamp), so the PDF can be searched and copied from in
+  any viewer — the page looks the same. Recognition runs in a worker (released after 90 s idle).
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -309,6 +317,10 @@ GTK/WebKitGTK process start-up before our page loads. Not yet measured on Window
 available here).
 
 ## Known issues
+- OCR: "Make searchable" skips pages with a /Rotate (turn them upright first); handwriting and very low-resolution
+  scans read poorly (Tesseract's limits); languages other than English need their Tesseract language file. Text
+  recognition needs WebAssembly SIMD (every supported web view has it). The first recognition of a session loads
+  ~6 MB of WASM and model data (~0.8 s on the test VM).
 - Drawings: shapes can't be rotated on the canvas (rotated ones are shown rotated); draw.io stencil shapes
   (`mxgraph.*` libraries: AWS, network, UML icons…) show as labelled boxes, and images must be embedded (linked
   ones show a placeholder, as the app stays offline); edited HTML labels become plain text; compressed draw.io

@@ -52,6 +52,8 @@
   import AdjustPanel from './AdjustPanel.svelte';
   import AnimEditor from './AnimEditor.svelte';
   import IconView from './IconView.svelte';
+  import OcrPanel from '../ocr/OcrPanel.svelte';
+  import ScanText from '@lucide/svelte/icons/scan-text';
 
   let { tab }: { tab: Tab } = $props();
 
@@ -75,6 +77,35 @@
   // an <img> so SVGs stay crisp and GIFs keep animating.
   let imgMode = $state(false);
   let imgEl = $state<HTMLImageElement>();
+  let ocrOpen = $state(false);
+  let ocrKey = $state(0);
+
+  /** The picture to read text from (all visible layers) and the selection's box, if any. */
+  function ocrSource(): { canvas: HTMLCanvasElement; rect?: { left: number; top: number; width: number; height: number } } {
+    if (editor) {
+      const b = es?.pixelSelection ? editor.selection?.bounds : undefined;
+      return { canvas: editor.composite(), rect: b && b.width > 2 && b.height > 2 ? { left: Math.round(b.x), top: Math.round(b.y), width: Math.round(b.width), height: Math.round(b.height) } : undefined };
+    }
+    const c = document.createElement('canvas');
+    c.width = imgEl?.naturalWidth || natural.w;
+    c.height = imgEl?.naturalHeight || natural.h;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#fff';
+    g.fillRect(0, 0, c.width, c.height);
+    if (imgEl) g.drawImage(imgEl, 0, 0, c.width, c.height);
+    return { canvas: c };
+  }
+
+  async function runOcr(langs: string[], progress: (s: string, p: number) => void) {
+    const { recognize, cropForOcr } = await import('../ocr/ocr');
+    const { canvas, rect } = ocrSource();
+    return recognize(rect ? cropForOcr(canvas, rect) : canvas, { langs }, progress);
+  }
+
+  function openOcr() {
+    if (ocrOpen) ocrKey++; // run again (e.g. on a new selection)
+    ocrOpen = true;
+  }
   let imgView = $state<View>({ zoom: 1, x: 0, y: 0 });
   let natural = $state({ w: 0, h: 0 });
   let imgFitted = true;
@@ -907,6 +938,8 @@
     {#if position}<span class="label">{position}</span>{/if}
     <button class="icon-btn" title="Next image (→)" onclick={() => navigate(1)}><Icon icon={ChevronRightIcon} /></button>
   {/if}
+  <span class="sep"></span>
+  <button class="icon-btn" class:on={ocrOpen} title="Copy text from the image (OCR) — from the selection if there is one" aria-label="Recognise text" onclick={() => (ocrOpen ? (ocrOpen = false) : openOcr())}><Icon icon={ScanText} /></button>
   {#if editable}
     <span class="sep"></span>
     <button class="icon-btn" class:on={panel === 'layers'} title="Layers" onclick={() => togglePanel('layers')}><Icon icon={Layers} /></button>
@@ -954,6 +987,7 @@
     <button class="btn ghost" title="Blur the selection: opens Adjust → Blur (Gaussian, motion, zoom, spin, lens, tilt-shift, surface)" onclick={() => setPanel('adjust')}><Icon icon={Droplets} size={14} /></button>
     <button class="btn ghost" title="Pixelate selection" onclick={() => editor?.pixelateSelection()}><Icon icon={Grid} size={14} /></button>
     <button class="btn ghost" title="Crop to selection" onclick={() => editor?.cropToSelection()}><Icon icon={Crop} size={14} /></button>
+    <button class="btn ghost" title="Copy the text in the selection (OCR)" onclick={openOcr}><Icon icon={ScanText} size={14} /> Text</button>
     <button class="btn ghost" title="Invert selection ({formatShortcut('Mod+Shift+I')})" onclick={invertSelection}>Invert</button>
     <button class="btn ghost" title="Deselect ({formatShortcut('Mod+D')})" onclick={() => editor?.deselect()}><Icon icon={XIcon} size={14} /></button>
   </div>
@@ -1025,6 +1059,11 @@
         <AdjustPanel bind:this={adjustPanel} {editor} {es} />
       {/if}
     </aside>
+  {/if}
+  {#if ocrOpen}
+    {#key ocrKey}
+      <OcrPanel title={es?.pixelSelection ? 'Text in the selection' : 'Text in the image'} run={runOcr} onclose={() => (ocrOpen = false)} />
+    {/key}
   {/if}
 </div>
 {/if}

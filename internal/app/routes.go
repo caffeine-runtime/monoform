@@ -34,6 +34,8 @@ func (a *App) registerRoutes() {
 			server.Error(w, server.StatusFor(err), err)
 		}
 	})
+	// OCR language data: ?f=/<lang>.traineddata.gz (the worker appends the file name).
+	a.Server.Handle("GET /__hia/tessdata", a.serveTessdata)
 	// One part of a zip-based document (images inside .docx).
 	a.Server.Handle("GET /__hia/zip", func(w http.ResponseWriter, r *http.Request) {
 		p, entry := r.URL.Query().Get("path"), r.URL.Query().Get("entry")

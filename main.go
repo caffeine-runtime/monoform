@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -27,6 +28,9 @@ var processStart = time.Now()
 
 func main() {
 	a := app.New(processStart, launchFiles(os.Args[1:]))
+	if dist, err := fs.Sub(assets, "frontend/dist"); err == nil {
+		a.Assets = dist
+	}
 
 	err := wails.Run(&options.App{
 		Title:            "Hold It All",

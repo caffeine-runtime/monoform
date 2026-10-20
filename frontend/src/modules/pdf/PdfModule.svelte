@@ -20,6 +20,9 @@
   import SignaturePad from './SignaturePad.svelte';
   import { markPolygon, matchRects, stampMatrix, type Mark, type TextRun } from './marks';
   import { buildFromImages, IMAGE_PATTERNS, pickPageSize, renderPage, scaleFor, toBlob } from './tools';
+  import OcrPanel from '../ocr/OcrPanel.svelte';
+  import { settings } from '../../core/settings.svelte';
+  import ScanText from '@lucide/svelte/icons/scan-text';
   import { pdfjs, openDocument } from './pdfjs';
   import Thumbs from './Thumbs.svelte';
   import { pdfControllers } from './controllers';
@@ -182,6 +185,7 @@
         { once: true },
       );
       updateStatus();
+      void checkScanned(d);
     } catch (e) {
       const err = e as Error & { name?: string };
       error = err?.name === 'PasswordException' ? 'This PDF is password-protected (opening encrypted PDFs arrives with the encryption tools).' : `Couldn't open this PDF: ${err?.message ?? err}`;
@@ -403,6 +407,98 @@
       busy = '';
       for (const t of temps) if (t !== working) void api.RemoveTemp(t);
     }
+  }
+
+  // ---------- text recognition (scanned PDFs) ----------
+
+  let ocrOpen = $state(false);
+  let ocrScope = $state<'page' | 'all'>('all');
+  let ocrKey = $state(0);
+  let scanned = $state(false);
+
+  async function pageHasText(d: PDFDocumentProxy, n: number): Promise<boolean> {
+    const tc = await (await d.getPage(n)).getTextContent();
+    return tc.items.some((i) => 'str' in i && i.str.trim() !== '');
+  }
+
+  /** After loading: does this look like a scan (no text on the first pages)? */
+  async function checkScanned(d: PDFDocumentProxy) {
+    scanned = false;
+    for (let n = 1; n <= Math.min(3, d.numPages); n++) if (await pageHasText(d, n)) return;
+    if (doc === d) scanned = true;
+  }
+
+  async function ocrPage(d: PDFDocumentProxy, n: number, langs: string[], withPdf: boolean, progress?: (s: string, p: number) => void) {
+    const { recognize } = await import('../ocr/ocr');
+    const pg = await d.getPage(n);
+    const [x0, y0, x1, y1] = pg.view;
+    const s = scaleFor(300, x1 - x0, y1 - y0);
+    const c = await renderPage(d, n, s, withPdf ? 0 : undefined);
+    return recognize(c, { langs, pdf: withPdf ? { dpi: 72 * s } : undefined }, progress);
+  }
+
+  async function runOcr(langs: string[], progress: (s: string, p: number) => void) {
+    if (!doc) throw new Error('No document');
+    const d = doc;
+    const list = ocrScope === 'page' ? [page] : Array.from({ length: pages }, (_, i) => i + 1);
+    const parts: string[] = [];
+    let conf = 0;
+    for (const [i, n] of list.entries()) {
+      const r = await ocrPage(d, n, langs, false, (st, p) => progress(list.length > 1 ? `Page ${n} of ${list.length}: ${st}` : st, (i + p) / list.length));
+      conf += r.confidence;
+      parts.push(list.length > 1 ? `— Page ${n} —\n${r.text}` : r.text);
+    }
+    return { text: parts.join('\n\n'), confidence: conf / list.length };
+  }
+
+  /** Add an invisible text layer to every page that has no text, so the PDF can be searched and copied from. */
+  async function makeSearchable(langs: string[]) {
+    if (!doc || tab.readOnly) return;
+    const d = doc;
+    const todo: number[] = [];
+    let rotated = 0;
+    for (let n = 1; n <= pages; n++) {
+      if (await pageHasText(d, n)) continue;
+      if ((await d.getPage(n)).rotate % 360) rotated++;
+      else todo.push(n);
+    }
+    if (!todo.length) {
+      ui.toast(rotated ? 'The pages without text are rotated; turn them upright first (page operations), then try again.' : 'Every page already has text.', 'info');
+      return;
+    }
+    const view = keepView();
+    try {
+      const layers: { page: number; pdf: string }[] = [];
+      for (const [i, n] of todo.entries()) {
+        busy = `Recognising page ${n} (${i + 1} of ${todo.length})…`;
+        const r = await ocrPage(d, n, langs, true);
+        if (!r.pdf || !r.text.trim()) continue;
+        let bin = '';
+        for (let k = 0; k < r.pdf.length; k += 0x8000) bin += String.fromCharCode(...r.pdf.subarray(k, k + 0x8000));
+        layers.push({ page: n, pdf: btoa(bin) });
+      }
+      if (!layers.length) {
+        ui.toast('No text was found on those pages.', 'info');
+        return;
+      }
+      busy = 'Adding the text layer…';
+      const out = await api.PdfAddTextLayer(await materialize(), layers as never);
+      if (working && working !== tab.filePath) void api.RemoveTemp(working);
+      working = out;
+      opsDirty = true;
+      await load(fileUrl(out), view);
+      ui.toast(`${layers.length} page${layers.length === 1 ? ' is' : 's are'} now searchable${rotated ? ` (${rotated} rotated page${rotated === 1 ? '' : 's'} skipped)` : ''}. Save to keep it.`, 'success');
+    } catch (e) {
+      toastError(e, 'Couldn’t make the PDF searchable');
+    } finally {
+      busy = '';
+    }
+  }
+
+  function openOcr(scope: 'page' | 'all') {
+    ocrScope = scope;
+    ocrKey++;
+    ocrOpen = true;
   }
 
   // ---------- compress, export, insert images ----------
@@ -665,6 +761,9 @@
     doc: () => doc,
     viewer: () => viewer,
     pageOp,
+    scanned: () => scanned,
+    makeSearchable,
+    openOcr,
     save,
     writeTo,
     setQuery: (q: string) => {
@@ -763,6 +862,7 @@
     {/if}
   {/if}
   <span class="spacer"></span>
+  <button class="icon-btn" class:on={ocrOpen} title="Recognise text (OCR) — copy text from scanned pages, or make the PDF searchable" aria-label="Recognise text" onclick={() => (ocrOpen ? (ocrOpen = false) : openOcr(pages > 1 ? 'page' : 'all'))}><Icon icon={ScanText} /></button>
   <button class="icon-btn" class:on={findOpen} title="Find ({formatShortcut('Mod+F')})" onclick={() => (findOpen ? closeFind() : openFind())}><Icon icon={Search} /></button>
   <button class="icon-btn" title="Page operations" disabled={tab.readOnly} onclick={opsMenu}><Icon icon={Ellipsis} /></button>
 </div>
@@ -805,6 +905,14 @@
   <div class="banner"><span class="grow">Drag boxes over what to remove. Find (Ctrl+F) can mark every match at once.</span><button class="btn ghost" onclick={() => (markMode = null)}>Done</button></div>
 {/if}
 {#if busy}<div class="banner"><span class="spinner inline"></span><span class="grow">{busy}</span></div>{/if}
+{#if scanned && !ocrOpen && !busy}
+  <div class="banner scanned">
+    <Icon icon={ScanText} size={14} /><span class="grow">This looks like a scan: its pages have no text to select or search.</span>
+    <button class="btn ghost" onclick={() => openOcr('all')}>Copy text</button>
+    {#if !tab.readOnly}<button class="btn primary" onclick={() => (ocrOpen = false, void makeSearchable(settings.value.ocrLangs?.length ? settings.value.ocrLangs : ['eng']))}>Make searchable</button>{/if}
+    <button class="icon-btn" title="Dismiss" onclick={() => (scanned = false)}><Icon icon={XIcon} /></button>
+  </div>
+{/if}
 
 {#if opsDirty}
   <div class="banner">
@@ -825,6 +933,19 @@
     {#if error}<div class="empty-state overlay">{error}</div>{/if}
     {#if loading && !doc}<div class="empty-state overlay"><span class="spinner"></span></div>{/if}
   </div>
+  {#if ocrOpen && doc}
+    {#key ocrKey}
+      <OcrPanel title={ocrScope === 'page' ? `Text on page ${page}` : 'Text in the document'} run={runOcr} onclose={() => (ocrOpen = false)}>
+        {#snippet actions({ langs })}
+          <select class="input scope" value={ocrScope} onchange={(e) => openOcr((e.currentTarget as HTMLSelectElement).value as 'page' | 'all')} aria-label="Pages to read">
+            <option value="page">This page</option>
+            <option value="all">All pages</option>
+          </select>
+          {#if !tab.readOnly}<button class="btn ghost" title="Add an invisible text layer to the pages that have none, so the PDF can be searched and copied from" onclick={() => void makeSearchable(langs)}>Make searchable</button>{/if}
+        {/snippet}
+      </OcrPanel>
+    {/key}
+  {/if}
 </div>
 
 {#if signOpen}<SignaturePad onpick={signaturePicked} oncancel={() => (signOpen = false)} />{/if}
@@ -887,6 +1008,10 @@
     flex: 1;
     min-height: 0;
     display: flex;
+  }
+  .scope {
+    height: 24px;
+    font-size: var(--fs-small);
   }
   .wrap {
     flex: 1;
