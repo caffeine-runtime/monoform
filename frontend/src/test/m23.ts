@@ -25,7 +25,7 @@ export default async function m23(dir: string) {
   assertEq(x.h.error(), null, 'XML valid');
   const xs = await x.h.client.stringify(0);
   assertEq(xs.text, '{"catalog":{"@lang":"en","book":[{"@id":"1","title":"Tom & Jerry","price":"9.5"},{"@id":"2","title":"<b>Bold</b>","price":"12"}]}}', 'XML as JSON');
-  assert(document.querySelector('.tabview.active .status.good')?.textContent?.includes('Valid XML'), 'shows Valid XML');
+  await waitFor(() => (document.querySelector('.tabview.active .status.good')?.textContent?.includes('Valid XML') ? true : null), 'shows Valid XML');
   // Break it: the error points at the line.
   const v = x.h.ctl().view;
   v.dispatch({ changes: { from: v.state.doc.toString().indexOf('</price></book>'), to: v.state.doc.toString().indexOf('</price></book>') + 8, insert: '' } });
@@ -45,7 +45,7 @@ export default async function m23(dir: string) {
   const j = await openData(join(dir, 'data', 'events.jsonl'));
   log(`5,000-line JSONL parsed in ${Math.round(performance.now() - t0)} ms`);
   assertEq(j.h.root().size, 5000, 'one record per line');
-  assert(document.querySelector('.tabview.active .status.good')?.textContent?.includes('5,000 records'), 'record count shown');
+  await waitFor(() => (document.querySelector('.tabview.active .status.good')?.textContent?.includes('5,000 records') ? true : null), 'record count shown');
   const rows = (await j.h.client.rows(0, 2)).rows;
   assertEq(JSON.stringify(rows), JSON.stringify([['0', 'open', '0', '{"n":0}'], ['1', 'save', '7', '']]), 'table rows (columns id, kind, ms, extra)');
   j.h.setView('table');
