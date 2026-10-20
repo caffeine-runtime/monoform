@@ -99,3 +99,36 @@
 .md li + li {
   margin-top: 0.2em;
 }
+
+/* Mermaid / Graphviz blocks: drawn on white like the tools draw them. */
+.md .diagram {
+  background: #fff;
+  color: #000;
+  border-radius: 6px;
+  padding: 12px;
+  margin: 0 0 1em;
+  overflow-x: auto;
+  text-align: center;
+  border: 1px solid var(--border-soft);
+}
+.md .diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+.md .diagram .diagram-src {
+  display: none;
+  text-align: left;
+}
+.md .diagram.error .diagram-src {
+  display: block;
+  margin: 8px 0 0;
+}
+.md .diagram.loading {
+  min-height: 60px;
+}
+.md .diagram-error {
+  color: #b42318;
+  font-size: 0.85em;
+  text-align: left;
+  white-space: pre-wrap;
+}

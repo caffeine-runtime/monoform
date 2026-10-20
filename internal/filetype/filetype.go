@@ -120,7 +120,7 @@ var textExts = []string{
 	"js", "mjs", "cjs", "jsx", "ts", "tsx", "svelte", "vue", "go", "mod", "sum", "rs", "py", "rb", "php", "java", "kt", "kts",
 	"c", "h", "cc", "cpp", "cxx", "hpp", "hh", "cs", "swift", "m", "mm", "sh", "bash", "zsh", "fish", "ps1", "bat", "cmd",
 	"sql", "lua", "pl", "r", "dart", "scala", "clj", "ex", "exs", "erl", "hs", "elm", "jl", "nim", "zig", "tex", "rst",
-	"adoc", "gitignore", "gitattributes", "editorconfig", "dockerfile", "makefile", "cmake", "gradle", "diff", "patch", "srt", "vtt",
+	"adoc", "dot", "gv", "mmd", "mermaid", "gitignore", "gitattributes", "editorconfig", "dockerfile", "makefile", "cmake", "gradle", "diff", "patch", "srt", "vtt",
 }
 
 // knownTextNames are files without an extension that are text.

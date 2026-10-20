@@ -63,6 +63,13 @@
     if (view !== 'source') render();
   });
 
+  // Draw Mermaid / Graphviz blocks after each preview update (renderers load on first use).
+  $effect(() => {
+    if (!html.includes('class="diagram"') || !previewEl) return;
+    const el = previewEl;
+    void import('../diagram/render').then((m) => m.fillDiagrams(el));
+  });
+
   function ready(c: TextController) {
     ctl = c;
     tab.handlers.getState = () => ({ view });

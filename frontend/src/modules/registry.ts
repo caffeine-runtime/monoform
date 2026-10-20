@@ -29,6 +29,14 @@ export function registerBuiltinModules() {
     load: () => import('./markdown'),
   });
   modules.register({
+    id: 'diagram',
+    name: 'Diagram',
+    extensions: ['dot', 'gv', 'mmd', 'mermaid'],
+    mimeTypes: ['text/vnd.graphviz'],
+    priority: 10,
+    load: () => import('./diagram'),
+  });
+  modules.register({
     id: 'cert',
     name: 'Certificate',
     extensions: ['pem', 'crt', 'cer', 'der', 'p12', 'pfx', 'p7b', 'p7c', 'csr', 'crl'],
