@@ -306,7 +306,7 @@ func collect(rows *sql.Rows, withRowID bool, limit int) (*Page, error) {
 
 // Result of one statement in a script.
 type Result struct {
-	SQL      string `json:"sql"`
+	SQL      string   `json:"sql"`
 	Columns  []string `json:"columns,omitempty"`
 	Rows     [][]any  `json:"rows,omitempty"`
 	More     bool     `json:"more,omitempty"` // more rows than returned

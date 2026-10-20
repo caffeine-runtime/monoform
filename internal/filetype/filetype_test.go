@@ -15,6 +15,7 @@ func TestByName(t *testing.T) {
 		"anim.gif":          Image,
 		"x.webp":            Image,
 		"icon.svg":          SVG,
+		"plan.DXF":          CAD,
 		"data.json":         JSON,
 		"k8s.yml":           YAML,
 		"table.tsv":         CSV,

@@ -190,6 +190,7 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 | modernc.org/sqlite (+ modernc.org/libc, mathutil, memory) | BSD-3-Clause | SQLite databases (pure Go, no cgo) |
 | github.com/dustin/go-humanize, github.com/mattn/go-isatty, github.com/ncruces/go-strftime | MIT | dependencies of modernc.org/sqlite |
 | github.com/remyoudompheng/bigfft | BSD-3-Clause | dependency of modernc.org/libc |
+| (own code) DXF reader/writer, B-spline evaluation, CAD tools | — | M20: no permissive JS DXF library both reads *and* writes while preserving unknown content (dxf-parser is read-only, dxf-writer write-only, both MIT); patching the original group lines keeps everything else byte-exact |
 | @codemirror/* (state, view, commands, language, search, autocomplete, language-data, lang-*), @lezer/* | MIT | text editor (autocomplete: bracket closing and word/language completion, a direct dependency since M18; lang-sql for the SQL console since M19) |
 | markdown-it (+ its deps entities, linkify-it, mdurl, punycode.js, uc.micro) | MIT | markdown preview |
 | konva | MIT | image markup canvas |
