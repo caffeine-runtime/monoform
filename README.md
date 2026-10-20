@@ -39,7 +39,7 @@ Everything is keyboard-reachable: press **Ctrl+K** (**⌘K** on macOS) and type.
 
 ## Install
 
-Builds come from GitHub Actions (**Actions → Build → latest run → Artifacts**):
+Download the latest version from the repository's **Releases** page (each release lists SHA-256 checksums in `SHA256SUMS`). Builds of unreleased commits are under **Actions → Build → a run → Artifacts**.
 
 - **Windows:** `hold-it-all-amd64-installer.exe`. The installer has an **unchecked** option to make Hold It All
   the default app for its file types. Without it, the app is still listed under *Open with*. Uninstalling restores
@@ -53,6 +53,12 @@ Builds come from GitHub Actions (**Actions → Build → latest run → Artifact
   no root needed. The app then appears in *Open With* menus. `./install.sh --set-default` also makes it the default
   for its file types, and `./install.sh --uninstall` removes it. It needs WebKitGTK 4.1 (`libwebkit2gtk-4.1-0`;
   Ubuntu 24.04+, Debian 13, Fedora 40+).
+
+### Publishing a release
+
+Push a tag like `v2.0.0`, or run the **Build** workflow manually with a version. CI runs every check and self-test,
+builds the three packages with that version (shown in Settings), and publishes a GitHub release with the files and
+`SHA256SUMS`. Versions with a suffix (`2.1.0-beta.1`) are marked as pre-releases.
 
 ## Build from source
 
