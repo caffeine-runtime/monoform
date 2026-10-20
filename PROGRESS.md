@@ -162,6 +162,13 @@
   trailing whitespace; UPPER (Ctrl+K Ctrl+U), lower (Ctrl+K Ctrl+L), Title and swap case; brackets and quotes close
   themselves; completion from the language plus words in the file; indent guides; show whitespace. The status bar
   counts cursors. All of it is off for files over 8 MB (like highlighting).
+- **M19 — Database browser (SQLite).** .db/.sqlite/.sqlite3 files (also recognised by their header) open in a
+  database view: tables (with row counts), views, indexes and triggers on the left; a table's rows in the
+  spreadsheet grid, paged from Go (100k rows scroll smoothly), with column sorting, search across columns and an
+  SQL WHERE filter; editing cells (type NULL for null), adding and deleting rows — pending, marked on the rows, with
+  undo — written in one transaction with Save (or dropped with Revert); a Structure view (columns, keys, defaults,
+  indexes, the CREATE statement); an SQL console with highlighting and schema-aware completion, Ctrl+Enter runs
+  the selection or the script, a result per statement; CSV export of a filtered table; read-only mode.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -211,6 +218,7 @@ available here).
 - Video effects: rendering keeps the whole encoded output in memory until it is written (fine for clips; a long 1080p render needs RAM of roughly its file size), and runs at about 1–2× real time at 320×180 on the test VM (WebCodecs) — slower where WebKitGTK's WebCodecs decoder is missing its GStreamer parser (gst-plugins-bad), because frames then come from seeking a <video> element.
 - Split view: the first split of a session costs one 75–100 ms UI frame on the test VM (first layout of the panes); later changes 35–55 ms. Two 3D views can be shown, but only the focused one is live — the other keeps a still of its last frame until clicked (they share one WebGL renderer).
 - Interface size scales the design tokens and every font size, plus the shell's bars and controls; some module-specific paddings and canvas overlays stay at their pixel size.
+- Databases: SQLite only (no server databases — they'd need network access); WITHOUT ROWID tables and views are edited through the SQL console, not the grid; BLOBs are shown summarised, not edited.
 - Video effects: starting a render or a track sets up WebKitGTK's codec pipelines on the main thread — one 80–170 ms UI frame on the test VM; the frame loop itself stays under ~60 ms.
 - Video effects: tracking follows translation (not rotation or scale) and stops when the object is lost or covered; overlays and effects aren't saved inside the original file — render, or they're lost when the tab closes (the tab asks first).
 - Video: rotation is saved for MP4/MOV only (WebM/MKV have no standard rotation flag); fragmented MP4 (some screen recorders, DASH) and AVI/OGV are play-only.

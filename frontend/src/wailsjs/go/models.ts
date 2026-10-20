@@ -82,6 +82,40 @@ export namespace app {
 		    return a;
 		}
 	}
+	export class DBOpened {
+	    id: number;
+	    readOnly: boolean;
+	    objects: db.SchemaObject[];
+	
+	    static createFrom(source: any = {}) {
+	        return new DBOpened(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.readOnly = source["readOnly"];
+	        this.objects = this.convertValues(source["objects"], db.SchemaObject);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class DocOpenResult {
 	    document: string;
 	    styles: Record<string, string>;
@@ -438,6 +472,161 @@ export namespace audio {
 	        this.end = source["end"];
 	        this.silence = source["silence"];
 	        this.gains = this.convertValues(source["gains"], Ramp);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
+export namespace db {
+	
+	export class Change {
+	    table: string;
+	    kind: string;
+	    rowid?: any;
+	    values?: Record<string, any>;
+	
+	    static createFrom(source: any = {}) {
+	        return new Change(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.table = source["table"];
+	        this.kind = source["kind"];
+	        this.rowid = source["rowid"];
+	        this.values = source["values"];
+	    }
+	}
+	export class Column {
+	    name: string;
+	    type: string;
+	    notNull: boolean;
+	    default?: string;
+	    pk: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Column(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.notNull = source["notNull"];
+	        this.default = source["default"];
+	        this.pk = source["pk"];
+	    }
+	}
+	export class Page {
+	    columns: string[];
+	    rows: any[][];
+	    keys?: any[];
+	    total: number;
+	    millis: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Page(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.columns = source["columns"];
+	        this.rows = source["rows"];
+	        this.keys = source["keys"];
+	        this.total = source["total"];
+	        this.millis = source["millis"];
+	    }
+	}
+	export class Result {
+	    sql: string;
+	    columns?: string[];
+	    rows?: any[][];
+	    more?: boolean;
+	    affected: number;
+	    millis: number;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Result(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sql = source["sql"];
+	        this.columns = source["columns"];
+	        this.rows = source["rows"];
+	        this.more = source["more"];
+	        this.affected = source["affected"];
+	        this.millis = source["millis"];
+	        this.error = source["error"];
+	    }
+	}
+	export class RowsQuery {
+	    table: string;
+	    where?: string;
+	    search?: string;
+	    order?: string;
+	    desc?: boolean;
+	    offset: number;
+	    limit: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RowsQuery(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.table = source["table"];
+	        this.where = source["where"];
+	        this.search = source["search"];
+	        this.order = source["order"];
+	        this.desc = source["desc"];
+	        this.offset = source["offset"];
+	        this.limit = source["limit"];
+	    }
+	}
+	export class SchemaObject {
+	    type: string;
+	    name: string;
+	    table?: string;
+	    sql: string;
+	    columns?: Column[];
+	    rows: number;
+	    rowid: boolean;
+	    generated?: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new SchemaObject(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.type = source["type"];
+	        this.name = source["name"];
+	        this.table = source["table"];
+	        this.sql = source["sql"];
+	        this.columns = this.convertValues(source["columns"], Column);
+	        this.rows = source["rows"];
+	        this.rowid = source["rowid"];
+	        this.generated = source["generated"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

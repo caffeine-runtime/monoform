@@ -421,6 +421,33 @@ _code = ["// Sample module for the code editor test.", "export function parseRec
 _code += [f"export const value{i} = {i} * 2; // filler line {i}" for i in range(200)]
 w("code/sample.ts", "\n".join(_code).encode())
 
+# ---- database (M19): SQLite file with tables, a view, an index, a trigger and 100k rows ----
+def _shopdb():
+    import sqlite3, tempfile
+    tmp = os.path.join(tempfile.mkdtemp(), "shop.db")
+    con = sqlite3.connect(tmp)
+    con.executescript("""
+      CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT, balance REAL DEFAULT 0);
+      CREATE TABLE orders (id INTEGER PRIMARY KEY, customer INTEGER REFERENCES customers(id), item TEXT, qty INTEGER);
+      CREATE TABLE settings (k TEXT PRIMARY KEY, v TEXT) WITHOUT ROWID;
+      CREATE TABLE events (id INTEGER PRIMARY KEY, at TEXT, kind TEXT);
+      CREATE INDEX idx_orders_customer ON orders(customer);
+      CREATE VIEW big_spenders AS SELECT name, balance FROM customers WHERE balance > 500;
+      CREATE TABLE audit (msg TEXT);
+      CREATE TRIGGER t_customers AFTER UPDATE ON customers BEGIN INSERT INTO audit VALUES ('changed ' || new.name); END;
+    """)
+    cities = ["Warsaw", "Berlin", "Paris", "Lisbon", None]
+    con.executemany("INSERT INTO customers (name, city, balance) VALUES (?, ?, ?)",
+                    [(f"Customer {i:04d}", cities[i % 5], (i * 37) % 1000) for i in range(1, 1001)])
+    con.executemany("INSERT INTO orders (customer, item, qty) VALUES (?, ?, ?)", [((i % 500) + 1, f"item {i % 17}", i % 9 + 1) for i in range(3000)])
+    con.execute("INSERT INTO settings VALUES ('currency', 'EUR')")
+    con.executemany("INSERT INTO events (at, kind) VALUES (?, ?)", [(f"2026-01-01T00:{i // 60 % 60:02d}:{i % 60:02d}", ["open", "save", "close"][i % 3]) for i in range(100000)])
+    con.commit()
+    con.close()
+    with open(tmp, "rb") as f:
+        return f.read()
+w("db/shop.db", _shopdb())
+
 # ---- video (small clips made with ffmpeg; see internal/video/testdata) ----
 for _f in ("clip.webm", "clip.mp4", "h264.mp4", "clip.mkv", "track.webm"):
     w("video/" + _f, open(os.path.join(_here, "..", "internal", "video", "testdata", _f), "rb").read())
