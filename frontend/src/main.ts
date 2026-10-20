@@ -13,7 +13,7 @@ import { peek } from './core/peek.svelte';
 import { workspace } from './core/tabs.svelte';
 import { theme } from './core/theme.svelte';
 import { tree } from './core/tree.svelte';
-import { ui } from './core/ui.svelte';
+import { ui, menu } from './core/ui.svelte';
 import { dropHandlers } from './core/drop';
 import { registerBuiltinModules } from './modules/registry';
 import { registerArchiveIntegration } from './core/archives';
@@ -34,6 +34,7 @@ function wireEvents() {
     (e) => {
       if (ui.dialog) return; // dialogs handle their own keys
       if (ui.picker) return;
+      if (menu.open) return; // menus handle their own keys (arrows, Enter, Esc)
       if (ui.paletteOpen && !(e.key === 'k' && (e.ctrlKey || e.metaKey))) return;
       commands.handleKey(e, inEditable(e.target));
     },

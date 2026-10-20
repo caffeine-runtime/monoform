@@ -1,6 +1,7 @@
 <script lang="ts">
   // Dialog, toasts and context menu.
   import Icon from './Icon.svelte';
+  import MenuList from './MenuList.svelte';
   import { AlertTriangle, Check, Info, X } from '../core/icons';
   import { menu, ui } from '../core/ui.svelte';
   import { formatShortcut } from '../core/keys';
@@ -8,9 +9,6 @@
   let inputValue = $state('');
   let inputEl = $state<HTMLInputElement>();
   let dialogEl = $state<HTMLDivElement>();
-  let menuEl = $state<HTMLDivElement>();
-  let menuPos = $state({ x: 0, y: 0 });
-  let menuSel = $state(-1);
 
   $effect(() => {
     const d = ui.dialog;
@@ -29,22 +27,6 @@
     });
   });
 
-  $effect(() => {
-    const m = menu.open;
-    if (!m) return;
-    menuSel = -1;
-    menuPos = { x: m.x, y: m.y };
-    queueMicrotask(() => {
-      if (!menuEl) return;
-      const r = menuEl.getBoundingClientRect();
-      menuPos = {
-        x: Math.max(4, Math.min(m.x, innerWidth - r.width - 4)),
-        y: Math.max(4, m.y + r.height > innerHeight - 4 ? m.y - r.height : m.y),
-      };
-      menuEl.focus();
-    });
-  });
-
   function dialogKey(e: KeyboardEvent) {
     const d = ui.dialog;
     if (!d) return;
@@ -58,24 +40,6 @@
     }
   }
 
-  function menuKey(e: KeyboardEvent) {
-    const m = menu.open;
-    if (!m) return;
-    const enabled = m.items.map((it, i) => (!it.separator && !it.disabled ? i : -1)).filter((i) => i >= 0);
-    if (e.key === 'Escape') menu.close();
-    else if (e.key === 'ArrowDown') menuSel = enabled.find((i) => i > menuSel) ?? enabled[0];
-    else if (e.key === 'ArrowUp') menuSel = [...enabled].reverse().find((i) => i < menuSel) ?? enabled[enabled.length - 1];
-    else if (e.key === 'Enter' && menuSel >= 0) run(m.items[menuSel]);
-    else return;
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
-  function run(it: { run?: () => unknown; disabled?: boolean }) {
-    if (it.disabled) return;
-    menu.close();
-    void Promise.resolve(it.run?.()).catch((e) => ui.toast(String(e?.message ?? e), 'error'));
-  }
 </script>
 
 {#if ui.dialog}
@@ -105,18 +69,7 @@
 {#if menu.open}
   <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
   <div class="menu-catcher" onclick={() => menu.close()} oncontextmenu={(e) => { e.preventDefault(); menu.close(); }}></div>
-  <div class="menu" bind:this={menuEl} style:left="{menuPos.x}px" style:top="{menuPos.y}px" role="menu" tabindex="-1" onkeydown={menuKey}>
-    {#each menu.open.items as it, i}
-      {#if it.separator}
-        {#if i > 0 && i < menu.open.items.length - 1}<div class="msep"></div>{/if}
-      {:else}
-        <button class="mi" class:sel={menuSel === i} disabled={it.disabled} role="menuitem" onmousemove={() => (menuSel = i)} onclick={() => run(it)}>
-          <span>{it.label}</span>
-          {#if it.shortcut}<span class="sc">{it.shortcut}</span>{/if}
-        </button>
-      {/if}
-    {/each}
-  </div>
+  <MenuList items={menu.open.items} x={menu.open.x} y={menu.open.y} />
 {/if}
 
 <div class="toasts" aria-live="polite">
@@ -184,50 +137,6 @@
     position: fixed;
     inset: 0;
     z-index: 300;
-  }
-  .menu {
-    position: fixed;
-    z-index: 301;
-    min-width: calc(200px * var(--ui-scale));
-    max-height: calc(100vh - 16px);
-    overflow-y: auto;
-    padding: 5px;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-    outline: none;
-  }
-  .mi {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    width: 100%;
-    height: calc(28px * var(--ui-scale));
-    padding: 0 10px;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    text-align: left;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .mi.sel {
-    background: var(--bg-hover);
-  }
-  .mi:disabled {
-    color: var(--text-faint);
-    cursor: default;
-  }
-  .sc {
-    color: var(--text-faint);
-    font-size: var(--fs-small);
-  }
-  .msep {
-    height: 1px;
-    margin: 4px 6px;
-    background: var(--border-soft);
   }
   .toasts {
     position: fixed;

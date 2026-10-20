@@ -133,6 +133,8 @@ export interface MenuItem {
   run?: () => unknown;
   disabled?: boolean;
   separator?: boolean;
+  /** A submenu (opens on hover, click or →). */
+  items?: MenuItem[];
 }
 
 class MenuState {

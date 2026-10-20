@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { appMenuItems } from '../core/appMenu';
   import Icon from './Icon.svelte';
   import FileTree from './FileTree.svelte';
   import SearchPanel from './SearchPanel.svelte';
@@ -36,22 +37,8 @@
   }
 
   function appMenu(e: MouseEvent) {
-    const groups = new Map<string, MenuItem[]>();
-    for (const c of commands.available()) {
-      const g = c.category ?? 'General';
-      if (!groups.has(g)) groups.set(g, []);
-      const sc = commands.shortcutOf(c.id);
-      groups.get(g)!.push({ label: c.title, shortcut: sc ? formatShortcut(sc) : undefined, run: () => commands.execute(c.id) });
-    }
-    const items: MenuItem[] = [];
-    for (const g of ['File', 'Edit', 'View', 'Tabs', 'Tools']) {
-      const list = groups.get(g);
-      if (!list) continue;
-      if (items.length) items.push({ separator: true });
-      items.push(...list);
-    }
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    menu.show({ clientX: r.left, clientY: r.bottom + 4 }, items);
+    menu.show({ clientX: r.left, clientY: r.bottom + 4 }, appMenuItems());
   }
 
   function listMenu(e: MouseEvent, path: string, recent: boolean) {

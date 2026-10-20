@@ -195,6 +195,12 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   buttons people know where to find, and wrapping keeps every control one click away. Controls in a bar keep
   their natural width (`flex-shrink: 0`) so a bar that doesn't fit is detected instead of quietly squeezing text;
   only search fields give (down to 120 px). Every toolbar button with text also has an icon, so it can shrink.
+- **The app menu is laid out, not generated flat** (`core/appMenu.ts`). A fixed layout puts the everyday actions
+  on top and the rest in submenus; it is still built from the command registry each time it opens, so
+  unavailable commands disappear and empty groups with them, and any command the layout doesn't name lands in a
+  submenu for its category (the open file type's commands, before Tools). Long per-type lists (> 14) split off
+  "Tool: …" commands and editing / viewing ones by title. Rejected: separate windows for groups of commands —
+  the command palette (Ctrl+K) already finds any command by name, and Settings already is a tab.
 - **Side panels float in narrow panes** (< 600 px, `isNarrow`): over the content with a shadow, closed when the
   pane becomes narrow, opened from the toolbar — a 260 px panel beside a 400 px pane would leave the canvas or
   table unusable.
