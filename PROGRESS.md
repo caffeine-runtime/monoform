@@ -195,6 +195,16 @@
   size before → after. Export pages (or the selected ones) as PNG/JPEG at 72–300 dpi; add images as pages; File →
   "Create PDF from images…" (one page per image, page size of the image or A4/Letter; GIF/BMP/AVIF/SVG converted on
   the way). Everything works on the working copy, so Save writes it and closing without saving discards it.
+- **M22 — Compare two files.** File → "Compare files…", "Compare this file with…", a tab's "Compare with…" (pick
+  another open file or browse), or the file tree's "Select for compare" → "Compare with …". Text and code: side by
+  side with line numbers, changed words highlighted inside changed lines, an overview strip of all changes (click
+  to jump), next/previous change (F7 / Shift+F7), only changes (3 lines of context, gaps expand on click), ignore
+  whitespace, swap sides, compare again. JSON/YAML: a list of changed paths (added/removed/changed with both values)
+  and a normalised side by side (keys sorted, formatting ignored). CSV/TSV: rows matched by a key column, so
+  reordering isn't a change; changed cells listed by column name. Images: side by side (zoom and pan together),
+  swipe, onion skin, difference (changed pixels in magenta, count and share, a tolerance for JPEG noise). Anything
+  else: byte by byte, reporting the first difference. Diffing runs in a worker (Myers' O(ND) in linear space), so a
+  100,000-line pair compares in ~0.1 s without stalls.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -220,6 +230,7 @@
 | Audio open | playable at once, waveform streams in | 3 s WAV: 195–240 ms to open, waveform complete after 140–190 ms; 10-min WAV: open 225 ms, waveform 165–175 ms, worst UI frame 35–50 ms; 10-min MP3 waveform 2.5 s (4 cores; 9.6 s on one), OGG 0.4 s, FLAC 2.4 s | same |
 | Video open / save | playable at once; save ≈ copy speed | 6 s WebM: open ~200 ms; saving remuxes without decoding (bounded by disk speed); Go tests remux 4 formats in < 1 s | same |
 | DXF (52,000 objects, 2.6 MB) | no freeze | opens in 0.5–0.8 s, worst UI frame 41–58 ms; zooming worst frame 38 ms (frames render in the worker in ~0.5 s each on llvmpipe; the page shows the previous one scaled meanwhile); moving 2,000 objects 60 ms | same |
+| Compare 100,000-line files (50 changes) | no freeze | 0.26–0.42 s to show (diff 0.09–0.13 s in the worker); worst UI frame 23–135 ms when the tab opens (varies run to run: GC/worker start), jumping between changes ≤ 48 ms | same |
 | 100-page PDF: first page visible | < 300 ms | 133–287 ms once the PDF module is loaded; 490–570 ms for the first PDF of a session (worker + fonts cold) | same |
 
 The Linux numbers are from a headless VM with software rendering; ~350 ms of each start is

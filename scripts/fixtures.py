@@ -536,6 +536,34 @@ def _bigdxf():
     return _dxf(g)
 w("cad/big.dxf", _bigdxf())
 
+# ---- compare pairs ----
+_code_a = """import { sum } from './math';
+
+export function total(items: number[]): number {
+  let t = 0;
+  for (const i of items) t += i;
+  return t * 2;
+}
+
+export const name = 'cart';
+""" + "".join(f"export const c{i} = {i};\n" for i in range(60))
+_code_b = _code_a.replace("return t * 2;", "return t * 3;").replace("export const name = 'cart';\n", "").replace("export const c30 = 30;\n", "export const c30 = 30;\nexport const extra = true;\n").replace("  let t = 0;", "    let t = 0;")
+w("compare/a.ts", _code_a.encode())
+w("compare/b.ts", _code_b.encode())
+w("compare/a.json", b'{"name": "app", "version": "1.0.0", "deps": {"x": "^1", "y": "^2"}, "tags": ["a", "b"]}\n')
+w("compare/b.json", b'{\n  "version": "1.1.0",\n  "name": "app",\n  "deps": {"x": "^1", "z": "^3"},\n  "tags": ["a", "c"]\n}\n')
+w("compare/a.csv", b"id,name,city\n1,Ann,Berlin\n2,Bob,Paris\n3,Cid,Rome\n")
+w("compare/b.csv", b"id,name,city\n3,Cid,Roma\n1,Ann,Berlin\n4,Dee,Oslo\n")
+w("compare/a.png", png(64, 48, (40, 120, 200)))
+w("compare/b.png", png_fn(64, 48, lambda x, y: (250, 40, 40) if 10 <= x < 20 and 5 <= y < 15 else (40, 120, 200)))
+w("compare/a.bin", bytes(range(256)) * 64)
+w("compare/b.bin", bytes(range(256)) * 32 + b"\xff" + bytes(range(1, 256)) + bytes(range(256)) * 31)
+_big = [f"line {i}: value {i * 7 % 1000}" for i in range(100000)]
+w("compare/big-a.txt", ("\n".join(_big) + "\n").encode())
+for _i in range(50):
+    _big[_i * 1999 + 7] = f"line changed {_i}"
+w("compare/big-b.txt", ("\n".join(_big) + "\n").encode())
+
 _pos, _nor, _uv, _idx = _cube()
 def _stl():
     tris = [(_idx[i], _idx[i + 1], _idx[i + 2]) for i in range(0, len(_idx), 3)]
