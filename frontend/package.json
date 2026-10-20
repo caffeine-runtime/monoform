@@ -12,7 +12,9 @@
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@tsconfig/svelte": "^5.0.8",
+    "@types/jsdom": "^30.0.0",
     "@types/three": "0.186.0",
+    "jsdom": "^27.4.0",
     "svelte": "^5.57.2",
     "svelte-check": "^4.7.7",
     "typescript": "^6.0.3",
@@ -40,6 +42,8 @@
     "mermaid": "~11.17.2",
     "onnxruntime-web": "1.30.0",
     "pdfjs-dist": "^6.4.299",
+    "perfect-freehand": "^1.2.3",
+    "roughjs": "^4.6.6",
     "smol-toml": "^1.9.1",
     "three": "0.186.1",
     "yaml": "^2.9.1"

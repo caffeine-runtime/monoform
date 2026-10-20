@@ -682,6 +682,31 @@ flowchart TD
 ```
 """)
 
+# ---- drawings (M29) ----
+import json as _json, zlib as _zlib, base64 as _b64, urllib.parse as _up
+_eb = {"angle": 0, "strokeColor": "#1e1e1e", "backgroundColor": "transparent", "fillStyle": "hachure", "strokeWidth": 2, "strokeStyle": "solid", "roughness": 1, "opacity": 100, "groupIds": [], "frameId": None, "seed": 11, "version": 5, "versionNonce": 99, "isDeleted": False, "boundElements": None, "updated": 1792400000000, "link": None, "locked": False}
+_els = [
+    dict(_eb, id="box", type="rectangle", x=100, y=100, width=220, height=110, roundness={"type": 3}, backgroundColor="#a5d8ff", boundElements=[{"type": "text", "id": "label"}, {"type": "arrow", "id": "arr"}], index="a0"),
+    dict(_eb, id="label", type="text", x=160, y=142.5, width=100, height=25, text="Hello", originalText="Hello", fontSize=20, fontFamily=5, textAlign="center", verticalAlign="middle", containerId="box", lineHeight=1.25, index="a1"),
+    dict(_eb, id="circ", type="ellipse", x=520, y=100, width=120, height=110, backgroundColor="#b2f2bb", fillStyle="cross-hatch", boundElements=[{"type": "arrow", "id": "arr"}], index="a2"),
+    dict(_eb, id="arr", type="arrow", x=324, y=155, width=192, height=0, points=[[0, 0], [192, 0]], startBinding={"elementId": "box", "focus": 0, "gap": 4}, endBinding={"elementId": "circ", "focus": 0, "gap": 4}, startArrowhead=None, endArrowhead="arrow", roundness={"type": 2}, lastCommittedPoint=None, index="a3"),
+    dict(_eb, id="pen", type="freedraw", x=120, y=300, width=200, height=40, points=[[0, 0], [40, 30], [80, 5], [120, 40], [160, 10], [200, 30]], pressures=[], simulatePressure=True, strokeColor="#e03131", lastCommittedPoint=None, index="a4"),
+    dict(_eb, id="note", type="text", x=420, y=300, width=200, height=50, text="Hand-drawn\nnotes", originalText="Hand-drawn\nnotes", fontSize=20, fontFamily=1, textAlign="left", verticalAlign="top", containerId=None, lineHeight=1.25, index="a5"),
+]
+w("drawings/sketch.excalidraw", _json.dumps({"type": "excalidraw", "version": 2, "source": "https://excalidraw.com", "elements": _els, "appState": {"viewBackgroundColor": "#ffffff", "gridSize": None}, "files": {}}, indent=2).encode())
+_page1 = """<mxGraphModel dx="1000" dy="600" grid="1" gridSize="10"><root><mxCell id="0"/><mxCell id="1" parent="0"/>
+<mxCell id="start" value="Start" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="40" y="60" width="120" height="60" as="geometry"/></mxCell>
+<mxCell id="check" value="Valid?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="240" y="50" width="100" height="80" as="geometry"/></mxCell>
+<mxCell id="done" value="Done" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="420" y="60" width="100" height="60" as="geometry"/></mxCell>
+<mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="start" target="check"><mxGeometry relative="1" as="geometry"/></mxCell>
+<mxCell id="e2" value="yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="check" target="done"><mxGeometry relative="1" as="geometry"/></mxCell>
+</root></mxGraphModel>"""
+_page2 = """<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="n" value="Second page" style="text;html=1;" vertex="1" parent="1"><mxGeometry x="20" y="20" width="120" height="30" as="geometry"/></mxCell></root></mxGraphModel>"""
+def _deflate(x):
+    c = _zlib.compressobj(9, _zlib.DEFLATED, -15)
+    return _b64.b64encode(c.compress(_up.quote(x, safe="~()*!.'").encode()) + c.flush()).decode()
+w("drawings/flow.drawio", ('<mxfile host="app.diagrams.net" version="24.0.0"><diagram id="p1" name="Flow">' + _deflate(_page1) + '</diagram><diagram id="p2" name="Notes">' + _deflate(_page2) + '</diagram></mxfile>').encode())
+
 # ---- packages and disk images (M26) ----
 # deb/rpm/iso/msi samples were made with dpkg-deb, rpmbuild, xorriso and wixl
 # (see internal/archive/testdata); jar/apk are zip files under another name.
