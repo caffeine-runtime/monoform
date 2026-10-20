@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cut, isUnchanged, keepOnly, keptLength, rangeAt, snap } from './edits';
+import { cut, isUnchanged, keepOnly, keptLength, rangeAt, removed, restore, snap } from './edits';
 
 describe('video edits', () => {
   const all: [number, number][] = [[0, 10]];
@@ -38,5 +38,14 @@ describe('video edits', () => {
     expect(isUnchanged({ keep: all, rotate: 0, mute: false }, 10)).toBe(true);
     expect(isUnchanged({ keep: all, rotate: 90, mute: false }, 10)).toBe(false);
     expect(isUnchanged({ keep: cut(all, 2, 3, 10), rotate: 0, mute: false }, 10)).toBe(false);
+  });
+
+  it('lists removed parts and restores them', () => {
+    const k = cut(cut(all, 2, 3, 10), 8, 10, 10);
+    expect(removed(k, 10)).toEqual([[2, 3], [8, 10]]);
+    expect(removed(keepOnly(all, 1, 4, 10), 10)).toEqual([[0, 1], [4, 10]]);
+    expect(restore(k, 2, 3, 10)).toEqual([[0, 8]]);
+    expect(restore(k, 8, 10, 10)).toEqual([[0, 2], [3, 10]]);
+    expect(removed(all, 10)).toEqual([]);
   });
 });

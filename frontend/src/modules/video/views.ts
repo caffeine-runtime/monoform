@@ -1,4 +1,4 @@
-export type VideoOp = 'cut' | 'keep' | 'setIn' | 'setOut' | 'rotate' | 'removeAudio' | 'undo' | 'redo' | 'selectAll' | 'clearSel';
+export type VideoOp = 'cut' | 'keep' | 'setIn' | 'setOut' | 'rotate' | 'removeAudio' | 'undo' | 'redo' | 'selectAll' | 'clearSel' | 'restoreAll';
 
 export interface VideoView {
   toggle: () => void;

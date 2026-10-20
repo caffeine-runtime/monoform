@@ -71,6 +71,23 @@ export function snap(keep: readonly Range[], keyframes: readonly number[], dur: 
   return normalize(out, dur);
 }
 
+/** Put [a, b) back into the kept parts. */
+export function restore(keep: readonly Range[], a: number, b: number, dur: number): Range[] {
+  return normalize([...keep, [Math.min(a, b), Math.max(a, b)]], dur);
+}
+
+/** The parts that are removed (gaps between kept ranges, and before/after them). */
+export function removed(keep: readonly Range[], dur: number): Range[] {
+  const out: Range[] = [];
+  let t = 0;
+  for (const [a, b] of keep) {
+    if (a > t + 1e-6) out.push([t, a]);
+    t = Math.max(t, b);
+  }
+  if (dur > t + 1e-6) out.push([t, dur]);
+  return out;
+}
+
 export function keptLength(keep: readonly Range[]): number {
   return keep.reduce((n, [a, b]) => n + (b - a), 0);
 }

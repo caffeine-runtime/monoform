@@ -97,6 +97,9 @@
   save the current frame as PNG. Light editor without re-encoding: cut out the selection, keep only the selection,
   rotate 90° steps (MP4/MOV), remove the audio track, extract the audio (.m4a/.weba/.mka); undo/redo; the
   timeline shows exactly what will be kept (cut points snap to keyframes) and playback skips removed parts.
+  The selection is unmistakable: a bold frame with drag handles, the rest of the timeline dimmed, and a bar with
+  its length and Cut out / Keep only / Deselect (Esc). A cut flashes the removed part red and a toast says how much
+  went and how long the video is now (with Undo); removed parts are labelled and each has a restore button.
   Saving rewrites the container in Go (mp4ff for MP4/MOV, our own Matroska writer for WebM/MKV) — seconds for
   any length, no quality loss. Editing works even where the system can't play the codec (e.g. H.264 on a bare
   Linux).
