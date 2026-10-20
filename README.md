@@ -32,7 +32,7 @@ Everything is keyboard-reachable: press **Ctrl+K** (**⌘K** on macOS) and type.
 | ![Image editor with layers and a magic-wand selection](docs/screenshots/image-layers.png) | ![Colour adjustments on a selection](docs/screenshots/image-adjust.png) |
 | ![SVG editing](docs/screenshots/svg.png) | ![HTML page preview](docs/screenshots/html.png) |
 | ![3D model viewer](docs/screenshots/model3d.png) | ![Audio editor with a fade](docs/screenshots/audio.png) |
-| ![Video with a cut part](docs/screenshots/video.png) | |
+| ![Video with a cut part](docs/screenshots/video.png) | ![Start page](docs/screenshots/start.png) |
 | ![Settings](docs/screenshots/settings.png) | ![Archive browser](docs/screenshots/archive.png) |
 | ![Search box](docs/screenshots/palette.png) | ![Checksum verification](docs/screenshots/checksums.png) |
 | ![Search by meaning](docs/screenshots/search-by-meaning.png) | ![Search by meaning: consent](docs/screenshots/search-by-meaning-consent.png) |

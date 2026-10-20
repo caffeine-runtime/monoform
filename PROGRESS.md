@@ -109,6 +109,10 @@
   AutoComplete proposes the one matching entry from the column while typing (Enter accepts, Delete/Backspace
   drops it). Every change, including paste/fill/move batches, is one undo step (Ctrl/Cmd+Z, Ctrl+Y /
   Ctrl+Shift+Z; toolbar buttons in CSV); context menu with cut/copy/paste/clear/insert/delete rows.
+- **Start page redesign.** "New" has one button per file type (Markdown note, Word document, spreadsheet, CSV,
+  image, SVG, web page, JSON, plain text) with simple one-colour icons, instead of a single "New document,
+  spreadsheet, image…" button whose label didn't fit; "Open" holds open file/folder, hash check and all commands.
+  Long folder paths in the recent list are cut with an ellipsis instead of running off the page.
 - **Fix — 3D lag while orbiting during an animation.** Each camera move queued an extra render loop, so the
   renders per frame multiplied while you dragged (worst with a playing, skinned animation). Now exactly one
   render per frame (m11 checks this: 70 renders in 70 frames, longest frame ≤ 41 ms on the software-rendered VM).
