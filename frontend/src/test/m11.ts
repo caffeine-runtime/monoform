@@ -67,6 +67,19 @@ export default async function m11(dir: string) {
   assertEq(glb.h.anims().map((a) => a.name).join(','), 'Spin,Bounce', 'animation list');
   const v = glb.h.viewer()!;
   assert(drawsSomething(v), 'model rendered');
+  {
+    // "Save view as PNG" captures the model (the canvas doesn't keep its buffer between frames).
+    await sleep(100);
+    const bmp = await createImageBitmap(await v.screenshot());
+    const c = document.createElement('canvas');
+    c.width = bmp.width;
+    c.height = bmp.height;
+    const g = c.getContext('2d')!;
+    g.drawImage(bmp, 0, 0);
+    const mid = g.getImageData(bmp.width / 2, bmp.height / 2, 1, 1).data;
+    const bg = (v.scene.background as THREE.Color).clone().convertLinearToSRGB();
+    assert(Math.abs(mid[0] - bg.r * 255) + Math.abs(mid[1] - bg.g * 255) + Math.abs(mid[2] - bg.b * 255) > 30, `screenshot shows the model (${mid.slice(0, 3).join(',')})`);
+  }
   const cube = meshes(v)[0];
   const tex = (cube.material as THREE.MeshStandardMaterial).map;
   assert(tex?.image, 'embedded texture decoded');
@@ -92,6 +105,33 @@ export default async function m11(dir: string) {
   await waitFor(() => (glb.h.anim().index === 0 && glb.h.anim().playing ? true : null), 'Spin playing');
   await sleep(300);
   assert(Math.abs(cube.quaternion.y) > 0.05, 'Spin rotates the cube');
+  {
+    // Orbit the camera while the animation plays, the way a mouse drag does
+    // (rotate + update per pointer move): one render per frame, no more.
+    const render = v.renderer.render.bind(v.renderer);
+    let renders = 0;
+    v.renderer.render = (s, c) => (renders++, render(s, c));
+    const controls = v.controls as unknown as { _rotateLeft(a: number): void; update(): boolean };
+    let frames = 0;
+    let on = true;
+    const count = () => {
+      frames++;
+      if (on) requestAnimationFrame(count);
+    };
+    requestAnimationFrame(count);
+    const orbit = await measureJank(async () => {
+      for (let i = 0; i < 60; i++) {
+        controls._rotateLeft(0.03);
+        controls.update();
+        await sleep(16);
+      }
+      await sleep(300); // damping settles
+    });
+    on = false;
+    v.renderer.render = render;
+    log(`orbit while animating: ${renders} renders in ${frames} frames, longest frame ${Math.round(orbit.maxGap)} ms`);
+    assert(renders <= frames + 2, `one render per frame while orbiting (${renders} renders, ${frames} frames)`);
+  }
   v.stopAnimation();
   // Wireframe and lighting toggles.
   glb.h.toggle('wireframe');
