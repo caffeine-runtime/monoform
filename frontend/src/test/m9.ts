@@ -19,7 +19,7 @@ interface Hooks {
   copy: (cut?: boolean, merged?: boolean) => void;
   paste: () => Promise<void>;
   saveCopy: () => Promise<boolean>;
-  adjust: () => { test: { set: (k: string, v: number | boolean) => void; apply: () => void } } | undefined;
+  adjust: () => { test: { set: (k: string, v: number | boolean) => void; setBlurType: (t: string) => void; apply: () => void; reset: () => void } } | undefined;
   setPanel: (p: 'layers' | 'adjust' | null) => void;
   fonts: () => string[];
 }
@@ -138,6 +138,45 @@ export default async function m9(dir: string) {
   log(`adjust preview+apply longest frame ${Math.round(jank.maxGap)} ms`);
   ed.undo();
   assert(px(ed.composite(), 200, 150)[0] > 150, 'undo adjustment');
+
+  // ---- kinds of blur, limited to a selection ----
+  const blurArea = { x: 100, y: 50, width: 120, height: 200 }; // covers the disc's left edge only
+  ed.setPixelSelection(selection.fromPath(selection.rectPath(blurArea), blurArea, ed.width, ed.height));
+  const orig = ed.composite();
+  const changedAt = (c: HTMLCanvasElement, x: number, y: number) => px(c, x, y).some((v, i) => Math.abs(v - px(orig, x, y)[i]) > 20);
+  const kinds: [string, Record<string, number>, boolean][] = [
+    ['gaussian', {}, true],
+    ['motion', { blurAngle: 0 }, true],
+    ['zoom', {}, true],
+    ['spin', { blurX: 0.2 }, true],
+    ['lens', {}, true],
+    ['tiltshift', { blurY: 0 }, true],
+    ['surface', {}, false], // keeps hard edges
+  ];
+  for (const [kind, extra, blurs] of kinds) {
+    adj.test.setBlurType(kind);
+    for (const [k, v] of Object.entries(extra)) adj.test.set(k, v);
+    const bj = await measureJank(async () => {
+      adj.test.set('blur', 40);
+      await sleep(80);
+      adj.test.apply();
+      await sleep(30);
+    });
+    const out = ed.composite();
+    const edge = changedAt(out, 121, 150) || changedAt(out, 118, 150);
+    assertEq(edge, blurs, `${kind} blur ${blurs ? 'softens' : 'keeps'} the disc edge inside the selection`);
+    assert(!changedAt(out, 279, 150) && !changedAt(out, 221, 150), `${kind} blur stays inside the selection`);
+    log(`${kind} blur longest frame ${Math.round(bj.maxGap)} ms`);
+    ed.undo();
+    adj.test.reset();
+  }
+  // Painting inside a selection never leaks out of it.
+  ed.setOptions({ color: '#00ff00', brushSize: 16, brushOpacity: 1 });
+  ed.paint([{ x: 40, y: 100 }, { x: 180, y: 100 }]);
+  assert(px(ed.composite(), 150, 100)[1] > 200, 'brush paints inside the selection');
+  assert(!changedAt(ed.composite(), 60, 100), 'brush does not paint outside the selection');
+  ed.undo();
+  ed.deselect();
   h.setPanel('layers');
 
   // ---- background removal ----

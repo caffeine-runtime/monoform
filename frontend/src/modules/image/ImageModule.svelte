@@ -887,7 +887,7 @@
     <button class="btn ghost" title="New layer from selection ({formatShortcut('Mod+J')})" onclick={() => editor?.layerFromSelection()}><Icon icon={SquaresUnite} size={14} /> To layer</button>
     <button class="btn ghost" title="Delete pixels (Delete)" onclick={() => editor?.clearSelectionPixels()}><Icon icon={Trash} size={14} /></button>
     <button class="btn ghost" title="Fill with colour" onclick={() => editor?.fillSelection()}><Icon icon={PaintBucket} size={14} /></button>
-    <button class="btn ghost" title="Blur selection" onclick={() => editor?.blurSelection()}><Icon icon={Droplets} size={14} /></button>
+    <button class="btn ghost" title="Blur the selection: opens Adjust → Blur (Gaussian, motion, zoom, spin, lens, tilt-shift, surface)" onclick={() => setPanel('adjust')}><Icon icon={Droplets} size={14} /></button>
     <button class="btn ghost" title="Pixelate selection" onclick={() => editor?.pixelateSelection()}><Icon icon={Grid} size={14} /></button>
     <button class="btn ghost" title="Crop to selection" onclick={() => editor?.cropToSelection()}><Icon icon={Crop} size={14} /></button>
     <button class="btn ghost" title="Invert selection ({formatShortcut('Mod+Shift+I')})" onclick={invertSelection}>Invert</button>

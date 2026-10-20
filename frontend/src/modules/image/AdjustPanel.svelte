@@ -1,7 +1,7 @@
 <script lang="ts">
   // Adjustment sliders with live GPU preview. Nothing changes until Apply;
   // with a selection, only the selected pixels are adjusted.
-  import { NEUTRAL, isNeutral, type Adjustments } from './adjust';
+  import { BLUR_TYPES, NEUTRAL, isNeutral, type Adjustments, type BlurType } from './adjust';
   import type { EditorState, ImageEditor } from './editor';
   import { ui } from '../../core/ui.svelte';
 
@@ -36,7 +36,6 @@
       title: 'Detail',
       sliders: [
         { key: 'sharpen', label: 'Sharpen', min: 0, max: 1, step: 0.01, scale: 100 },
-        { key: 'blur', label: 'Blur', min: 0, max: 40, step: 0.5, unit: ' px' },
         { key: 'vignette', label: 'Vignette', min: 0, max: 1, step: 0.01, scale: 100 },
       ],
     },
@@ -49,6 +48,25 @@
     }
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(() => editor.previewAdjust($state.snapshot(a) as Adjustments));
+  }
+
+  // Blur controls that apply to the chosen kind of blur.
+  const blurSliders = $derived.by((): Slider[] => {
+    const t = a.blurType;
+    const amount: Slider = { key: 'blur', label: t === 'zoom' || t === 'spin' ? 'Strength' : t === 'motion' ? 'Distance' : 'Radius', min: 0, max: 100, step: 0.5, unit: t === 'zoom' || t === 'spin' ? '' : ' px' };
+    const out = [amount];
+    if (t === 'motion' || t === 'tiltshift') out.push({ key: 'blurAngle', label: 'Angle', min: -180, max: 180, step: 1, unit: '°' });
+    if (t === 'zoom' || t === 'spin' || t === 'tiltshift') {
+      out.push({ key: 'blurX', label: 'Centre X', min: 0, max: 1, step: 0.01, scale: 100, unit: '%' });
+      out.push({ key: 'blurY', label: 'Centre Y', min: 0, max: 1, step: 0.01, scale: 100, unit: '%' });
+    }
+    if (t === 'tiltshift') out.push({ key: 'blurBand', label: 'Sharp band', min: 0, max: 0.5, step: 0.01, scale: 100, unit: '%' });
+    return out;
+  });
+
+  function setBlurType(t: BlurType | string) {
+    a.blurType = t as BlurType;
+    if (a.blur) changed();
   }
 
   function set(key: keyof Adjustments, v: number | boolean) {
@@ -74,7 +92,7 @@
   // Leaving the panel (or the tab) discards an unapplied preview.
   $effect(() => () => editor.cancelAdjust());
   // Hooks for the self-test.
-  export const test = { set, apply, reset };
+  export const test = { set, setBlurType, apply, reset };
 </script>
 
 <div class="adjust">
@@ -89,6 +107,19 @@
           <span class="num">{fmt(s, a[s.key] as number)}</span>
         </label>
       {/each}
+    {/each}
+    <h4>Blur</h4>
+    <div class="toggles" role="radiogroup" aria-label="Kind of blur">
+      {#each BLUR_TYPES as b (b.id)}
+        <button class="chip" role="radio" aria-checked={a.blurType === b.id} class:on={a.blurType === b.id} title={b.help} onclick={() => setBlurType(b.id)}>{b.label}</button>
+      {/each}
+    </div>
+    {#each blurSliders as s (s.key)}
+      <label class="row" ondblclick={() => set(s.key, NEUTRAL[s.key] as number)} title="Double-click to reset">
+        <span class="lbl">{s.label}</span>
+        <input type="range" min={s.min} max={s.max} step={s.step} value={a[s.key] as number} oninput={(e) => set(s.key, +(e.target as HTMLInputElement).value)} />
+        <span class="num">{fmt(s, a[s.key] as number)}</span>
+      </label>
     {/each}
     <h4>Effects</h4>
     <div class="toggles">
@@ -158,6 +189,12 @@
   .chip.on {
     background: var(--accent-soft);
     color: var(--accent-text);
+  }
+  button.chip {
+    border: none;
+    color: inherit;
+    font: inherit;
+    font-size: var(--fs-small);
   }
   .chip input {
     display: none;

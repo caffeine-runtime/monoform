@@ -16,12 +16,28 @@ export interface Adjustments {
   tint: number; // -1..1 (green..magenta)
   hue: number; // degrees, -180..180
   sharpen: number; // 0..1
-  blur: number; // radius in px, 0..40
+  blur: number; // amount in px, 0..100 (radius; length for motion; % for zoom; degrees for spin)
+  blurType: BlurType;
+  blurAngle: number; // degrees, motion direction / tilt-shift band angle
+  blurX: number; // 0..1, centre for zoom, spin, tilt-shift
+  blurY: number; // 0..1
+  blurBand: number; // 0..1, tilt-shift: half-height of the sharp band (fraction of the image)
   vignette: number; // 0..1
   grayscale: boolean;
   sepia: boolean;
   invert: boolean;
 }
+
+export type BlurType = 'gaussian' | 'motion' | 'zoom' | 'spin' | 'lens' | 'tiltshift' | 'surface';
+export const BLUR_TYPES: { id: BlurType; label: string; help: string }[] = [
+  { id: 'gaussian', label: 'Gaussian', help: 'Soft, even blur' },
+  { id: 'motion', label: 'Motion', help: 'Streaks along a direction, like a moving camera' },
+  { id: 'zoom', label: 'Zoom', help: 'Radial streaks from the centre point, like zooming during the exposure' },
+  { id: 'spin', label: 'Spin', help: 'Circular blur around the centre point' },
+  { id: 'lens', label: 'Lens', help: 'Round out-of-focus blur with bright bokeh highlights' },
+  { id: 'tiltshift', label: 'Tilt-shift', help: 'Sharp band, increasingly blurred above and below (miniature look)' },
+  { id: 'surface', label: 'Surface', help: 'Smooths surfaces and noise but keeps edges sharp' },
+];
 
 export const NEUTRAL: Adjustments = {
   exposure: 0,
@@ -36,14 +52,22 @@ export const NEUTRAL: Adjustments = {
   hue: 0,
   sharpen: 0,
   blur: 0,
+  blurType: 'gaussian',
+  blurAngle: 0,
+  blurX: 0.5,
+  blurY: 0.5,
+  blurBand: 0.15,
   vignette: 0,
   grayscale: false,
   sepia: false,
   invert: false,
 };
 
+const BLUR_SHAPE: (keyof Adjustments)[] = ['blurType', 'blurAngle', 'blurX', 'blurY', 'blurBand'];
+
+/** True when nothing would change (blur shape settings alone don't count). */
 export function isNeutral(a: Adjustments): boolean {
-  return (Object.keys(NEUTRAL) as (keyof Adjustments)[]).every((k) => a[k] === NEUTRAL[k]);
+  return (Object.keys(NEUTRAL) as (keyof Adjustments)[]).every((k) => BLUR_SHAPE.includes(k) || a[k] === NEUTRAL[k]);
 }
 
 const VERT = `#version 300 es
@@ -74,6 +98,48 @@ void main() {
   o = acc.a > 0.0 ? vec4(acc.rgb / acc.a, acc.a) : vec4(0.0);
 }`;
 
+// Shaped blurs, one pass over n taps (premultiplied). kind: 1 motion, 2 zoom,
+// 3 spin, 4 lens, 5 surface. Positions are in pixels; the texture is flipped
+// (FLIP_Y), so image y grows towards uv.y = 0.
+const FX = `#version 300 es
+precision highp float;
+in vec2 uv;
+out vec4 o;
+uniform sampler2D src;
+uniform int kind, n;
+uniform float amount;
+uniform vec2 size, dir, center;
+vec4 tap(vec2 p) { vec4 c = texture(src, p / size); return vec4(c.rgb * c.a, c.a); }
+void main() {
+  vec2 px = uv * size;
+  vec4 c0 = texture(src, uv);
+  vec4 acc = vec4(0.0);
+  float ws = 0.0;
+  for (int i = 0; i < n; i++) {
+    float k = (float(i) + 0.5) / float(n);
+    vec2 p;
+    float w = 1.0;
+    if (kind == 1) p = px + dir * (k - 0.5) * 2.0 * amount;
+    else if (kind == 2) p = center + (px - center) * (1.0 - amount * k);
+    else if (kind == 3) {
+      float a = (k - 0.5) * amount;
+      vec2 v = px - center;
+      p = center + vec2(v.x * cos(a) - v.y * sin(a), v.x * sin(a) + v.y * cos(a));
+    } else {
+      float r = amount * sqrt(k);
+      float t = float(i) * 2.39996323; // golden angle: even disc coverage
+      p = px + r * vec2(cos(t), sin(t));
+    }
+    vec4 c = tap(p);
+    if (kind == 4) w = 1.0 + 12.0 * pow(max(c.r, max(c.g, c.b)), 6.0); // bright spots bloom into discs
+    if (kind == 5) { vec3 d = c.rgb - c0.rgb * c.a; w = exp(-dot(d, d) / 0.02); }
+    acc += c * w;
+    ws += w;
+  }
+  acc /= ws;
+  o = acc.a > 0.0 ? vec4(acc.rgb / acc.a, acc.a) : vec4(0.0);
+}`;
+
 const MAIN = `#version 300 es
 precision highp float;
 in vec2 uv;
@@ -82,7 +148,9 @@ uniform sampler2D src;
 uniform sampler2D sharpSrc; // small blur, for unsharp mask
 uniform sampler2D blurSrc;  // big blur
 uniform sampler2D mask;
-uniform bool useMask, useSharp, useBlur;
+uniform bool useMask, useSharp, useBlur, tilt;
+uniform vec2 tiltC, tiltN, size;
+uniform float tiltW;
 uniform float exposure, brightness, contrast, highlights, shadows, saturation, vibrance, temperature, tint, hue, sharpen, vignette;
 uniform bool grayscale, sepia, invertc;
 
@@ -102,6 +170,11 @@ float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 void main() {
   vec4 orig = texture(src, uv);
   vec4 base = useBlur ? texture(blurSrc, uv) : orig;
+  if (useBlur && tilt) {
+    // Distance from the sharp band's centre line, in units of the image height.
+    float d = abs(dot(uv * size - tiltC, tiltN)) / size.y;
+    base = mix(orig, base, smoothstep(tiltW, tiltW + 0.2, d));
+  }
   vec3 c = base.rgb;
   if (useSharp) c += (c - texture(sharpSrc, uv).rgb) * sharpen * 2.5;
   c *= exp2(exposure);
@@ -164,6 +237,7 @@ export class Adjuster {
   private gl: WebGL2RenderingContext;
   private main: WebGLProgram;
   private blur: WebGLProgram;
+  private fx: WebGLProgram;
   private src: WebGLTexture;
   private mask: WebGLTexture | null = null;
   private tmp: Target;
@@ -172,7 +246,7 @@ export class Adjuster {
   private w: number;
   private h: number;
   private lastSharpSigma = -1;
-  private lastBlurSigma = -1;
+  private lastBlur = '';
 
   constructor(source: HTMLCanvasElement, mask?: HTMLCanvasElement | null) {
     this.w = source.width;
@@ -185,6 +259,7 @@ export class Adjuster {
     this.gl = gl;
     this.main = program(gl, MAIN);
     this.blur = program(gl, BLUR);
+    this.fx = program(gl, FX);
     const buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
@@ -240,16 +315,48 @@ export class Adjuster {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
+  private shaped(into: Target, a: Adjustments) {
+    const gl = this.gl;
+    const p = this.fx;
+    gl.useProgram(p);
+    const u = (k: string) => gl.getUniformLocation(p, k);
+    const kinds = { motion: 1, zoom: 2, spin: 3, lens: 4, surface: 5 } as Record<string, number>;
+    const kind = kinds[a.blurType];
+    const rad = (a.blurAngle * Math.PI) / 180;
+    // amount: px for motion/lens/surface, fraction for zoom (0..0.5), radians for spin (0..~60°)
+    const amount = kind === 2 ? a.blur / 200 : kind === 3 ? (a.blur * Math.PI) / 300 : a.blur;
+    // Enough taps that streaks don't break into dots (capped for slow GPUs).
+    const reach = kind === 2 ? amount * Math.hypot(this.w, this.h) / 2 : kind === 3 ? amount * Math.hypot(this.w, this.h) / 2 : amount * 2;
+    const n = Math.max(8, Math.min(kind === 4 || kind === 5 ? 160 : 128, Math.ceil(kind === 4 || kind === 5 ? amount * amount * 0.8 : reach)));
+    gl.uniform1i(u('kind'), kind);
+    gl.uniform1i(u('n'), n);
+    gl.uniform1f(u('amount'), amount);
+    gl.uniform2f(u('size'), this.w, this.h);
+    gl.uniform2f(u('dir'), Math.cos(rad), -Math.sin(rad));
+    gl.uniform2f(u('center'), a.blurX * this.w, (1 - a.blurY) * this.h);
+    gl.uniform1i(u('src'), 0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.src);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, into.fb);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
+
   /** Render adjustments into `canvas`. */
   render(a: Adjustments) {
     const gl = this.gl;
     gl.viewport(0, 0, this.w, this.h);
     const sharpSigma = a.sharpen > 0 ? 1.4 : 0;
-    const blurSigma = Math.min(25, a.blur / 2);
+    const useBlur = a.blur > 0.6;
+    const gaussian = a.blurType === 'gaussian' || a.blurType === 'tiltshift';
     if (sharpSigma && sharpSigma !== this.lastSharpSigma) this.gaussian(this.sharpT, sharpSigma);
-    if (blurSigma > 0.3 && blurSigma !== this.lastBlurSigma) this.gaussian(this.blurT, blurSigma);
+    const key = useBlur ? (gaussian ? `g${a.blur}` : `${a.blurType}:${a.blur}:${a.blurAngle}:${a.blurX}:${a.blurY}`) : '';
+    if (useBlur && key !== this.lastBlur) {
+      if (gaussian) this.gaussian(this.blurT, Math.min(25, a.blur / 2));
+      else this.shaped(this.blurT, a);
+    }
     this.lastSharpSigma = sharpSigma;
-    this.lastBlurSigma = blurSigma;
+    this.lastBlur = key;
     const p = this.main;
     gl.useProgram(p);
     const u = (n: string) => gl.getUniformLocation(p, n);
@@ -267,7 +374,13 @@ export class Adjuster {
     gl.uniform1i(u('mask'), 3);
     gl.uniform1i(u('useMask'), this.mask ? 1 : 0);
     gl.uniform1i(u('useSharp'), sharpSigma ? 1 : 0);
-    gl.uniform1i(u('useBlur'), blurSigma > 0.3 ? 1 : 0);
+    gl.uniform1i(u('useBlur'), useBlur ? 1 : 0);
+    const tr = (a.blurAngle * Math.PI) / 180;
+    gl.uniform1i(u('tilt'), a.blurType === 'tiltshift' ? 1 : 0);
+    gl.uniform2f(u('size'), this.w, this.h);
+    gl.uniform2f(u('tiltC'), a.blurX * this.w, (1 - a.blurY) * this.h);
+    gl.uniform2f(u('tiltN'), Math.sin(tr), Math.cos(tr)); // normal of a band at angle tr (flipped y)
+    gl.uniform1f(u('tiltW'), a.blurBand);
     for (const k of ['exposure', 'brightness', 'contrast', 'highlights', 'shadows', 'saturation', 'vibrance', 'temperature', 'tint', 'hue', 'sharpen', 'vignette'] as const) {
       gl.uniform1f(u(k), a[k]);
     }
