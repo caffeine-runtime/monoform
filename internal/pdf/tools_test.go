@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 func writePNG(t *testing.T, path string, w, h int, alpha bool) {
@@ -162,4 +163,43 @@ func contains(s, sub string) bool {
 		}
 	}
 	return false
+}
+
+func TestAddTextLayer(t *testing.T) {
+	dir := t.TempDir()
+	ctx := context.Background()
+	src := write(t, dir, "scan.pdf", 2)
+	out := filepath.Join(dir, "searchable.pdf")
+	// A one-page PDF standing in for Tesseract's text-only page.
+	if err := AddTextLayer(ctx, src, out, map[int][]byte{2: Minimal(1)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := Validate(ctx, out); err != nil {
+		t.Fatalf("invalid: %v", err)
+	}
+	if got := pageTexts(t, out); got[0] != "Page 1" || got[1] != "Page 2" {
+		t.Errorf("original text kept: %v", got)
+	}
+	if contains(contentOf(t, out, 1), " Do") || !contains(contentOf(t, out, 2), " Do") {
+		t.Error("only page 2 gets the layer")
+	}
+	// The layer's text is inside the form XObject drawn on page 2.
+	pc, err := api.ReadContextFile(ctx, out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, entry := range pc.XRefTable.Table {
+		if sd, ok := entry.Object.(types.StreamDict); ok && sd.Subtype() != nil && *sd.Subtype() == "Form" {
+			if err := sd.Decode(); err == nil && contains(string(sd.Content), "(Page 1)") {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Error("text layer form not found")
+	}
+	if err := AddTextLayer(ctx, src, out, nil); err == nil {
+		t.Error("empty layer set accepted")
+	}
 }

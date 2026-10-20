@@ -37,6 +37,7 @@
     "@huggingface/tokenizers": "0.2.0",
     "@lezer/highlight": "^1.2.5",
     "@lucide/svelte": "^1.59.0",
+    "@tesseract.js-data/eng": "^1.0.0",
     "konva": "^10.9.0",
     "markdown-it": "^15.0.3",
     "mermaid": "~11.17.2",
@@ -45,6 +46,7 @@
     "perfect-freehand": "^1.2.3",
     "roughjs": "^4.6.6",
     "smol-toml": "^1.9.1",
+    "tesseract.js": "^7.0.0",
     "three": "0.186.1",
     "yaml": "^2.9.1"
   }

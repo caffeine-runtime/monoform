@@ -258,6 +258,36 @@ export namespace app {
 	        this.cache = source["cache"];
 	    }
 	}
+	export class OcrLanguage {
+	    code: string;
+	    name: string;
+	    bundled: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new OcrLanguage(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.code = source["code"];
+	        this.name = source["name"];
+	        this.bundled = source["bundled"];
+	    }
+	}
+	export class OcrPage {
+	    page: number;
+	    pdf: number[];
+	
+	    static createFrom(source: any = {}) {
+	        return new OcrPage(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.page = source["page"];
+	        this.pdf = source["pdf"];
+	    }
+	}
 	export class PassagesResult {
 	    size: number;
 	    mod: number;
@@ -1454,6 +1484,7 @@ export namespace settings {
 	    recentsOff: boolean;
 	    imageKeepOriginal: boolean;
 	    signatures: string[];
+	    ocrLangs: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -1479,6 +1510,7 @@ export namespace settings {
 	        this.recentsOff = source["recentsOff"];
 	        this.imageKeepOriginal = source["imageKeepOriginal"];
 	        this.signatures = source["signatures"];
+	        this.ocrLangs = source["ocrLangs"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

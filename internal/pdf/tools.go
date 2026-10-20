@@ -435,3 +435,30 @@ func FromImages(c context.Context, files []string, dst, size string) error {
 	}
 	return api.ImportImagesFile(c, files, dst, imp, conf())
 }
+
+// AddTextLayer lays OCR text over pages: layers maps a 1-based page number
+// to a one-page PDF of the same size holding only invisible text (as
+// Tesseract writes it). The text becomes selectable and searchable; the page
+// looks the same.
+func AddTextLayer(c context.Context, src, dst string, layers map[int][]byte) error {
+	if len(layers) == 0 {
+		return errors.New("no recognised text to add")
+	}
+	in, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	m := map[int]*model.Watermark{}
+	for page, b := range layers {
+		wm, err := api.PDFWatermarkForReadSeeker(c, bytes.NewReader(b), 1, "scale:1 abs, rot:0, pos:c, opacity:1", true, false, types.POINTS)
+		if err != nil {
+			return fmt.Errorf("page %d: %w", page, err)
+		}
+		m[page] = wm
+	}
+	var out bytes.Buffer
+	if err := api.AddWatermarksMap(c, bytes.NewReader(in), &out, m, conf()); err != nil {
+		return err
+	}
+	return os.WriteFile(dst, out.Bytes(), 0o644)
+}

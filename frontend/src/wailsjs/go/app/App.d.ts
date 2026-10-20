@@ -100,6 +100,12 @@ export function MediaRelease(arg1:string):Promise<void>;
 
 export function MediaURL(arg1:string):Promise<string>;
 
+export function OcrAddLanguage(arg1:string):Promise<string>;
+
+export function OcrLanguages():Promise<Array<app.OcrLanguage>>;
+
+export function OcrRemoveLanguage(arg1:string):Promise<void>;
+
 export function OpenExternal(arg1:string):Promise<void>;
 
 export function OpenFiles(arg1:Array<string>):Promise<void>;
@@ -111,6 +117,8 @@ export function OpenFolderDialog(arg1:string):Promise<string>;
 export function OpenInBrowser(arg1:string):Promise<void>;
 
 export function PageRoot(arg1:string):Promise<string>;
+
+export function PdfAddTextLayer(arg1:string,arg2:Array<app.OcrPage>):Promise<string>;
 
 export function PdfCompress(arg1:string,arg2:number,arg3:number):Promise<app.PdfCompressed>;
 
