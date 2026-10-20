@@ -1,5 +1,5 @@
 <script lang="ts">
-  // .docx editing on a page-like canvas; .doc is converted to .docx.
+  // .docx and .odt editing on a page-like canvas; .doc is converted to .docx.
   import { onMount, tick } from 'svelte';
   import Icon from '../../shell/Icon.svelte';
   import Bold from '@lucide/svelte/icons/bold';
@@ -15,12 +15,14 @@
   import { toastError, ui } from '../../core/ui.svelte';
   import { formatShortcut } from '../../core/keys';
   import { DocModel } from './docxModel';
+  import { OdtModel } from './odtModel';
   import { officeControllers } from './controllers';
 
   let { tab }: { tab: Tab } = $props();
 
   let page = $state<HTMLDivElement>();
-  let model: DocModel | null = null;
+  let model: DocModel | OdtModel | null = null;
+  let odt = $state(false);
   let note = $state('');
   let saveAs = $state('');
   let template = false;
@@ -42,11 +44,9 @@
       saveAs = r.saveAs;
       template = r.template;
       sourcePath = template ? '' : path;
-      model = new DocModel(r.document, {
-        styles: r.styles ?? {},
-        rels: r.rels ?? [],
-        partUrl: (entry) => endpoint('zip', { path, entry }),
-      });
+      odt = r.format === 'odt';
+      const partUrl = (entry: string) => endpoint('zip', { path, entry });
+      model = odt ? new OdtModel(r.document, { styles: r.styles ?? {}, textStyles: r.textStyles ?? {}, partUrl }) : new DocModel(r.document, { styles: r.styles ?? {}, rels: r.rels ?? [], partUrl });
       await tick();
       page!.replaceChildren(model.render(document));
       tab.dirty = false;
@@ -61,7 +61,7 @@
   function count() {
     const text = page?.innerText ?? '';
     words = (text.match(/\S+/g) ?? []).length;
-    tab.status = { ...tab.status, type: template ? 'Word 97–2003 document' : 'Word document', info: `${words.toLocaleString()} words` };
+    tab.status = { ...tab.status, type: odt ? 'OpenDocument text' : template ? 'Word 97–2003 document' : 'Word document', info: `${words.toLocaleString()} words` };
   }
 
   let countTimer: ReturnType<typeof setTimeout> | undefined;
@@ -109,6 +109,12 @@
   }
 
   async function doSaveAs(): Promise<boolean> {
+    if (odt) {
+      // The other parts of the package come from the .odt it was opened from.
+      const p = await api.SaveFileDialog('Save document as', tab.filePath || tab.title, [{ name: 'OpenDocument text', patterns: '*.odt' }]);
+      if (!p) return false;
+      return writeTo(/\.odt$/i.test(p) ? p : `${p}.odt`, true);
+    }
     const p = await api.SaveFileDialog('Save document as', saveAs || tab.filePath || tab.title, [{ name: 'Word document', patterns: '*.docx' }]);
     if (!p) return false;
     return writeTo(/\.docx$/i.test(p) ? p : `${p}.docx`, true);
@@ -218,6 +224,7 @@
   <div
     class="page selectable"
     class:hidden={!!error}
+    class:odt
     bind:this={page}
     contenteditable={!tab.readOnly}
     spellcheck="true"
@@ -264,6 +271,26 @@
   }
   .page.hidden {
     display: none;
+  }
+  /* ODF keeps runs of spaces as elements; show them as typed. */
+  .page.odt {
+    white-space: pre-wrap;
+    --doc-font: 'Liberation Serif', 'Times New Roman', 'Source Serif 4 Variable', serif;
+  }
+  .page :global(.li.num)::before {
+    content: attr(data-n);
+    left: 0;
+  }
+  .page :global(.li.cont)::before {
+    content: none;
+  }
+  .page :global(.atom.mark) {
+    display: inline;
+  }
+  .page :global(.atom.chip.note) {
+    vertical-align: super;
+    font-size: 0.7em;
+    padding: 0 2px;
   }
   .page :global(p) {
     margin: 0 0 8px;

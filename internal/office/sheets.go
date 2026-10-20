@@ -51,6 +51,8 @@ type book struct {
 	// Set once any edit touches a workbook with formulas: Excel/LibreOffice
 	// then recalculate cached results when the file is opened.
 	needsCalc bool
+	// Set for .ods workbooks: what's needed to write them back as ODS.
+	ods *odsDoc
 }
 
 // maxIndexedCells bounds the formula scan; huge sheets skip live recalculation.
@@ -80,6 +82,10 @@ func (bs *Books) Open(path string) (BookInfo, error) {
 		if ext == "xlsm" || ext == "xltm" {
 			info.Note = "Macros are kept as they are but never run."
 		}
+	case "ods", "ots":
+		if err := b.loadODS(path); err != nil {
+			return info, err
+		}
 	case "xls":
 		sheets, err := ReadXls(path)
 		if err != nil {
@@ -96,11 +102,14 @@ func (bs *Books) Open(path string) (BookInfo, error) {
 		return info, fmt.Errorf("unsupported spreadsheet type .%s", ext)
 	}
 	for _, name := range b.f.GetSheetList() {
-		rows, err := b.f.GetRows(name)
-		if err != nil {
-			return info, err
+		rows, ok := b.rows[name] // .ods: the text the file shows
+		if !ok {
+			var err error
+			if rows, err = b.f.GetRows(name); err != nil {
+				return info, err
+			}
+			b.rows[name] = rows
 		}
-		b.rows[name] = rows
 		info.Sheets = append(info.Sheets, SheetInfo{Name: name, Rows: len(rows), Cols: maxCols(rows)})
 	}
 	bs.mu.Lock()
@@ -523,6 +532,9 @@ func (bs *Books) InsertRow(id, sheet string, row int) error {
 		return err
 	}
 	delete(b.formulas, sheet) // references moved; re-index on next edit
+	if b.ods != nil {
+		b.ods.insertRow(sheet, row)
+	}
 	rows := b.rows[sheet]
 	if row <= len(rows) {
 		rows = append(rows[:row], append([][]string{{}}, rows[row:]...)...)
@@ -543,6 +555,9 @@ func (bs *Books) DeleteRow(id, sheet string, row int) error {
 		return err
 	}
 	delete(b.formulas, sheet)
+	if b.ods != nil {
+		b.ods.deleteRow(sheet, row)
+	}
 	rows := b.rows[sheet]
 	if row < len(rows) {
 		b.rows[sheet] = append(rows[:row], rows[row+1:]...)
@@ -562,6 +577,9 @@ func (bs *Books) AddSheet(id, name string) error {
 		return err
 	}
 	b.rows[name] = [][]string{}
+	if b.ods != nil {
+		b.ods.addSheet(name)
+	}
 	return nil
 }
 
@@ -573,13 +591,33 @@ func (bs *Books) RenameSheet(id, from, to string) error {
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	b.indexFormulas()
 	if err := b.f.SetSheetName(from, to); err != nil {
 		return err
+	}
+	// excelize renames the sheet but not references to it in formulas.
+	for sheet, refs := range b.formulas {
+		name := sheet
+		if name == from {
+			name = to
+		}
+		for _, ref := range refs {
+			if fm, _ := b.f.GetCellFormula(name, ref); fm != "" {
+				if nf := renameSheetRefs(fm, from, to); nf != fm {
+					b.f.SetCellFormula(name, ref, nf)
+				}
+			}
+		}
 	}
 	b.rows[to] = b.rows[from]
 	delete(b.rows, from)
 	b.formulas[to] = b.formulas[from]
 	delete(b.formulas, from)
+	if b.ods != nil {
+		if t := b.ods.table(from); t != nil {
+			t.name = to
+		}
+	}
 	return nil
 }
 
@@ -592,6 +630,16 @@ func (bs *Books) Save(id, path string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	ext := strings.ToLower(filepath.Ext(path))
+	if ext == ".ods" || ext == ".ots" {
+		if b.ods == nil {
+			return errors.New("only spreadsheets opened from .ods files can be saved as .ods; save as .xlsx")
+		}
+		if err := WriteODF(path, b.ods.src, b.odsContent()); err != nil {
+			return err
+		}
+		b.ods.src = path
+		return nil
+	}
 	if ext != ".xlsx" && ext != ".xlsm" && ext != ".xltx" && ext != ".xltm" {
 		return errors.New("spreadsheets are saved as .xlsx")
 	}
@@ -618,4 +666,50 @@ func (bs *Books) Close(id string) {
 	if b != nil {
 		b.f.Close()
 	}
+}
+
+// renameSheetRefs rewrites "Old!A1" and "'Old'!A1" references (outside
+// string literals) to the new sheet name.
+func renameSheetRefs(f, from, to string) string {
+	quote := func(n string) string {
+		if reBareSheet.MatchString(n) {
+			return n
+		}
+		return "'" + strings.ReplaceAll(n, "'", "''") + "'"
+	}
+	forms := []string{"'" + strings.ReplaceAll(from, "'", "''") + "'!"}
+	if reBareSheet.MatchString(from) {
+		forms = append(forms, from+"!")
+	}
+	var out strings.Builder
+	for i := 0; i < len(f); {
+		if f[i] == '"' {
+			j := i + 1
+			for j < len(f) && !(f[j] == '"' && (j+1 >= len(f) || f[j+1] != '"')) {
+				if f[j] == '"' {
+					j++
+				}
+				j++
+			}
+			out.WriteString(f[i:min(j+1, len(f))])
+			i = j + 1
+			continue
+		}
+		matched := false
+		if i == 0 || !strings.ContainsRune("_.$'!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", rune(f[i-1])) {
+			for _, form := range forms {
+				if strings.HasPrefix(strings.ToLower(f[i:]), strings.ToLower(form)) {
+					out.WriteString(quote(to) + "!")
+					i += len(form)
+					matched = true
+					break
+				}
+			}
+		}
+		if !matched {
+			out.WriteByte(f[i])
+			i++
+		}
+	}
+	return out.String()
 }

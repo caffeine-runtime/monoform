@@ -24,6 +24,8 @@ func TestByName(t *testing.T) {
 		"bundle.7z":         Archive,
 		"old.rar":           Archive,
 		"app.apk":           Archive,
+		"notes.odt":         Document,
+		"budget.ODS":        Sheet,
 		"pkg.deb":           Archive,
 		"setup.MSI":         Archive,
 		"disc.iso":          Archive,

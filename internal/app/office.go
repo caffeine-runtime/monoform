@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"path/filepath"
 	"strings"
 
@@ -59,10 +60,17 @@ type DocOpenResult struct {
 	SaveAs   string                `json:"saveAs"`
 	Note     string                `json:"note"`
 	Template bool                  `json:"template"` // saving builds a new package (no source .docx)
+	Format   string                `json:"format"`   // "docx", "doc" or "odt"
+	// .odt: named text styles -> formatting flags ("b i").
+	TextStyles map[string]string `json:"textStyles"`
 }
 
 func (a *App) DocOpen(path string) (DocOpenResult, error) {
-	if strings.EqualFold(filepath.Ext(path), ".doc") {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".odt", ".ott":
+		pkg, err := office.ReadOdt(path)
+		return DocOpenResult{Document: pkg.Content, Styles: pkg.Styles, TextStyles: pkg.TextStyles, Format: "odt"}, err
+	case ".doc":
 		paras, err := office.ReadDoc(path)
 		if err != nil {
 			return DocOpenResult{}, err
@@ -74,15 +82,28 @@ func (a *App) DocOpen(path string) (DocOpenResult, error) {
 			SaveAs:   strings.TrimSuffix(path, filepath.Ext(path)) + ".docx",
 			Note:     "Legacy .doc: the text is editable, and saving creates a new .docx next to it (images, tables and most formatting from the .doc are not carried over).",
 			Template: true,
+			Format:   "doc",
 		}, nil
 	}
 	pkg, err := office.ReadDocx(path)
-	return DocOpenResult{Document: pkg.Document, Styles: pkg.Styles, Rels: pkg.Rels}, err
+	return DocOpenResult{Document: pkg.Document, Styles: pkg.Styles, Rels: pkg.Rels, Format: "docx"}, err
 }
 
-// DocSave writes document.xml into a .docx at dst. src is the package to
-// copy the other parts from ("" builds a new package).
+// DocSave writes document.xml into a .docx at dst (content.xml into an .odt).
+// src is the package to copy the other parts from ("" builds a new .docx).
 func (a *App) DocSave(dst, src, document string) error {
+	if ext := strings.ToLower(filepath.Ext(dst)); ext == ".odt" || ext == ".ott" {
+		if src == "" {
+			return errors.New("an OpenDocument text can only be saved from an .odt it was opened from")
+		}
+		if err := office.WriteODF(dst, src, []byte(document)); err != nil {
+			return err
+		}
+		if a.watcher != nil {
+			a.watcher.NoteOwnWrite(dst)
+		}
+		return nil
+	}
 	if src != "" && filepath.Clean(src) == filepath.Clean(dst) {
 		// Reading and replacing the same file: copy the source aside first.
 		tmp := a.TempPath(filepath.Base(src))

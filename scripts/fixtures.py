@@ -153,7 +153,7 @@ import shutil
 here = os.path.dirname(os.path.abspath(__file__))
 td = os.path.join(here, "..", "internal", "office", "testdata")
 os.makedirs(os.path.join(d, "office"), exist_ok=True)
-for src, dst in [("doc.docx", "report.docx"), ("doc.doc", "legacy.doc"), ("sheet.xlsx", "budget.xlsx"), ("sheet.xls", "legacy.xls"), ("sheet.xlsx", "grid.xlsx")]:
+for src, dst in [("doc.docx", "report.docx"), ("doc.doc", "legacy.doc"), ("sheet.xlsx", "budget.xlsx"), ("sheet.xls", "legacy.xls"), ("sheet.xlsx", "grid.xlsx"), ("doc.odt", "notes.odt"), ("sheet.ods", "budget.ods")]:
     shutil.copyfile(os.path.join(td, src), os.path.join(d, "office", dst))
 for stale in ("legacy.docx", "legacy.xlsx"):
     p = os.path.join(d, "office", stale)

@@ -397,24 +397,24 @@ export class DocModel {
   }
 }
 
-interface Fmt {
+export interface Fmt {
   b: boolean;
   i: boolean;
   u: boolean;
   s: boolean;
 }
 
-type Segment =
+export type Segment =
   | { kind: 'text'; text: string; run?: string; link?: string; fmt: Fmt }
   | { kind: 'br'; run?: string; link?: string; fmt: Fmt }
   | { kind: 'atom'; atom: string; link?: string };
 
-function sameFmt(a: Fmt, b: Fmt) {
+export function sameFmt(a: Fmt, b: Fmt) {
   return a.b === b.b && a.i === b.i && a.u === b.u && a.s === b.s;
 }
 
 /** Walk a paragraph's DOM collecting text with its effective formatting. */
-function collect(el: HTMLElement): Segment[] {
+export function collect(el: HTMLElement): Segment[] {
   const out: Segment[] = [];
   const walk = (n: Node, fmt: Fmt, run: string | undefined, link: string | undefined) => {
     if (n.nodeType === Node.TEXT_NODE) {
@@ -458,7 +458,7 @@ function collect(el: HTMLElement): Segment[] {
   return out;
 }
 
-function hasOwnText(el: HTMLElement) {
+export function hasOwnText(el: HTMLElement) {
   return Array.from(el.childNodes).some((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim());
 }
 

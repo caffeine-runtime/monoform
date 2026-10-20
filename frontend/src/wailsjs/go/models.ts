@@ -173,6 +173,8 @@ export namespace app {
 	    saveAs: string;
 	    note: string;
 	    template: boolean;
+	    format: string;
+	    textStyles: Record<string, string>;
 	
 	    static createFrom(source: any = {}) {
 	        return new DocOpenResult(source);
@@ -186,6 +188,8 @@ export namespace app {
 	        this.saveAs = source["saveAs"];
 	        this.note = source["note"];
 	        this.template = source["template"];
+	        this.format = source["format"];
+	        this.textStyles = source["textStyles"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
