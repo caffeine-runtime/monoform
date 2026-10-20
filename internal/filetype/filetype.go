@@ -29,6 +29,7 @@ const (
 	Model    Kind = "model"
 	Audio    Kind = "audio"
 	Video    Kind = "video"
+	Database Kind = "database"
 	Binary   Kind = "binary"
 	Unknown  Kind = ""
 )
@@ -75,6 +76,9 @@ var byExt = map[string]entry{
 	"weba": {Audio, "audio/webm"}, "mka": {Audio, "audio/x-matroska"}, "aif": {Audio, "audio/aiff"}, "aiff": {Audio, "audio/aiff"},
 	"mp4": {Video, "video/mp4"}, "m4v": {Video, "video/mp4"}, "mov": {Video, "video/quicktime"}, "webm": {Video, "video/webm"},
 	"mkv": {Video, "video/x-matroska"}, "ogv": {Video, "video/ogg"}, "avi": {Video, "video/x-msvideo"},
+	// SQLite databases
+	"db": {Database, "application/vnd.sqlite3"}, "sqlite": {Database, "application/vnd.sqlite3"}, "sqlite3": {Database, "application/vnd.sqlite3"},
+	"db3": {Database, "application/vnd.sqlite3"}, "s3db": {Database, "application/vnd.sqlite3"}, "sl3": {Database, "application/vnd.sqlite3"},
 	// data
 	"json": {JSON, "application/json"}, "jsonc": {JSON, "application/json"}, "geojson": {JSON, "application/geo+json"}, "webmanifest": {JSON, "application/manifest+json"},
 	"yaml": {YAML, "application/yaml"}, "yml": {YAML, "application/yaml"},
@@ -192,6 +196,8 @@ func Sniff(b []byte) Info {
 		return m(Image, "image/webp")
 	case len(b) >= 14 && bytes.HasPrefix(b, []byte("BM")) && validBMP(b):
 		return m(Image, "image/bmp")
+	case bytes.HasPrefix(b, []byte("SQLite format 3\x00")):
+		return m(Database, "application/vnd.sqlite3")
 	case bytes.HasPrefix(b, []byte("PK\x03\x04")), bytes.HasPrefix(b, []byte("PK\x05\x06")):
 		return m(Archive, "application/zip")
 	case bytes.HasPrefix(b, []byte("Rar!\x1a\x07")):

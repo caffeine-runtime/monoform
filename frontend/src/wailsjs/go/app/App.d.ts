@@ -5,6 +5,7 @@ import {audio} from '../models';
 import {app} from '../models';
 import {server} from '../models';
 import {newfile} from '../models';
+import {db} from '../models';
 import {filetype} from '../models';
 import {fs} from '../models';
 import {pdf} from '../models';
@@ -43,6 +44,20 @@ export function CreateFile(arg1:string):Promise<void>;
 export function CreateFolder(arg1:string):Promise<void>;
 
 export function CreateFromTemplate(arg1:string,arg2:string,arg3:newfile.Options):Promise<void>;
+
+export function DBApply(arg1:number,arg2:Array<db.Change>):Promise<void>;
+
+export function DBClose(arg1:number):Promise<void>;
+
+export function DBExec(arg1:number,arg2:string,arg3:number):Promise<Array<db.Result>>;
+
+export function DBExportCSV(arg1:number,arg2:db.RowsQuery,arg3:string,arg4:string):Promise<number>;
+
+export function DBOpen(arg1:string,arg2:boolean):Promise<app.DBOpened>;
+
+export function DBRows(arg1:number,arg2:db.RowsQuery):Promise<db.Page>;
+
+export function DBSchema(arg1:number):Promise<Array<db.SchemaObject>>;
 
 export function DataLocations():Promise<app.Locations>;
 

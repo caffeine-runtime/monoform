@@ -62,6 +62,34 @@ export function CreateFromTemplate(arg1, arg2, arg3) {
   return window['go']['app']['App']['CreateFromTemplate'](arg1, arg2, arg3);
 }
 
+export function DBApply(arg1, arg2) {
+  return window['go']['app']['App']['DBApply'](arg1, arg2);
+}
+
+export function DBClose(arg1) {
+  return window['go']['app']['App']['DBClose'](arg1);
+}
+
+export function DBExec(arg1, arg2, arg3) {
+  return window['go']['app']['App']['DBExec'](arg1, arg2, arg3);
+}
+
+export function DBExportCSV(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['DBExportCSV'](arg1, arg2, arg3, arg4);
+}
+
+export function DBOpen(arg1, arg2) {
+  return window['go']['app']['App']['DBOpen'](arg1, arg2);
+}
+
+export function DBRows(arg1, arg2) {
+  return window['go']['app']['App']['DBRows'](arg1, arg2);
+}
+
+export function DBSchema(arg1) {
+  return window['go']['app']['App']['DBSchema'](arg1);
+}
+
 export function DataLocations() {
   return window['go']['app']['App']['DataLocations']();
 }

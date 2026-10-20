@@ -66,6 +66,14 @@ export function registerBuiltinModules() {
     load: () => import('./audio'),
   });
   modules.register({
+    id: 'database',
+    name: 'Database',
+    extensions: ['db', 'sqlite', 'sqlite3', 'db3', 's3db', 'sl3'],
+    mimeTypes: ['application/vnd.sqlite3'],
+    priority: 10,
+    load: () => import('./database'),
+  });
+  modules.register({
     id: 'video',
     name: 'Video',
     extensions: ['mp4', 'm4v', 'mov', 'webm', 'mkv', 'ogv', 'avi'],

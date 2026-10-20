@@ -109,3 +109,9 @@ func TestLooksLikeTextTruncatedRune(t *testing.T) {
 		t.Fatal("truncated trailing rune should still be text")
 	}
 }
+
+func TestSQLite(t *testing.T) {
+	if got := Sniff(append([]byte("SQLite format 3\x00"), make([]byte, 100)...)); got.Kind != Database || got.Mime != "application/vnd.sqlite3" {
+		t.Errorf("sniff %+v", got)
+	}
+}
