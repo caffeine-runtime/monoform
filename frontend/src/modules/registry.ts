@@ -28,6 +28,14 @@ export function registerBuiltinModules() {
     load: () => import('./markdown'),
   });
   modules.register({
+    id: 'font',
+    name: 'Font',
+    extensions: ['ttf', 'otf', 'ttc', 'otc', 'woff', 'woff2'],
+    mimeTypes: ['font/ttf', 'font/otf', 'font/woff', 'font/woff2', 'font/collection'],
+    priority: 10,
+    load: () => import('./font'),
+  });
+  modules.register({
     id: 'log',
     name: 'Log',
     extensions: ['log', 'out', 'err'],
@@ -38,8 +46,8 @@ export function registerBuiltinModules() {
   modules.register({
     id: 'image',
     name: 'Image',
-    extensions: ['png', 'jpg', 'jpeg', 'jfif', 'gif', 'webp', 'bmp', 'ora'],
-    mimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/bmp'],
+    extensions: ['png', 'jpg', 'jpeg', 'jfif', 'gif', 'webp', 'bmp', 'ora', 'heic', 'heif', 'avif', 'ico', 'cur', 'icns'],
+    mimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/bmp', 'image/heic', 'image/heif', 'image/avif', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/icns'],
     load: () => import('./image'),
   });
   modules.register({

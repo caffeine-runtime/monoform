@@ -1,7 +1,8 @@
 // Tool entry points that exist before their module loads.
 import { api } from './backend';
 import { commands } from './commands';
-import { extname } from './paths';
+import { basename, dirname, extname, join, stem } from './paths';
+import { toastError, ui } from './ui.svelte';
 import { workspace } from './tabs.svelte';
 import { semantic } from './semantic/semantic.svelte';
 import { treeMenuContributions } from '../shell/treeActions';
@@ -50,6 +51,24 @@ export function registerTools() {
     if (item.archive || item.isDir) return [];
     const items: MenuItem[] = [{ label: 'Compute hash…', run: () => void workspace.openTool('hash', item.path) }];
     if (CHECKSUM_EXT.includes(extname(item.path)) || /sums$/i.test(item.name)) items.push({ label: 'Verify checksums', run: () => void workspace.openPath(item.path, { moduleId: 'checksum' }) });
+    if (['heic', 'heif', 'avif'].includes(extname(item.path)))
+      for (const f of ['jpg', 'png'])
+        items.push({ label: `Convert to ${f.toUpperCase()}`, run: () => void convertImage(item.path, f) });
     return items;
   });
+}
+
+/** Convert an image (HEIC through the system decoder) next to the original, never overwriting. */
+export async function convertImage(src: string, format: string): Promise<string | undefined> {
+  const names = Array.from({ length: 50 }, (_, i) => join(dirname(src), `${stem(src)}${i ? ` (${i + 1})` : ''}.${format}`));
+  const taken = await api.Exists(names);
+  const dst = names[taken.indexOf(false)];
+  if (!dst) return;
+  try {
+    await api.ConvertImage(src, dst, format);
+    ui.toast(`Saved ${basename(dst)}`, 'success', { label: 'Open', run: () => void workspace.openPath(dst) });
+    return dst;
+  } catch (e) {
+    toastError(e, 'Couldn’t convert the image');
+  }
 }

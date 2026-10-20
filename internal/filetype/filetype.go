@@ -64,6 +64,8 @@ var byExt = map[string]entry{
 	// images
 	"png": {Image, "image/png"}, "jpg": {Image, "image/jpeg"}, "jpeg": {Image, "image/jpeg"}, "jfif": {Image, "image/jpeg"},
 	"gif": {Image, "image/gif"}, "webp": {Image, "image/webp"}, "bmp": {Image, "image/bmp"}, "ora": {Image, "image/openraster"},
+	"heic": {Image, "image/heic"}, "heif": {Image, "image/heif"}, "avif": {Image, "image/avif"},
+	"ico": {Image, "image/x-icon"}, "cur": {Image, "image/x-icon"}, "icns": {Image, "image/icns"},
 	"svg": {SVG, "image/svg+xml"},
 	"glb": {Model, "model/gltf-binary"}, "gltf": {Model, "model/gltf+json"}, "fbx": {Model, "application/octet-stream"},
 	"obj": {Model, "model/obj"}, "stl": {Model, "model/stl"}, "ply": {Model, "application/octet-stream"}, "3mf": {Model, "model/3mf"},
