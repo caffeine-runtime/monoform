@@ -57,6 +57,10 @@
   const dur = $derived(info?.duration || el?.duration || 0);
   const editable = $derived(!!info?.editable);
   const kept = $derived(E.snap(edit.keep, info?.keyframes ?? [], dur));
+  const gaps = $derived(E.removed(kept, dur));
+  /** Parts just cut out, flashed on the timeline so the change is noticed. */
+  let flash = $state<E.Range[]>([]);
+  let flashTimer: ReturnType<typeof setTimeout> | undefined;
   const snapped = $derived(kept.length !== E.normalize(edit.keep, dur).length || kept.some((r, i) => Math.abs(r[0] - edit.keep[i]?.[0]) > 0.001 || Math.abs(r[1] - edit.keep[i]?.[1]) > 0.001));
   const gop = $derived(info && info.keyframes.length > 1 ? (info.keyframes[info.keyframes.length - 1] - info.keyframes[0]) / (info.keyframes.length - 1) : 0);
   const changed = $derived(!!info && !E.isUnchanged(edit, dur));
@@ -136,7 +140,7 @@
   async function thumbnails() {
     if (!strip || !opened || !info?.hasVideo || !dur || !lineW) return;
     const gen = ++thumbGen;
-    const h = 44;
+    const h = 52;
     const dpr = window.devicePixelRatio || 1;
     strip.width = Math.round(lineW * dpr);
     strip.height = Math.round(h * dpr);
@@ -261,6 +265,17 @@
     if (!moved) sel = null;
   }
 
+  /** Drag one edge of the selection; the other stays put. */
+  function edgeDown(e: PointerEvent, which: 0 | 1) {
+    if (e.button !== 0 || !sel) return;
+    e.stopPropagation();
+    const line = (e.currentTarget as HTMLElement).closest('.timeline') as HTMLElement;
+    line.setPointerCapture(e.pointerId);
+    dragging = true;
+    moved = true;
+    anchor = sel[1 - which];
+  }
+
   function setSel(a: number, b: number) {
     const lo = Math.max(0, Math.min(a, b));
     const hi = Math.min(dur, Math.max(a, b));
@@ -318,10 +333,21 @@
         if (!sel) return ui.toast('Select a part of the timeline first: drag across it, or press I and O at the start and end.', 'info');
         const keep = op === 'cut' ? E.cut(edit.keep, sel[0], sel[1], dur) : E.keepOnly(edit.keep, sel[0], sel[1], dur);
         if (!keep.length) return ui.toast('That would remove everything.', 'warning');
+        const before = E.keptLength(kept);
+        const beforeGaps = gaps;
         commit({ ...edit, keep });
         sel = null;
+        // Flash what disappeared and say how much, with a one-click undo.
+        const now = E.removed(E.snap(keep, info?.keyframes ?? [], dur), dur);
+        flash = now.flatMap(([a, b]) => beforeGaps.reduce<E.Range[]>((parts, g) => parts.flatMap(([x, y]) => E.cut([[x, y]], g[0], g[1], dur)), [[a, b]]));
+        clearTimeout(flashTimer);
+        flashTimer = setTimeout(() => (flash = []), 1200);
+        const after = E.keptLength(E.snap(keep, info?.keyframes ?? [], dur));
+        ui.toast(`${op === 'cut' ? 'Cut out' : 'Trimmed away'} ${formatTime(before - after, 1)} — the video is now ${formatTime(after, 1)} long.`, 'success', { label: 'Undo', run: () => doEdit('undo') }, 6000);
         return;
       }
+      case 'restoreAll':
+        return commit({ ...edit, keep: [[0, dur]] });
       case 'rotate':
         if (info?.container !== 'mp4') return ui.toast('Rotation can be saved in MP4 and MOV files only (WebM/MKV have no standard rotation flag).', 'info');
         return commit({ ...edit, rotate: (edit.rotate + 90) % 360 });
@@ -329,6 +355,13 @@
         if (!info?.hasAudio) return ui.toast('This video has no audio track.', 'info');
         return commit({ ...edit, mute: !edit.mute });
     }
+  }
+
+  /** Put one removed part back. */
+  function restoreGap(g: E.Range) {
+    if (!needEditable()) return;
+    commit({ ...edit, keep: E.restore(edit.keep, g[0], g[1], dur) });
+    ui.toast(`Restored ${formatTime(g[1] - g[0], 1)}.`, 'success', { label: 'Undo', run: () => doEdit('undo') });
   }
 
   // ---------- saving ----------
@@ -543,21 +576,41 @@
   {#if info?.keyframes.length && info.keyframes.length < lineW / 3}
     {#each info.keyframes as k, i (i)}<div class="kf" style:left="{xOf(k)}px"></div>{/each}
   {/if}
-  {#each kept as r, i (i)}
-    {#if i === 0 && r[0] > 0}<div class="gone" style:left="0px" style:width="{xOf(r[0])}px"></div>{/if}
-    <div class="gone" style:left="{xOf(r[1])}px" style:width="{xOf(kept[i + 1]?.[0] ?? dur) - xOf(r[1])}px"></div>
+  {#each gaps as g (g[0])}
+    {@const w = xOf(g[1]) - xOf(g[0])}
+    <div class="gone" style:left="{xOf(g[0])}px" style:width="{w}px" title="Removed {formatTime(g[0], 2)} – {formatTime(g[1], 2)} ({formatTime(g[1] - g[0], 1)})">
+      {#if w > 70}<span class="gone-label">removed</span>{/if}
+      {#if w > 22}<button class="restore" title="Restore this part" aria-label="Restore removed part" onpointerdown={(e) => e.stopPropagation()} onclick={() => restoreGap(g)}>↺</button>{/if}
+    </div>
   {/each}
-  {#if sel}<div class="sel" style:left="{xOf(sel[0])}px" style:width="{xOf(sel[1]) - xOf(sel[0])}px"></div>{/if}
+  {#each flash as f (f[0])}<div class="flash" style:left="{xOf(f[0])}px" style:width="{Math.max(3, xOf(f[1]) - xOf(f[0]))}px"></div>{/each}
+  {#if sel}
+    <div class="dim" style:left="0px" style:width="{xOf(sel[0])}px"></div>
+    <div class="dim" style:left="{xOf(sel[1])}px" style:right="0px"></div>
+    <div class="sel" style:left="{xOf(sel[0])}px" style:width="{xOf(sel[1]) - xOf(sel[0])}px">
+      <span class="handle l" role="presentation" title="Drag to move the start" onpointerdown={(e) => edgeDown(e, 0)}></span>
+      <span class="handle r" role="presentation" title="Drag to move the end" onpointerdown={(e) => edgeDown(e, 1)}></span>
+    </div>
+  {/if}
   <div class="playhead" style:left="{xOf(time)}px"></div>
 </div>
+{#if sel}
+  <div class="selbar">
+    <span class="selchip"><Icon icon={Scissors} size={13} /> Selected {formatTime(sel[1] - sel[0], 2)} <span class="muted">({formatTime(sel[0], 2)} – {formatTime(sel[1], 2)})</span></span>
+    {#if editable}
+      <button class="btn ghost danger" title="Cut out the selected part (Del)" onclick={() => doEdit('cut')}><Icon icon={Scissors} size={14} /> Cut out</button>
+      <button class="btn ghost" title="Keep only the selected part (T)" onclick={() => doEdit('keep')}><Icon icon={Crop} size={14} /> Keep only this</button>
+    {/if}
+    <button class="btn ghost" title="Clear the selection (Esc)" onclick={() => doEdit('clearSel')}>Deselect</button>
+  </div>
+{/if}
 
 <div class="toolbar controls">
   <button class="icon-btn play" title="{playing ? 'Pause' : 'Play'} (Space)" onclick={toggle} disabled={!!playError}><Icon icon={playing ? Pause : Play} size={16} /></button>
   <button class="icon-btn" title="Previous frame (,)" onclick={() => frame(-1)}><Icon icon={StepBack} size={15} /></button>
   <button class="icon-btn" title="Next frame (.)" onclick={() => frame(1)}><Icon icon={StepForward} size={15} /></button>
   <span class="time">{formatTime(time, 2)} <span class="muted">/ {formatTime(dur, 2)}</span></span>
-  {#if sel}<span class="label">Selection {formatTime(sel[0], 2)} – {formatTime(sel[1], 2)}</span>{/if}
-  {#if changed}<span class="label edited">→ {formatTime(E.keptLength(kept), 2)}{edit.rotate ? ` · ↻${edit.rotate}°` : ''}{edit.mute ? ' · no audio' : ''}</span>{/if}
+  {#if changed}<span class="label edited" title="Length after your edits">Edited: {formatTime(E.keptLength(kept), 2)}{gaps.length ? ` · ${gaps.length} part${gaps.length > 1 ? 's' : ''} removed` : ''}{edit.rotate ? ` · ↻${edit.rotate}°` : ''}{edit.mute ? ' · no audio' : ''}</span>{/if}
   <span class="spacer"></span>
   <button class="icon-btn" class:on={loopOn} title="Loop selection (L)" onclick={() => (loopOn = !loopOn)}><Icon icon={Repeat} size={14} /></button>
   <button class="icon-btn" title={muted ? 'Unmute (M)' : 'Mute (M)'} onclick={() => el && (el.muted = muted = !muted)}><Icon icon={muted ? VolumeX : Volume2} size={15} /></button>
@@ -632,7 +685,7 @@
   }
   .timeline {
     position: relative;
-    height: 44px;
+    height: 52px;
     margin: 6px 8px 0;
     border-radius: var(--radius);
     background: var(--bg-sidebar);
@@ -662,15 +715,111 @@
     background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.62) 0 6px, rgba(0, 0, 0, 0.45) 6px 12px);
     pointer-events: none;
   }
+  .gone-label {
+    position: absolute;
+    left: 6px;
+    top: 4px;
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.75);
+    pointer-events: none;
+  }
+  .restore {
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.85);
+    color: #222;
+    font-size: 12px;
+    line-height: 18px;
+    padding: 0;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+  .restore:hover {
+    background: #fff;
+  }
+  .flash {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: var(--danger);
+    pointer-events: none;
+    animation: flash 1.2s ease-out forwards;
+  }
+  @keyframes flash {
+    0% {
+      opacity: 0.95;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+  .dim {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+  }
   .sel {
     position: absolute;
     top: 0;
     bottom: 0;
-    background: var(--accent-soft);
-    border-left: 2px solid var(--accent);
-    border-right: 2px solid var(--accent);
-    opacity: 0.6;
+    background: rgba(217, 119, 87, 0.18);
+    border: 2px solid var(--accent);
+    border-radius: 4px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
     pointer-events: none;
+  }
+  .handle {
+    position: absolute;
+    top: 50%;
+    width: 10px;
+    height: 26px;
+    margin-top: -13px;
+    background: var(--accent);
+    border-radius: 3px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+    cursor: ew-resize;
+    pointer-events: auto;
+  }
+  .handle.l {
+    left: -6px;
+  }
+  .handle.r {
+    right: -6px;
+  }
+  .selbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 8px 0;
+    padding: 4px 8px;
+    border-radius: var(--radius);
+    background: var(--accent-soft);
+    font-size: var(--fs-small);
+  }
+  .selchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--accent-text);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    margin-right: auto;
+  }
+  .selchip .muted {
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+  .danger {
+    color: var(--danger);
   }
   .playhead {
     position: absolute;

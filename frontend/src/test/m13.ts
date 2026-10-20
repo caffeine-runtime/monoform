@@ -8,6 +8,8 @@ import { join } from '../core/paths';
 import { workspace, type Tab } from '../core/tabs.svelte';
 import type { Range, VideoEdit } from '../modules/video/edits';
 import type { VideoOp } from '../modules/video/views';
+import { ui } from '../core/ui.svelte';
+import { tick } from 'svelte';
 import { assert, assertEq, log, measureJank, sleep, waitFor } from './harness';
 
 interface Hooks {
@@ -85,8 +87,22 @@ export default async function m13(dir: string) {
 
   // Cut 1–3 s, then play across it (muted: autoplay rules).
   w.h.setSel(1.0, 3.0);
+  await tick();
+  const view = () => document.querySelector('.tabview.active') as HTMLElement;
+  assertEq(view().querySelectorAll('.timeline .sel .handle').length, 2, 'selection has two drag handles');
+  assert(view().querySelector('.selbar')?.textContent?.includes('Selected 0:02'), 'selection bar says how much is selected');
   w.h.doEdit('cut');
-  assertEq(JSON.stringify(w.h.kept()), '[[0,1],[3,6.001]]'.replace('6.001', String(wi.duration)), 'kept after the cut');
+  const keptAfterCut = '[[0,1],[3,6.001]]'.replace('6.001', String(wi.duration));
+  assertEq(JSON.stringify(w.h.kept()), keptAfterCut, 'kept after the cut');
+  await tick();
+  assert(view().querySelector('.timeline .flash'), 'the cut part flashes on the timeline');
+  assert(view().querySelector('.timeline .gone .gone-label')?.textContent === 'removed', 'removed part is labelled');
+  const toast = ui.toasts.find((t) => t.message.startsWith('Cut out 0:02'));
+  assert(toast?.action?.label === 'Undo', `cut toast with Undo (${ui.toasts.map((t) => t.message).join(' | ')})`);
+  (view().querySelector('.timeline .gone .restore') as HTMLButtonElement).click();
+  assertEq(w.h.kept().length, 1, 'restore button puts the part back');
+  w.h.doEdit('undo');
+  assertEq(JSON.stringify(w.h.kept()), keptAfterCut, 'undo restore');
   assert(w.tab.dirty, 'dirty');
   el.muted = true;
   w.h.seek(0.7);
