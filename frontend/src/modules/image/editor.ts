@@ -42,7 +42,8 @@ export type Tool =
   | 'oval'
   | 'text'
   | 'blur'
-  | 'pixelate';
+  | 'pixelate'
+  | 'picker';
 export const REGION_TOOLS: Tool[] = ['crop', 'blur', 'pixelate'];
 export const SELECT_TOOLS: Tool[] = ['select', 'ellipse', 'lasso', 'wand', 'object'];
 
@@ -204,7 +205,7 @@ export class ImageEditor {
   /** Asks the user for text (wired to the app's prompt dialog). */
   askText: (initial: string) => Promise<string | null> = async () => null;
   /** Called on a click with the wand or object tool (handled by the module, which talks to the vision worker). */
-  onPick: (tool: 'wand' | 'object', x: number, y: number, mode: SelectMode) => void = () => {};
+  onPick: (tool: 'wand' | 'object' | 'picker', x: number, y: number, mode: SelectMode) => void = () => {};
 
   constructor(
     private container: HTMLDivElement,
@@ -384,7 +385,7 @@ export class ImageEditor {
       if (target === this.region || target.getParent() === this.regionTr || onTr) return;
       const p = this.pointer();
       const mode = this.modeFor(e.evt);
-      if (t === 'wand' || t === 'object') {
+      if (t === 'wand' || t === 'object' || t === 'picker') {
         this.onPick(t, p.x, p.y, mode);
         return;
       }

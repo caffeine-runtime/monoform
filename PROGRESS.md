@@ -284,6 +284,16 @@
   (no text on the first pages) with a banner; "Make searchable" recognises every page without text at 300 dpi and
   lays Tesseract's invisible text-only page over it (pdfcpu stamp), so the PDF can be searched and copied from in
   any viewer — the page looks the same. Recognition runs in a worker (released after 90 s idle).
+- **M31 — Screenshots and colours.** "Take a screenshot of an area" (Ctrl+Shift+X), "…of the whole screen" and
+  "…in 3 seconds" hide the window, capture with what the system has — macOS `screencapture` (drag an area or pick
+  a window), the desktop's screenshot portal on Linux (GNOME/KDE, also Wayland, over D-Bus without cgo), else
+  gnome-screenshot / spectacle / grim+slurp / xfce4-screenshooter / maim / scrot / ImageMagick, and on Windows a copy
+  of all monitors via .NET (opened with Crop, since there's no area picker) — save to Pictures/Screenshots with a
+  dated name and open in the image editor, whose arrows, boxes, ellipses, text, blur and pixelate tools do the
+  marking up. "Pick a colour from the screen" opens a temporary shot with the new colour picker (I): the colour as
+  HEX/RGB/HSL (click to copy, or use it to draw) and the image's palette (5/8/12 dominant colours by share; copy
+  the list or CSS variables, save a .gpl palette) in a Colours panel. After reading an image's text (M30), "Hide
+  text" pixelates every recognised word (passwords, names, numbers) in one undoable step.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -317,6 +327,9 @@ GTK/WebKitGTK process start-up before our page loads. Not yet measured on Window
 available here).
 
 ## Known issues
+- Screenshots: on Windows the whole screen is taken and opened with Crop (no area picker without a native
+  overlay); on Linux without the portal or any screenshot tool it says what to install. macOS asks once for the
+  Screen Recording permission. The colour picker reads from a screenshot of the screen, not live.
 - OCR: "Make searchable" skips pages with a /Rotate (turn them upright first); handwriting and very low-resolution
   scans read poorly (Tesseract's limits); languages other than English need their Tesseract language file. Text
   recognition needs WebAssembly SIMD (every supported web view has it). The first recognition of a session loads

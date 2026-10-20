@@ -10,8 +10,37 @@ import type { MenuItem } from './ui.svelte';
 
 const CHECKSUM_EXT = ['sha256', 'sha1', 'md5', 'sha512', 'b3', 'sha256sum', 'md5sum', 'sha1sum', 'sha512sum'];
 
+/** Take a screenshot and open it in the image editor (to add arrows, boxes, text, blur…). */
+export async function takeScreenshot(mode: 'region' | 'screen', delay = 0) {
+  try {
+    const r = await api.ScreenCapture(mode, delay, false);
+    if (!r.path) return; // cancelled
+    // When only the whole screen could be taken, start with Crop.
+    await workspace.openPath(r.path, { state: mode === 'region' && !r.interactive ? { tool: 'crop' } : undefined });
+    ui.toast(mode === 'region' && !r.interactive ? 'Took the whole screen: drag the part to keep and press Enter.' : `Saved to ${dirname(r.path)}. Add arrows, boxes or text, blur private parts, then save.`, 'success');
+  } catch (e) {
+    toastError(e, 'Screenshot failed');
+  }
+}
+
+/** Pick a colour anywhere on the screen: a temporary shot opened with the colour picker. */
+export async function pickScreenColour() {
+  try {
+    const r = await api.ScreenCapture('screen', 0, true);
+    if (!r.path) return;
+    await workspace.openPath(r.path, { state: { tool: 'picker', panel: 'colours' } });
+    ui.toast('Click anywhere in the picture to pick its colour.', 'info');
+  } catch (e) {
+    toastError(e, 'Couldn’t capture the screen');
+  }
+}
+
 export function registerTools() {
   commands.register(
+    { id: 'screenshot.region', title: 'Take a screenshot of an area…', category: 'Tools', shortcut: 'Mod+Shift+X', run: () => void takeScreenshot('region') },
+    { id: 'screenshot.screen', title: 'Take a screenshot of the whole screen', category: 'Tools', run: () => void takeScreenshot('screen') },
+    { id: 'screenshot.delayed', title: 'Take a screenshot of the whole screen in 3 seconds', category: 'Tools', run: () => void takeScreenshot('screen', 3) },
+    { id: 'tools.pickColour', title: 'Pick a colour from the screen', category: 'Tools', run: () => void pickScreenColour() },
     {
       id: 'tools.hash',
       title: 'Compute file hash…',

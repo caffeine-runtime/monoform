@@ -37,6 +37,7 @@ const scenarios: Record<string, () => Promise<{ default: (arg: string) => Promis
   m28: () => import('./m28'),
   m29: () => import('./m29'),
   m30: () => import('./m30'),
+  m31: () => import('./m31'),
   imgshot: () => import('./imgshot'),
   bakeenv: () => import('./bakeenv'),
   probe: () => import('./probe'),

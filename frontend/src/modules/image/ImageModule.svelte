@@ -53,6 +53,8 @@
   import AnimEditor from './AnimEditor.svelte';
   import IconView from './IconView.svelte';
   import OcrPanel from '../ocr/OcrPanel.svelte';
+  import ColoursPanel from './ColoursPanel.svelte';
+  import Pipette from '@lucide/svelte/icons/pipette';
   import ScanText from '@lucide/svelte/icons/scan-text';
 
   let { tab }: { tab: Tab } = $props();
@@ -96,10 +98,31 @@
     return { canvas: c };
   }
 
+  /** Word boxes of the last recognition, in document pixels (for hiding text). */
+  let ocrWords = $state<{ x: number; y: number; width: number; height: number }[]>([]);
+
   async function runOcr(langs: string[], progress: (s: string, p: number) => void) {
     const { recognize, cropForOcr } = await import('../ocr/ocr');
     const { canvas, rect } = ocrSource();
-    return recognize(rect ? cropForOcr(canvas, rect) : canvas, { langs }, progress);
+    const r = await recognize(rect ? cropForOcr(canvas, rect) : canvas, { langs }, progress);
+    // Map boxes back from the padded, maybe enlarged crop.
+    const scale = rect && (rect.height < 60 || rect.width < 60) ? 2 : 1;
+    const pad = rect ? 24 : 0;
+    ocrWords = r.lines.flatMap((l) => l.words.filter((w) => w.text.trim() && w.conf > 20)).map((w) => ({ x: (rect?.left ?? 0) + (w.bbox.x0 - pad) / scale, y: (rect?.top ?? 0) + (w.bbox.y0 - pad) / scale, width: (w.bbox.x1 - w.bbox.x0) / scale, height: (w.bbox.y1 - w.bbox.y0) / scale }));
+    return r;
+  }
+
+  /** Pixelate every recognised word (passwords, names, numbers in a screenshot). */
+  function hideText() {
+    if (!editor || !ocrWords.length) return;
+    const path = new Path2D();
+    for (const w of ocrWords) path.rect(w.x - 3, w.y - 3, w.width + 6, w.height + 6);
+    const b = ocrWords.reduce((u, w) => ({ x0: Math.min(u.x0, w.x - 3), y0: Math.min(u.y0, w.y - 3), x1: Math.max(u.x1, w.x + w.width + 3), y1: Math.max(u.y1, w.y + w.height + 3) }), { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity });
+    const bounds = selection.clampRect({ x: Math.floor(b.x0), y: Math.floor(b.y0), width: Math.ceil(b.x1 - b.x0), height: Math.ceil(b.y1 - b.y0) }, editor.width, editor.height);
+    editor.setPixelSelection(selection.fromPath(path, bounds, editor.width, editor.height), 'replace');
+    editor.pixelateSelection();
+    editor.deselect();
+    ui.toast(`Pixelated ${ocrWords.length} word${ocrWords.length === 1 ? '' : 's'}. Undo with ${formatShortcut('Mod+Z')}.`, 'success');
   }
 
   function openOcr() {
@@ -118,7 +141,7 @@
   let angle = $state(0);
   let expand = $state(true);
   let siblings = $state<string[] | null>(null);
-  let panel = $state<'layers' | 'adjust' | null>(loadPanel());
+  let panel = $state<'layers' | 'adjust' | 'colours' | null>(loadPanel());
   let adjustPanel = $state<AdjustPanel>();
   let fonts = $state<string[]>([]);
   let objectPoints: { x: number; y: number; positive: boolean }[] = [];
@@ -138,19 +161,19 @@
   const zoom = $derived(imgMode ? imgView.zoom : (es?.zoom ?? 1));
   const position = $derived(siblings && tab.filePath ? `${siblings.indexOf(tab.filePath) + 1} / ${siblings.length}` : '');
 
-  function loadPanel(): 'layers' | 'adjust' | null {
+  function loadPanel(): 'layers' | 'adjust' | 'colours' | null {
     try {
       const v = localStorage.getItem('hia.image.panel');
-      return v === 'none' ? null : v === 'adjust' ? 'adjust' : 'layers';
+      return v === 'none' ? null : v === 'adjust' ? 'adjust' : v === 'colours' ? 'colours' : 'layers';
     } catch {
       return 'layers';
     }
   }
   /** Toolbar buttons toggle; commands and tabs just show. */
-  function togglePanel(p: 'layers' | 'adjust') {
+  function togglePanel(p: 'layers' | 'adjust' | 'colours') {
     setPanel(panel === p ? null : p);
   }
-  function setPanel(p: 'layers' | 'adjust' | null) {
+  function setPanel(p: 'layers' | 'adjust' | 'colours' | null) {
     panel = p;
     try {
       localStorage.setItem('hia.image.panel', panel ?? 'none');
@@ -284,12 +307,33 @@
       tab.dirty = s.dirty;
       updateStatus();
     };
-    editor.onPick = (t, x, y, mode) => void (t === 'wand' ? wandAt(x, y, mode) : objectAt(x, y, mode));
+    editor.onPick = (t, x, y, mode) => (t === 'picker' ? pickAt(x, y) : void (t === 'wand' ? wandAt(x, y, mode) : objectAt(x, y, mode)));
     editor.setTool(tool);
     editor.selectMode = selMode;
     opts = { ...editor.opts };
     es = editor.state();
     updateStatus();
+    // Opened for a purpose (a screenshot to crop, a colour to pick).
+    const init = tab.restoredState as { tool?: Tool; panel?: 'colours' } | undefined;
+    if (init && !initApplied) {
+      initApplied = true;
+      if (init.tool) setTool(init.tool);
+      if (init.panel) setPanel(init.panel);
+    }
+  }
+
+  let initApplied = false;
+  let picked = $state<[number, number, number] | null>(null);
+
+  /** The colour of the visible image at a document point. */
+  function pickAt(x: number, y: number) {
+    if (!editor) return;
+    const c = editor.composite();
+    const px = Math.min(c.width - 1, Math.max(0, Math.floor(x)));
+    const py = Math.min(c.height - 1, Math.max(0, Math.floor(y)));
+    const d = c.getContext('2d')!.getImageData(px, py, 1, 1).data;
+    picked = [d[0], d[1], d[2]];
+    if (panel !== 'colours') setPanel('colours');
   }
 
   function destroyEditor() {
@@ -512,7 +556,8 @@
     selectSubject: () => void selectSubject(),
     saveCopy: () => void saveCopy(),
     saveLayers: () => void saveWithLayers(),
-    panel: (p: 'layers' | 'adjust') => setPanel(p),
+    panel: (p: 'layers' | 'adjust' | 'colours') => setPanel(p),
+    picked: () => picked,
     editable: () => editable,
   };
   imageControllers.set(tab.id, ctl);
@@ -814,6 +859,12 @@
     setPanel,
     busy: () => busy,
     fonts: () => availableFonts(),
+    tool: () => tool,
+    panel: () => panel,
+    picked: () => picked,
+    pickAt,
+    hideText,
+    ocrWords: () => ocrWords,
   };
 
   /** label: name; help: how to use it (shown on hover). */
@@ -836,6 +887,7 @@
       { id: 'eraser', icon: Eraser, label: 'Eraser', help: 'Drag to erase the active layer to transparency.', key: 'E' },
     ],
     [
+      { id: 'picker', icon: Pipette, label: 'Colour picker', help: 'Click the image to pick a colour: see it as HEX/RGB/HSL in Colours, copy it or use it to draw.', key: 'I' },
       { id: 'text', icon: Type, label: 'Text', help: 'Click where the text should go and type it. Double-click text later to edit it.', key: 'T' },
       { id: 'arrow', icon: MoveUpRight, label: 'Arrow', help: 'Drag from the tail to the tip to draw an arrow.', key: 'A' },
       { id: 'rect', icon: Square, label: 'Rectangle', help: 'Drag to draw a rectangle. Hold Ctrl (or Shift) for a square; set Corners in the toolbar for rounded or sharp corners.', key: 'R' },
@@ -1052,9 +1104,12 @@
       <div class="ptabs">
         <button class:on={panel === 'layers'} onclick={() => setPanel('layers')}>Layers</button>
         <button class:on={panel === 'adjust'} onclick={() => setPanel('adjust')}>Adjust</button>
+        <button class:on={panel === 'colours'} onclick={() => setPanel('colours')}>Colours</button>
       </div>
       {#if panel === 'layers'}
         <LayersPanel {editor} {es} />
+      {:else if panel === 'colours'}
+        <ColoursPanel {editor} {picked} title={tab.filePath ?? tab.title} onuse={(c) => (pickColor(c), ui.toast(`Using ${c}`, 'success'))} />
       {:else}
         <AdjustPanel bind:this={adjustPanel} {editor} {es} />
       {/if}
@@ -1062,7 +1117,11 @@
   {/if}
   {#if ocrOpen}
     {#key ocrKey}
-      <OcrPanel title={es?.pixelSelection ? 'Text in the selection' : 'Text in the image'} run={runOcr} onclose={() => (ocrOpen = false)} />
+      <OcrPanel title={es?.pixelSelection ? 'Text in the selection' : 'Text in the image'} run={runOcr} onclose={() => (ocrOpen = false)}>
+        {#snippet actions()}
+          {#if editable && editor && ocrWords.length}<button class="btn ghost" title="Pixelate every recognised word — for passwords, names and numbers in screenshots" onclick={hideText}>Hide text</button>{/if}
+        {/snippet}
+      </OcrPanel>
     {/key}
   {/if}
 </div>

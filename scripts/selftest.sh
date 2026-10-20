@@ -16,7 +16,7 @@ if [ -z "${DISPLAY:-}" ]; then
 fi
 LOG=$(mktemp)
 set +e
-HIA_TEST="$SCENARIO" HIA_TEST_ARG="$ARG" HIA_SETTINGS="$SETTINGS" timeout "${HIA_TIMEOUT:-120}" "$BIN" >"$LOG" 2>&1
+HIA_SCREENSHOTS="${HIA_SCREENSHOTS:-${TMPDIR:-/tmp}/hia-screenshots}" HIA_TEST="$SCENARIO" HIA_TEST_ARG="$ARG" HIA_SETTINGS="$SETTINGS" timeout "${HIA_TIMEOUT:-120}" "$BIN" >"$LOG" 2>&1
 CODE=$?
 set -e
 grep -E "selftest|startup:" "$LOG" || true
