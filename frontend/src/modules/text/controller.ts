@@ -7,7 +7,7 @@ import { api } from '../../core/backend';
 import { settings } from '../../core/settings.svelte';
 import type { Tab } from '../../core/tabs.svelte';
 import { ui } from '../../core/ui.svelte';
-import { baseExtensions, heavyFeatures, languageFor, LARGE_FILE, makeCompartments, type Compartments } from './setup';
+import { baseExtensions, heavyFeatures, languageFor, LARGE_FILE, makeCompartments, minimapExt, whitespaceExt, type Compartments } from './setup';
 import { canWrite, EOL_LABELS, eolString, labelOf, type Encoding, type Eol } from './encoding';
 import { decodeStream, saveDoc, EncodeError } from './textio';
 import { sessionToken } from '../../core/backend';
@@ -22,6 +22,8 @@ export interface ControllerOptions {
   onLoaded?: () => void;
   /** Soft-wrap lines (default: the global word-wrap setting). */
   wrap?: boolean;
+  /** Show the minimap (default: the global setting); off where a preview sits beside the source. */
+  minimap?: boolean;
 }
 
 export class TextController {
@@ -51,7 +53,7 @@ export class TextController {
     return EditorState.create({
       doc,
       extensions: [
-        baseExtensions(this.c, { large: this.large, wrap: this.wrap, readOnly: this.tab.readOnly || this.loading, lineSep }),
+        baseExtensions(this.c, { large: this.large, wrap: this.wrap, readOnly: this.tab.readOnly || this.loading, lineSep, minimap: this.minimapOn, whitespace: settings.value.showWhitespace }),
         this.opts.extensions ?? [],
         EditorView.updateListener.of((u) => {
           if (u.docChanged && !u.transactions.some((tr) => tr.annotation(loadingAnno))) this.onEdit();
@@ -272,7 +274,16 @@ export class TextController {
   /** Re-enable heavy features if a large file was shrunk below the limit (or vice versa). */
   setLarge(large: boolean) {
     this.large = large;
-    this.view.dispatch({ effects: this.c.heavy.reconfigure(heavyFeatures(large)) });
+    this.view.dispatch({ effects: [this.c.heavy.reconfigure(heavyFeatures(large)), this.c.minimap.reconfigure(minimapExt(this.minimapOn, large))] });
+  }
+
+  private get minimapOn(): boolean {
+    return this.opts.minimap ?? !settings.value.minimapOff;
+  }
+
+  /** Apply changed editor settings (minimap, whitespace markers). */
+  applyPrefs() {
+    this.view.dispatch({ effects: [this.c.minimap.reconfigure(minimapExt(this.minimapOn, this.large)), this.c.whitespace.reconfigure(whitespaceExt(settings.value.showWhitespace))] });
   }
 
   destroy() {

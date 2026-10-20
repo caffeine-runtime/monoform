@@ -35,6 +35,7 @@
   });
 
   const options = {
+    minimap: false, // a preview sits beside the source
     language: markdown({ codeLanguages: languages }),
     extensions: [assetHandlers(tab)],
     onDocChanged: () => schedule(),

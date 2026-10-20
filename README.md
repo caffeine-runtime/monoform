@@ -10,7 +10,7 @@ works offline, collects no telemetry and needs no account, and saves everything 
 
 | | |
 |---|---|
-| **Text & Markdown** | CodeMirror editor with byte-exact round-trips across encodings and line endings, find/replace, split/preview Markdown, image paste into `assets/`, folder search. |
+| **Text & Markdown** | Code editor with Sublime-style editing — minimap, Go to symbol (Ctrl+R), multiple cursors (Ctrl+D, Ctrl+Alt+↑/↓, Ctrl+Shift+L), select/duplicate/join/sort lines, case changes, auto-closed brackets, word completion, indent guides — and byte-exact round-trips across encodings and line endings, find/replace, split/preview Markdown, image paste into `assets/`, folder search. |
 | **PDF** | Fast viewer with search and thumbnails; highlight, comment and ink annotations; form filling; reorder, rotate, delete, extract, merge, split. |
 | **Workspace** | Split view: 2–4 tabs side by side (Ctrl+\\, the split button, or drag a tab onto a view's edge); interface size 80–200 % (Ctrl+Alt+= / −). |
 | **Images** | Layered editor: transparency, selections (rectangle, lasso, magic wand, click an object, select subject — edges snapped to the pixels) with copy/paste, brush/eraser, text in any installed font, free rotation, colour adjustments and seven kinds of blur (all limited to a selection), one-click background removal, "save a copy", layers saved as OpenRaster (.ora). |

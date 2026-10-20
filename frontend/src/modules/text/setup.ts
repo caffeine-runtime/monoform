@@ -1,5 +1,5 @@
 // CodeMirror configuration shared by the text and markdown modules.
-import { EditorState, Compartment, type Extension } from '@codemirror/state';
+import { EditorState, Compartment, Prec, type Extension } from '@codemirror/state';
 import {
   EditorView,
   keymap,
@@ -11,10 +11,14 @@ import {
   rectangularSelection,
   crosshairCursor,
   highlightActiveLine,
+  highlightWhitespace,
 } from '@codemirror/view';
-import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap, indentWithTab, copyLineDown, cursorMatchingBracket } from '@codemirror/commands';
+import { autocompletion, closeBrackets, closeBracketsKeymap, completeAnyWord, completionKeymap } from '@codemirror/autocomplete';
+import { addCursorVertical, expandToLine, insertLineAbove, joinLines, sortLines, splitIntoLines, transformCase } from './editing';
+import { indentGuides, minimap } from './minimap';
 import { indentOnInput, bracketMatching, foldGutter, foldKeymap, syntaxHighlighting, HighlightStyle, LanguageDescription } from '@codemirror/language';
-import { search, searchKeymap, highlightSelectionMatches } from '@codemirror/search';
+import { search, searchKeymap, highlightSelectionMatches, selectSelectionMatches } from '@codemirror/search';
 import { tags as t } from '@lezer/highlight';
 
 /** Files above this size get a lighter editor (no highlighting/folding). */
@@ -104,20 +108,60 @@ export interface Compartments {
   readOnly: Compartment;
   lineSep: Compartment;
   heavy: Compartment;
+  minimap: Compartment;
+  whitespace: Compartment;
 }
 
 export function makeCompartments(): Compartments {
-  return { language: new Compartment(), wrap: new Compartment(), readOnly: new Compartment(), lineSep: new Compartment(), heavy: new Compartment() };
+  return { language: new Compartment(), wrap: new Compartment(), readOnly: new Compartment(), lineSep: new Compartment(), heavy: new Compartment(), minimap: new Compartment(), whitespace: new Compartment() };
+}
+
+/** Sublime Text key bindings on top of CodeMirror's defaults (which already have Ctrl+D, Alt+↑/↓, Ctrl+/ …). */
+export const sublimeKeymap = Prec.high(
+  keymap.of([
+    { key: 'Mod-Shift-l', run: splitIntoLines },
+    { key: 'Alt-F3', run: selectSelectionMatches },
+    { key: 'Mod-l', run: expandToLine },
+    { key: 'Mod-Shift-d', run: copyLineDown },
+    { key: 'Mod-j', run: joinLines },
+    { key: 'Mod-Shift-Enter', run: insertLineAbove },
+    { key: 'Mod-m', run: cursorMatchingBracket },
+    { key: 'Mod-Alt-ArrowUp', run: addCursorVertical(-1) },
+    { key: 'Mod-Alt-ArrowDown', run: addCursorVertical(1) },
+    { key: 'Mod-k Mod-u', run: transformCase('upper') },
+    { key: 'Mod-k Mod-l', run: transformCase('lower') },
+    { key: 'F9', run: sortLines },
+  ]),
+);
+
+/** Minimap and whitespace markers, from the settings (both off for huge files). */
+export function minimapExt(on: boolean, large: boolean): Extension {
+  return on && !large ? minimap() : [];
+}
+export function whitespaceExt(on: boolean): Extension {
+  return on ? highlightWhitespace() : [];
 }
 
 /** Features that are too costly for huge files. */
 export function heavyFeatures(large: boolean): Extension {
   if (large) return [];
-  return [foldGutter({ openText: '⌄', closedText: '›' }), bracketMatching(), highlightSelectionMatches(), syntaxHighlighting(highlight), keymap.of(foldKeymap)];
+  return [
+    foldGutter({ openText: '⌄', closedText: '›' }),
+    bracketMatching(),
+    highlightSelectionMatches(),
+    syntaxHighlighting(highlight),
+    keymap.of([...foldKeymap, ...closeBracketsKeymap, ...completionKeymap]),
+    closeBrackets(),
+    indentGuides(),
+    // Completions from the language where it has them, plus words in the document (as in Sublime).
+    autocompletion({ activateOnTyping: true, maxRenderedOptions: 40 }),
+    EditorState.languageData.of(() => [{ autocomplete: completeAnyWord }]),
+  ];
 }
 
-export function baseExtensions(c: Compartments, opts: { large: boolean; wrap: boolean; readOnly: boolean; lineSep?: string }): Extension[] {
+export function baseExtensions(c: Compartments, opts: { large: boolean; wrap: boolean; readOnly: boolean; lineSep?: string; minimap?: boolean; whitespace?: boolean }): Extension[] {
   return [
+    sublimeKeymap,
     lineNumbers(),
     highlightActiveLineGutter(),
     highlightSpecialChars(),
@@ -137,6 +181,8 @@ export function baseExtensions(c: Compartments, opts: { large: boolean; wrap: bo
     c.wrap.of(opts.wrap ? EditorView.lineWrapping : []),
     c.readOnly.of(EditorState.readOnly.of(opts.readOnly)),
     c.lineSep.of(opts.lineSep ? EditorState.lineSeparator.of(opts.lineSep) : []),
+    c.minimap.of(minimapExt(!!opts.minimap, opts.large)),
+    c.whitespace.of(whitespaceExt(!!opts.whitespace)),
   ];
 }
 

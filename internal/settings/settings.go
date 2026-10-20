@@ -64,9 +64,13 @@ type Settings struct {
 	WordWrap       bool     `json:"wordWrap"`
 	FontSize       int      `json:"fontSize"`
 	// UIScale enlarges or shrinks the whole interface (0.75..2).
-	UIScale  float64  `json:"uiScale"`
-	Session  Session  `json:"session"`
-	Semantic Semantic `json:"semantic"`
+	UIScale float64 `json:"uiScale"`
+	// MinimapOff hides the code editor's minimap (shown by default).
+	MinimapOff bool `json:"minimapOff"`
+	// ShowWhitespace marks spaces and tabs in the code editor.
+	ShowWhitespace bool     `json:"showWhitespace"`
+	Session        Session  `json:"session"`
+	Semantic       Semantic `json:"semantic"`
 	// RecentsOff stops recording recent files and folders.
 	RecentsOff bool `json:"recentsOff"`
 	// ImageKeepOriginal makes Save write an edited image to a copy next to

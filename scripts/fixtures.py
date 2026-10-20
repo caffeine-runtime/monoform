@@ -411,6 +411,16 @@ for _f in ("tone.mp3", "tone.flac", "tone.ogg", "tone.opus"):
     w("audio/" + _f, open(os.path.join(_here, "..", "internal", "audio", "testdata", _f), "rb").read())
 w("audio/tone.m4a", open(os.path.join(_here, "fixture-data", "tone.m4a"), "rb").read())
 
+# ---- code editor (M18): symbols, indentation, repeated words, enough lines to scroll ----
+_code = ["// Sample module for the code editor test.", "export function parseRecord(line: string): Record {",
+         "  const parts = line.split(',');", "  if (parts.length < 2) {", "    throw new Error('short record');", "  }",
+         "  return { name: parts[0], amount: Number(parts[1]) };", "}", "", "export class Ledger {",
+         "  private records: Record[] = [];", "  addRecord(r: Record) {", "    this.records.push(r);", "  }",
+         "  totalAmount(): number {", "    return this.records.reduce((n, r) => n + r.amount, 0);", "  }", "}",
+         "", "interface Record {", "  name: string;", "  amount: number;", "}", ""]
+_code += [f"export const value{i} = {i} * 2; // filler line {i}" for i in range(200)]
+w("code/sample.ts", "\n".join(_code).encode())
+
 # ---- video (small clips made with ffmpeg; see internal/video/testdata) ----
 for _f in ("clip.webm", "clip.mp4", "h264.mp4", "clip.mkv", "track.webm"):
     w("video/" + _f, open(os.path.join(_here, "..", "internal", "video", "testdata", _f), "rb").read())

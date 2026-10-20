@@ -68,6 +68,14 @@
       <input id="fs" type="number" min="8" max="32" value={s.fontSize} onchange={setFontSize} />
     </div>
     <label class="row check">
+      <span class="lbl">Show the minimap in the code editor</span>
+      <input type="checkbox" checked={!s.minimapOff} onchange={() => commands.execute('text.toggleMinimap')} />
+    </label>
+    <label class="row check">
+      <span class="lbl">Show spaces and tabs</span>
+      <input type="checkbox" checked={s.showWhitespace} onchange={() => commands.execute('text.toggleWhitespace')} />
+    </label>
+    <label class="row check">
       <span class="lbl">Wrap long lines in the text editor</span>
       <input type="checkbox" checked={s.wordWrap} onchange={(e) => settings.update((x) => (x.wordWrap = (e.target as HTMLInputElement).checked))} />
     </label>
