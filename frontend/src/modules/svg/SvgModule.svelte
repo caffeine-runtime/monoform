@@ -1,7 +1,9 @@
 <script lang="ts">
-  // SVG: edit the source with a live preview. The preview renders the SVG
-  // through an <img> from a blob URL, so scripts and external references in
-  // the file never run. Export to PNG at any scale.
+  // SVG: edit visually (Design: select, move, scale, rotate, draw shapes,
+  // change colours and attributes — every change is a minimal edit of the
+  // source) or edit the source with a live preview. The preview renders the
+  // SVG through an <img> from a blob URL; the design canvas uses a sanitized
+  // inline copy (no scripts, handlers or outside references). Export to PNG.
   import { onMount } from 'svelte';
   import { xml } from '@codemirror/lang-xml';
   import type { Tab } from '../../core/tabs.svelte';
@@ -13,11 +15,27 @@
   import type { TextController } from '../text/controller';
   import { centered, clampZoom, fitZoom, stepZoom, zoomAt, type View } from '../image/geometry';
   import { svgViews, type ViewMode } from './views';
+  import SvgDesign from './SvgDesign.svelte';
+  import SvgInspector from './SvgInspector.svelte';
+  import { duplicate, removeEl, scan, setAttr, parseTransform, mul, formatTransform, attr, type Change, type El } from './svgdoc';
+  import { undo, redo } from '@codemirror/commands';
 
   let { tab }: { tab: Tab } = $props();
 
   const restored = (tab.restoredState as { view?: ViewMode } | undefined)?.view;
-  let view = $state<ViewMode>(restored ?? 'split');
+  let view = $state<ViewMode>(restored ?? 'design');
+  // Design view state: the source text it edits, its elements and the selection.
+  let docText = $state('');
+  let selected = $state<number | null>(null);
+  let shapeStyle = $state({ fill: '#4a90d9', stroke: 'none', strokeWidth: 0 });
+  let design = $state<SvgDesign>();
+  const els = $derived.by((): El[] => {
+    try {
+      return scan(docText);
+    } catch {
+      return [];
+    }
+  });
   let src = $state('');
   let error = $state('');
   let natural = $state({ w: 0, h: 0 });
@@ -32,6 +50,7 @@
   svgViews.set(tab.id, {
     get: () => view,
     set: (v) => {
+      if (v === 'design' && ctl) docText = ctl.view.state.doc.toString();
       view = v;
       workspace.touch();
       queueMicrotask(() => {
@@ -40,13 +59,51 @@
       });
     },
     exportPng: () => void exportPng(),
-    fit: () => fit(),
+    fit: () => (view === 'design' ? design?.fit() : fit()),
+    design: designOp,
+    hasSelection: () => view === 'design' && selected !== null && selected > 0,
   });
+
+  /** Apply visual edits to the source (one undo step) and refresh the design view at once. */
+  function applyChanges(changes: Change[], select?: number | null) {
+    if (!ctl || !changes.length) return;
+    ctl.view.dispatch({ changes, userEvent: 'input.design', scrollIntoView: false });
+    docText = ctl.view.state.doc.toString();
+    if (select !== undefined) selected = select;
+    else if (selected !== null && selected >= els.length) selected = null;
+  }
+
+  function designOp(op: string) {
+    if (!ctl || view !== 'design') return;
+    const el = selected !== null && selected > 0 ? els[selected] : null;
+    if (op === 'undo' || op === 'redo') {
+      (op === 'undo' ? undo : redo)(ctl.view);
+      docText = ctl.view.state.doc.toString();
+      if (selected !== null && selected >= els.length) selected = null;
+    } else if (op === 'deselect') selected = null;
+    else if (op.startsWith('tool:')) design?.setTool(op.slice(5) as never);
+    else if (el && op === 'delete') applyChanges([removeEl(docText, el)], null);
+    else if (el && op === 'duplicate') {
+      const ids = new Set(els.map((e) => attr(e, 'id')).filter((x): x is string => !!x));
+      applyChanges([duplicate(docText, el, ids)], null);
+    } else if (el && op.startsWith('nudge:')) {
+      const [dx, dy] = op.slice(6).split(',').map(Number);
+      const c = setAttr(docText, el, 'transform', formatTransform(mul([1, 0, 0, 1, dx, dy], parseTransform(attr(el, 'transform')))));
+      if (c) applyChanges([c], el.index);
+    }
+  }
 
   const options = {
     language: xml(),
-    onDocChanged: () => schedule(),
-    onLoaded: () => render(),
+    onDocChanged: () => {
+      schedule();
+      // Typing in the source (Split/Source) updates the design view when it is shown again.
+      if (view === 'design' && ctl) docText = ctl.view.state.doc.toString();
+    },
+    onLoaded: () => {
+      if (ctl) docText = ctl.view.state.doc.toString();
+      render();
+    },
     wrap: true,
   };
 
@@ -193,17 +250,40 @@
     src: () => src,
     exportTo,
     setText: (t: string) => ctl?.view.dispatch({ changes: { from: 0, to: ctl.view.state.doc.length, insert: t } }),
+    setView: (v: ViewMode) => svgViews.get(tab.id)?.set(v),
+    text: () => ctl?.view.state.doc.toString() ?? '',
+    selected: () => selected,
+    select: (i: number | null) => (selected = i),
+    els: () => els,
+    designOp,
+    design: () => design,
+    style: () => shapeStyle,
+    setStyle: (s: typeof shapeStyle) => (shapeStyle = s),
   };
 </script>
 
 <div class="toolbar">
   <div class="seg" role="group" aria-label="View">
+    <button class="btn ghost" class:on={view === 'design'} title="Edit visually: select, move, scale, rotate, draw shapes, change colours" onclick={() => svgViews.get(tab.id)?.set('design')}>Design</button>
     <button class="btn ghost" class:on={view === 'source'} onclick={() => svgViews.get(tab.id)?.set('source')}>Source</button>
     <button class="btn ghost" class:on={view === 'split'} onclick={() => svgViews.get(tab.id)?.set('split')}>Split</button>
     <button class="btn ghost" class:on={view === 'preview'} onclick={() => svgViews.get(tab.id)?.set('preview')}>Preview</button>
   </div>
   <span class="spacer"></span>
-  {#if view !== 'source'}
+  {#if view === 'design'}
+    <div class="seg" role="group" aria-label="Background">
+      <button class="btn ghost" class:on={bg === 'checker'} title="Transparent" onclick={() => (bg = 'checker')}>▦</button>
+      <button class="btn ghost" class:on={bg === 'light'} title="Light background" onclick={() => (bg = 'light')}>☀</button>
+      <button class="btn ghost" class:on={bg === 'dark'} title="Dark background" onclick={() => (bg = 'dark')}>☾</button>
+    </div>
+    <span class="sep"></span>
+    <button class="btn ghost" title="Zoom out" onclick={() => design?.zoomBy(-1)}>−</button>
+    <button class="btn ghost" title="Fit" onclick={() => design?.fit()}>Fit</button>
+    <button class="btn ghost" title="Zoom in" onclick={() => design?.zoomBy(1)}>+</button>
+    <button class="btn ghost" title="Undo ({'Ctrl+Z'})" onclick={() => designOp('undo')}>↶</button>
+    <button class="btn ghost" title="Redo ({'Ctrl+Shift+Z'})" onclick={() => designOp('redo')}>↷</button>
+    <span class="sep"></span>
+  {:else if view !== 'source'}
     <div class="seg" role="group" aria-label="Background">
       <button class="btn ghost" class:on={bg === 'checker'} title="Transparent" onclick={() => (bg = 'checker')}>▦</button>
       <button class="btn ghost" class:on={bg === 'light'} title="Light background" onclick={() => (bg = 'light')}>☀</button>
@@ -221,7 +301,10 @@
 {#if error}<div class="banner err">SVG error: {error}</div>{/if}
 <div class="panes" data-view={view}>
   <div class="src"><TextEditor {tab} {options} onready={ready} /></div>
-  {#if view !== 'source'}
+  {#if view === 'design'}
+    <SvgDesign bind:this={design} text={docText} {els} bind:selected style={shapeStyle} onchange={applyChanges} {bg} />
+    <SvgInspector text={docText} {els} bind:selected bind:style={shapeStyle} onchange={applyChanges} />
+  {:else if view !== 'source'}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="preview {bg}"
@@ -294,7 +377,8 @@
     max-width: none;
     user-select: none;
   }
-  .panes[data-view='preview'] .src {
+  .panes[data-view='preview'] .src,
+  .panes[data-view='design'] .src {
     display: none;
   }
   .panes[data-view='preview'] .preview {
