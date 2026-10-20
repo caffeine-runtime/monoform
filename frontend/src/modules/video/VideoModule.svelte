@@ -1084,7 +1084,7 @@
     height: 12px;
     background: rgba(91, 141, 239, 0.75);
     color: #fff;
-    font-size: 9.5px;
+    font-size: calc(9.5px * var(--ui-scale));
     line-height: 12px;
     overflow: hidden;
     pointer-events: none;
@@ -1106,7 +1106,7 @@
     border-radius: 4px;
     background: rgba(0, 0, 0, 0.6);
     color: #fff;
-    font-size: 11px;
+    font-size: calc(11px * var(--ui-scale));
     line-height: 16px;
     padding: 0;
     cursor: pointer;
@@ -1209,7 +1209,7 @@
     position: absolute;
     left: 6px;
     top: 4px;
-    font-size: 10.5px;
+    font-size: calc(10.5px * var(--ui-scale));
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: rgba(255, 255, 255, 0.75);
@@ -1225,7 +1225,7 @@
     border-radius: 4px;
     background: rgba(255, 255, 255, 0.85);
     color: #222;
-    font-size: 12px;
+    font-size: calc(12px * var(--ui-scale));
     line-height: 18px;
     padding: 0;
     cursor: pointer;

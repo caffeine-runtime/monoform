@@ -125,12 +125,38 @@ export class ModelViewer {
   attach() {
     const s = this.shared;
     if (s.owner !== this) {
-      s.owner?.controls.disconnect();
+      const prev = s.owner;
+      if (prev) {
+        // In split view the other 3D tab stays visible: leave it a still of its last frame.
+        prev.freeze();
+        prev.controls.disconnect();
+      }
       s.owner = this;
+      this.still?.remove();
+      this.still = null;
       this.host.appendChild(this.renderer.domElement);
       this.controls.connect(this.renderer.domElement);
     }
     this.resize();
+  }
+
+  private still: HTMLCanvasElement | null = null;
+
+  /** Copy the current view into a plain canvas that stays when the shared canvas moves away. */
+  private freeze() {
+    const src = this.renderer.domElement;
+    if (!this.host.clientWidth || !src.width) return;
+    this.renderer.render(this.scene, this.camera); // the drawing buffer isn't preserved between frames
+    const c = document.createElement('canvas');
+    c.width = src.width;
+    c.height = src.height;
+    c.getContext('2d')!.drawImage(src, 0, 0);
+    c.className = 'still';
+    c.title = 'Click to move and rotate this model';
+    Object.assign(c.style, { position: 'absolute', inset: '0', width: '100%', height: '100%' });
+    this.still?.remove();
+    this.still = c;
+    this.host.appendChild(c);
   }
 
   private resize() {

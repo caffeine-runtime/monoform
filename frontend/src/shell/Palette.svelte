@@ -279,12 +279,12 @@
     border: 1px solid var(--border-soft);
   }
   .q {
-    height: 48px;
+    height: calc(48px * var(--ui-scale));
     border: none;
     outline: none;
     padding: 0 18px;
     background: transparent;
-    font-size: 15px;
+    font-size: calc(15px * var(--ui-scale));
     border-bottom: 1px solid var(--border-soft);
   }
   .list {
@@ -300,7 +300,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    height: 32px;
+    height: calc(32px * var(--ui-scale));
     padding: 0 10px;
     border-radius: var(--radius);
     cursor: pointer;

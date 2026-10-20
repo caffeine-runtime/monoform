@@ -137,6 +137,14 @@
   and whole-video fades. Everything previews live (WebGL compositor over the playing video) and undoes. With
   effects, saving renders a WebM (VP9/VP8 + Opus) with the webview's WebCodecs encoders, cuts exact; without
   effects, saving stays the lossless remux. Nothing loads until the first effect is added.
+- **M16 — Split view and interface size.** Show 2–4 tabs at once, like Zen's split tabs: Ctrl+\\ (side by side,
+  again to undo), the split button at the end of the tab bar (two side by side, two stacked, three, four), a tab's
+  context menu ("Open side by side / below"), or drag a tab from the tab bar onto the edge of a view (the middle
+  replaces that pane). The focused pane is outlined and is the "active" tab for shortcuts, the status bar and
+  saving; clicking a pane focuses it, choosing a tab in the tab bar shows it in the focused pane, Ctrl+Alt+] / [
+  move between panes; dividers drag; closing a tab removes its pane; the split is restored with the session.
+  Interface size 80–200 % (Settings → Interface size, Ctrl+Alt+= / Ctrl+Alt+−, "Interface: normal size"):
+  text, bars, buttons, icons, list rows and the editor font scale together.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -184,6 +192,8 @@ available here).
 - Audio preview: cut points can sound a few milliseconds late (the player seeks over removed parts); the saved file is exact. MP3 waveform and playback can be offset by up to ~25–50 ms (players skip the encoder delay differently); edits are sample-exact relative to the waveform.
 - Video saving without effects doesn't re-encode, so cuts snap to keyframes (the timeline shows the snapped result). With effects the video is rendered to WebM (VP9/VP8 + Opus) — the encoders every webview has; MP4/H.264 output isn't offered (no permissively licensed encoder in pure Go; WebKitGTK has no H.264 WebCodecs encoder). No crop or colour filters on video yet.
 - Video effects: rendering keeps the whole encoded output in memory until it is written (fine for clips; a long 1080p render needs RAM of roughly its file size), and runs at about 1–2× real time at 320×180 on the test VM (WebCodecs) — slower where WebKitGTK's WebCodecs decoder is missing its GStreamer parser (gst-plugins-bad), because frames then come from seeking a <video> element.
+- Split view: the first split of a session costs one 75–100 ms UI frame on the test VM (first layout of the panes); later changes 35–55 ms. Two 3D views can be shown, but only the focused one is live — the other keeps a still of its last frame until clicked (they share one WebGL renderer).
+- Interface size scales the design tokens and every font size, plus the shell's bars and controls; some module-specific paddings and canvas overlays stay at their pixel size.
 - Video effects: starting a render or a track sets up WebKitGTK's codec pipelines on the main thread — one 80–170 ms UI frame on the test VM; the frame loop itself stays under ~60 ms.
 - Video effects: tracking follows translation (not rotation or scale) and stops when the object is lost or covered; overlays and effects aren't saved inside the original file — render, or they're lost when the tab closes (the tab asks first).
 - Video: rotation is saved for MP4/MOV only (WebM/MKV have no standard rotation flag); fragmented MP4 (some screen recorders, DASH) and AVI/OGV are play-only.

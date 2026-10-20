@@ -86,7 +86,7 @@ select {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 28px;
+  height: calc(28px * var(--ui-scale));
   padding: 0 10px;
   border: none;
   border-radius: var(--radius);
@@ -126,8 +126,8 @@ select {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: calc(28px * var(--ui-scale));
+  height: calc(28px * var(--ui-scale));
   padding: 0;
   border: none;
   border-radius: var(--radius);
@@ -149,7 +149,7 @@ select {
   cursor: default;
 }
 .input {
-  height: 30px;
+  height: calc(30px * var(--ui-scale));
   padding: 0 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -173,7 +173,7 @@ select {
   padding: 6px 10px;
   border-bottom: 1px solid var(--border-soft);
   background: var(--bg);
-  min-height: 40px;
+  min-height: calc(40px * var(--ui-scale));
   flex: none;
   overflow-x: auto;
   scrollbar-width: none;
@@ -183,7 +183,7 @@ select {
 }
 .toolbar .sep {
   width: 1px;
-  height: 18px;
+  height: calc(18px * var(--ui-scale));
   background: var(--border);
   margin: 0 6px;
   flex: none;
@@ -222,8 +222,8 @@ select {
   text-align: center;
 }
 .spinner {
-  width: 16px;
-  height: 16px;
+  width: calc(16px * var(--ui-scale));
+  height: calc(16px * var(--ui-scale));
   border-radius: 50%;
   border: 2px solid var(--border);
   border-top-color: var(--accent);
@@ -237,7 +237,7 @@ select {
 }
 .kbd {
   font-family: var(--font-ui);
-  font-size: 11px;
+  font-size: calc(11px * var(--ui-scale));
   color: var(--text-muted);
   padding: 1px 6px;
   border-radius: 5px;

@@ -5,9 +5,18 @@
   import { modules, type LoadedModule } from '../core/modules';
   import { workspace, type Tab } from '../core/tabs.svelte';
   import ExternalChangeBanner from './ExternalChangeBanner.svelte';
+  import { paneRect } from '../core/split';
 
   let { tab }: { tab: Tab } = $props();
   const active = $derived(workspace.activeId === tab.id);
+  const shown = $derived(workspace.isShown(tab.id));
+  // In split view the tab sits in its pane; the focused pane is outlined.
+  const rect = $derived.by(() => {
+    const s = workspace.split;
+    const i = s ? s.panes.indexOf(tab.id) : -1;
+    return s && i >= 0 ? paneRect(s, i) : null;
+  });
+  const pct = (v: number) => `${(v * 100).toFixed(3)}%`;
   let mod = $state<LoadedModule | null>(null);
   let error = $state('');
   let slow = $state(false);
@@ -31,7 +40,22 @@
   });
 </script>
 
-<div class="tabview" class:active data-module={tab.moduleId} role="tabpanel" aria-hidden={!active}>
+<div
+  class="tabview"
+  class:active
+  class:shown
+  class:pane={!!rect}
+  data-module={tab.moduleId}
+  data-tab-id={tab.id}
+  role="tabpanel"
+  aria-hidden={!shown}
+  style:left={rect ? pct(rect.left) : null}
+  style:top={rect ? pct(rect.top) : null}
+  style:width={rect ? pct(rect.width) : null}
+  style:height={rect ? pct(rect.height) : null}
+  onpointerdowncapture={() => !active && shown && workspace.activate(tab)}
+  onfocusin={() => !active && shown && workspace.activate(tab)}
+>
   {#if tab.external}
     <ExternalChangeBanner {tab} />
   {/if}
@@ -55,8 +79,19 @@
     flex-direction: column;
     background: var(--bg);
   }
-  .tabview.active {
+  .tabview.shown {
     display: flex;
+  }
+  .tabview.pane {
+    inset: auto;
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .tabview.pane.active {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+    z-index: 1;
   }
   .body {
     flex: 1;

@@ -168,7 +168,7 @@
   }
   h2 {
     margin: 0 0 6px;
-    font-size: 17px;
+    font-size: calc(17px * var(--ui-scale));
   }
   p {
     margin: 0;

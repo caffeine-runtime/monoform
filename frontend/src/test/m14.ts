@@ -17,7 +17,10 @@ const gridEl = () => document.querySelector<HTMLElement>('.tabview.active .grid'
 
 /** Centre of a rendered cell. */
 function cellXY(row: number, col: number) {
-  const tr = [...document.querySelectorAll<HTMLElement>('.tabview.active .grid .tr')].find((e) => e.style.top === `${row * 28}px`);
+  // Row height follows the interface size (--row on the grid).
+  const grid = document.querySelector<HTMLElement>('.tabview.active .grid')!;
+  const rowH = parseFloat(grid.style.getPropertyValue('--row')) || 28;
+  const tr = [...document.querySelectorAll<HTMLElement>('.tabview.active .grid .tr')].find((e) => e.style.top === `${row * rowH}px`);
   assert(tr, `row ${row} rendered`);
   const r = tr.children[col + 1].getBoundingClientRect();
   return { x: r.left + r.width / 2, y: r.top + r.height / 2, left: r.left, right: r.right, top: r.top, bottom: r.bottom };

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { UI_SCALES } from '../../core/appCommands';
   // Settings: appearance, files, recents (with per-item removal and
   // clearing), search by meaning, and where the app keeps its data.
   import { onMount } from 'svelte';
@@ -54,6 +55,13 @@
           <button role="radio" aria-checked={s.theme === t.id} class:on={s.theme === t.id} onclick={() => theme.set(t.id)}>{t.label}</button>
         {/each}
       </div>
+    </div>
+    <div class="row">
+      <label class="lbl" for="uis" title="Makes text, buttons and icons everywhere larger or smaller (Ctrl+Alt+= / Ctrl+Alt+−)">Interface size</label>
+      <span class="scale">
+        <input id="uis" type="range" min="0" max={UI_SCALES.length - 1} step="1" value={Math.max(0, UI_SCALES.findIndex((v) => Math.abs(v - (s.uiScale || 1)) < 1e-3))} oninput={(e) => settings.update((x) => (x.uiScale = UI_SCALES[+(e.target as HTMLInputElement).value]))} />
+        <span class="pct">{Math.round((s.uiScale || 1) * 100)}%</span>
+      </span>
     </div>
     <div class="row">
       <label class="lbl" for="fs">Editor font size</label>
@@ -141,11 +149,11 @@
   }
   h2 {
     margin: 0 0 4px;
-    font-size: 20px;
+    font-size: calc(20px * var(--ui-scale));
   }
   h3 {
     margin: 0;
-    font-size: 14px;
+    font-size: calc(14px * var(--ui-scale));
   }
   .card {
     background: var(--bg-elevated);
@@ -250,5 +258,14 @@
     font-family: var(--font-mono);
     font-size: 0.92em;
     word-break: break-all;
+  }
+  .scale {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pct {
+    min-width: 3em;
+    font-variant-numeric: tabular-nums;
   }
 </style>

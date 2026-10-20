@@ -23,6 +23,7 @@ const scenarios: Record<string, () => Promise<{ default: (arg: string) => Promis
   m13: () => import('./m13'),
   m14: () => import('./m14'),
   m15: () => import('./m15'),
+  m16: () => import('./m16'),
   imgshot: () => import('./imgshot'),
   bakeenv: () => import('./bakeenv'),
   probe: () => import('./probe'),

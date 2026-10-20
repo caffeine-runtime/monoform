@@ -872,6 +872,24 @@ export namespace settings {
 	        this.unloadAfter = source["unloadAfter"];
 	    }
 	}
+	export class SessionSplit {
+	    layout: string;
+	    panes: number[];
+	    x: number;
+	    y: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SessionSplit(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.layout = source["layout"];
+	        this.panes = source["panes"];
+	        this.x = source["x"];
+	        this.y = source["y"];
+	    }
+	}
 	export class SessionTab {
 	    kind: string;
 	    path?: string;
@@ -900,6 +918,7 @@ export namespace settings {
 	    folder: string;
 	    tabs: SessionTab[];
 	    active: number;
+	    split?: SessionSplit;
 	    expanded: string[];
 	
 	    static createFrom(source: any = {}) {
@@ -911,6 +930,7 @@ export namespace settings {
 	        this.folder = source["folder"];
 	        this.tabs = this.convertValues(source["tabs"], SessionTab);
 	        this.active = source["active"];
+	        this.split = this.convertValues(source["split"], SessionSplit);
 	        this.expanded = source["expanded"];
 	    }
 	
@@ -933,6 +953,7 @@ export namespace settings {
 		}
 	}
 	
+	
 	export class Settings {
 	    version: number;
 	    theme: string;
@@ -944,6 +965,7 @@ export namespace settings {
 	    showHidden: boolean;
 	    wordWrap: boolean;
 	    fontSize: number;
+	    uiScale: number;
 	    session: Session;
 	    semantic: Semantic;
 	    recentsOff: boolean;
@@ -965,6 +987,7 @@ export namespace settings {
 	        this.showHidden = source["showHidden"];
 	        this.wordWrap = source["wordWrap"];
 	        this.fontSize = source["fontSize"];
+	        this.uiScale = source["uiScale"];
 	        this.session = this.convertValues(source["session"], Session);
 	        this.semantic = this.convertValues(source["semantic"], Semantic);
 	        this.recentsOff = source["recentsOff"];

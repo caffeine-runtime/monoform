@@ -62,11 +62,13 @@
   --font-ui: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-serif: 'Source Serif 4 Variable', 'Source Serif 4', Georgia, serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'JetBrains Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
-  --fs-ui: 13px;
-  --fs-small: 11.5px;
-  --row-h: 28px;
-  --tabbar-h: 38px;
-  --statusbar-h: 26px;
+  /* Interface scale (Settings → Interface size, Ctrl+Alt+=/−); sizes below follow it. */
+  --ui-scale: 1;
+  --fs-ui: calc(13px * var(--ui-scale));
+  --fs-small: calc(11.5px * var(--ui-scale));
+  --row-h: calc(28px * var(--ui-scale));
+  --tabbar-h: calc(38px * var(--ui-scale));
+  --statusbar-h: calc(26px * var(--ui-scale));
   --ease: cubic-bezier(0.2, 0, 0, 1);
 }
 

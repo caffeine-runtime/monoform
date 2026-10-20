@@ -295,7 +295,7 @@
     background: none;
     color: var(--text-muted);
     cursor: pointer;
-    font-size: 14px;
+    font-size: calc(14px * var(--ui-scale));
   }
   .curve {
     padding: 4px 0 8px 14px;

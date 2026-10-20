@@ -123,8 +123,8 @@
     display: flex;
   }
   .icon-btn.sm {
-    width: 24px;
-    height: 24px;
+    width: calc(24px * var(--ui-scale));
+    height: calc(24px * var(--ui-scale));
   }
   .meta {
     display: flex;
@@ -177,7 +177,7 @@
     color: var(--text);
   }
   .file {
-    height: 26px;
+    height: calc(26px * var(--ui-scale));
     padding: 0 8px 0 4px;
     color: var(--text-muted);
   }
@@ -204,23 +204,23 @@
     font-size: var(--fs-small);
   }
   .count {
-    font-size: 11px;
+    font-size: calc(11px * var(--ui-scale));
     padding: 0 6px;
     border-radius: 8px;
     background: var(--bg-hover);
     color: var(--text-muted);
   }
   .match {
-    height: 24px;
+    height: calc(24px * var(--ui-scale));
     padding: 0 8px 0 28px;
-    font-size: 12.5px;
+    font-size: calc(12.5px * var(--ui-scale));
   }
   .ln {
     color: var(--text-faint);
-    min-width: 26px;
+    min-width: calc(26px * var(--ui-scale));
     text-align: right;
     font-variant-numeric: tabular-nums;
-    font-size: 11px;
+    font-size: calc(11px * var(--ui-scale));
   }
   .txt {
     overflow: hidden;

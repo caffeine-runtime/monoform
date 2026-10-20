@@ -65,12 +65,12 @@
     overflow: hidden;
   }
   .q {
-    height: 44px;
+    height: calc(44px * var(--ui-scale));
     border: none;
     outline: none;
     padding: 0 16px;
     background: transparent;
-    font-size: 14px;
+    font-size: calc(14px * var(--ui-scale));
     border-bottom: 1px solid var(--border-soft);
   }
   .list {
@@ -81,7 +81,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    height: 30px;
+    height: calc(30px * var(--ui-scale));
     padding: 0 10px;
     border-radius: var(--radius);
     cursor: pointer;

@@ -401,7 +401,7 @@
   .formula .input {
     flex: 1;
     font-family: var(--font-mono);
-    font-size: 12.5px;
+    font-size: calc(12.5px * var(--ui-scale));
   }
   .body {
     flex: 1;

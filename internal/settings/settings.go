@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	iofs "io/fs"
+	"math"
 	"os"
 	"path/filepath"
 	"sync"
@@ -26,10 +27,20 @@ type SessionTab struct {
 	Pinned bool   `json:"pinned,omitempty"`
 }
 
+// SessionSplit is a split view: up to four tabs shown at once.
+type SessionSplit struct {
+	Layout string  `json:"layout"` // "columns", "rows" or "grid"
+	Panes  []int   `json:"panes"`  // tab indices, one per pane
+	X      float64 `json:"x"`      // divider positions, 0.15..0.85
+	Y      float64 `json:"y"`
+}
+
 type Session struct {
 	Folder string       `json:"folder"`
 	Tabs   []SessionTab `json:"tabs"`
 	Active int          `json:"active"`
+	// Split is nil when one tab fills the window.
+	Split *SessionSplit `json:"split,omitempty"`
 	// Expanded folder-tree directories, so the tree reopens as it was.
 	Expanded []string `json:"expanded"`
 }
@@ -52,8 +63,10 @@ type Settings struct {
 	ShowHidden     bool     `json:"showHidden"`
 	WordWrap       bool     `json:"wordWrap"`
 	FontSize       int      `json:"fontSize"`
-	Session        Session  `json:"session"`
-	Semantic       Semantic `json:"semantic"`
+	// UIScale enlarges or shrinks the whole interface (0.75..2).
+	UIScale  float64  `json:"uiScale"`
+	Session  Session  `json:"session"`
+	Semantic Semantic `json:"semantic"`
 	// RecentsOff stops recording recent files and folders.
 	RecentsOff bool `json:"recentsOff"`
 	// ImageKeepOriginal makes Save write an edited image to a copy next to
@@ -71,6 +84,7 @@ func Defaults() Settings {
 		SidebarVisible: true,
 		SidebarWidth:   260,
 		FontSize:       14,
+		UIScale:        1,
 		Session:        Session{Tabs: []SessionTab{}, Expanded: []string{}},
 		Semantic:       Semantic{UnloadAfter: 60},
 	}
@@ -201,6 +215,29 @@ func normalize(v Settings) Settings {
 	if v.Session.Active < 0 || v.Session.Active >= len(v.Session.Tabs) {
 		v.Session.Active = 0
 	}
+	if v.UIScale < 0.75 || v.UIScale > 2 {
+		v.UIScale = d.UIScale
+	}
+	if sp := v.Session.Split; sp != nil {
+		ok := (sp.Layout == "columns" || sp.Layout == "rows" || sp.Layout == "grid") && len(sp.Panes) >= 2 && len(sp.Panes) <= 4
+		seen := map[int]bool{}
+		for _, p := range sp.Panes {
+			ok = ok && p >= 0 && p < len(v.Session.Tabs) && !seen[p]
+			seen[p] = true
+		}
+		if !ok {
+			v.Session.Split = nil
+		} else {
+			clamp := func(x float64) float64 { return math.Min(0.85, math.Max(0.15, x)) }
+			if sp.X == 0 {
+				sp.X = 0.5
+			}
+			if sp.Y == 0 {
+				sp.Y = 0.5
+			}
+			sp.X, sp.Y = clamp(sp.X), clamp(sp.Y)
+		}
+	}
 	if v.Semantic.UnloadAfter < 10 || v.Semantic.UnloadAfter > 3600 {
 		v.Semantic.UnloadAfter = d.Semantic.UnloadAfter
 	}
@@ -217,5 +254,10 @@ func clone(v Settings) Settings {
 	v.Pinned = append([]string{}, v.Pinned...)
 	v.Session.Tabs = append([]SessionTab{}, v.Session.Tabs...)
 	v.Session.Expanded = append([]string{}, v.Session.Expanded...)
+	if v.Session.Split != nil {
+		sp := *v.Session.Split
+		sp.Panes = append([]int{}, sp.Panes...)
+		v.Session.Split = &sp
+	}
 	return v
 }

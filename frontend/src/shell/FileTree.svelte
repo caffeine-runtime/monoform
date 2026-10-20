@@ -9,7 +9,8 @@
 
   let { root }: { root: string } = $props();
 
-  const ROW = 26;
+  // Row height follows the interface scale; CSS reads it from --row.
+  const ROW = $derived(Math.round(26 * (settings.value.uiScale || 1)));
   let viewport: HTMLDivElement;
   let scrollTop = $state(0);
   let height = $state(400);
@@ -100,6 +101,7 @@
 <div
   class="tree"
   bind:this={viewport}
+  style:--row="{ROW}px"
   bind:clientHeight={height}
   onscroll={() => (scrollTop = viewport.scrollTop)}
   tabindex="0"
@@ -163,7 +165,7 @@
     position: absolute;
     left: 0;
     right: 0;
-    height: 26px;
+    height: var(--row);
     display: flex;
     align-items: center;
     gap: 4px;
@@ -187,7 +189,7 @@
     color: var(--text-muted);
   }
   .chev {
-    width: 14px;
+    width: calc(14px * var(--ui-scale));
     flex: none;
     display: inline-flex;
     color: var(--text-faint);
