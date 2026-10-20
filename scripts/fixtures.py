@@ -4,7 +4,7 @@ import os, sys, struct, zlib, shutil
 
 d = sys.argv[1]
 # Outputs written by earlier self-test runs; operations refuse to overwrite.
-for rel in ("pdf/out", "archives/out", "newfiles", "img/out", "img/subject (edited).png", "img/red (edited).png"):
+for rel in ("audio", "pdf/out", "archives/out", "newfiles", "img/out", "img/subject (edited).png", "img/red (edited).png"):
     q = os.path.join(d, rel)
     if os.path.isdir(q): shutil.rmtree(q, ignore_errors=True)
     elif os.path.exists(q): os.remove(q)
@@ -386,6 +386,28 @@ def _spheres():
 w("models/spheres.glb", _spheres())
 # Draco-compressed glTF (generated once by fixture-data/knot-draco.mjs).
 w("models/knot-draco.glb", open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixture-data", "knot-draco.glb"), "rb").read())
+
+# ---- audio ----
+def _wav(frames_bytes, rate, ch):
+    n = len(frames_bytes)
+    return (b"RIFF" + struct.pack("<I", 36 + n) + b"WAVEfmt " + struct.pack("<IHHIIHH", 16, 1, ch, rate, rate * ch * 2, ch * 2, 16)
+            + b"data" + struct.pack("<I", n) + frames_bytes)
+def _tones():
+    # 3 s, 48 kHz stereo: 440 Hz at 0.5, 880 Hz at 0.25, 220 Hz at 0.5; right channel at half level.
+    rate, out = 48000, bytearray()
+    for f, a in ((440, 0.5), (880, 0.25), (220, 0.5)):
+        for i in range(rate):
+            v = a * _math.sin(2 * _math.pi * f * i / rate)
+            out += struct.pack("<hh", int(round(v * 32767)), int(round(v * 16383)))
+    return _wav(bytes(out), rate, 2)
+w("audio/tones.wav", _tones())
+# 10 minutes, mono 22.05 kHz (one second repeated): for open time and UI frames.
+_sec = b"".join(struct.pack("<h", int(12000 * _math.sin(2 * _math.pi * 330 * i / 22050))) for i in range(22050))
+w("audio/long.wav", _wav(_sec * 600, 22050, 1))
+_here = os.path.dirname(os.path.abspath(__file__))
+for _f in ("tone.mp3", "tone.flac", "tone.ogg", "tone.opus"):
+    w("audio/" + _f, open(os.path.join(_here, "..", "internal", "audio", "testdata", _f), "rb").read())
+w("audio/tone.m4a", open(os.path.join(_here, "fixture-data", "tone.m4a"), "rb").read())
 
 _pos, _nor, _uv, _idx = _cube()
 def _stl():
