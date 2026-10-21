@@ -6,14 +6,14 @@ import (
 	"testing"
 )
 
-// The native runtime isn't in the repository: HIA_ORT_LIB points at an
+// The native runtime isn't in the repository: MF_ORT_LIB points at an
 // onnxruntime shared library (CI downloads one with the app's own code, see
 // TestDownloadRuntime).
 func runtimeForTest(t *testing.T) *Runtime {
 	t.Helper()
-	lib := os.Getenv("HIA_ORT_LIB")
+	lib := os.Getenv("MF_ORT_LIB")
 	if lib == "" {
-		t.Skip("HIA_ORT_LIB not set")
+		t.Skip("MF_ORT_LIB not set")
 	}
 	rt, err := LoadRuntime(lib)
 	if err != nil {

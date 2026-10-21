@@ -4,9 +4,24 @@
 // still shows up in a submenu named after its category, so nothing is lost.
 import { commands } from './commands';
 import { formatShortcut } from './keys';
-import type { MenuItem } from './ui.svelte';
+import { settings } from './settings.svelte';
+import type { MenuControl, MenuItem } from './ui.svelte';
 
-type Entry = string | '-' | { label: string; items: Entry[] };
+// A control row stands for the commands it covers (they stay in the palette).
+// `always`: shown even when none of them is available now (a setting, not an action on the open file).
+type Entry = string | '-' | { label: string; items: Entry[] } | { control: MenuControl; covers: string[]; always?: boolean };
+
+/** On/off options: shown as the thing's name with a check mark when it's on. */
+const CHECKS: Record<string, [string, () => boolean]> = {
+  'view.toggleSidebar': ['Sidebar', () => settings.value.sidebarVisible],
+  'view.togglePanels': ['Side panels', () => !settings.value.panelsHidden],
+  'view.togglePathBar': ['Path bar', () => !settings.value.pathBarOff],
+  'view.toggleHidden': ['Hidden files', () => settings.value.showHidden],
+  'view.previewByDefault': ['Open files in preview mode', () => !!settings.value.openInPreview],
+  'text.toggleWrap': ['Word wrap', () => settings.value.wordWrap],
+  'text.toggleMinimap': ['Minimap', () => !settings.value.minimapOff],
+  'text.toggleWhitespace': ['Spaces and tabs', () => settings.value.showWhitespace],
+};
 
 const LAYOUT: Entry[] = [
   'file.quickOpen',
@@ -69,7 +84,6 @@ const LAYOUT: Entry[] = [
       'view.toggleSidebar',
       'view.togglePanels',
       'view.togglePathBar',
-      'view.showFiles',
       'view.toggleHidden',
       '-',
       'view.previewByDefault',
@@ -77,19 +91,16 @@ const LAYOUT: Entry[] = [
       'text.toggleMinimap',
       'text.toggleWhitespace',
       '-',
-      'text.zoomIn',
-      'text.zoomOut',
-      'text.zoomReset',
+      { control: 'split', covers: ['view.splitColumns', 'view.splitRows', 'view.splitThree', 'view.splitGrid', 'view.unsplit'] },
+      'view.nextPane',
+      'view.prevPane',
+      '-',
+      'view.showFiles',
     ],
   },
-  {
-    label: 'Split view',
-    items: ['view.splitColumns', 'view.splitRows', 'view.splitThree', 'view.splitGrid', 'view.unsplit', '-', 'view.nextPane', 'view.prevPane'],
-  },
-  {
-    label: 'Appearance',
-    items: ['view.toggleTheme', 'view.themeSystem', 'view.themeDark', 'view.themeLight', '-', 'view.uiBigger', 'view.uiSmaller', 'view.uiReset'],
-  },
+  { control: 'theme', covers: ['view.toggleTheme', 'view.themeSystem', 'view.themeDark', 'view.themeLight'] },
+  { control: 'uiScale', covers: ['view.uiBigger', 'view.uiSmaller', 'view.uiReset'] },
+  { control: 'fontSize', covers: ['text.zoomIn', 'text.zoomOut', 'text.zoomReset'], always: true },
   'app.settings',
   '-',
   { label: 'Tabs', items: ['tab.new', 'tab.newWindow', '-', 'tab.close', 'tab.closeOthers', 'tab.closeAll', 'tab.reopen', '-', 'tab.next', 'tab.prev'] },
@@ -108,6 +119,7 @@ const SHELL = new Set(['File', 'Edit', 'Go', 'View', 'Tabs', 'Tools', 'Search', 
 function placed(es: Entry[], out = new Set<string>()): Set<string> {
   for (const e of es) {
     if (typeof e === 'string') out.add(e);
+    else if ('control' in e) e.covers.forEach((id) => out.add(id));
     else placed(e.items, out);
   }
   return out;
@@ -131,12 +143,14 @@ export function appMenuItems(): MenuItem[] {
     const c = avail.get(id);
     if (!c) return null;
     const sc = commands.shortcutOf(id);
-    return { label: c.title, shortcut: sc ? formatShortcut(sc) : undefined, run: () => commands.execute(id) };
+    const check = CHECKS[id];
+    return { label: check?.[0] ?? c.title, checked: check?.[1](), shortcut: sc ? formatShortcut(sc) : undefined, run: () => commands.execute(id) };
   };
   const es = (list: Entry[]): MenuItem[] =>
     list.flatMap((e): MenuItem[] => {
       if (e === '-') return [{ separator: true }];
       if (typeof e === 'string') return [item(e)].filter((x): x is MenuItem => !!x);
+      if ('control' in e) return e.always || e.covers.some((id) => avail.has(id)) ? [{ control: e.control }] : [];
       const items = es(e.items);
       // "Split view: two side by side" reads "Two side by side" inside Split view.
       const pre = `${e.label.toLowerCase()}: `;

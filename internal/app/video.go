@@ -5,8 +5,8 @@ import (
 	"errors"
 	"path/filepath"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/jobs"
-	"github.com/caffeine-runtime/hold-it-all/internal/video"
+	"github.com/caffeine-runtime/monoform/internal/jobs"
+	"github.com/caffeine-runtime/monoform/internal/video"
 )
 
 // VideoOpened is what the video module needs to show a file.

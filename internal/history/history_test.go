@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	hfs "github.com/caffeine-runtime/hold-it-all/internal/fs"
+	hfs "github.com/caffeine-runtime/monoform/internal/fs"
 )
 
 // open makes a store and routes the app's atomic writes through it.

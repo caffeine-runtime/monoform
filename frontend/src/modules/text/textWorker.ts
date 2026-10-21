@@ -52,7 +52,7 @@ self.onmessage = async (e: MessageEvent<In>) => {
         }
         offset += p.length;
       });
-      const urlFor = (p: string, q: Record<string, string>) => `/__hia/${p}?${new URLSearchParams({ t: m.token, ...q })}`;
+      const urlFor = (p: string, q: Record<string, string>) => `/__mf/${p}?${new URLSearchParams({ t: m.token, ...q })}`;
       const entry = await uploadParts(urlFor, m.path, out, (done, total) => post({ type: 'progress', id: m.id, done, total }));
       post({ type: 'saved', id: m.id, entry });
     }

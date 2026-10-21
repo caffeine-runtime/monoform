@@ -37,8 +37,8 @@
       icons: [Pencil, History, Undo2],
     },
     {
-      title: 'Yours, and offline',
-      text: 'No account, no cloud, no tracking. Your files stay on this computer, and the app works without the internet.',
+      title: 'Free, open and offline',
+      text: 'Open source and free, built with AI. No account, no cloud, no tracking: your files stay on this computer, and the app works without the internet.',
       icons: [ShieldCheck, WifiOff, HardDrive],
     },
   ];
@@ -83,7 +83,7 @@
               <span class="ic" style:--i={i}><Icon icon={ic} size={20} /></span>
             {/each}
           </div>
-          {#if step === 0}<p class="hello">Welcome</p>{/if}
+          {#if step === 0}<p class="hello">Welcome to Monoform</p>{/if}
           <h1>{s.title}</h1>
           <p class="text">{s.text}</p>
         {:else}

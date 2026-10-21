@@ -18,14 +18,14 @@ import (
 
 	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/filetype"
-	"github.com/caffeine-runtime/hold-it-all/internal/fs"
-	"github.com/caffeine-runtime/hold-it-all/internal/history"
-	"github.com/caffeine-runtime/hold-it-all/internal/jobs"
-	"github.com/caffeine-runtime/hold-it-all/internal/office"
-	"github.com/caffeine-runtime/hold-it-all/internal/search"
-	"github.com/caffeine-runtime/hold-it-all/internal/server"
-	"github.com/caffeine-runtime/hold-it-all/internal/settings"
+	"github.com/caffeine-runtime/monoform/internal/filetype"
+	"github.com/caffeine-runtime/monoform/internal/fs"
+	"github.com/caffeine-runtime/monoform/internal/history"
+	"github.com/caffeine-runtime/monoform/internal/jobs"
+	"github.com/caffeine-runtime/monoform/internal/office"
+	"github.com/caffeine-runtime/monoform/internal/search"
+	"github.com/caffeine-runtime/monoform/internal/server"
+	"github.com/caffeine-runtime/monoform/internal/settings"
 )
 
 var Version = "1.0.0-dev"
@@ -59,12 +59,15 @@ type App struct {
 func New(start time.Time, launchFiles []string, launchMode string) *App {
 	a := &App{start: start, launchFiles: launchFiles, launchMode: launchMode, books: office.NewBooks()}
 	a.Server = server.New(server.NewToken())
-	server.RecordPages = os.Getenv("HIA_TEST") != ""
+	server.RecordPages = os.Getenv("MF_TEST") != ""
+	if os.Getenv("MF_TEST") == "" && launchMode != "window" && launchMode != "peek" {
+		settings.MoveOldData() // from the app's earlier name, once
+	}
 	path, err := settings.DefaultPath()
 	if err != nil {
-		path = filepath.Join(os.TempDir(), "HoldItAll", "settings.json")
+		path = filepath.Join(os.TempDir(), "Monoform", "settings.json")
 	}
-	if p := os.Getenv("HIA_SETTINGS"); p != "" {
+	if p := os.Getenv("MF_SETTINGS"); p != "" {
 		path = p
 	}
 	a.Settings, err = settings.Open(path)
@@ -185,8 +188,8 @@ func (a *App) Boot() BootInfo {
 		LaunchMode:  a.launchMode,
 		Home:        home,
 		PathSep:     string(filepath.Separator),
-		TestScript:  os.Getenv("HIA_TEST"),
-		TestArg:     os.Getenv("HIA_TEST_ARG"),
+		TestScript:  os.Getenv("MF_TEST"),
+		TestArg:     os.Getenv("MF_TEST_ARG"),
 	}
 }
 
@@ -414,25 +417,25 @@ func (a *App) OpenExternal(url string) {
 }
 
 // TestServedPages lists files the HTML page route served since the last
-// call. Only available in self-test mode (HIA_TEST set).
+// call. Only available in self-test mode (MF_TEST set).
 func (a *App) TestServedPages() []string {
-	if os.Getenv("HIA_TEST") == "" {
+	if os.Getenv("MF_TEST") == "" {
 		return nil
 	}
 	return a.Server.ServedPages()
 }
 
 // TestWriteFile simulates another program changing a file. Only available
-// in self-test mode (HIA_TEST set).
+// in self-test mode (MF_TEST set).
 func (a *App) TestWriteFile(p, content string) error {
-	if os.Getenv("HIA_TEST") == "" {
+	if os.Getenv("MF_TEST") == "" {
 		return os.ErrPermission
 	}
 	return os.WriteFile(p, []byte(content), 0o644)
 }
 
 // PageRoot returns a read-only token that serves dir to an HTML preview at
-// /__hia/page/<token>/ (see server/pages.go).
+// /__mf/page/<token>/ (see server/pages.go).
 func (a *App) PageRoot(dir string) (string, error) { return a.Server.PageRoot(dir) }
 
 // OpenInBrowser opens an existing local HTML or SVG file in the default

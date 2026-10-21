@@ -1,5 +1,5 @@
-// Package cli is Hold It All's command line: `holdit FILE…` opens files in
-// the app; `holdit hash`, `verify`, `info` and `convert` work headless, for
+// Package cli is Monoform's command line: `monoform FILE…` opens files in
+// the app; `monoform hash`, `verify`, `info` and `convert` work headless, for
 // scripts (output like sha256sum, exit codes 0 = fine, 1 = a check failed,
 // 2 = usage or I/O error).
 package cli
@@ -24,27 +24,27 @@ import (
 	_ "golang.org/x/image/tiff"
 	_ "golang.org/x/image/webp"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/filetype"
-	"github.com/caffeine-runtime/hold-it-all/internal/fs"
-	"github.com/caffeine-runtime/hold-it-all/internal/hash"
-	"github.com/caffeine-runtime/hold-it-all/internal/imaging"
-	"github.com/caffeine-runtime/hold-it-all/internal/pdf"
+	"github.com/caffeine-runtime/monoform/internal/filetype"
+	"github.com/caffeine-runtime/monoform/internal/fs"
+	"github.com/caffeine-runtime/monoform/internal/hash"
+	"github.com/caffeine-runtime/monoform/internal/imaging"
+	"github.com/caffeine-runtime/monoform/internal/pdf"
 )
 
-const usage = `Hold It All — one window for your everyday files.
+const usage = `Monoform — one window for your everyday files.
 
 Usage:
-  holdit [FILE...]                 open files in the app (a running window takes them)
-  holdit --peek FILE               a small preview window (Open in editor expands it)
-  holdit --preview FILE...         open files in preview mode (read-only until you choose Edit)
+  monoform [FILE...]                 open files in the app (a running window takes them)
+  monoform --peek FILE               a small preview window (Open in editor expands it)
+  monoform --preview FILE...         open files in preview mode (read-only until you choose Edit)
 
-  holdit hash [-a ALGO[,ALGO]] FILE...   print checksums (sha256 by default; md5, sha1,
+  monoform hash [-a ALGO[,ALGO]] FILE...   print checksums (sha256 by default; md5, sha1,
                                         sha256, sha512, blake3 or all), like sha256sum
-  holdit verify CHECKSUMS...            check files against SHA256SUMS / *.sha256 / BSD lists
-  holdit info FILE...                   type, size and details (pages, image size)
-  holdit convert IN OUT                 convert an image (format from OUT's extension:
+  monoform verify CHECKSUMS...            check files against SHA256SUMS / *.sha256 / BSD lists
+  monoform info FILE...                   type, size and details (pages, image size)
+  monoform convert IN OUT                 convert an image (format from OUT's extension:
                                         png jpg webp gif bmp tiff ico icns; HEIC via the system)
-  holdit help | version
+  monoform help | version
 
 Exit codes: 0 fine, 1 a check failed, 2 usage or I/O error.
 `
@@ -68,7 +68,7 @@ func Main(args []string, version string, out, errw io.Writer) (code int, ok bool
 		fmt.Fprint(out, usage)
 		return 0, true
 	case "version", "-v", "--version":
-		fmt.Fprintf(out, "Hold It All %s\n", version)
+		fmt.Fprintf(out, "Monoform %s\n", version)
 		return 0, true
 	}
 	f, isCmd := commands[args[0]]
@@ -113,7 +113,7 @@ func cmdHash(ctx context.Context, args []string, out, errw io.Writer) int {
 		switch {
 		case a == "-a" || a == "--algorithm":
 			if i+1 >= len(args) {
-				fmt.Fprintln(errw, "holdit hash: -a needs an algorithm")
+				fmt.Fprintln(errw, "monoform hash: -a needs an algorithm")
 				return 2
 			}
 			i++
@@ -132,13 +132,13 @@ func cmdHash(ctx context.Context, args []string, out, errw io.Writer) int {
 	}
 	for _, al := range algos {
 		if !contains(hash.Algorithms, al) {
-			fmt.Fprintf(errw, "holdit hash: unknown algorithm %q (use %s or all)\n", al, strings.Join(hash.Algorithms, ", "))
+			fmt.Fprintf(errw, "monoform hash: unknown algorithm %q (use %s or all)\n", al, strings.Join(hash.Algorithms, ", "))
 			return 2
 		}
 	}
 	files = expand(files)
 	if len(files) == 0 {
-		fmt.Fprintln(errw, "usage: holdit hash [-a ALGO[,ALGO]] FILE...")
+		fmt.Fprintln(errw, "usage: monoform hash [-a ALGO[,ALGO]] FILE...")
 		return 2
 	}
 	code := 0
@@ -152,7 +152,7 @@ func cmdHash(ctx context.Context, args []string, out, errw io.Writer) int {
 			sums, err = hash.File(ctx, f, algos, nil)
 		}
 		if err != nil {
-			fmt.Fprintf(errw, "holdit hash: %s: %v\n", f, cleanErr(err))
+			fmt.Fprintf(errw, "monoform hash: %s: %v\n", f, cleanErr(err))
 			code = 2
 			if ctx.Err() != nil {
 				return 2
@@ -173,7 +173,7 @@ func cmdHash(ctx context.Context, args []string, out, errw io.Writer) int {
 func cmdVerify(ctx context.Context, args []string, out, errw io.Writer) int {
 	files := expand(args)
 	if len(files) == 0 {
-		fmt.Fprintln(errw, "usage: holdit verify CHECKSUM-FILE...")
+		fmt.Fprintln(errw, "usage: monoform verify CHECKSUM-FILE...")
 		return 2
 	}
 	code := 0
@@ -181,7 +181,7 @@ func cmdVerify(ctx context.Context, args []string, out, errw io.Writer) int {
 	for _, f := range files {
 		lines, err := hash.ParseChecksumFile(f)
 		if err != nil {
-			fmt.Fprintf(errw, "holdit verify: %s: %v\n", f, cleanErr(err))
+			fmt.Fprintf(errw, "monoform verify: %s: %v\n", f, cleanErr(err))
 			code = 2
 			continue
 		}
@@ -217,7 +217,7 @@ func cmdVerify(ctx context.Context, args []string, out, errw io.Writer) int {
 		}
 	}
 	if bad+missing > 0 {
-		fmt.Fprintf(errw, "holdit verify: %d OK, %d failed, %d missing\n", ok, bad, missing)
+		fmt.Fprintf(errw, "monoform verify: %d OK, %d failed, %d missing\n", ok, bad, missing)
 		if code == 0 {
 			code = 1
 		}
@@ -228,14 +228,14 @@ func cmdVerify(ctx context.Context, args []string, out, errw io.Writer) int {
 func cmdInfo(ctx context.Context, args []string, out, errw io.Writer) int {
 	files := expand(args)
 	if len(files) == 0 {
-		fmt.Fprintln(errw, "usage: holdit info FILE...")
+		fmt.Fprintln(errw, "usage: monoform info FILE...")
 		return 2
 	}
 	code := 0
 	for i, f := range files {
 		st, err := os.Stat(f)
 		if err != nil {
-			fmt.Fprintf(errw, "holdit info: %s: %v\n", f, cleanErr(err))
+			fmt.Fprintf(errw, "monoform info: %s: %v\n", f, cleanErr(err))
 			code = 2
 			continue
 		}
@@ -270,7 +270,7 @@ func cmdInfo(ctx context.Context, args []string, out, errw io.Writer) int {
 
 func cmdConvert(ctx context.Context, args []string, out, errw io.Writer) int {
 	if len(args) != 2 {
-		fmt.Fprintln(errw, "usage: holdit convert IN OUT   (format from OUT's extension)")
+		fmt.Fprintln(errw, "usage: monoform convert IN OUT   (format from OUT's extension)")
 		return 2
 	}
 	src, dst := args[0], args[1]
@@ -280,7 +280,7 @@ func cmdConvert(ctx context.Context, args []string, out, errw io.Writer) int {
 	}
 	img, err := decode(ctx, src)
 	if err != nil {
-		fmt.Fprintf(errw, "holdit convert: %s: %v\n", src, cleanErr(err))
+		fmt.Fprintf(errw, "monoform convert: %s: %v\n", src, cleanErr(err))
 		return 2
 	}
 	var werr error
@@ -296,7 +296,7 @@ func cmdConvert(ctx context.Context, args []string, out, errw io.Writer) int {
 		werr = fs.AtomicWrite(dst, func(w io.Writer) error { return imaging.Encode(w, img, imaging.Options{Format: format, Quality: 92}) })
 	}
 	if werr != nil {
-		fmt.Fprintf(errw, "holdit convert: %s: %v\n", dst, cleanErr(werr))
+		fmt.Fprintf(errw, "monoform convert: %s: %v\n", dst, cleanErr(werr))
 		return 2
 	}
 	b := img.Bounds()
@@ -342,7 +342,7 @@ func decode(ctx context.Context, p string) (image.Image, error) {
 		}
 		return best, nil
 	}
-	tmp, err := os.MkdirTemp("", "holdit-")
+	tmp, err := os.MkdirTemp("", "monoform-")
 	if err != nil {
 		return nil, err
 	}
@@ -390,7 +390,7 @@ func contains(list []string, s string) bool {
 	return false
 }
 
-// ExeDir is the folder of the running program (where holdit finds the app).
+// ExeDir is the folder of the running program (where monoform finds the app).
 func ExeDir() string {
 	p, err := os.Executable()
 	if err != nil {
@@ -402,21 +402,21 @@ func ExeDir() string {
 	return filepath.Dir(p)
 }
 
-// AppPath is the desktop app next to holdit.
+// AppPath is the desktop app next to monoform.
 func AppPath() string {
 	dir := ExeDir()
 	switch runtime.GOOS {
 	case "windows":
-		return filepath.Join(dir, "hold-it-all.exe")
+		return filepath.Join(dir, "monoform.exe")
 	case "darwin":
-		// Inside the bundle: Contents/MacOS/holdit next to the app binary.
-		for _, n := range []string{"hold-it-all", "Hold It All"} {
+		// Inside the bundle: Contents/MacOS/monoform-cli next to the app binary.
+		for _, n := range []string{"Monoform", "monoform"} {
 			if _, err := os.Stat(filepath.Join(dir, n)); err == nil {
 				return filepath.Join(dir, n)
 			}
 		}
 	}
-	return filepath.Join(dir, "hold-it-all")
+	return filepath.Join(dir, "monoform")
 }
 
 // IsCommand says whether args ask for a command-line subcommand (not files to open).

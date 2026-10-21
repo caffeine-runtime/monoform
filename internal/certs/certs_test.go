@@ -43,7 +43,7 @@ func issue(t *testing.T, tmpl *x509.Certificate, parent *pair) pair {
 
 func chain(t *testing.T) (root, leaf pair) {
 	root = issue(t, &x509.Certificate{
-		SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: "Test Root", Organization: []string{"Hold It All"}, Country: []string{"PL"}},
+		SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: "Test Root", Organization: []string{"Monoform"}, Country: []string{"PL"}},
 		NotBefore: now.AddDate(-1, 0, 0), NotAfter: now.AddDate(10, 0, 0), IsCA: true, BasicConstraintsValid: true, KeyUsage: x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
 	}, nil)
 	leaf = issue(t, &x509.Certificate{

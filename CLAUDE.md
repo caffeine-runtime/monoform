@@ -1,6 +1,6 @@
-# Hold It All — notes for coding agents
+# Monoform — notes for coding agents
 
-Cross-platform desktop app (Wails v2.17.0 + Go 1.26.0 + Svelte 5/TypeScript/Vite) that opens and edits everyday
+Monoform (formerly Hold It All) is a free, open-source (MIT), AI-written cross-platform desktop app (Wails v2.17.0 + Go 1.26.0 + Svelte 5/TypeScript/Vite) that opens and edits everyday
 files: text/Markdown, PDF, images (layered editor), SVG, HTML, JSON/YAML/CSV, Word/Excel, archives, hashes, 3D models,
 audio and video. Offline, no telemetry, permissive licenses only.
 
@@ -12,7 +12,7 @@ are, dependency licenses) · [docs/TESTING.md](docs/TESTING.md) (self-tests) · 
 
 ```sh
 cd frontend && npm ci && npm run check && npm test && cd ..   # frontend types + unit tests
-./scripts/build.sh                                             # frontend + app → build/bin/hold-it-all
+./scripts/build.sh                                             # frontend + app → build/bin/monoform
 go vet -tags webkit2_41 ./... && go test -tags webkit2_41 ./...  # needs frontend/dist from a build
 wails generate module -tags webkit2_41                         # after changing bound Go methods
 python3 scripts/fixtures.py /tmp/fx && scripts/selftest.sh m12 /tmp/fx   # in-app self-test (Xvfb)

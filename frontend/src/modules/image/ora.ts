@@ -1,10 +1,11 @@
 // OpenRaster (.ora): an open layered image format (a zip of PNG layers plus
 // stack.xml) read by GIMP, Krita and MyPaint. Used to save work with its
 // layers. Text and shapes are flattened into their layer's pixels; we also
-// store their Konva description in a namespaced attribute so Hold It All
+// store their Konva description in a namespaced attribute so Monoform
 // can reopen them editable (other apps ignore it). A layer mask is applied
 // to the layer's PNG too; the unmasked pixels and the mask are stored beside
-// it (hia:raw, hia:mask) so the mask stays editable here.
+// it (mf:raw, mf:mask) so the mask stays editable here. Files saved before the
+// rename to Monoform used the hia: prefix and namespace; both are read.
 import { endpoint } from '../../core/backend';
 
 export interface OraLayer {
@@ -60,11 +61,11 @@ export async function writeOra(img: OraImage): Promise<ArrayBuffer> {
   // stack.xml lists layers top first.
   const top = [...img.layers].reverse();
   const xml =
-    `<?xml version="1.0" encoding="UTF-8"?>\n<image version="0.0.5" w="${img.width}" h="${img.height}" xmlns:hia="https://holditall.dev/ora">\n <stack>\n` +
+    `<?xml version="1.0" encoding="UTF-8"?>\n<image version="0.0.5" w="${img.width}" h="${img.height}" xmlns:mf="https://monoform.dev/ora">\n <stack>\n` +
     top
       .map(
         (l, i) =>
-          `  <layer name="${esc(l.name)}" src="data/layer${top.length - 1 - i}.png" x="${Math.round(l.x)}" y="${Math.round(l.y)}" opacity="${l.opacity.toFixed(3)}" visibility="${l.visible ? 'visible' : 'hidden'}" composite-op="${l.composite}"${l.objects ? ` hia:objects="${esc(l.objects)}"` : ''}${l.raw ? ` hia:raw="${esc(l.raw)}"` : ''}${l.mask ? ` hia:mask="${esc(l.mask.src)}"${l.mask.on ? '' : ' hia:mask-off="1"'}` : ''}/>`,
+          `  <layer name="${esc(l.name)}" src="data/layer${top.length - 1 - i}.png" x="${Math.round(l.x)}" y="${Math.round(l.y)}" opacity="${l.opacity.toFixed(3)}" visibility="${l.visible ? 'visible' : 'hidden'}" composite-op="${l.composite}"${l.objects ? ` mf:objects="${esc(l.objects)}"` : ''}${l.raw ? ` mf:raw="${esc(l.raw)}"` : ''}${l.mask ? ` mf:mask="${esc(l.mask.src)}"${l.mask.on ? '' : ' mf:mask-off="1"'}` : ''}/>`,
       )
       .join('\n') +
     `\n </stack>\n</image>\n`;
@@ -102,7 +103,9 @@ export interface OraStackLayer {
   raw?: string;
 }
 
-const hia = (l: Element, name: string) => l.getAttribute(`hia:${name}`) ?? l.getAttributeNS('https://holditall.dev/ora', name) ?? undefined;
+const OLD_NS = 'https://holditall.dev/ora'; // before the rename to Monoform
+const attr = (l: Element, name: string) =>
+  l.getAttribute(`mf:${name}`) ?? l.getAttributeNS('https://monoform.dev/ora', name) ?? l.getAttribute(`hia:${name}`) ?? l.getAttributeNS(OLD_NS, name) ?? undefined;
 
 /** Read an .ora file from disk through the zip endpoint. Layers bottom first. */
 export async function readOra(path: string): Promise<{ width: number; height: number; layers: (OraStackLayer & { bitmap: ImageBitmap })[] }> {
@@ -125,9 +128,9 @@ export async function readOra(path: string): Promise<{ width: number; height: nu
     opacity: Number(l.getAttribute('opacity') ?? 1),
     visible: (l.getAttribute('visibility') ?? 'visible') !== 'hidden',
     blend: oraToBlend(l.getAttribute('composite-op')),
-    objects: hia(l, 'objects'),
-    mask: hia(l, 'mask') ? { src: hia(l, 'mask')!, on: hia(l, 'mask-off') !== '1' } : undefined,
-    raw: hia(l, 'raw'),
+    objects: attr(l, 'objects'),
+    mask: attr(l, 'mask') ? { src: attr(l, 'mask')!, on: attr(l, 'mask-off') !== '1' } : undefined,
+    raw: attr(l, 'raw'),
   }));
   const layers = await Promise.all(
     stackLayers

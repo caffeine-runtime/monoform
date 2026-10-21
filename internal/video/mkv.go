@@ -623,8 +623,8 @@ func remuxMKV(ctx context.Context, src string, plan Plan, w io.WriteSeeker, prog
 		info = append(info, elemUint(idTimestampScale, m.scale)...)
 	}
 	info = append(info, elemFloat(idDuration, float64(outLen))...)
-	info = append(info, elem(idMuxingApp, []byte("Hold It All"))...)
-	info = append(info, elem(idWritingApp, []byte("Hold It All"))...)
+	info = append(info, elem(idMuxingApp, []byte("Monoform"))...)
+	info = append(info, elem(idWritingApp, []byte("Monoform"))...)
 	if err := write(elem(idInfo, info)); err != nil {
 		return nil, err
 	}

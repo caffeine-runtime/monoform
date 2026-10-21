@@ -24,7 +24,7 @@
   function fromDrop(e: DragEvent): Transfer | Promise<Transfer> | null {
     const dt = e.dataTransfer;
     if (!dt) return null;
-    const path = dt.getData('application/x-hia-path');
+    const path = dt.getData('application/x-mf-path');
     if (path) return { kind: 'files', paths: [path] };
     const img = Array.from(dt.files).find((f) => f.type.startsWith('image/'));
     if (img)
@@ -42,7 +42,7 @@
   function takes(e: DragEvent): boolean {
     const kinds = tab.handlers.accept?.kinds ?? [];
     const types = e.dataTransfer?.types ?? [];
-    return (types.includes('application/x-hia-path') && kinds.includes('files')) || (types.includes('Files') && kinds.includes('image')) || (types.includes('text/plain') && kinds.includes('text'));
+    return (types.includes('application/x-mf-path') && kinds.includes('files')) || (types.includes('Files') && kinds.includes('image')) || (types.includes('text/plain') && kinds.includes('text'));
   }
   async function drop(e: DragEvent) {
     if (e.defaultPrevented || !takes(e)) return;

@@ -23,7 +23,7 @@ geo.computeBoundingBox();
 const bb = geo.boundingBox;
 const n = pos.length / 3;
 const gltf = {
-  asset: { version: '2.0', generator: 'hold-it-all fixtures' },
+  asset: { version: '2.0', generator: 'monoform fixtures' },
   extensionsUsed: ['KHR_draco_mesh_compression'], extensionsRequired: ['KHR_draco_mesh_compression'],
   scene: 0, scenes: [{ nodes: [0] }], nodes: [{ name: 'Knot', mesh: 0 }],
   meshes: [{ primitives: [{ attributes: { POSITION: 0, NORMAL: 1 }, indices: 2, material: 0,

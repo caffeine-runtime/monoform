@@ -12,7 +12,7 @@ import (
 )
 
 func TestOcrLanguages(t *testing.T) {
-	t.Setenv("HIA_CACHE", t.TempDir())
+	t.Setenv("MF_CACHE", t.TempDir())
 	a := &App{Assets: fstest.MapFS{"tesseract/tessdata/eng.traineddata.gz": {Data: []byte("\x1f\x8bbundled")}}}
 	if got := a.OcrLanguages(); len(got) != 1 || got[0].Code != "eng" || !got[0].Bundled {
 		t.Fatalf("bundled: %+v", got)
@@ -29,7 +29,7 @@ func TestOcrLanguages(t *testing.T) {
 	}
 	// Served gzipped; the bundled one from the app's assets.
 	rec := httptest.NewRecorder()
-	a.serveTessdata(rec, httptest.NewRequest("GET", "/__hia/tessdata?f=/pol.traineddata.gz", nil))
+	a.serveTessdata(rec, httptest.NewRequest("GET", "/__mf/tessdata?f=/pol.traineddata.gz", nil))
 	zr, err := gzip.NewReader(rec.Body)
 	if err != nil {
 		t.Fatal(err)
@@ -38,13 +38,13 @@ func TestOcrLanguages(t *testing.T) {
 		t.Errorf("served %d bytes", len(b))
 	}
 	rec = httptest.NewRecorder()
-	a.serveTessdata(rec, httptest.NewRequest("GET", "/__hia/tessdata?f=/eng.traineddata.gz", nil))
+	a.serveTessdata(rec, httptest.NewRequest("GET", "/__mf/tessdata?f=/eng.traineddata.gz", nil))
 	if rec.Body.String() != "\x1f\x8bbundled" {
 		t.Errorf("bundled served: %q", rec.Body.String())
 	}
 	for _, bad := range []string{"/../x.traineddata.gz", "/deu.traineddata.gz", "/eng.txt"} {
 		rec = httptest.NewRecorder()
-		a.serveTessdata(rec, httptest.NewRequest("GET", "/__hia/tessdata?f="+bad, nil))
+		a.serveTessdata(rec, httptest.NewRequest("GET", "/__mf/tessdata?f="+bad, nil))
 		if rec.Code < 400 {
 			t.Errorf("%s served", bad)
 		}

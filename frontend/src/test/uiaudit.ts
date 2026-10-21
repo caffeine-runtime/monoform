@@ -86,7 +86,7 @@ export default async function uiaudit(arg: string) {
   const files = [
     '', 'notes/index.md', 'code/sample.ts', 'data/people.json', 'data/grid.csv', 'data/events.jsonl', 'logs/app.log', 'config/app.ini', 'certs/chain.pem',
     'img/photo.png', 'img/anim.gif', 'diagrams/build.dot', 'drawings/flow.drawio', 'drawings/sketch.excalidraw', 'pdf/three.pdf', 'office/report.docx',
-    'office/budget.xlsx', 'office/notes.odt', 'archives/sample.zip', 'packages/hia-test.deb', 'db/shop.db', 'cad/plan.dxf', 'models/cube.stl',
+    'office/budget.xlsx', 'office/notes.odt', 'archives/sample.zip', 'packages/mf-test.deb', 'db/shop.db', 'cad/plan.dxf', 'models/cube.stl',
     'audio/tone.mp3', 'video/clip.webm', 'fonts/test.ttf', 'web/index.html', 'hash/SHA256SUMS', 'compare/a.bin', '@settings', '@compare',
   ];
   for (const f of files) {

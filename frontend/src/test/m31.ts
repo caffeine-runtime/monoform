@@ -29,7 +29,7 @@ export default async function m31(dir: string) {
   assertEq(shot.moduleId, 'image', 'opened in the image editor');
   const ed = await waitFor(() => (ih(shot)?.editor()?.width > 0 ? ih(shot).editor() : null), 'screenshot decoded');
   assert(ed.width >= 640 && ed.height >= 400, `screen-sized: ${ed.width}×${ed.height}`);
-  assert(shot.filePath?.includes('hia-screenshots'), 'saved in the screenshots folder');
+  assert(shot.filePath?.includes('mf-screenshots'), 'saved in the screenshots folder');
   assert(document.querySelector('.tabview.active button[aria-label="Arrow"]') && document.querySelector('.tabview.active button[aria-label="Blur region"]'), 'annotation tools at hand');
   await closeAll();
 
@@ -37,7 +37,7 @@ export default async function m31(dir: string) {
   assert(commands.execute('tools.pickColour'), 'pick colour command');
   const pick = await waitFor(() => workspace.tabs.find((t) => /Screenshot/.test(t.title)), 'colour shot opened', 20000);
   await waitFor(() => (ih(pick)?.tool() === 'picker' && ih(pick)?.panel() === 'colours' ? true : null), 'picker and Colours ready');
-  assert(!pick.filePath?.includes('hia-screenshots'), 'kept out of the screenshots folder');
+  assert(!pick.filePath?.includes('mf-screenshots'), 'kept out of the screenshots folder');
   await closeAll();
 
   // ---- picker and palette on a known image ----

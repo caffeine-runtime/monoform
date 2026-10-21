@@ -18,7 +18,7 @@ type Record struct {
 
 	mu        sync.Mutex
 	reg       map[string]map[string]string // "HKCU\key" → value name → value
-	Shortcuts map[string]string            // "HKCU Programs\Hold It All" → target
+	Shortcuts map[string]string            // "HKCU Programs\Monoform" → target
 	Shims     map[string]string
 	Notified  int
 }

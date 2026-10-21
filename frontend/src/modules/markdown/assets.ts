@@ -108,7 +108,7 @@ export function assetHandlers(tab: Tab) {
     },
     drop(e, view) {
       const pos = view.posAtCoords({ x: e.clientX, y: e.clientY }) ?? view.state.selection.main.head;
-      const internal = e.dataTransfer?.getData('application/x-hia-path');
+      const internal = e.dataTransfer?.getData('application/x-mf-path');
       if (internal) {
         e.preventDefault();
         // Files from the sidebar are linked where they are, not copied.

@@ -89,7 +89,16 @@ export default async function m33(dir: string) {
   workspace.setSplit(null);
   WindowSetSize(before.w, before.h);
   workspace.activate(json);
-  await waitFor(() => (!jbar.classList.contains('compact') ? true : null), 'labels return', 10000); // the window manager can take a while to apply the resize under load
+  // A window manager under load can drop a resize request: ask again each second.
+  let asked = performance.now();
+  await waitFor(() => {
+    if (!jbar.classList.contains('compact')) return true;
+    if (performance.now() - asked > 1000) {
+      WindowSetSize(before.w, before.h);
+      asked = performance.now();
+    }
+    return null;
+  }, 'labels return', 10000);
   assert(!expand.title, 'tooltip removed with the label back');
   for (const t of [...workspace.tabs]) await workspace.close(t, { force: true });
 }

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/download"
+	"github.com/caffeine-runtime/monoform/internal/download"
 )
 
 // Pack is an optional feature's download: its model files (the runtime is

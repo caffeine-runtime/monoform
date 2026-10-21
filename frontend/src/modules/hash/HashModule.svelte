@@ -20,7 +20,7 @@
   let { tab }: { tab: Tab } = $props();
 
   const verifyMode = tab.source.kind === 'file';
-  const ALGO_KEY = 'hia.hash.algos';
+  const ALGO_KEY = 'mf.hash.algos';
   function loadAlgos(): string[] {
     try {
       const v = JSON.parse(localStorage.getItem(ALGO_KEY) ?? 'null');

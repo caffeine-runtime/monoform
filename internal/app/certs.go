@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/certs"
+	"github.com/caffeine-runtime/monoform/internal/certs"
 )
 
 // CertInspect reads certificates/keys from a file (password for PKCS#12).

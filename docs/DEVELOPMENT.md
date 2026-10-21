@@ -1,4 +1,4 @@
-# Developing Hold It All
+# Developing Monoform
 
 Everything needed to edit, build and test the project — for people and for coding agents (Claude Code on the
 desktop or the web, etc.). The short version for agents is in [`../CLAUDE.md`](../CLAUDE.md).
@@ -75,7 +75,7 @@ builds and runs its demo.
 
 | Task | Command |
 |---|---|
-| Build the app (Linux/macOS) | `./scripts/build.sh` → `build/bin/hold-it-all` (macOS: `build/bin/Hold It All.app`) |
+| Build the app (Linux/macOS) | `./scripts/build.sh` → `build/bin/monoform` (macOS: `build/bin/Monoform.app`) |
 | Run with hot reload | `wails dev` (Linux: `wails dev -tags webkit2_41`) |
 | Type-check the frontend | `cd frontend && npm run check` |
 | Frontend unit tests | `cd frontend && npm test` |
@@ -87,7 +87,7 @@ builds and runs its demo.
 | Screenshot the app | `scripts/screenshot.sh out.png "<folder>|<files>|<commands>|<search>|<palette query>|<wait ms>"` (`SHOT_DELAY=6` for slow scenes) |
 
 Self-test scenarios and what each checks are listed in [TESTING.md](TESTING.md). Special ones: `m0-setup` then
-`m0-restore` share a settings file (third argument); `m9` needs `HIA_TIMEOUT=400`; `m6b` needs the search model
+`m0-restore` share a settings file (third argument); `m9` needs `MF_TIMEOUT=400`; `m6b` needs the search model
 served locally (see TESTING.md). CI runs them all except `m6b`.
 
 ### Before every commit/push
@@ -108,14 +108,14 @@ Run the self-tests of the area you touched at least; CI runs everything.
 main.go                 Wails entry point (window, asset server, bindings)
 wails.json              app name, version, file associations
 internal/app            everything the frontend calls (bound methods) + HTTP routes for data
-internal/server         local data channel (/__hia/*): file reads/saves, uploads, folder-scoped page route
+internal/server         local data channel (/__mf/*): file reads/saves, uploads, folder-scoped page route
 internal/media          loopback HTTP server that streams audio/video to <audio>/<video>
 internal/<feature>      archive, audio, filetype, fs, hash, imaging, jobs, newfile, office, pdf, search,
                         semantic, settings, video — plain Go packages with their own tests
 frontend/src/main.ts    boot; frontend/src/shell = window chrome (sidebar, tabs, palette, status bar)
 frontend/src/core       shared state and services (tabs, commands, keys, jobs, backend calls, settings)
 frontend/src/modules    one folder per file type; registered in modules/registry.ts, loaded lazily
-frontend/src/test       in-app self-test scenarios (only loaded when HIA_TEST is set)
+frontend/src/test       in-app self-test scenarios (only loaded when MF_TEST is set)
 frontend/src/wailsjs    generated bindings (don't edit by hand)
 scripts/                build, self-test, fixtures, verifiers, license audit, screenshots
 build/                  packaging: icons, macOS Info.plist, Linux .desktop + install.sh
@@ -177,7 +177,7 @@ These come from the original brief and are checked in review and CI:
 
 ## Commits and branches
 
-- Work and push on the branch you've been given (today the default branch is `claude/hold-it-all-v1-er4dqs`).
+- Work and push on the branch you've been given (today the default branch is `claude/monoform-v1-er4dqs`).
 - Commit after each milestone with a message that explains the change and why; keep the repository's existing
   commit trailers if you're an agent that adds them.
 - Don't open pull requests or publish releases unless asked; releasing is described in [RELEASING.md](RELEASING.md).

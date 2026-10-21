@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/fs"
-	"github.com/caffeine-runtime/hold-it-all/internal/history"
-	"github.com/caffeine-runtime/hold-it-all/internal/settings"
+	"github.com/caffeine-runtime/monoform/internal/fs"
+	"github.com/caffeine-runtime/monoform/internal/history"
+	"github.com/caffeine-runtime/monoform/internal/settings"
 )
 
 // openHistory starts file history next to the settings file. The app's own
@@ -22,14 +22,14 @@ func (a *App) openHistory(settingsPath string) {
 		log.Printf("history: %v", err)
 		return
 	}
-	// Working copies (appTempDir, made on first use) are named hold-it-all-*.
+	// Working copies (appTempDir, made on first use) are named monoform-*.
 	tmp := []string{os.TempDir()}
 	if r, err := filepath.EvalSymlinks(tmp[0]); err == nil && r != tmp[0] {
 		tmp = append(tmp, r)
 	}
 	h.Skip = func(abs string) bool {
 		for _, t := range tmp {
-			if rel, err := filepath.Rel(t, abs); err == nil && strings.HasPrefix(rel, "hold-it-all-") {
+			if rel, err := filepath.Rel(t, abs); err == nil && strings.HasPrefix(rel, "monoform-") {
 				return true
 			}
 		}

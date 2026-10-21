@@ -294,14 +294,14 @@
   HEX/RGB/HSL (click to copy, or use it to draw) and the image's palette (5/8/12 dominant colours by share; copy
   the list or CSS variables, save a .gpl palette) in a Colours panel. After reading an image's text (M30), "Hide
   text" pixelates every recognised word (passwords, names, numbers) in one undoable step.
-- **M32 — Command line, quick peek, preview mode.** `holdit` (a small console program shipped with the app; the
-  app binary accepts the same commands): `holdit FILE…` opens files (a running window takes them), `--peek` and
-  `--preview`; `holdit hash [-a md5,sha1,sha256,sha512,blake3|all] FILE…` prints sha256sum-/BSD-style lines,
-  `holdit verify LIST…` checks SHA256SUMS-style lists (names relative to the list or the current folder),
-  `holdit info` shows type, size, pages / image size, `holdit convert IN OUT` converts images (HEIC via the system);
+- **M32 — Command line, quick peek, preview mode.** `monoform` (a small console program shipped with the app; the
+  app binary accepts the same commands): `monoform FILE…` opens files (a running window takes them), `--peek` and
+  `--preview`; `monoform hash [-a md5,sha1,sha256,sha512,blake3|all] FILE…` prints sha256sum-/BSD-style lines,
+  `monoform verify LIST…` checks SHA256SUMS-style lists (names relative to the list or the current folder),
+  `monoform info` shows type, size, pages / image size, `monoform convert IN OUT` converts images (HEIC via the system);
   patterns the shell didn't expand (Windows) are globbed; exit codes 0 / 1 (a check failed) / 2. Packaging: Linux
-  tarball + install.sh, the Windows installer (a `holdit` shim in the per-user WindowsApps folder, which is on
-  PATH, and a "Quick peek" context-menu verb), the macOS bundle (Settings → Install the holdit command links it into
+  tarball + install.sh, the Windows installer (a `monoform` shim in the per-user WindowsApps folder, which is on
+  PATH, and a "Quick peek" context-menu verb), the macOS bundle (Settings → Install the monoform command links it into
   /usr/local/bin). Quick peek (`--peek`, Open With → Quick peek): a 960×680 window with just the file, read-only,
   no sidebar or tabs; Esc closes it, "Open in editor" makes the window full size, the file editable and brings back
   the last session (peeking never overwrites it). Preview mode: any file tab can be switched between preview
@@ -317,7 +317,7 @@
   becomes narrow and open from the toolbar. Settings rows put their control under the label when narrow; the
   hash checker's summary and time readouts don't break mid-phrase. Checked at 320–1100 px pane widths and the
   640×400 minimum window (self-test `m33`; `uiaudit` lists wrapped labels and overflowing bars for every view).
-- **M34 — File history.** Every save made in Hold It All keeps the file's earlier content and the new one
+- **M34 — File history.** Every save made in Monoform keeps the file's earlier content and the new one
   (text, images, documents, spreadsheets, PDFs, drawings, audio/video exports — anything written through the
   app). *Show file history* (Ctrl+Alt+Y, the tab or file-tree menu) lists the versions by day — before the first
   save, saved, changed by another program, restored — with size changes; each opens read-only, compares with the
@@ -398,15 +398,23 @@
   instead of opening); **Markdown note** — a picture is saved into assets/ and linked, files are linked, text
   inserted; **text/code** — text; **SVG** — a picture is embedded, text becomes a text element. Text dragged out of
   an editor and files dragged from the sidebar can be dropped the same way. A tab that can't take something says so.
-- **M41 — Our own Windows setup.** The NSIS installer is replaced by Hold It All's own setup program, in the app's
+- **M41 — Our own Windows setup.** The NSIS installer is replaced by Monoform's own setup program, in the app's
   look: one card with the app icon, *Install* (or *Update*, showing the version it replaces), and an *Options* fold
-  with the folder, *For everyone on this computer*, desktop shortcut, the `holdit` command and the (unchecked) default
-  app choice; then a progress bar and *Open Hold It All*. It installs for the current user without asking for
-  administrator rights; *For everyone* asks. It notices a running Hold It All (and can close it), and removes an
-  install made by the old installer first. The uninstaller (Settings › Apps) is the same program: *Remove Hold It
-  All?* with an option to delete settings, history and the search index too; file defaults go back to what they were.
+  with the folder, *For everyone on this computer*, desktop shortcut, the `monoform` command and the (unchecked) default
+  app choice; then a progress bar and *Open Monoform*. It installs for the current user without asking for
+  administrator rights; *For everyone* asks. It notices a running Monoform (and can close it), and removes an
+  install made by the old installer first. The uninstaller (Settings › Apps) is the same program: *Remove Monoform?* with an option to delete settings, history and the search index too; file defaults go back to what they were.
   `--quiet` installs/uninstalls without a window (used by CI on a real Windows runner). Off Windows it runs as a demo
   that installs into a test folder (`scripts/setup-selftest.sh`).
+- **Rename: Monoform (2.0.0-beta.8).** Hold It All is now **Monoform** — free, open source (MIT, `LICENSE`) and
+  AI-written — with a new logo (a single rounded M) on the app icon, the sidebar, the setup and every file icon. Each
+  file type's icon now has one shared form (page, tile, symbol, M) and differs only in colour and symbol. Updating
+  keeps everything: settings, file history, the search index and AI models move to the new folders on first start,
+  and the setup removes the old app. The command is `monoform` (`monoform hash`, `verify`, `info`, `convert`).
+- **A shorter app menu.** Families of options are one row each: the theme is a System / Light / Dark toggle,
+  interface size and text size are sliders (double-click resets), split view is a row of layout buttons; on/off
+  options (sidebar, side panels, path bar, hidden files, word wrap, minimap, spaces and tabs, preview mode) are
+  checked items with short names. The individual commands stay in the command palette with their shortcuts.
 - **M43 — Optional AI models: better subject selection, object removal.** *Settings › AI models* lists two optional
   downloads, each with its size, model and licence: **Better subject selection** (BiRefNet; *Select subject* and
   *Remove background* find people, hair and objects far more precisely — the bundled model stays the default) and

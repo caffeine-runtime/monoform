@@ -60,7 +60,7 @@
     const dir = tab.filePath ? dirname(tab.filePath) : '';
     if (dir) {
       try {
-        base = `${location.origin}/__hia/page/${await api.PageRoot(dir)}/`;
+        base = `${location.origin}/__mf/page/${await api.PageRoot(dir)}/`;
       } catch {
         base = '';
       }
@@ -76,7 +76,7 @@
 
   function render() {
     if (!ctl || view === 'source') return;
-    const built = buildPage(ctl.view.state.doc.toString(), { base: base || `${location.origin}/__hia/page/none/`, origin: location.origin, scripts, remote });
+    const built = buildPage(ctl.view.state.doc.toString(), { base: base || `${location.origin}/__mf/page/none/`, origin: location.origin, scripts, remote });
     info = { title: built.title, remoteRefs: built.remoteRefs, externalLinks: built.externalLinks };
     srcdoc = built.html;
     tab.status = { ...tab.status, type: 'HTML page', info: built.title || undefined };

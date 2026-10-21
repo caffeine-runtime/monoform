@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Hold It All's own setup: one calm card in the app's colours instead of
+  // Monoform's own setup: one calm card in the app's colours instead of
   // the stock installer pages. Install (with a few options), progress, done;
   // run as the uninstaller it offers to remove the app.
   import { onMount } from 'svelte';
@@ -44,7 +44,7 @@
 
   async function browse() {
     const d = await api.browse(o.dir);
-    if (d) o.dir = d.toLowerCase().endsWith('hold it all') ? d : `${d}${d.includes('\\') ? '\\' : '/'}Hold It All`;
+    if (d) o.dir = d.toLowerCase().endsWith('monoform') ? d : `${d}${d.includes('\\') ? '\\' : '/'}Monoform`;
   }
 
   async function closeApp() {
@@ -69,7 +69,7 @@
   const install = () => run(() => api.install($state.snapshot(o)), 'done');
   const remove = () => run(() => api.uninstall(removeData), 'removed');
 
-  /** HIA_SETUP_TEST: go through the pages by themselves and report. */
+  /** MF_SETUP_TEST: go through the pages by themselves and report. */
   async function selfTest() {
     await new Promise((r) => setTimeout(r, 400));
     if (info!.mode === 'install') await install();
@@ -82,7 +82,7 @@
 <div class="win">
   <header class="bar" style="--wails-draggable: drag">
     <img src={appIcon} alt="" class="logo" />
-    <span class="title">Hold It All {info?.mode === 'uninstall' ? 'Uninstall' : 'Setup'}</span>
+    <span class="title">Monoform {info?.mode === 'uninstall' ? 'Uninstall' : 'Setup'}</span>
     {#if info?.demo}<span class="demo" title="Nothing is changed on this computer: files go to a test folder">demo</span>{/if}
     <span class="spacer"></span>
     <button class="wbtn" title="Minimise" aria-label="Minimise" onclick={api.minimise}><Icon icon={Minus} size={14} /></button>
@@ -96,19 +96,19 @@
       <div class="hero">
         <img src={appIcon} alt="" class="big" />
         <div>
-          <h1>{update ? 'Update' : 'Install'} Hold It All</h1>
+          <h1>{update ? 'Update' : 'Install'} Monoform</h1>
           <p class="muted">Version {info.version}{update && info.installed?.version ? ` · replaces ${info.installed.version}` : ''}. One window for your everyday files — offline, no account.</p>
         </div>
       </div>
 
       {#if info.running}
         <div class="note warn">
-          <span>Hold It All is open. Close it first (unsaved work will be asked about).</span>
+          <span>Monoform is open. Close it first (unsaved work will be asked about).</span>
           <button class="btn" disabled={closing} onclick={closeApp}>{closing ? 'Closing…' : 'Close it'}</button>
         </div>
       {/if}
       {#if info.old}
-        <div class="note">An earlier version installed with the old installer is removed first{info.old.everyone ? ' (Windows asks for permission)' : ''}. Your settings and files stay.</div>
+        <div class="note">Hold It All, the app's earlier name, is removed first{info.old.everyone ? ' (Windows asks for permission)' : ''}. Your settings and files stay.</div>
       {/if}
 
       <button class="more" aria-expanded={more} onclick={() => (more = !more)}><Icon icon={ChevronDown} size={14} /> Options</button>
@@ -121,8 +121,8 @@
           </label>
           <label class="chk"><input type="checkbox" checked={o.everyone} onchange={(e) => setEveryone((e.target as HTMLInputElement).checked)} /> For everyone on this computer <span class="muted">(asks for permission)</span></label>
           <label class="chk"><input type="checkbox" bind:checked={o.desktop} /> Shortcut on the desktop</label>
-          <label class="chk"><input type="checkbox" bind:checked={o.command} /> The <code>holdit</code> command in the terminal</label>
-          <label class="chk"><input type="checkbox" bind:checked={o.defaults} /> Open text, Markdown, PDF, images, Office files and archives with Hold It All by default</label>
+          <label class="chk"><input type="checkbox" bind:checked={o.command} /> The <code>monoform</code> command in the terminal</label>
+          <label class="chk"><input type="checkbox" bind:checked={o.defaults} /> Open text, Markdown, PDF, images, Office files and archives with Monoform by default</label>
         </div>
       {:else}
         <p class="summary muted">Into {o.dir}{o.desktop ? ' · desktop shortcut' : ''}{o.defaults ? ' · default app' : ''}. Always listed in “Open with”.</p>
@@ -137,13 +137,13 @@
       <div class="hero">
         <img src={appIcon} alt="" class="big" />
         <div>
-          <h1>Remove Hold It All?</h1>
+          <h1>Remove Monoform?</h1>
           <p class="muted">The app, its shortcuts and its file-type settings are removed{info.installed ? ` from ${info.installed.dir}` : ''}. Your own files are never touched.</p>
         </div>
       </div>
       {#if info.running}
         <div class="note warn">
-          <span>Hold It All is open. Close it first.</span>
+          <span>Monoform is open. Close it first.</span>
           <button class="btn" disabled={closing} onclick={closeApp}>{closing ? 'Closing…' : 'Close it'}</button>
         </div>
       {/if}
@@ -162,17 +162,17 @@
   {:else if page === 'done'}
     <main class="center">
       <span class="ok"><Icon icon={Check} size={22} /></span>
-      <h2>Hold It All is {update ? 'updated' : 'installed'}</h2>
-      <p class="muted">Find it in the Start menu{o.desktop ? ' and on the desktop' : ''}. Right-click any file for “Quick peek with Hold It All”.</p>
+      <h2>Monoform is {update ? 'updated' : 'installed'}</h2>
+      <p class="muted">Find it in the Start menu{o.desktop ? ' and on the desktop' : ''}. Right-click any file for “Quick peek with Monoform”.</p>
     </main>
     <footer>
       <button class="btn ghost" onclick={api.quit}>Close</button>
-      <button class="btn primary" onclick={() => void api.launch().then(api.quit)}>Open Hold It All</button>
+      <button class="btn primary" onclick={() => void api.launch().then(api.quit)}>Open Monoform</button>
     </footer>
   {:else if page === 'removed'}
     <main class="center">
       <span class="ok"><Icon icon={Check} size={22} /></span>
-      <h2>Hold It All is removed</h2>
+      <h2>Monoform is removed</h2>
       <p class="muted">{removeData ? 'Its settings and history are gone too.' : 'Your settings stay, in case you install it again.'}</p>
     </main>
     <footer><button class="btn primary" onclick={api.quit}>Close</button></footer>

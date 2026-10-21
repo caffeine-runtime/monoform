@@ -17,8 +17,8 @@ import (
 
 	"github.com/xuri/excelize/v2"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/fs"
-	"github.com/caffeine-runtime/hold-it-all/internal/office"
+	"github.com/caffeine-runtime/monoform/internal/fs"
+	"github.com/caffeine-runtime/monoform/internal/office"
 )
 
 // Kinds lists the kinds Create understands with their default extension.

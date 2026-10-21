@@ -83,7 +83,7 @@ function mermaid(src: string): Promise<DiagramResult> {
     const mm = await loadMermaid();
     // Let a frame through between diagrams.
     await new Promise((r) => requestAnimationFrame(() => r(null)));
-    const id = `hia-mermaid-${++mid}`;
+    const id = `mf-mermaid-${++mid}`;
     try {
       const { svg } = await mm.render(id, src);
       const vb = /viewBox="[-\d.]+ [-\d.]+ ([\d.]+) ([\d.]+)"/.exec(svg);

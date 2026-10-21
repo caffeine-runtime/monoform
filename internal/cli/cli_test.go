@@ -37,10 +37,10 @@ func TestOpenFilesIsNotACommand(t *testing.T) {
 			t.Errorf("%v handled as a command", args)
 		}
 	}
-	if out, _, code := run(t, "--version"); code != 0 || out != "Hold It All 1.2.3\n" {
+	if out, _, code := run(t, "--version"); code != 0 || out != "Monoform 1.2.3\n" {
 		t.Errorf("version: %q", out)
 	}
-	if out, _, _ := run(t, "help"); !strings.Contains(out, "holdit hash") {
+	if out, _, _ := run(t, "help"); !strings.Contains(out, "monoform hash") {
 		t.Error("help text")
 	}
 }

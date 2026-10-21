@@ -179,7 +179,7 @@
 
   function loadPanel(): 'layers' | 'adjust' | 'colours' | null {
     try {
-      const v = localStorage.getItem('hia.image.panel');
+      const v = localStorage.getItem('mf.image.panel');
       return v === 'none' ? null : v === 'adjust' ? 'adjust' : v === 'colours' ? 'colours' : 'layers';
     } catch {
       return 'layers';
@@ -194,7 +194,7 @@
     // Asking for a panel shows side panels again if they were hidden.
     if (p && settings.value.panelsHidden) settings.update((s) => (s.panelsHidden = false));
     try {
-      localStorage.setItem('hia.image.panel', panel ?? 'none');
+      localStorage.setItem('mf.image.panel', panel ?? 'none');
     } catch {
       /* private mode */
     }

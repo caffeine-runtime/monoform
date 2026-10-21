@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/audio"
-	"github.com/caffeine-runtime/hold-it-all/internal/jobs"
-	"github.com/caffeine-runtime/hold-it-all/internal/media"
-	"github.com/caffeine-runtime/hold-it-all/internal/server"
+	"github.com/caffeine-runtime/monoform/internal/audio"
+	"github.com/caffeine-runtime/monoform/internal/jobs"
+	"github.com/caffeine-runtime/monoform/internal/media"
+	"github.com/caffeine-runtime/monoform/internal/server"
 )
 
 // An audio session is one open audio tab: its file's info, the waveform
@@ -169,7 +169,7 @@ func (a *App) MediaRelease(url string) { a.media().Release(url) }
 func (a *App) registerAudioRoutes() {
 	// Waveform peaks from bucket ?from= on, as little-endian int16
 	// (lane-major min/max pairs). X-Done says whether more will come.
-	a.Server.Handle("GET /__hia/audio/peaks", func(w http.ResponseWriter, r *http.Request) {
+	a.Server.Handle("GET /__mf/audio/peaks", func(w http.ResponseWriter, r *http.Request) {
 		s, err := lookupAudio(r.URL.Query().Get("id"))
 		if err != nil {
 			server.Error(w, http.StatusNotFound, err)
@@ -196,7 +196,7 @@ func (a *App) registerAudioRoutes() {
 		}
 		w.Write(buf)
 	})
-	a.Server.Handle("GET /__hia/audio/cover", func(w http.ResponseWriter, r *http.Request) {
+	a.Server.Handle("GET /__mf/audio/cover", func(w http.ResponseWriter, r *http.Request) {
 		s, err := lookupAudio(r.URL.Query().Get("id"))
 		if err != nil || s.cover == nil {
 			http.NotFound(w, r)

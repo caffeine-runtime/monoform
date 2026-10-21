@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/setup"
+	"github.com/caffeine-runtime/monoform/internal/setup"
 )
 
 func system() setup.System { return setup.Windows{} }

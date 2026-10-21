@@ -20,8 +20,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/pdf"
-	"github.com/caffeine-runtime/hold-it-all/internal/server"
+	"github.com/caffeine-runtime/monoform/internal/pdf"
+	"github.com/caffeine-runtime/monoform/internal/server"
 )
 
 // OcrLanguage is one language the recogniser can use.

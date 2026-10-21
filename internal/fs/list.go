@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/filetype"
+	"github.com/caffeine-runtime/monoform/internal/filetype"
 )
 
 // Entry describes one file or directory for the sidebar and dialogs.

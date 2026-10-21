@@ -1,8 +1,8 @@
 // M6b: omnisearch (commands, file names, text in files) and the optional
 // search by meaning: consent, verified download, background indexing,
 // queries without shared words, incremental updates, idle unload, turning off.
-// Run with HIA_MODEL_DIR=<empty dir>, HIA_MODEL_URL=<server with the model>,
-// HIA_CACHE=<empty dir> (see docs/TESTING.md).
+// Run with MF_MODEL_DIR=<empty dir>, MF_MODEL_URL=<server with the model>,
+// MF_CACHE=<empty dir> (see docs/TESTING.md).
 import { api } from '../core/backend';
 import { commands } from '../core/commands';
 import { basename, join } from '../core/paths';

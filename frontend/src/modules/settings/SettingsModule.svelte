@@ -113,8 +113,8 @@
       <input type="checkbox" checked={s.openInPreview} onchange={(e) => settings.update((x) => (x.openInPreview = (e.target as HTMLInputElement).checked))} />
     </label>
     <div class="row">
-      <span class="lbl">Command line: <code>holdit FILE</code> opens files, <code>holdit hash *.iso</code>, <code>verify</code>, <code>info</code> and <code>convert</code> work in scripts{cliStatus?.installed ? ` (installed: ${cliStatus.path})` : ''}</span>
-      {#if cliStatus && !cliStatus.installed && cliStatus.bundled}<button class="btn" onclick={installCli}>Install the holdit command</button>{/if}
+      <span class="lbl">Command line: <code>monoform FILE</code> opens files, <code>monoform hash *.iso</code>, <code>verify</code>, <code>info</code> and <code>convert</code> work in scripts{cliStatus?.installed ? ` (installed: ${cliStatus.path})` : ''}</span>
+      {#if cliStatus && !cliStatus.installed && cliStatus.bundled}<button class="btn" onclick={installCli}>Install the monoform command</button>{/if}
     </div>
     <div class="row">
       <span class="lbl">New files</span>
@@ -125,7 +125,7 @@
   <section class="card">
     <h3>File history</h3>
     <label class="row check">
-      <span class="lbl">Keep earlier versions of files saved in Hold It All, to compare or restore ({formatShortcut('Mod+Alt+Y')} shows a file's history)</span>
+      <span class="lbl">Keep earlier versions of files saved in Monoform, to compare or restore ({formatShortcut('Mod+Alt+Y')} shows a file's history)</span>
       <input type="checkbox" checked={!s.historyOff} onchange={(e) => settings.update((x) => (x.historyOff = !(e.target as HTMLInputElement).checked))} />
     </label>
     <div class="row">
@@ -210,7 +210,7 @@
       <span class="muted">Cache</span><span class="selectable mono">{locations ? tildify(locations.cache, boot.home) : '…'}</span>
       <span class="muted">File history</span><span class="selectable mono">{locations ? tildify(locations.history, boot.home) : '…'}</span>
     </div>
-    <p class="muted small">Hold It All works offline, sends no telemetry and needs no account.</p>
+    <p class="muted small">Monoform works offline, sends no telemetry and needs no account.</p>
   </section>
 </div>
 

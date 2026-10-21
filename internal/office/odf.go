@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/fs"
+	"github.com/caffeine-runtime/monoform/internal/fs"
 )
 
 // OpenDocument (.odt/.ods) packages: a zip whose first entry is an

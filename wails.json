@@ -1,354 +1,354 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "Hold It All",
-  "outputfilename": "hold-it-all",
+  "name": "Monoform",
+  "outputfilename": "monoform",
   "frontend:install": "npm ci",
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
   "wailsjsdir": "./frontend/src",
   "author": {
-    "name": "Hold It All contributors"
+    "name": "Monoform contributors"
   },
   "info": {
-    "companyName": "Hold It All",
-    "productName": "Hold It All",
+    "companyName": "Monoform",
+    "productName": "Monoform",
     "productVersion": "1.0.0",
-    "copyright": "Copyright \u00a9 2026 Hold It All contributors",
-    "comments": "One window for your everyday files.",
+    "copyright": "Copyright \u00a9 2026 The Monoform authors (MIT)",
+    "comments": "Free, open-source everyday tool: one window for your everyday files.",
     "fileAssociations": [
       {
         "ext": "txt",
-        "name": "HoldItAll.txt",
+        "name": "Monoform.txt",
         "description": "Text document",
         "iconName": "file-text",
         "role": "Editor"
       },
       {
         "ext": "log",
-        "name": "HoldItAll.log",
+        "name": "Monoform.log",
         "description": "Text document",
         "iconName": "file-text",
         "role": "Editor"
       },
       {
         "ext": "md",
-        "name": "HoldItAll.md",
+        "name": "Monoform.md",
         "description": "Markdown document",
         "iconName": "file-markdown",
         "role": "Editor"
       },
       {
         "ext": "markdown",
-        "name": "HoldItAll.markdown",
+        "name": "Monoform.markdown",
         "description": "Markdown document",
         "iconName": "file-markdown",
         "role": "Editor"
       },
       {
         "ext": "json",
-        "name": "HoldItAll.json",
+        "name": "Monoform.json",
         "description": "JSON document",
         "iconName": "file-data",
         "role": "Editor"
       },
       {
         "ext": "yaml",
-        "name": "HoldItAll.yaml",
+        "name": "Monoform.yaml",
         "description": "YAML document",
         "iconName": "file-data",
         "role": "Editor"
       },
       {
         "ext": "yml",
-        "name": "HoldItAll.yml",
+        "name": "Monoform.yml",
         "description": "YAML document",
         "iconName": "file-data",
         "role": "Editor"
       },
       {
         "ext": "csv",
-        "name": "HoldItAll.csv",
+        "name": "Monoform.csv",
         "description": "CSV table",
         "iconName": "file-table",
         "role": "Editor"
       },
       {
         "ext": "tsv",
-        "name": "HoldItAll.tsv",
+        "name": "Monoform.tsv",
         "description": "CSV table",
         "iconName": "file-table",
         "role": "Editor"
       },
       {
         "ext": "pdf",
-        "name": "HoldItAll.pdf",
+        "name": "Monoform.pdf",
         "description": "PDF document",
         "iconName": "file-pdf",
         "role": "Editor"
       },
       {
         "ext": "png",
-        "name": "HoldItAll.png",
+        "name": "Monoform.png",
         "description": "Image",
         "iconName": "file-image",
         "role": "Editor"
       },
       {
         "ext": "jpg",
-        "name": "HoldItAll.jpg",
+        "name": "Monoform.jpg",
         "description": "Image",
         "iconName": "file-image",
         "role": "Editor"
       },
       {
         "ext": "jpeg",
-        "name": "HoldItAll.jpeg",
+        "name": "Monoform.jpeg",
         "description": "Image",
         "iconName": "file-image",
         "role": "Editor"
       },
       {
         "ext": "gif",
-        "name": "HoldItAll.gif",
+        "name": "Monoform.gif",
         "description": "Image",
         "iconName": "file-image",
         "role": "Editor"
       },
       {
         "ext": "webp",
-        "name": "HoldItAll.webp",
+        "name": "Monoform.webp",
         "description": "Image",
         "iconName": "file-image",
         "role": "Editor"
       },
       {
         "ext": "bmp",
-        "name": "HoldItAll.bmp",
+        "name": "Monoform.bmp",
         "description": "Image",
         "iconName": "file-image",
         "role": "Editor"
       },
       {
         "ext": "svg",
-        "name": "HoldItAll.svg",
+        "name": "Monoform.svg",
         "description": "SVG image",
         "iconName": "file-vector",
         "role": "Viewer"
       },
       {
         "ext": "docx",
-        "name": "HoldItAll.docx",
+        "name": "Monoform.docx",
         "description": "Word document",
         "iconName": "file-word",
         "role": "Editor"
       },
       {
         "ext": "doc",
-        "name": "HoldItAll.doc",
+        "name": "Monoform.doc",
         "description": "Word document",
         "iconName": "file-word",
         "role": "Editor"
       },
       {
         "ext": "xlsx",
-        "name": "HoldItAll.xlsx",
+        "name": "Monoform.xlsx",
         "description": "Excel workbook",
         "iconName": "file-table",
         "role": "Editor"
       },
       {
         "ext": "xls",
-        "name": "HoldItAll.xls",
+        "name": "Monoform.xls",
         "description": "Excel workbook",
         "iconName": "file-table",
         "role": "Editor"
       },
       {
         "ext": "zip",
-        "name": "HoldItAll.zip",
+        "name": "Monoform.zip",
         "description": "Archive",
         "iconName": "file-archive",
         "role": "Viewer"
       },
       {
         "ext": "7z",
-        "name": "HoldItAll.7z",
+        "name": "Monoform.7z",
         "description": "Archive",
         "iconName": "file-archive",
         "role": "Viewer"
       },
       {
         "ext": "rar",
-        "name": "HoldItAll.rar",
+        "name": "Monoform.rar",
         "description": "Archive",
         "iconName": "file-archive",
         "role": "Viewer"
       },
       {
         "ext": "tar",
-        "name": "HoldItAll.tar",
+        "name": "Monoform.tar",
         "description": "Archive",
         "iconName": "file-archive",
         "role": "Viewer"
       },
       {
         "ext": "gz",
-        "name": "HoldItAll.gz",
+        "name": "Monoform.gz",
         "description": "Archive",
         "iconName": "file-archive",
         "role": "Viewer"
       },
       {
         "ext": "tgz",
-        "name": "HoldItAll.tgz",
+        "name": "Monoform.tgz",
         "description": "Archive",
         "iconName": "file-archive",
         "role": "Viewer"
       },
       {
         "ext": "sha256",
-        "name": "HoldItAll.sha256",
+        "name": "Monoform.sha256",
         "description": "Checksum list",
         "iconName": "file-checksum",
         "role": "Viewer"
       },
       {
         "ext": "md5",
-        "name": "HoldItAll.md5",
+        "name": "Monoform.md5",
         "description": "Checksum list",
         "iconName": "file-checksum",
         "role": "Viewer"
       },
       {
         "ext": "html",
-        "name": "HoldItAll.html",
+        "name": "Monoform.html",
         "description": "Web page",
         "iconName": "file-web",
         "role": "Editor"
       },
       {
         "ext": "htm",
-        "name": "HoldItAll.htm",
+        "name": "Monoform.htm",
         "description": "Web page",
         "iconName": "file-web",
         "role": "Editor"
       },
       {
         "ext": "mp3",
-        "name": "HoldItAll.mp3",
+        "name": "Monoform.mp3",
         "description": "MP3 audio",
         "iconName": "file-audio",
         "role": "Editor"
       },
       {
         "ext": "wav",
-        "name": "HoldItAll.wav",
+        "name": "Monoform.wav",
         "description": "WAV audio",
         "iconName": "file-audio",
         "role": "Editor"
       },
       {
         "ext": "flac",
-        "name": "HoldItAll.flac",
+        "name": "Monoform.flac",
         "description": "FLAC audio",
         "iconName": "file-audio",
         "role": "Editor"
       },
       {
         "ext": "ogg",
-        "name": "HoldItAll.ogg",
+        "name": "Monoform.ogg",
         "description": "OGG audio",
         "iconName": "file-audio",
         "role": "Editor"
       },
       {
         "ext": "m4a",
-        "name": "HoldItAll.m4a",
+        "name": "Monoform.m4a",
         "description": "M4A audio",
         "iconName": "file-audio",
         "role": "Editor"
       },
       {
         "ext": "opus",
-        "name": "HoldItAll.opus",
+        "name": "Monoform.opus",
         "description": "Opus audio",
         "iconName": "file-audio",
         "role": "Editor"
       },
       {
         "ext": "mp4",
-        "name": "HoldItAll.mp4",
+        "name": "Monoform.mp4",
         "description": "MP4 video",
         "iconName": "file-video",
         "role": "Editor"
       },
       {
         "ext": "mov",
-        "name": "HoldItAll.mov",
+        "name": "Monoform.mov",
         "description": "QuickTime video",
         "iconName": "file-video",
         "role": "Editor"
       },
       {
         "ext": "webm",
-        "name": "HoldItAll.webm",
+        "name": "Monoform.webm",
         "description": "WebM video",
         "iconName": "file-video",
         "role": "Editor"
       },
       {
         "ext": "mkv",
-        "name": "HoldItAll.mkv",
+        "name": "Monoform.mkv",
         "description": "Matroska video",
         "iconName": "file-video",
         "role": "Editor"
       },
       {
         "ext": "glb",
-        "name": "HoldItAll.glb",
+        "name": "Monoform.glb",
         "description": "glTF 3D model",
         "iconName": "file-model",
         "role": "Viewer"
       },
       {
         "ext": "gltf",
-        "name": "HoldItAll.gltf",
+        "name": "Monoform.gltf",
         "description": "glTF 3D model",
         "iconName": "file-model",
         "role": "Viewer"
       },
       {
         "ext": "stl",
-        "name": "HoldItAll.stl",
+        "name": "Monoform.stl",
         "description": "STL 3D model",
         "iconName": "file-model",
         "role": "Viewer"
       },
       {
         "ext": "obj",
-        "name": "HoldItAll.obj",
+        "name": "Monoform.obj",
         "description": "OBJ 3D model",
         "iconName": "file-model",
         "role": "Viewer"
       },
       {
         "ext": "fbx",
-        "name": "HoldItAll.fbx",
+        "name": "Monoform.fbx",
         "description": "FBX 3D model",
         "iconName": "file-model",
         "role": "Viewer"
       },
       {
         "ext": "3mf",
-        "name": "HoldItAll.3mf",
+        "name": "Monoform.3mf",
         "description": "3MF 3D model",
         "iconName": "file-model",
         "role": "Viewer"
       },
       {
         "ext": "ply",
-        "name": "HoldItAll.ply",
+        "name": "Monoform.ply",
         "description": "PLY 3D model",
         "iconName": "file-model",
         "role": "Viewer"

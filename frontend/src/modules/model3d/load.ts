@@ -38,9 +38,9 @@ const inWorker = typeof (globalThis as { WorkerGlobalScope?: unknown }).WorkerGl
  * flipY is kept on the texture and applied when it is rebuilt on the main thread.
  */
 function patchTextureLoader() {
-  if (!inWorker || (THREE.TextureLoader.prototype as { hiaPatched?: boolean }).hiaPatched) return;
-  const proto = THREE.TextureLoader.prototype as THREE.TextureLoader & { hiaPatched?: boolean };
-  proto.hiaPatched = true;
+  if (!inWorker || (THREE.TextureLoader.prototype as { mfPatched?: boolean }).mfPatched) return;
+  const proto = THREE.TextureLoader.prototype as THREE.TextureLoader & { mfPatched?: boolean };
+  proto.mfPatched = true;
   proto.load = function (this: THREE.TextureLoader, url: string, onLoad?: (t: THREE.Texture) => void, _p?: unknown, onError?: (e: unknown) => void) {
     const tex = new THREE.Texture();
     const resolved = this.manager.resolveURL((this.path ?? '') + url);

@@ -339,13 +339,13 @@ export class ModelViewer {
         if (!(m.isMesh && !(mat instanceof THREE.MeshBasicMaterial))) return mat;
         const src = mat as THREE.MeshStandardMaterial;
         const basic = new THREE.MeshBasicMaterial({ color: src.color ?? 0xffffff, map: src.map ?? null, vertexColors: src.vertexColors, transparent: src.transparent, opacity: src.opacity, alphaTest: src.alphaTest, side: src.side, alphaMap: src.alphaMap ?? null });
-        basic.userData.hiaUnlit = true;
+        basic.userData.mfUnlit = true;
         return basic;
       };
       const current = this.lighting ? original : Array.isArray(original) ? original.map(toBasic) : toBasic(original);
       // Free the unlit copies we made earlier.
       const prev = m.material;
-      for (const p of Array.isArray(prev) ? prev : [prev]) if (p.userData.hiaUnlit && !(Array.isArray(current) ? current.includes(p) : current === p)) p.dispose();
+      for (const p of Array.isArray(prev) ? prev : [prev]) if (p.userData.mfUnlit && !(Array.isArray(current) ? current.includes(p) : current === p)) p.dispose();
       m.material = current;
       for (const mat of Array.isArray(current) ? current : [current]) {
         if ('wireframe' in mat) (mat as THREE.MeshBasicMaterial).wireframe = this.wireframe;
@@ -406,7 +406,7 @@ export class ModelViewer {
     }
     for (const m of this.unlit.keys()) {
       const cur = m.material;
-      for (const p of Array.isArray(cur) ? cur : [cur]) if (p.userData.hiaUnlit) p.dispose();
+      for (const p of Array.isArray(cur) ? cur : [cur]) if (p.userData.mfUnlit) p.dispose();
     }
     this.unlit.clear();
     this.model = null;

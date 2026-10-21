@@ -9,15 +9,15 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/jobs"
-	"github.com/caffeine-runtime/hold-it-all/internal/semantic"
-	"github.com/caffeine-runtime/hold-it-all/internal/server"
+	"github.com/caffeine-runtime/monoform/internal/jobs"
+	"github.com/caffeine-runtime/monoform/internal/semantic"
+	"github.com/caffeine-runtime/monoform/internal/server"
 )
 
 // Optional semantic search. The model is downloaded only on request into the
-// user cache dir; the index of each folder lives next to it. HIA_CACHE moves
-// both (tests), HIA_MODEL_DIR points at an existing model copy and
-// HIA_MODEL_URL replaces the download host (tests).
+// user cache dir; the index of each folder lives next to it. MF_CACHE moves
+// both (tests), MF_MODEL_DIR points at an existing model copy and
+// MF_MODEL_URL replaces the download host (tests).
 
 var (
 	semOnce  sync.Once
@@ -25,18 +25,18 @@ var (
 )
 
 func cacheDir() string {
-	if d := os.Getenv("HIA_CACHE"); d != "" {
+	if d := os.Getenv("MF_CACHE"); d != "" {
 		return d
 	}
 	d, err := os.UserCacheDir()
 	if err != nil {
 		d = os.TempDir()
 	}
-	return filepath.Join(d, "HoldItAll")
+	return filepath.Join(d, "Monoform")
 }
 
 func modelDir() string {
-	if d := os.Getenv("HIA_MODEL_DIR"); d != "" {
+	if d := os.Getenv("MF_MODEL_DIR"); d != "" {
 		return d
 	}
 	return filepath.Join(cacheDir(), "models", semantic.Model.ID)
@@ -71,7 +71,7 @@ func (a *App) SemanticInfo() SemanticInfo {
 // the app, and only after the user agreed to it).
 func (a *App) SemanticDownload() string {
 	base := semantic.DefaultBaseURL()
-	if u := os.Getenv("HIA_MODEL_URL"); u != "" {
+	if u := os.Getenv("MF_MODEL_URL"); u != "" {
 		base = u
 	}
 	return a.Jobs.Start("model", "Downloading search model", func(ctx context.Context, r *jobs.Reporter) (any, error) {
@@ -81,8 +81,8 @@ func (a *App) SemanticDownload() string {
 
 // SemanticRemoveModel deletes the downloaded model and all folder indexes.
 func (a *App) SemanticRemoveModel() error {
-	if os.Getenv("HIA_MODEL_DIR") != "" {
-		return errors.New("the model directory is set by HIA_MODEL_DIR; not removing it")
+	if os.Getenv("MF_MODEL_DIR") != "" {
+		return errors.New("the model directory is set by MF_MODEL_DIR; not removing it")
 	}
 	if err := a.sem().ClearAll(); err != nil {
 		return err
@@ -131,7 +131,7 @@ func (a *App) registerModelRoute() {
 	for _, f := range semantic.Model.Files {
 		allowed[f.Path] = true
 	}
-	a.Server.Handle("GET /__hia/model/{file...}", func(w http.ResponseWriter, r *http.Request) {
+	a.Server.Handle("GET /__mf/model/{file...}", func(w http.ResponseWriter, r *http.Request) {
 		name := path.Clean(r.PathValue("file"))
 		if !allowed[name] {
 			server.Error(w, http.StatusNotFound, errors.New("not a model file"))

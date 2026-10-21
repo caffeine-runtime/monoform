@@ -7,7 +7,7 @@ let off: (() => void)[] = [];
 const reg = (...cs: Partial<Command>[]) => off.push(commands.register(...cs.map((c) => ({ run: () => {}, ...c }) as Command)));
 afterEach(() => (off.forEach((f) => f()), (off = [])));
 
-const labels = (items: MenuItem[]) => items.map((i) => (i.separator ? '—' : i.items ? `${i.label} ›` : i.label));
+const labels = (items: MenuItem[]) => items.map((i) => (i.separator ? '—' : i.control ? `[${i.control}]` : i.items ? `${i.label} ›` : i.label));
 const sub = (items: MenuItem[], name: string) => items.find((i) => i.label === name)?.items ?? [];
 
 describe('app menu', () => {
@@ -24,11 +24,27 @@ describe('app menu', () => {
       { id: 'tab.close', title: 'Close tab', category: 'Tabs' },
     );
     const m = appMenuItems();
-    expect(labels(m)).toEqual(['Go to file…', 'New ›', '—', 'Save', '—', 'View ›', 'Split view ›', 'Settings', '—', 'Tabs ›']);
+    expect(labels(m)).toEqual(['Go to file…', 'New ›', '—', 'Save', '—', 'View ›', '[fontSize]', 'Settings', '—', 'Tabs ›']);
     expect(m[0].shortcut).toBeTruthy();
     expect(labels(sub(m, 'New'))).toEqual(['New text file', 'New Markdown note']);
-    expect(labels(sub(m, 'Split view'))).toEqual(['Two side by side', 'Four (grid)']); // no repeated prefix
-    expect(labels(sub(m, 'View'))).toEqual(['Something new']); // not placed: still listed under its category
+    // The split layouts are one row of buttons; a command not placed is still listed under its category.
+    expect(labels(sub(m, 'View'))).toEqual(['[split]', '—', 'Something new']);
+  });
+
+  it('shows options as checked items and families of commands as one control row', () => {
+    reg(
+      { id: 'view.toggleSidebar', title: 'Toggle sidebar', category: 'View' },
+      { id: 'view.togglePathBar', title: 'Show / hide the path bar', category: 'View' },
+      { id: 'view.themeDark', title: 'Theme: dark', category: 'View' },
+      { id: 'view.themeLight', title: 'Theme: light', category: 'View' },
+      { id: 'view.uiBigger', title: 'Interface: larger', category: 'View' },
+      { id: 'app.settings', title: 'Settings', category: 'View' },
+    );
+    const m = appMenuItems();
+    expect(labels(m)).toEqual(['View ›', '[theme]', '[uiScale]', '[fontSize]', 'Settings']); // text size: a setting, always there
+    const v = sub(m, 'View');
+    expect(labels(v)).toEqual(['Sidebar', 'Path bar']);
+    expect(v.every((i) => typeof i.checked === 'boolean')).toBe(true);
   });
 
   it('adds the open file’s commands as their own submenu, tools grouped', () => {
@@ -40,7 +56,7 @@ describe('app menu', () => {
       { id: 'image.hiddenThing', title: 'Hidden', category: 'Image', hidden: true },
     );
     const m = appMenuItems();
-    expect(labels(m)).toEqual(['Image ›', 'Tools ›']);
+    expect(labels(m)).toEqual(['Image ›', 'Tools ›', '—', '[fontSize]']); // no theme/size rows: their commands aren't there
     const img = sub(m, 'Image');
     expect(labels(img)).toEqual(['Tools ›', '—', 'Rotate clockwise']);
     expect(labels(sub(img, 'Tools'))).toEqual(['Brush', 'Text']);
@@ -48,7 +64,7 @@ describe('app menu', () => {
 
   it('leaves out commands that are not available and their empty groups', () => {
     reg({ id: 'file.save', title: 'Save', category: 'File', when: () => false }, { id: 'file.new', title: 'New text file', category: 'File', when: () => false });
-    expect(appMenuItems()).toEqual([]);
+    expect(appMenuItems()).toEqual([{ control: 'fontSize' }]);
   });
 });
 

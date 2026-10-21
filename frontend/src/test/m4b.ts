@@ -51,7 +51,7 @@ export default async function m4b(dir: string) {
   page.focus();
   const tn = last.querySelector('span')!.firstChild!;
   placeCaret(tn, tn.textContent!.length - 1);
-  document.execCommand('insertText', false, ', edited in Hold It All');
+  document.execCommand('insertText', false, ', edited in Monoform');
   assert(selectText(last, 'edited'), 'select word');
   docH(d).exec('bold');
   const end = document.createRange();
@@ -74,7 +74,7 @@ export default async function m4b(dir: string) {
   // Reopen: content survived.
   const d2 = (await workspace.openPath(join(dir, 'office', 'report.docx')))!;
   const page2: HTMLElement = await waitFor(() => docH(d2)?.page()?.querySelector('h1') && docH(d2).page(), 'docx reopened');
-  assert(page2.textContent!.includes('Last paragraph, edited in Hold It All.'), 'edit persisted');
+  assert(page2.textContent!.includes('Last paragraph, edited in Monoform.'), 'edit persisted');
   assert(page2.textContent!.includes('A brand new paragraph.'), 'new paragraph persisted');
   assert([...page2.querySelectorAll('b')].some((b) => b.textContent === 'edited'), 'bold persisted');
   assertEq(page2.querySelectorAll('td')[3].textContent, 'B2+', 'table cell edit persisted');

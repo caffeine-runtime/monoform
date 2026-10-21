@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
-    <assemblyIdentity type="win32" name="dev.holditall.setup" version="{{.Info.ProductVersion}}.0" processorArchitecture="*"/>
+    <assemblyIdentity type="win32" name="dev.monoform.setup" version="{{.Info.ProductVersion}}.0" processorArchitecture="*"/>
     <!-- Runs as the user: installing for one user needs no permission; "for everyone" asks then. -->
     <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
         <security>

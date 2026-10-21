@@ -62,7 +62,7 @@ async function ensure(langs: string[]): Promise<TessWorker> {
     workerPath: `${location.origin}/tesseract/worker.min.js`,
     corePath: `${location.origin}/tesseract/tesseract-core-simd-lstm.wasm.js`,
     // The worker appends "/<lang>.traineddata.gz", which lands in f=.
-    langPath: `${location.origin}/__hia/tessdata?t=${encodeURIComponent(sessionToken())}&f=`,
+    langPath: `${location.origin}/__mf/tessdata?t=${encodeURIComponent(sessionToken())}&f=`,
     cacheMethod: 'none',
     gzip: true,
     workerBlobURL: false,

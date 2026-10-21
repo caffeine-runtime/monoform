@@ -12,7 +12,7 @@ describe('markdown renderer', () => {
   });
   it('rewrites relative images to the file endpoint', () => {
     const html = md.render('![cat](assets/cat%201.png)', env);
-    expect(html).toContain('src="/__hia/file?t=tok&amp;path=%2Fnotes%2Fassets%2Fcat%201.png"');
+    expect(html).toContain('src="/__mf/file?t=tok&amp;path=%2Fnotes%2Fassets%2Fcat%201.png"');
     expect(html).toContain('data-path="/notes/assets/cat 1.png"');
   });
   it('does not fetch remote images', () => {

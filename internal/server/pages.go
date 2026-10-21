@@ -77,7 +77,7 @@ func (s *Server) pageDir(token string) (string, bool) {
 	return "", false
 }
 
-// servePage handles GET /__hia/page/<token>/<relative path>.
+// servePage handles GET /__mf/page/<token>/<relative path>.
 func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		http.Error(w, "read-only", http.StatusMethodNotAllowed)

@@ -54,7 +54,7 @@
   // Window title and dirty tracking for the close prompt.
   $effect(() => {
     const t = workspace.active;
-    const title = t ? `${t.dirty ? '• ' : ''}${t.title} — Hold It All` : 'Hold It All';
+    const title = t ? `${t.dirty ? '• ' : ''}${t.title} — Monoform` : 'Monoform';
     document.title = title;
     void api.SetTitle(title);
   });

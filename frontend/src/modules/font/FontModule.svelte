@@ -12,7 +12,7 @@
   let { tab }: { tab: Tab } = $props();
 
   // svelte-ignore state_referenced_locally
-  const family = `hia-font-${tab.id}`;
+  const family = `mf-font-${tab.id}`;
   let face: FontFace | null = null;
   let info = $state<FontInfo | null>(null);
   let error = $state('');

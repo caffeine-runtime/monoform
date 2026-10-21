@@ -58,11 +58,11 @@ jobs:
           go vet -tags webkit2_41 ./...
           go test -tags webkit2_41 ./...
       - name: Model runtime (download from NuGet with the app's code, run a tiny model)
-        run: HIA_AI_NET=1 go test -tags webkit2_41 ./internal/ai -run DownloadRuntime -v
+        run: MF_AI_NET=1 go test -tags webkit2_41 ./internal/ai -run DownloadRuntime -v
       - name: License audit (permissive only)
         run: |
-          go build -tags webkit2_41 -o /tmp/hold-it-all .
-          python3 scripts/licenses.py /tmp/hold-it-all
+          go build -tags webkit2_41 -o /tmp/monoform .
+          python3 scripts/licenses.py /tmp/monoform
 
   selftest:
     name: In-app self-tests (Linux, Xvfb)
@@ -96,8 +96,8 @@ jobs:
           for s in m1 m2 m3 m4 m4b m5 m6 m8 m10 m11 m12 m13 m14 m15 m16 m18 m19 m20 m21 m22 m23 m24 m25 m26 m27 m28 m29 m30 m31 m32 m33 m34 m35 m36 m37 m38 m39 m40 m42; do scripts/selftest.sh "$s" "$FX"; done
           # Quick peek: started with --peek FILE.
           scripts/selftest.sh m32peek "$FX" "" --peek "$FX/diagrams/notes.md"
-          HIA_AI_FAKE=1 HIA_CACHE="$(mktemp -d)" scripts/selftest.sh m43 "$FX"
-          HIA_TIMEOUT=400 scripts/selftest.sh m9 "$FX"
+          MF_AI_FAKE=1 MF_CACHE="$(mktemp -d)" scripts/selftest.sh m43 "$FX"
+          MF_TIMEOUT=400 scripts/selftest.sh m9 "$FX"
           # Pointer maths with a scaled interface (rows and controls at 125 %).
           python3 scripts/fixtures.py "$RUNNER_TEMP/fx125" && echo '{"uiScale":1.25}' > "$RUNNER_TEMP/scale.json" && scripts/selftest.sh m14 "$RUNNER_TEMP/fx125" "$RUNNER_TEMP/scale.json"
           scripts/verify-pdf.sh "$FX"
@@ -139,8 +139,8 @@ jobs:
           if [ -z "$v" ] && [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="${GITHUB_REF#refs/tags/v}"; fi
           if [ -z "$v" ]; then v="0.0.0-dev+${GITHUB_SHA::7}"; fi
           if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.+-]+)?$ ]]; then echo "::error::bad version '$v'"; exit 1; fi
-          echo "HIA_VERSION=$v" >> "$GITHUB_ENV"
-          echo "HIA_LDFLAGS=-X github.com/caffeine-runtime/hold-it-all/internal/app.Version=$v" >> "$GITHUB_ENV"
+          echo "MF_VERSION=$v" >> "$GITHUB_ENV"
+          echo "MF_LDFLAGS=-X github.com/caffeine-runtime/monoform/internal/app.Version=$v" >> "$GITHUB_ENV"
           # The Windows installer needs a plain x.y.z product version.
           node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('wails.json'));j.info.productVersion=process.argv[1];fs.writeFileSync('wails.json',JSON.stringify(j,null,2)+'\n')" "${v%%[-+]*}"
 
@@ -148,79 +148,78 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
-          wails build -tags webkit2_41 -platform linux/amd64 -trimpath -ldflags "$HIA_LDFLAGS"
-          go build -trimpath -ldflags "-X main.version=$HIA_VERSION" -o build/bin/holdit ./cmd/holdit
-          mkdir -p stage/hold-it-all dist
-          cp build/bin/hold-it-all build/bin/holdit build/linux/hold-it-all.desktop build/linux/hold-it-all-peek.desktop build/linux/install.sh stage/hold-it-all/
-          cp build/appicon.png stage/hold-it-all/hold-it-all.png
-          tar -C stage -czf dist/hold-it-all-linux-amd64.tar.gz hold-it-all
+          wails build -tags webkit2_41 -platform linux/amd64 -trimpath -ldflags "$MF_LDFLAGS"
+          mkdir -p stage/monoform dist
+          cp build/bin/monoform build/linux/monoform.desktop build/linux/monoform-peek.desktop build/linux/install.sh stage/monoform/
+          cp build/appicon.png stage/monoform/monoform.png
+          tar -C stage -czf dist/monoform-linux-amd64.tar.gz monoform
 
       - name: Build (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force build/bin | Out-Null
-          go build -trimpath -ldflags "-X main.version=$env:HIA_VERSION" -o build/bin/holdit.exe ./cmd/holdit
-          wails build -platform windows/amd64 -trimpath -o hold-it-all.exe -ldflags "$env:HIA_LDFLAGS"
+          go build -trimpath -ldflags "-X main.version=$env:MF_VERSION" -o build/bin/monoform-cli.exe ./cmd/monoform-cli
+          wails build -platform windows/amd64 -trimpath -o monoform.exe -ldflags "$env:MF_LDFLAGS"
           # Our own setup program (cmd/setup) with the app inside.
           npm --prefix frontend run build:setup
-          go run ./cmd/setup/pack build/bin/hold-it-all.exe build/bin/holdit.exe @((Get-ChildItem build/windows/file-*.ico).FullName)
+          go run ./cmd/setup/pack build/bin/monoform.exe build/bin/monoform-cli.exe @((Get-ChildItem build/windows/file-*.ico).FullName)
           Copy-Item build/windows/icon.ico cmd/setup/build/windows/icon.ico
-          $v = $env:HIA_VERSION -replace '[-+].*$', ''
+          $v = $env:MF_VERSION -replace '[-+].*$', ''
           node -e "const fs=require('fs');const p='cmd/setup/wails.json';const j=JSON.parse(fs.readFileSync(p));j.info.productVersion=process.argv[1];fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n')" "$v"
           Push-Location cmd/setup
-          wails build -platform windows/amd64 -s -skipbindings -webview2 embed -trimpath -o hold-it-all-amd64-installer.exe -ldflags "-X main.version=$env:HIA_VERSION"
+          wails build -platform windows/amd64 -s -skipbindings -webview2 embed -trimpath -o monoform-amd64-installer.exe -ldflags "-X main.version=$env:MF_VERSION"
           Pop-Location
           New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item cmd/setup/build/bin/hold-it-all-amd64-installer.exe dist/
-          Compress-Archive -Path build/bin/hold-it-all.exe,build/bin/holdit.exe -DestinationPath dist/hold-it-all-windows-amd64-portable.zip
+          Copy-Item cmd/setup/build/bin/monoform-amd64-installer.exe dist/
+          Compress-Archive -Path build/bin/monoform.exe,build/bin/monoform-cli.exe -DestinationPath dist/monoform-windows-amd64-portable.zip
 
       - name: Model runtime (Windows DLL loading, wide-char model paths)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $env:HIA_AI_NET = '1'
+          $env:MF_AI_NET = '1'
           go test ./internal/ai -run DownloadRuntime -v
 
       - name: Setup program (Windows, quiet install and uninstall)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $dir = Join-Path $env:RUNNER_TEMP 'Hold It All'
-          $log = Join-Path $env:TEMP 'hold-it-all-setup.log'
-          $p = Start-Process dist/hold-it-all-amd64-installer.exe -ArgumentList '--quiet','--dir',"`"$dir`"",'--desktop','--defaults' -Wait -PassThru
+          $dir = Join-Path $env:RUNNER_TEMP 'Monoform'
+          $log = Join-Path $env:TEMP 'monoform-setup.log'
+          $p = Start-Process dist/monoform-amd64-installer.exe -ArgumentList '--quiet','--dir',"`"$dir`"",'--desktop','--defaults' -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "install exited $($p.ExitCode): $(Get-Content $log -ErrorAction SilentlyContinue)" }
-          foreach ($f in 'hold-it-all.exe','holdit.exe','file-text.ico','file-image.ico','uninstall.exe') { if (-not (Test-Path (Join-Path $dir $f))) { throw "$f not installed" } }
-          $u = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\HoldItAll'
-          if ($u.DisplayVersion -ne $env:HIA_VERSION) { throw "uninstall entry version '$($u.DisplayVersion)'" }
-          if ((Get-ItemProperty 'HKCU:\Software\Classes\.md').'(default)' -ne 'HoldItAll.md') { throw '.md not associated' }
-          if ((Get-ItemProperty 'HKCU:\Software\Classes\HoldItAll.png\DefaultIcon').'(default)' -notlike '*file-image.ico') { throw 'png has no picture icon' }
-          if ((Get-ItemProperty 'HKCU:\Software\Classes\HoldItAll.png\shell\open\command').'(default)' -notlike '*--peek*') { throw 'png does not open in quick view' }
-          if (-not (Test-Path (Join-Path ([Environment]::GetFolderPath('Programs')) 'Hold It All.lnk'))) { throw 'no Start menu shortcut' }
-          if (-not (Test-Path "$env:LOCALAPPDATA\Microsoft\WindowsApps\holdit.cmd")) { throw 'no holdit command' }
-          & (Join-Path $dir 'holdit.exe') version
+          foreach ($f in 'monoform.exe','monoform-cli.exe','file-text.ico','file-image.ico','uninstall.exe') { if (-not (Test-Path (Join-Path $dir $f))) { throw "$f not installed" } }
+          $u = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Monoform'
+          if ($u.DisplayVersion -ne $env:MF_VERSION) { throw "uninstall entry version '$($u.DisplayVersion)'" }
+          if ((Get-ItemProperty 'HKCU:\Software\Classes\.md').'(default)' -ne 'Monoform.md') { throw '.md not associated' }
+          if ((Get-ItemProperty 'HKCU:\Software\Classes\Monoform.png\DefaultIcon').'(default)' -notlike '*file-image.ico') { throw 'png has no picture icon' }
+          if ((Get-ItemProperty 'HKCU:\Software\Classes\Monoform.png\shell\open\command').'(default)' -notlike '*--peek*') { throw 'png does not open in quick view' }
+          if (-not (Test-Path (Join-Path ([Environment]::GetFolderPath('Programs')) 'Monoform.lnk'))) { throw 'no Start menu shortcut' }
+          if (-not (Test-Path "$env:LOCALAPPDATA\Microsoft\WindowsApps\monoform.cmd")) { throw 'no monoform command' }
+          & (Join-Path $dir 'monoform-cli.exe') version
           $p = Start-Process (Join-Path $dir 'uninstall.exe') -ArgumentList '--uninstall','--quiet' -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "uninstall exited $($p.ExitCode): $(Get-Content $log -ErrorAction SilentlyContinue)" }
           # The uninstaller may only go (with the folder) after it exits.
           for ($i = 0; $i -lt 30 -and (Test-Path $dir); $i++) { Start-Sleep -Milliseconds 500 }
           if (Test-Path $dir) { throw "folder left after uninstall: $((Get-ChildItem $dir).Name -join ', ')" }
-          if (Test-Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\HoldItAll') { throw 'uninstall entry left' }
-          if (Test-Path 'HKCU:\Software\Classes\HoldItAll.md') { throw 'file class left' }
-          if (Test-Path (Join-Path ([Environment]::GetFolderPath('Programs')) 'Hold It All.lnk')) { throw 'shortcut left' }
+          if (Test-Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Monoform') { throw 'uninstall entry left' }
+          if (Test-Path 'HKCU:\Software\Classes\Monoform.md') { throw 'file class left' }
+          if (Test-Path (Join-Path ([Environment]::GetFolderPath('Programs')) 'Monoform.lnk')) { throw 'shortcut left' }
           "setup: quiet install and uninstall OK"
 
       - name: Build (macOS)
         if: runner.os == 'macOS'
         run: |
-          wails build -platform darwin/universal -trimpath -ldflags "$HIA_LDFLAGS"
-          for a in amd64 arm64; do GOOS=darwin GOARCH=$a go build -trimpath -ldflags "-X main.version=$HIA_VERSION" -o "build/holdit-$a" ./cmd/holdit; done
-          lipo -create -output "build/bin/Hold It All.app/Contents/MacOS/holdit" build/holdit-amd64 build/holdit-arm64
+          wails build -platform darwin/universal -trimpath -ldflags "$MF_LDFLAGS"
+          for a in amd64 arm64; do GOOS=darwin GOARCH=$a go build -trimpath -ldflags "-X main.version=$MF_VERSION" -o "build/monoform-cli-$a" ./cmd/monoform-cli; done
+          lipo -create -output "build/bin/Monoform.app/Contents/MacOS/monoform-cli" build/monoform-cli-amd64 build/monoform-cli-arm64
           mkdir -p dist
-          ditto -c -k --keepParent "build/bin/Hold It All.app" dist/hold-it-all-macos-universal.zip
+          ditto -c -k --keepParent "build/bin/Monoform.app" dist/monoform-macos-universal.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: hold-it-all-${{ matrix.name }}
+          name: monoform-${{ matrix.name }}
           path: dist/*
           if-no-files-found: error
 
@@ -258,4 +257,4 @@ jobs:
             sed -i '/macos-universal/d' notes.md
             printf '\n**No macOS package in this release** — use the previous release on macOS.\n' >> notes.md
           fi
-          gh release create "v$v" $(find dist -maxdepth 1 -type f | sort) --target "$GITHUB_SHA" --title "Hold It All $v" --notes-file notes.md --generate-notes "${flags[@]}"
+          gh release create "v$v" $(find dist -maxdepth 1 -type f | sort) --target "$GITHUB_SHA" --title "Monoform $v" --notes-file notes.md --generate-notes "${flags[@]}"

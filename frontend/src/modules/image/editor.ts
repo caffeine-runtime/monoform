@@ -1324,7 +1324,7 @@ export class ImageEditor {
       shadowEnabled: o.shadow,
       name: 'text',
     });
-    node.setAttr('hiaFamily', o.fontFamily);
+    node.setAttr('mfFamily', o.fontFamily);
     this.active.objs.add(node);
     this.decorate(node);
     this.commit();
@@ -1359,7 +1359,7 @@ export class ImageEditor {
       return {
         kind: 'text',
         text: n.text(),
-        fontFamily: (n.getAttr('hiaFamily') as string) ?? n.fontFamily(),
+        fontFamily: (n.getAttr('mfFamily') as string) ?? n.fontFamily(),
         fontSize: Math.round(n.fontSize()),
         bold: style.includes('bold'),
         italic: style.includes('italic'),
@@ -1383,7 +1383,7 @@ export class ImageEditor {
       if (p.text !== undefined) n.text(p.text);
       if (p.fontFamily !== undefined) {
         n.fontFamily(cssFamily(p.fontFamily));
-        n.setAttr('hiaFamily', p.fontFamily);
+        n.setAttr('mfFamily', p.fontFamily);
       }
       if (p.fontSize !== undefined && p.fontSize > 0) n.fontSize(p.fontSize);
       if (p.bold !== undefined || p.italic !== undefined) {

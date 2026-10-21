@@ -69,7 +69,7 @@ export function buildPage(text: string, o: PageOptions): BuiltPage {
     if (!href || href.startsWith('#')) continue;
     if (REMOTE.test(href) || (SCHEME.test(href) && !/^(data|blob):/i.test(href))) {
       externalLinks++;
-      a.setAttribute('data-hia-href', href);
+      a.setAttribute('data-mf-href', href);
       a.removeAttribute('href');
       a.setAttribute('title', `${href} — use “Open in browser” to follow external links`);
       a.style.cursor = 'not-allowed';

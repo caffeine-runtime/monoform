@@ -144,7 +144,7 @@ func newFLACEncoder(w io.WriteSeeker, f Format, tags Tags, picture *Picture) (*f
 	}
 	// The encoder writes block lengths as given, so compute them.
 	if len(comments) > 0 {
-		const vendor = "Hold It All"
+		const vendor = "Monoform"
 		n := 4 + len(vendor) + 4
 		for _, c := range comments {
 			n += 4 + len(c[0]) + 1 + len(c[1])

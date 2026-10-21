@@ -89,7 +89,7 @@ func LoadRuntime(path string) (*Runtime, error) {
 		return nil, errors.New("ONNX Runtime is too old")
 	}
 	rt := &Runtime{api: api}
-	logID := cstr("hold-it-all")
+	logID := cstr("monoform")
 	if err := rt.status(rt.call(fnCreateEnv, loggingLevelError, uintptr(unsafe.Pointer(&logID[0])), ptr(&rt.env))); err != nil {
 		return nil, err
 	}

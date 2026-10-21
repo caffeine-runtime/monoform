@@ -87,7 +87,7 @@ export class TextController {
     this.loading = true;
     tab.status = { ...tab.status, info: 'Loading…' };
     let first = true;
-    const prof = (globalThis as any).__hiaProf as ((label: string, ms: number) => void) | undefined;
+    const prof = (globalThis as any).__mfProf as ((label: string, ms: number) => void) | undefined;
     const timed = <T>(label: string, fn: () => T): T => {
       if (!prof) return fn();
       const t = performance.now();

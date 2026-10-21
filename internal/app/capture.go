@@ -9,12 +9,12 @@ import (
 
 	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/capture"
+	"github.com/caffeine-runtime/monoform/internal/capture"
 )
 
 // screenshotDir is where screenshots are saved: Pictures/Screenshots.
 func screenshotDir() string {
-	if d := os.Getenv("HIA_SCREENSHOTS"); d != "" {
+	if d := os.Getenv("MF_SCREENSHOTS"); d != "" {
 		return d
 	}
 	home, err := os.UserHomeDir()
@@ -34,7 +34,7 @@ func (a *App) ScreenCapture(mode string, delay int, temp bool) (capture.Result, 
 	if temp {
 		dst = a.TempPath(name)
 	}
-	hide := a.ctx != nil && os.Getenv("HIA_TEST_KEEP_WINDOW") == ""
+	hide := a.ctx != nil && os.Getenv("MF_TEST_KEEP_WINDOW") == ""
 	if hide {
 		wruntime.WindowHide(a.ctx)
 		defer wruntime.WindowShow(a.ctx)

@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/db"
-	"github.com/caffeine-runtime/hold-it-all/internal/fs"
+	"github.com/caffeine-runtime/monoform/internal/db"
+	"github.com/caffeine-runtime/monoform/internal/fs"
 )
 
 // Open database files, by handle (one per tab).

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CHUNK_BYTES, uploadParts } from './upload';
 
-const urlFor = (p: string, q: Record<string, string>) => `/__hia/${p}?${new URLSearchParams(q)}`;
+const urlFor = (p: string, q: Record<string, string>) => `/__mf/${p}?${new URLSearchParams(q)}`;
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -20,14 +20,14 @@ describe('uploadParts', () => {
   it('sends small payloads in one request', async () => {
     const calls = mockFetch();
     await uploadParts(urlFor, '/x', [new Uint8Array(10), new Uint8Array(5)]);
-    expect(calls).toEqual([{ url: '/__hia/save?path=%2Fx', size: 15 }]);
+    expect(calls).toEqual([{ url: '/__mf/save?path=%2Fx', size: 15 }]);
   });
   it('chunks large payloads and commits', async () => {
     const calls = mockFetch();
     const big = new Uint8Array(CHUNK_BYTES * 2 + 100);
     const progress: number[] = [];
     await uploadParts(urlFor, '/x', [big.subarray(0, 300), big.subarray(300)], (d) => progress.push(d));
-    expect(calls.map((c) => c.url.split('?')[0])).toEqual(['/__hia/upload/begin', '/__hia/upload/chunk', '/__hia/upload/chunk', '/__hia/upload/chunk', '/__hia/upload/commit']);
+    expect(calls.map((c) => c.url.split('?')[0])).toEqual(['/__mf/upload/begin', '/__mf/upload/chunk', '/__mf/upload/chunk', '/__mf/upload/chunk', '/__mf/upload/commit']);
     expect(calls.slice(1, 4).map((c) => c.size)).toEqual([CHUNK_BYTES, CHUNK_BYTES, 100]);
     expect(progress[progress.length - 1]).toBe(big.byteLength);
   });

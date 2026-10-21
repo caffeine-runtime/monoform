@@ -9,7 +9,7 @@ import (
 
 	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/settings"
+	"github.com/caffeine-runtime/monoform/internal/settings"
 )
 
 // A tab moved to a window of its own runs as a second app process started
@@ -50,7 +50,7 @@ var handoff struct {
 // processes of their own, so several can be open next to the editor. In
 // self-test mode nothing is started or closed; TestLastHandoff reports it.
 func (a *App) OpenInEditor(paths []string) error {
-	if os.Getenv("HIA_TEST") != "" {
+	if os.Getenv("MF_TEST") != "" {
 		handoff.Lock()
 		handoff.last = append([]string{}, paths...)
 		handoff.Unlock()
@@ -82,14 +82,14 @@ func childEnv(env []string) []string {
 	out := make([]string, 0, len(env)+1)
 	test := ""
 	for _, kv := range env {
-		if v, ok := strings.CutPrefix(kv, "HIA_TEST="); ok {
+		if v, ok := strings.CutPrefix(kv, "MF_TEST="); ok {
 			test = v
 			continue
 		}
 		out = append(out, kv)
 	}
 	if test != "" {
-		out = append(out, "HIA_TEST=windowchild")
+		out = append(out, "MF_TEST=windowchild")
 	}
 	return out
 }

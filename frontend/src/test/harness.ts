@@ -1,4 +1,4 @@
-// Helpers for in-webview self tests (HIA_TEST). Not part of the normal UI:
+// Helpers for in-webview self tests (MF_TEST). Not part of the normal UI:
 // this chunk only loads when the env var is set.
 import { api } from '../core/backend';
 

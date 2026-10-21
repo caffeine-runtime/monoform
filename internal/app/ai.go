@@ -14,15 +14,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/ai"
-	"github.com/caffeine-runtime/hold-it-all/internal/jobs"
-	"github.com/caffeine-runtime/hold-it-all/internal/server"
+	"github.com/caffeine-runtime/monoform/internal/ai"
+	"github.com/caffeine-runtime/monoform/internal/jobs"
+	"github.com/caffeine-runtime/monoform/internal/server"
 )
 
 // Optional image models (better subject selection, object removal). They are
 // downloaded only when the user installs them (Settings › AI models, or the
 // offer when first used) into the cache dir and run in-process with ONNX
-// Runtime, loaded on use and freed after a minute idle. HIA_AI_FAKE=1 (self
+// Runtime, loaded on use and freed after a minute idle. MF_AI_FAKE=1 (self
 // tests) swaps them for tiny stand-ins: installing takes a moment, the
 // subject is an ellipse and removal fills with the surrounding colour.
 
@@ -38,7 +38,7 @@ func (a *App) ai() *ai.Engine {
 	return aiEngine
 }
 
-func aiFake() bool { return os.Getenv("HIA_AI_FAKE") == "1" && os.Getenv("HIA_TEST") != "" }
+func aiFake() bool { return os.Getenv("MF_AI_FAKE") == "1" && os.Getenv("MF_TEST") != "" }
 
 func fakeInstalled(p ai.Pack) string { return filepath.Join(cacheDir(), "models", "fake-"+p.ID) }
 
@@ -167,7 +167,7 @@ func takeInput(id string, size int) ([]byte, error) {
 
 func (a *App) registerAIRoutes() {
 	// A piece of an input: ?id=&off=&total= (the first piece allocates it).
-	a.Server.Handle("POST /__hia/ai/input", func(w http.ResponseWriter, r *http.Request) {
+	a.Server.Handle("POST /__mf/ai/input", func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
 		id := q.Get("id")
 		off, err1 := strconv.Atoi(q.Get("off"))
@@ -192,7 +192,7 @@ func (a *App) registerAIRoutes() {
 		server.JSON(w, map[string]bool{"ok": true})
 	})
 	// A result, by Range (it's dropped once its last byte was read).
-	a.Server.Handle("GET /__hia/ai/result", func(w http.ResponseWriter, r *http.Request) {
+	a.Server.Handle("GET /__mf/ai/result", func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Query().Get("id")
 		aiBlobs.Lock()
 		b := aiBlobs.out[id]
@@ -214,7 +214,7 @@ func (a *App) registerAIRoutes() {
 	})
 	// The subject of a picture: the input is SubjectSize² RGB; the result one
 	// opacity byte per pixel. Replies {"result": id}.
-	a.Server.Handle("POST /__hia/ai/subject", func(w http.ResponseWriter, r *http.Request) {
+	a.Server.Handle("POST /__mf/ai/subject", func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Query().Get("input")
 		rgb, err := takeInput(id, 3*ai.SubjectSize*ai.SubjectSize)
 		if err != nil {
@@ -239,7 +239,7 @@ func (a *App) registerAIRoutes() {
 	// Object removal runs as a job (progress and Cancel in the status bar):
 	// the input is EraseSize² RGB then EraseSize² mask bytes. Replies the job
 	// id; the repainted RGB is the result under that id once the job is done.
-	a.Server.Handle("POST /__hia/ai/erase", func(w http.ResponseWriter, r *http.Request) {
+	a.Server.Handle("POST /__mf/ai/erase", func(w http.ResponseWriter, r *http.Request) {
 		const n = ai.EraseSize * ai.EraseSize
 		body, err := takeInput(r.URL.Query().Get("input"), 4*n)
 		if err != nil {

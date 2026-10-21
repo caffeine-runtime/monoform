@@ -92,7 +92,7 @@
 
   function dragStart(e: DragEvent, item: TreeItem) {
     if (!e.dataTransfer) return;
-    e.dataTransfer.setData('application/x-hia-path', item.archive ? '' : item.path);
+    e.dataTransfer.setData('application/x-mf-path', item.archive ? '' : item.path);
     e.dataTransfer.setData('text/plain', item.path);
     e.dataTransfer.effectAllowed = 'copy';
   }

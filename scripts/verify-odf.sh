@@ -9,7 +9,7 @@ export HOME=${HOME_FOR_SOFFICE:-$OUT}
 soffice --headless --convert-to "txt:Text (encoded):UTF8" --outdir "$OUT" "$D/notes.odt" >/dev/null 2>&1
 soffice --headless --convert-to csv --outdir "$OUT" "$D/budget.ods" >/dev/null 2>&1
 cat "$OUT/notes.txt"
-grep -q "Last paragraph, edited in Hold It All." "$OUT/notes.txt" || fail "odt edit not readable by LibreOffice"
+grep -q "Last paragraph, edited in Monoform." "$OUT/notes.txt" || fail "odt edit not readable by LibreOffice"
 grep -q "Step three" "$OUT/notes.txt" || fail "new list item missing"
 grep -q "Quarterly report" "$OUT/notes.txt" || fail "heading lost"
 unzip -p "$D/notes.odt" content.xml | grep -q "<text:note-body><text:p[^>]*>A footnote.</text:p>" || fail "footnote lost"

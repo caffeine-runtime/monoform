@@ -8,7 +8,7 @@ import (
 	"io/fs"
 	"strings"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/setup"
+	"github.com/caffeine-runtime/monoform/internal/setup"
 )
 
 // The app's files, gzipped, with payload/files.json listing names and sizes
@@ -50,7 +50,7 @@ func payloadFiles() []setup.File {
 		}})
 	}
 	if len(out) == 0 {
-		for _, n := range append([]string{setup.Exe, "holdit.exe"}, setup.Icons(setup.Assocs)...) {
+		for _, n := range append([]string{setup.Exe, setup.CLIExe}, setup.Icons(setup.Assocs)...) {
 			n := n
 			body := "stand-in for " + n + " (demo build without a payload)\n"
 			out = append(out, setup.File{Name: n, Size: int64(len(body)), Open: func() (io.ReadCloser, error) { return io.NopCloser(strings.NewReader(body)), nil }})

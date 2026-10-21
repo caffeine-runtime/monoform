@@ -354,7 +354,7 @@ async function save(path: string, token: string) {
     lastTerm = eol;
   }
   flush();
-  const urlFor = (p: string, q: Record<string, string>) => `/__hia/${p}?${new URLSearchParams({ t: token, ...q })}`;
+  const urlFor = (p: string, q: Record<string, string>) => `/__mf/${p}?${new URLSearchParams({ t: token, ...q })}`;
   return uploadParts(urlFor, path, parts, (done, total) => post({ type: 'progress', phase: 'Saving', done, total }));
 }
 

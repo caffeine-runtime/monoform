@@ -74,7 +74,7 @@
     }
     parseError = '';
     const all = [rootEl, ...Array.from(rootEl.getElementsByTagName('*'))];
-    all.forEach((e, i) => e.setAttribute('data-hia-i', String(i)));
+    all.forEach((e, i) => e.setAttribute('data-mf-i', String(i)));
     sanitize(rootEl);
     size = measure(rootEl);
     const node = document.importNode(rootEl, true) as unknown as SVGSVGElement;
@@ -122,7 +122,7 @@
   }
   export const zoom = () => pv.zoom;
 
-  const inline = (i: number | null) => (i === null || !root ? null : root.querySelector<SVGGraphicsElement>(`[data-hia-i="${i}"]`) ?? (i === 0 ? root : null));
+  const inline = (i: number | null) => (i === null || !root ? null : root.querySelector<SVGGraphicsElement>(`[data-mf-i="${i}"]`) ?? (i === 0 ? root : null));
 
   function measureBox() {
     const el = inline(selected);
@@ -167,10 +167,10 @@
 
   /** What a click on `target` selects: the top-level shape, then one level deeper per click inside the selection. */
   function pick(target: Element, deep: boolean): number | null {
-    const hit = target.closest('[data-hia-i]');
+    const hit = target.closest('[data-mf-i]');
     if (!hit || hit === root) return null;
     const chain: number[] = [];
-    for (let e: Element | null = hit; e && e !== root; e = e.parentElement) chain.unshift(Number(e.getAttribute('data-hia-i')));
+    for (let e: Element | null = hit; e && e !== root; e = e.parentElement) chain.unshift(Number(e.getAttribute('data-mf-i')));
     if (deep) return chain[chain.length - 1];
     // Inside the current selection: keep it (so it can be dragged); else the top-level shape.
     return selected !== null && chain.includes(selected) ? selected : chain[0];
@@ -386,10 +386,10 @@
   function dbl(e: MouseEvent) {
     if (tool !== 'select') return;
     // Double-click goes one level deeper into a group (or edits text).
-    const hit = (e.target as Element).closest('[data-hia-i]');
+    const hit = (e.target as Element).closest('[data-mf-i]');
     if (!hit || hit === root || selected === null) return;
     const chain: number[] = [];
-    for (let el: Element | null = hit; el && el !== root; el = el.parentElement) chain.unshift(Number(el.getAttribute('data-hia-i')));
+    for (let el: Element | null = hit; el && el !== root; el = el.parentElement) chain.unshift(Number(el.getAttribute('data-mf-i')));
     const at = chain.indexOf(selected);
     if (at >= 0 && at < chain.length - 1) selected = chain[at + 1];
     else if (els[selected]?.tag === 'text') void editText(selected);

@@ -1,7 +1,7 @@
 // Package server implements the binary data channel between the webview and
 // Go. Wails bindings marshal everything as JSON, which is far too slow for a
 // 50 MB log or a PDF, so file contents travel over plain HTTP requests that
-// the Wails asset server routes to this handler (/__hia/...).
+// the Wails asset server routes to this handler (/__mf/...).
 //
 // Every request must carry the per-launch token (?t=...). Only our own
 // frontend knows it, so content rendered from user files (markdown, SVG) can't
@@ -26,11 +26,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/filetype"
-	"github.com/caffeine-runtime/hold-it-all/internal/fs"
+	"github.com/caffeine-runtime/monoform/internal/filetype"
+	"github.com/caffeine-runtime/monoform/internal/fs"
 )
 
-const Prefix = "/__hia/"
+const Prefix = "/__mf/"
 
 // MaxUpload bounds request bodies (a saved file). Large enough for any
 // realistic document or image, small enough to stop runaway memory use.
@@ -61,20 +61,20 @@ func NewToken() string {
 
 func New(token string) *Server {
 	s := &Server{token: token, mux: http.NewServeMux(), Transforms: map[string]Transform{}}
-	s.mux.HandleFunc("GET /__hia/file", s.handleFile)
-	s.mux.HandleFunc("POST /__hia/save", s.handleSave)
-	s.mux.HandleFunc("POST /__hia/asset", s.handleAsset)
+	s.mux.HandleFunc("GET /__mf/file", s.handleFile)
+	s.mux.HandleFunc("POST /__mf/save", s.handleSave)
+	s.mux.HandleFunc("POST /__mf/asset", s.handleAsset)
 	s.registerUploads()
-	s.mux.HandleFunc("GET /__hia/ping", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok")) })
+	s.mux.HandleFunc("GET /__mf/ping", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok")) })
 	return s
 }
 
-// Handle registers an additional route (pattern like "POST /__hia/pdf").
+// Handle registers an additional route (pattern like "POST /__mf/pdf").
 func (s *Server) Handle(pattern string, h http.HandlerFunc) { s.mux.HandleFunc(pattern, h) }
 
 func (s *Server) Token() string { return s.token }
 
-// Middleware routes /__hia/ requests to the server and everything else to next.
+// Middleware routes /__mf/ requests to the server and everything else to next.
 func (s *Server) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, Prefix) {

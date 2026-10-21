@@ -8,7 +8,7 @@ import { kindOfFence } from '../diagram/fence';
 export interface RenderEnv {
   /** Absolute path of the note, for resolving relative links. */
   base: string;
-  /** Session token for /__hia/ URLs. */
+  /** Session token for /__mf/ URLs. */
   token: string;
 }
 
@@ -25,7 +25,7 @@ function isExternal(href: string): boolean {
 }
 
 export function fileUrlFor(path: string, token: string): string {
-  return `/__hia/file?t=${encodeURIComponent(token)}&path=${encodeURIComponent(path)}`;
+  return `/__mf/file?t=${encodeURIComponent(token)}&path=${encodeURIComponent(path)}`;
 }
 
 export function createRenderer() {

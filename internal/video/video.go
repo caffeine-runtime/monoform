@@ -17,7 +17,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	hfs "github.com/caffeine-runtime/hold-it-all/internal/fs"
+	hfs "github.com/caffeine-runtime/monoform/internal/fs"
 )
 
 // Info describes a video file for the player and editor.

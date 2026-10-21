@@ -17,8 +17,8 @@ describe('font info', () => {
   it('reads names, weight, glyphs and coverage from TrueType', async () => {
     const i = await fontInfo(load('test.ttf'));
     expect(i.format).toBe('TrueType');
-    expect([i.family, i.style, i.version]).toEqual(['Hia Test Sans', 'Bold', 'Version 1.002']);
-    expect(i.copyright).toContain('Hold It All');
+    expect([i.family, i.style, i.version]).toEqual(['Mf Test Sans', 'Bold', 'Version 1.002']);
+    expect(i.copyright).toContain('Monoform');
     expect(i.license).toContain('CC0');
     expect(i.weight).toBe(700);
     expect(i.glyphs).toBe(5);
@@ -27,7 +27,7 @@ describe('font info', () => {
   it('reads WOFF (inflating its tables)', async () => {
     const i = await fontInfo(load('test.woff'));
     expect(i.format).toBe('WOFF');
-    expect(i.family).toBe('Hia Test Sans');
+    expect(i.family).toBe('Mf Test Sans');
     expect(i.chars).toContain(0x17e);
   });
   it('rejects other files and names blocks', async () => {
