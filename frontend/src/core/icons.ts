@@ -46,3 +46,6 @@ export { default as PenTool } from '@lucide/svelte/icons/pen-tool';
 export { default as Globe } from '@lucide/svelte/icons/globe';
 export { default as Braces } from '@lucide/svelte/icons/braces';
 export { default as Type } from '@lucide/svelte/icons/type';
+export { default as History } from '@lucide/svelte/icons/history';
+export { default as Diff } from '@lucide/svelte/icons/diff';
+export { default as ArrowDownToLine } from '@lucide/svelte/icons/arrow-down-to-line';
