@@ -85,6 +85,7 @@ builds and runs its demo.
 | Make test fixtures | `python3 scripts/fixtures.py /tmp/fx` (re-run before each self-test session; it resets outputs) |
 | Run one self-test | `scripts/selftest.sh m12 /tmp/fx` (exit 0 = PASS; prints timings and UI-frame measurements) |
 | Screenshot the app | `scripts/screenshot.sh out.png "<folder>|<files>|<commands>|<search>|<palette query>|<wait ms>"` (`SHOT_DELAY=6` for slow scenes) |
+| README clips and screenshots | `scripts/readme-media.sh [scene…]` (after a build; needs ffmpeg) → `docs/readme/*.webp`, `docs/screenshots/*.png`; `python3 scripts/readme_hero.py` redraws the banner (needs `pip install fonttools brotli`) |
 
 Self-test scenarios and what each checks are listed in [TESTING.md](TESTING.md). Special ones: `m0-setup` then
 `m0-restore` share a settings file (third argument); `m9` needs `MF_TIMEOUT=400`; `m6b` needs the search model
@@ -157,7 +158,8 @@ These come from the original brief and are checked in review and CI:
 3. **Self-test:** `frontend/src/test/mNN.ts` using test hooks the component exposes on its tab
    (`(tab as any).fooTest = {...}`), fixtures generated in `scripts/fixtures.py`, registered in
    `test/selftest.ts`, added to the self-test loop in `.github/workflows/build.yml`, and described in TESTING.md.
-4. **Docs** as above; a screenshot in `docs/screenshots/` for user-visible features.
+4. **Docs** as above; for user-visible features a gallery screenshot — a `still-<name>` in `frontend/src/test/demo.ts`
+   and `scripts/readme-media.sh`, recorded from the demo folder (`scripts/demo_files.py`) — and a README line.
 
 ## Things that are easy to trip over
 

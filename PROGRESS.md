@@ -434,6 +434,12 @@
   file with no folder open, an export from an unsaved tab) was offered the working directory, which is
   `C:\Windows\System32` when Windows starts the app from Explorer or the installer. It now opens in the folder you
   last saved into, else Documents (Windows' known folder, so OneDrive redirection is followed; XDG on Linux).
+- **A project page.** The README opens with an animated banner (light/dark), clips recorded from the app (opening
+  every kind of file in one window, recolouring a selection and removing a background, Markdown with a live diagram,
+  four files side by side), the file types with their icons, and a gallery of 16 fresh screenshots — all made by
+  `scripts/readme-media.sh` from a generated demo folder. Found on the way and fixed: a **PDF at Fit width didn't
+  refit** when the window or its split pane changed size (self-test `m33`), and **Excel files written by scripts
+  showed formulas without results as empty cells** — they're calculated on open now (Go test).
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -499,7 +505,7 @@ available here).
   .msi, list their files but can't extract them (MSZIP and stored cabinets — what WiX and most tools write — work).
 - Start-up on the headless Linux VM is above the 500 ms budget; needs measuring on real hardware.
 - Opening a 50 MB file has one or two 80–120 ms frames on the software-rendered VM (budget 50 ms).
-- Markdown preview code blocks are not syntax-highlighted.
+- Markdown preview code blocks are not syntax-highlighted, and task lists (`- [ ]`, `- [x]`) show as plain text, not checkboxes.
 - The first PDF opened in a session takes ~0.5 s to show page 1 (cold worker/fonts); later ones meet the 300 ms budget.
 - PDF: applying a page operation, compression, signatures or redactions reloads the document; pdf.js's first repaint of it is one ~170–250 ms frame on the test VM. Redacted pages become images (by design: nothing under the boxes survives), so their text is no longer selectable — OCR (planned) can bring it back. Signatures are images, not cryptographic (certificate) signatures.
 - Word editing: creating new bullet/numbered lists, inserting images/tables and editing headers/footers aren't supported yet (existing ones are preserved). Legacy .doc conversion keeps text only; .xls conversion keeps values (not formulas/formatting).

@@ -61,6 +61,7 @@ const scenarios: Record<string, () => Promise<{ default: (arg: string) => Promis
   coi: () => import('./coi'),
   caps: () => import('./caps'),
   show: () => import('./show'),
+  demo: () => import('./demo'),
   prof: () => import('./prof'),
   'm1-roundtrip': () => import('./m1').then((m) => ({ default: m.roundtrip })),
   'm1-baseline': () => import('./m1').then((m) => ({ default: m.baseline })),
