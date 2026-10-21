@@ -26,7 +26,8 @@ self-tests.
 
 - Only permissive licenses (MIT/BSD/Apache-2.0/ISC/CC0/OFL/Unlicense). No GPL/LGPL/AGPL/MPL. No cgo beyond Wails.
   Record every new dependency and its license in docs/DECISIONS.md.
-- No network access (except the opt-in, consented model download for search by meaning).
+- No network access (except the opt-in, consented model downloads: search by meaning, and the image editor's AI
+  models in Settings › AI models).
 - Responsiveness: no main-thread task > 50 ms, progress for > 300 ms, feature code lazily loaded, entry bundle
   < 200 KB gz. Self-tests log the longest UI frame.
 - Each feature: Go tests and/or Vitest + an in-app self-test (`frontend/src/test/mNN.ts`, added to CI) + updates

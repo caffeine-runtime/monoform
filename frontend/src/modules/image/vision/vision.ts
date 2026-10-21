@@ -1,6 +1,7 @@
 // Main-thread side of the vision worker: started on first use, terminated
 // after a minute idle so the models' memory is returned.
-import type { MaskResult, VisionIn, VisionOut } from './visionWorker';
+import type { ErasePatch, EraseStarted, MaskResult, VisionIn, VisionOut } from './visionWorker';
+import type { Rect } from './erase';
 
 const IDLE_MS = 60_000;
 
@@ -71,6 +72,24 @@ class Vision {
 
   selectObject(key: string, points: { x: number; y: number; positive: boolean }[]): Promise<MaskResult> {
     return this.call({ type: 'samDecode', key, points }, []);
+  }
+
+  /** The subject with the optional BiRefNet model (base: endpoint('ai'), carrying the session token). */
+  async subjectAI(src: CanvasImageSource, base: string): Promise<MaskResult> {
+    const image = await createImageBitmap(src as ImageBitmapSource);
+    return this.call({ type: 'aiSubject', image, base }, [image]);
+  }
+
+  /** Start removing what mask covers inside rect; returns the backend job and what finish needs. */
+  async eraseBegin(src: CanvasImageSource, mask: CanvasImageSource, rect: Rect, base: string, seed: number): Promise<EraseStarted> {
+    const image = await createImageBitmap(src as ImageBitmapSource);
+    const m = await createImageBitmap(mask as ImageBitmapSource);
+    return this.call({ type: 'eraseBegin', image, mask: m, rect, base, seed }, [image, m]);
+  }
+
+  /** The repainted patch (soft-edged, rect-sized) once the job is done. */
+  eraseFinish(started: EraseStarted, base: string): Promise<ErasePatch> {
+    return this.call({ type: 'eraseFinish', started, base }, []);
   }
 
   /** Outline of an arbitrary mask (inverted selections etc.). */

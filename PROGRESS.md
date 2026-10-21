@@ -407,6 +407,13 @@
   All?* with an option to delete settings, history and the search index too; file defaults go back to what they were.
   `--quiet` installs/uninstalls without a window (used by CI on a real Windows runner). Off Windows it runs as a demo
   that installs into a test folder (`scripts/setup-selftest.sh`).
+- **M43 — Optional AI models: better subject selection, object removal.** *Settings › AI models* lists two optional
+  downloads, each with its size, model and licence: **Better subject selection** (BiRefNet; *Select subject* and
+  *Remove background* find people, hair and objects far more precisely — the bundled model stays the default) and
+  **Object removal** (Moebius; select something, *Remove* in the selection bar or *Image › Remove object*, and the gap
+  is painted in with what could be behind it, in ~25 s with progress and Cancel in the status bar; undo and run again
+  for a different fill). A dialog asks before anything is downloaded; the first use offers it. Models run natively
+  (ONNX Runtime, downloaded with the first pack), only while used, and are freed after a minute.
 - **M42 — Path bar, side panels, quick view for pictures, per-type file icons.** The open file's **full path** shows
   above it (*View › Show / hide the path bar*); each folder in it opens a small **folder browser**: the folder's
   subfolders and files (the open file marked), `..` to go up, typing to filter, a click opens a file, *Open as folder*

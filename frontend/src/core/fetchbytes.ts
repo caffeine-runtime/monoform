@@ -3,8 +3,8 @@
 // big single responses (and any big fetch on the page thread) cause jank.
 export const PIECE = 4 << 20;
 
-export async function fetchBytes(url: string, onProgress?: (done: number, total: number) => void): Promise<Uint8Array> {
-  const first = await fetch(url, { headers: { Range: `bytes=0-${PIECE - 1}` } });
+export async function fetchBytes(url: string, onProgress?: (done: number, total: number) => void, piece = PIECE): Promise<Uint8Array> {
+  const first = await fetch(url, { headers: { Range: `bytes=0-${piece - 1}` } });
   if (first.status === 206) {
     const total = Number(first.headers.get('Content-Range')?.split('/')[1] ?? NaN);
     const head = new Uint8Array(await first.arrayBuffer());
@@ -13,7 +13,7 @@ export async function fetchBytes(url: string, onProgress?: (done: number, total:
     out.set(head);
     onProgress?.(head.byteLength, total);
     for (let off = head.byteLength; off < total; ) {
-      const end = Math.min(total, off + PIECE) - 1;
+      const end = Math.min(total, off + piece) - 1;
       const res = await fetch(url, { headers: { Range: `bytes=${off}-${end}` } });
       if (res.status !== 206) throw new Error(`range request failed (${res.status})`);
       const part = new Uint8Array(await res.arrayBuffer());

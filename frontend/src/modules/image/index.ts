@@ -64,6 +64,7 @@ const cmds: Command[] = [
   { id: 'image.maskDelete', title: 'Mask: delete', category: 'Image', when: edit, run: run((c) => c.mask('delete')) },
   { id: 'image.removeBackground', title: 'Remove background', category: 'Image', when: edit, run: run((c) => c.removeBackground()) },
   { id: 'image.selectSubject', title: 'Select subject', category: 'Image', when: edit, run: run((c) => c.selectSubject()) },
+  { id: 'image.removeObject', title: 'Remove object (fill the gap)', category: 'Image', when: edit, run: run((c) => c.removeObject()) },
   { id: 'image.saveCopy', title: 'Save a copy (keep original)', category: 'Image', shortcut: 'Mod+Alt+S', when: edit, run: run((c) => c.saveCopy()) },
   { id: 'image.saveLayers', title: 'Save with layers (.ora)…', category: 'Image', when: edit, run: run((c) => c.saveLayers()) },
   { id: 'image.layers', title: 'Show layers', category: 'Image', when: edit, run: run((c) => c.panel('layers')) },

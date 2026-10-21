@@ -9,6 +9,7 @@
   import { settings } from '../../core/settings.svelte';
   import { theme } from '../../core/theme.svelte';
   import { semantic } from '../../core/semantic/semantic.svelte';
+  import { aiModels } from '../../core/aimodels.svelte';
   import { workspace, type Tab } from '../../core/tabs.svelte';
   import { basename, dirname, formatBytes, tildify } from '../../core/paths';
   import { boot } from '../../core/boot';
@@ -40,6 +41,7 @@
     tab.handlers = { ...tab.handlers, getState: () => ({}) };
     void api.DataLocations().then((l) => (locations = l));
     void semantic.refresh();
+    void aiModels.refresh();
   });
 
   let historyUsage = $state<number | null>(null);
@@ -179,6 +181,27 @@
     </div>
   </section>
 
+  <section class="card ai">
+    <h3>AI models</h3>
+    <p class="muted small">Optional downloads for the image editor. They run on this computer only, and only while you use them.</p>
+    {#each aiModels.packs as p (p.id)}
+      <div class="row pack" data-pack={p.id}>
+        <div class="lbl">
+          <div><b>{p.name}</b>{#if p.installed}<span class="tag">Installed</span>{/if}</div>
+          <div class="muted small">{p.purpose}</div>
+          <div class="muted small">{p.model} ({p.license}) · {p.installed ? formatBytes(p.disk) : `${formatBytes(p.download)} download`}</div>
+        </div>
+        {#if p.installed}
+          <button class="btn" onclick={() => aiModels.remove(p.id)}>Remove</button>
+        {:else if !p.supported}
+          <span class="muted small">Not available on this system</span>
+        {:else}
+          <button class="btn primary" disabled={aiModels.busy === p.id} onclick={() => aiModels.install(p.id)}>{aiModels.busy === p.id ? 'Downloading…' : 'Install'}</button>
+        {/if}
+      </div>
+    {/each}
+  </section>
+
   <section class="card">
     <h3>About</h3>
     <div class="grid">
@@ -312,6 +335,23 @@
     display: grid;
     grid-template-columns: max-content 1fr;
     gap: 6px 18px;
+  }
+  .pack {
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .pack .lbl {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .tag {
+    margin-left: 8px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    font-size: var(--fs-small);
   }
   .muted {
     color: var(--text-muted);

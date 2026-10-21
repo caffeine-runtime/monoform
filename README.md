@@ -19,7 +19,7 @@ works offline, collects no telemetry and needs no account, and saves everything 
 | **Compare** | Any two files side by side: text and code with word-level changes and change navigation; JSON/YAML as a list of changed paths; CSV rows matched by key; images by swipe, onion skin or a pixel difference; other files byte by byte. |
 | **Workspace** | Split view: 2–4 tabs side by side (Ctrl+\\, the split button, or drag a tab onto a view's edge); interface size 80–200 % (Ctrl+Alt+= / −). Every view fits narrow panes: toolbars drop to icons (names on hover) and side panels float over the content. Drag the divider between source and preview (Markdown, HTML, diagrams, SVG) or between split tabs; double-click for equal sizes. The ☰ menu groups commands into submenus (New, This file, the open file's own commands, View, Split view…); Ctrl/Cmd+K finds any command by name. Tabs: **+** for a new tab, drag to reorder, drag a tab out of the window to give it a window of its own. Pictures and text move between tabs: copy and paste, or drag them from one view onto another (a picture or a video frame onto a video, an image, a note or an SVG). A short welcome on first start lets you pick the look (Help › Welcome shows it again). |
 | **File history** | Every save keeps the earlier version: `Ctrl+Alt+Y` lists a file's versions to open, compare with the file now, or restore (undoable); *File history: all files* finds deleted files too. Stored locally, size-limited (Settings → File history). |
-| **Images** | Layered editor: transparency, selections (rectangle, lasso, magic wand, click an object, select subject — edges snapped to the pixels) with copy/paste, brush/eraser, text in any installed font, free rotation, colour adjustments and seven kinds of blur (all limited to a selection), layer masks (hide parts of a layer without erasing them; paint, invert, from a selection), one-click background removal, "save a copy", layers saved as OpenRaster (.ora); copy the text out of a screenshot or photo (OCR, offline), or out of just a selected part, and hide it (pixelate every word) in one click; colour picker with HEX/RGB/HSL and the image's palette (copy as CSS, save as .gpl). |
+| **Images** | Layered editor: transparency, selections (rectangle, lasso, magic wand, click an object, select subject — edges snapped to the pixels) with copy/paste, brush/eraser, text in any installed font, free rotation, colour adjustments and seven kinds of blur (all limited to a selection), layer masks (hide parts of a layer without erasing them; paint, invert, from a selection), one-click background removal, **remove an object and fill the gap** (optional model), "save a copy", layers saved as OpenRaster (.ora); copy the text out of a screenshot or photo (OCR, offline), or out of just a selected part, and hide it (pixelate every word) in one click; colour picker with HEX/RGB/HSL and the image's palette (copy as CSS, save as .gpl). |
 | **More images** | HEIC/HEIF and AVIF (through the system's decoder; convert to JPG/PNG); animated GIF and WebP frame editor (timing, reorder, delete, reverse, loop) saving GIF or WebP; ICO/ICNS viewer and maker; font preview (TTF, OTF, WOFF, WOFF2) with metadata, sizes and character map. |
 | **SVG & web pages** | Edit SVG visually (select, move, scale, rotate, draw rectangles, ellipses, lines, freehand and text, change colours and any attribute, arrange, outline) or as source with a live preview — visual edits change only the affected attributes in the source; export PNG at any size; open HTML files in a safe preview (scripts and internet content off until you allow them) next to their source. |
 | **3D models** | glTF/GLB (incl. Draco), FBX, OBJ+MTL, STL, PLY, 3MF, Collada, 3DS, USDZ, VRML, AMF, PCD, XYZ, VTK — orbit view, clickable animation list with play/pause/scrub/speed, wireframe and lighting toggles, floor grid, PNG snapshot. |
@@ -134,10 +134,13 @@ builds all three platforms on every push to `main` and on pull requests.
 
 ## Privacy
 
-Hold It All makes no network connections. The one exception happens only if you turn on *search by meaning*: after
-you agree, it downloads the model once (about 200 MB, Apache-2.0, checked against fixed SHA-256 sums). Your files never
-leave your computer. Settings live in your OS config folder (`HoldItAll/settings.json`). The optional model and
-search indexes live in the OS cache folder and can be removed from the app.
+Hold It All makes no network connections. The exceptions happen only when you ask for an optional model: *search by
+meaning* (about 200 MB, Apache-2.0) and, for the image editor, *Better subject selection* (BiRefNet, MIT, about 210 MB)
+and *Object removal* (Moebius, Apache-2.0, about 1.2 GB) with the ONNX Runtime library they run on (MIT, 6–13 MB,
+from Microsoft's NuGet package). Each is downloaded once after you agree, checked against fixed SHA-256 sums, and runs
+on your computer only while you use it. Your files never leave your computer. Settings live in your OS config folder
+(`HoldItAll/settings.json`). The optional models and search indexes live in the OS cache folder and can be removed
+from the app (Settings › AI models).
 
 ## Documentation
 

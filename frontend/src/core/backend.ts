@@ -9,6 +9,7 @@ export type Entry = fs.Entry;
 export type Settings = settings.Settings;
 export type SessionTab = settings.SessionTab;
 export type BootInfo = app.BootInfo;
+export type AIPack = app.AIPack;
 
 export const api = Go;
 

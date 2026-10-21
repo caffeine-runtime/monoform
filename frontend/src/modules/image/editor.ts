@@ -1170,6 +1170,18 @@ export class ImageEditor {
     if (this.tool !== 'move') this.setTool('move');
   }
 
+  /** Paint a patch (object removal: a fill with a soft edge) over the active layer at (x, y), as one undo step. */
+  paintPatch(patch: CanvasImageSource, x: number, y: number) {
+    this.pixelOp(
+      (c) => {
+        const out = raster.clone(c);
+        out.getContext('2d')!.drawImage(patch, x, y);
+        return out;
+      },
+      { ignoreSelection: true },
+    );
+  }
+
   /** Keep only the masked part of the active layer (background removal). */
   applyMaskToLayer(mask: HTMLCanvasElement) {
     this.pixelOp(

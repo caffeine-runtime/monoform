@@ -18,6 +18,12 @@ import {semantic} from '../models';
 import {office} from '../models';
 import {video} from '../models';
 
+export function AIInstall(arg1:string):Promise<string>;
+
+export function AIPacks():Promise<Array<app.AIPack>>;
+
+export function AIRemove(arg1:string):Promise<void>;
+
 export function AnimFrameCount(arg1:string):Promise<number>;
 
 export function AnimOpen(arg1:string):Promise<app.AnimInfo>;

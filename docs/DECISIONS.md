@@ -19,6 +19,38 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 - **Side panels hide with one switch** (`panelsHidden`): panels carry `data-sidepanel` and the app hides them all with
   one CSS rule, so every editor's panel follows the same toggle without each module wiring it; asking the image editor
   for a panel (its toolbar buttons) turns them back on, so a hidden panel is never a dead button.
+- **Optional AI models run natively, not in the web view** (`internal/ai`). The better subject finder (BiRefNet) and
+  object removal (Moebius) are too big for onnxruntime-web: WebAssembly's 4 GB limit and one-thread speed rule them
+  out (BiRefNet needs ~2 GB working memory, Moebius 1.2 GB of weights). Go loads Microsoft's ONNX Runtime shared
+  library at run time and calls its C API through **purego** — no cgo, so the app still builds and runs without it.
+  Only the functions used are bound (`ort.go`: table indices from `onnxruntime_c_api.h`, which only grows at the end);
+  model paths go as UTF-16 on Windows; telemetry events are switched off; a run can be stopped (`RunOptionsSetTerminate`).
+  - **Opt-in downloads** (Settings › AI models, or offered the first time a feature needs one): a dialog names the
+    size and the hosts first. Files are pinned by revision, size and SHA-256 (`catalog.go`) and fetched with
+    `internal/download` (shared with search by meaning). The runtime comes from the official NuGet package: only this
+    platform's library is read out of it with **HTTP Range requests** (6 MB for Windows instead of the 160 MB package;
+    offsets pinned from its central directory). No runtime for Intel Macs (Microsoft doesn't publish one), so the
+    packs show as unavailable there. Removing the last pack removes the runtime too.
+  - **Models are loaded on first use and freed after a minute idle**, one inference at a time; nothing runs in the
+    background.
+  - **BiRefNet:** the onnx-community export decomposes deformable convolutions into GatherND/ScatterND chains: 29 s
+    and 7.4 GB per picture on 4 cores. The GridSample export (CoderViking, MIT, reproducible script and measured
+    deviation 1e-4) takes ~6 s and 2 GB. ONNX Runtime 1.31 also runs ONNX's DeformConv natively, but the time goes to
+    the Swin backbone (MatMul/Conv ~50%), so a re-export wouldn't pay. The 1024² mask is snapped to the pixels
+    with the existing refine step.
+  - **Moebius** (ECCV 2026, 0.22B, Apache-2.0) fills like a diffusion model: it paints what could be behind an object
+    instead of smearing texture. The reference sampler runs 19 steps with guidance (38 UNet passes, ~2 min on 4 cores).
+    Measured on our photos, **5 steps without guidance** give the same removals in ~25 s (+ ~15 s to load the model the
+    first time) — *provided the steps start at the noisiest level (999)*: the reference spacing for few steps starts at
+    750, which from pure noise makes the model paint a new object into the gap. The model works on 512×512 like phone
+    erasers: the app crops a square ~1.8× the selection around it, grows the mask 6 px (edges, halos), and pastes the
+    fill back through a 2 px soft edge, one undo step. Rejected: LaMa (200 MB, weaker at large objects), RETHINED (fast,
+    BSD-3 code, but no trained weights published).
+  - **Transfers are chunked** (256 KB requests, Range reads of results): the app's own requests are handled on the UI
+    thread by WebKitGTK and WebView2.
+  - **Self-tests use stand-ins** (`HIA_AI_FAKE=1`): the UI flow is tested in CI without 1.4 GB of downloads; the real
+    models are covered by Go tests (`HIA_AI_STORE`) and `m43real`, locally, and CI downloads the real runtime on Linux
+    and Windows and runs a tiny model with it.
 - **Save dialogs never start in the working directory** (`internal/app/savedir.go`). Windows starts GUI apps from
   Explorer, file associations and the installer with the working directory at `C:\Windows\System32` (or the install
   folder), so a suggested name without a folder now goes to the folder last saved into, else Documents.
@@ -344,6 +376,10 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 | @huggingface/tokenizers | Apache-2.0 | search by meaning: tokenizer |
 | EmbeddingGemma 2 (`onnx-community/embeddinggemma-2-ONNX`, q4 text encoder) — **downloaded on request, not bundled** | Apache-2.0 | search by meaning: model weights |
 | U²-Netp ONNX (`BritishWerewolf/U-2-Netp`, from xuebinqin/U-2-Net) — bundled model | Apache-2.0 | background removal |
+| github.com/ebitengine/purego | Apache-2.0 | calls ONNX Runtime's C API without cgo |
+| ONNX Runtime 1.31.0 native library (`Microsoft.ML.OnnxRuntime` NuGet package; licence and ThirdPartyNotices downloaded with it) — **downloaded on request, not bundled** | MIT | runs the optional image models |
+| BiRefNet lite (`CoderViking/birefnet-lite-onnx`, a GridSample export of ZhengPeng7/BiRefNet_lite) — **downloaded on request** | MIT | better subject selection |
+| Moebius (`simonw/Moebius-ONNX`, from hustvl/Moebius; its VAE from hustvl/PixelHacker, MIT) — **downloaded on request** | Apache-2.0 | object removal |
 | SlimSAM-77 quantized ONNX (`Xenova/slimsam-77-uniform`, from czg1225/SlimSAM / Segment Anything) — bundled model | Apache-2.0 | click-to-select objects |
 | lukechampine.com/blake3 (+ klauspost/cpuid/v2 MIT) | MIT | BLAKE3 hashing |
 | third_party/golang-lru (ours, replaces hashicorp/golang-lru/v2) | MIT | 7z key cache |
