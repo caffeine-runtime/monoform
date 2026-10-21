@@ -3,7 +3,8 @@
 hero-light.svg (GitHub shows the one matching the reader's theme).
 
 The app icon draws itself, the name and tagline rise in, and the file-type
-icons (build/icon/file-*.svg) pop in and float. Text is converted to paths
+icons (build/icon/file-*.svg) swipe past in three rows, each swipe with a
+motion-blurred trail. Text is converted to paths
 from the app's own fonts (Source Serif 4, Inter; OFL), so it looks the same
 everywhere. Plain CSS animations, off for readers who prefer reduced motion.
 
@@ -22,7 +23,7 @@ from fontTools.varLib.instancer import instantiateVariableFont
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'scripts'))
 sys.dont_write_bytecode = True
-from icons import M_PATH, TILE  # noqa: E402
+from icons import M_PATH, TILE, TYPES  # noqa: E402
 
 FONTS = os.path.join(ROOT, 'frontend', 'node_modules', '@fontsource-variable')
 SERIF = os.path.join(FONTS, 'source-serif-4', 'files', 'source-serif-4-latin-wght-normal.woff2')
@@ -33,8 +34,12 @@ THEMES = {
     'light': dict(bg='#f7f3ea', glow1='#e8a07a', glow2='#8cc4bd', ink='#2a2925', muted='#6c655a', pill='#efe8da', line='#ddd3bf', tile=TILE, mark='#ece2cb'),
 }
 
-# Nine of the file types, in a 3×3 grid on the right.
-GRID = ['markdown', 'pdf', 'image', 'table', 'vector', 'model', 'audio', 'video', 'archive']
+# The file types on the right: three rows, each swiping one icon along at a
+# time in its own rhythm (rows alternate direction).
+KINDS = list(TYPES)
+ROWS = [KINDS, KINDS[5:] + KINDS[:5], KINDS[9:] + KINDS[:9]]
+SIZE, STEP = 100, 116
+HOLD, SWIPE = 1.25, 0.5  # seconds an icon rests, seconds a swipe takes
 PILLS = ['Free and open source', 'Works offline', 'No telemetry', 'Windows · macOS · Linux']
 
 
@@ -79,16 +84,39 @@ CSS = '''
   .tile { transform-box: fill-box; transform-origin: center; animation: pop .7s cubic-bezier(.3,1.4,.5,1) backwards; }
   .rise { animation: rise .9s cubic-bezier(.2,.8,.2,1) backwards; }
   .pop { transform-box: fill-box; transform-origin: center; animation: pop .6s cubic-bezier(.3,1.5,.5,1) backwards; }
-  .bob { animation: bob 5s ease-in-out infinite alternate; }
+  .blur { opacity: 0; }
   .glow { animation: drift 14s ease-in-out infinite alternate; }
   @keyframes draw { from { stroke-dashoffset: 2600; } }
   @keyframes fillin { from { fill-opacity: 0; } }
   @keyframes pop { from { transform: scale(.4); opacity: 0; } }
   @keyframes rise { from { transform: translateY(18px); opacity: 0; } }
-  @keyframes bob { from { transform: translateY(-5px); } to { transform: translateY(5px); } }
   @keyframes drift { from { transform: translate(-30px, 10px); } to { transform: translate(40px, -16px); } }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
 '''
+
+
+def reel_css():
+    """Keyframes for the rows (hold, then an eased swipe of one step) and for
+    the sharp/blurred copies, which trade places during each swipe."""
+    period = HOLD + SWIPE
+    hold = HOLD / period * 100
+    out = []
+    for r, kinds in enumerate(ROWS):
+        n = len(kinds)
+        frames = []
+        for k in range(n):
+            x = -k * STEP if r % 2 == 0 else -(n - k) * STEP
+            t0, t1 = k / n * 100, (k + HOLD / period) / n * 100
+            frames.append(f'{t0:.3f}% {{ transform: translateX({x}px); animation-timing-function: linear; }}')
+            frames.append(f'{t1:.3f}% {{ transform: translateX({x}px); animation-timing-function: cubic-bezier(.7,0,.25,1); }}')
+        frames.append(f'100% {{ transform: translateX({-n * STEP if r % 2 == 0 else 0}px); }}')
+        out.append(f'@keyframes row{r} {{ {" ".join(frames)} }}')
+        out.append(f'.row{r} {{ animation: row{r} {n * period:.2f}s infinite; }}')
+    mid = hold + (100 - hold) * 0.45
+    out.append(f'@keyframes sharp {{ 0%, {hold:.2f}% {{ opacity: 1; }} {mid:.2f}% {{ opacity: .2; }} 100% {{ opacity: 1; }} }}')
+    out.append(f'@keyframes blurred {{ 0%, {hold:.2f}% {{ opacity: 0; }} {mid:.2f}% {{ opacity: .9; }} 100% {{ opacity: 0; }} }}')
+    out.append(f'.sharp {{ animation: sharp {period:.2f}s infinite; }} .blur {{ animation: blurred {period:.2f}s infinite; }}')
+    return '\n  '.join(out)
 
 
 def hero(theme, serif, sans, sans_med):
@@ -100,6 +128,13 @@ def hero(theme, serif, sans, sans_med):
     <radialGradient id="g1"><stop offset="0" stop-color="{t['glow1']}" stop-opacity=".35"/><stop offset="1" stop-color="{t['glow1']}" stop-opacity="0"/></radialGradient>
     <radialGradient id="g2"><stop offset="0" stop-color="{t['glow2']}" stop-opacity=".28"/><stop offset="1" stop-color="{t['glow2']}" stop-opacity="0"/></radialGradient>
     <clipPath id="frame"><rect width="{W}" height="{H}" rx="28"/></clipPath>
+    <filter id="mblur" x="-5%" y="-30%" width="110%" height="160%"><feGaussianBlur stdDeviation="18 0"/></filter>
+    <linearGradient id="edge" x1="776" x2="1176" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".16" stop-color="#fff"/>
+      <stop offset=".84" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <mask id="reel" maskUnits="userSpaceOnUse" x="0" y="0" width="{W}" height="{H}"><rect x="776" y="0" width="400" height="{H}" fill="url(#edge)"/></mask>
+    {''.join(f'<symbol id="ft-{k}" viewBox="40 20 432 472">{file_icon(k)}</symbol>' for k in KINDS)}
+    {''.join('<g id="strip%d">%s</g>' % (r, ''.join(f'<use href="#ft-{k}" x="{i * STEP}" width="{SIZE}" height="{SIZE}"/>' for i, k in enumerate(kinds + kinds))) for r, kinds in enumerate(ROWS))}
   </defs>
   <g clip-path="url(#frame)">
   <rect width="{W}" height="{H}" fill="{t['bg']}"/>
@@ -113,7 +148,7 @@ def hero(theme, serif, sans, sans_med):
   </g>''')
     # Name, tagline, pills.
     parts.append(f'<g class="rise" style="animation-delay:.35s">{serif.path("Monoform", 232, 160, 96, t["ink"], tracking=-1.5)}</g>')
-    parts.append(f'<g class="rise" style="animation-delay:.6s">{sans.path("One calm, fast window for every everyday file.", 80, 262, 29, t["ink"])}</g>')
+    parts.append(f'<g class="rise" style="animation-delay:.6s">{sans_med.path("One window to rule them all.", 80, 264, 34, t["ink"])}</g>')
     parts.append(f'<g class="rise" style="animation-delay:.75s">{sans.path("Notes, PDFs, images, spreadsheets, 3D, audio, video and more.", 80, 302, 21, t["muted"])}</g>')
     x = 80
     for i, label in enumerate(PILLS):
@@ -123,17 +158,20 @@ def hero(theme, serif, sans, sans_med):
     {sans_med.path(label, x + 14, 356, 15, t['ink'])}
   </g>''')
         x += w + 10
-    # The file types: pop in one after another, then float.
-    size, gap, gx, gy = 104, 14, 812, 54
-    for i, kind in enumerate(GRID):
-        cx, cy = gx + (i % 3) * (size + gap), gy + (i // 3) * (size + gap)
-        parts.append(f'''<g class="bob" style="animation-delay:{-i * 0.55:.2f}s"><g class="pop" style="animation-delay:{0.5 + i * 0.09:.2f}s">
-    <svg x="{cx}" y="{cy}" width="{size}" height="{size}" viewBox="40 20 432 472">{file_icon(kind)}</svg>
-  </g></g>''')
+    # The file types swiping past, faded out at the edges.
+    rows = []
+    for r in range(len(ROWS)):
+        d = f'animation-delay:{-r * 0.58:.2f}s'
+        rows.append(f'''<g transform="translate(790 {48 + r * (SIZE + 18)})"><g class="row{r}" style="{d}">
+      <g class="sharp" style="{d}"><use href="#strip{r}"/></g>
+      <g class="blur" style="{d}" filter="url(#mblur)"><use href="#strip{r}"/></g>
+    </g></g>''')
+    parts.append(f'<g class="rise" style="animation-delay:.45s"><g mask="url(#reel)">{"".join(rows)}</g></g>')
     parts.append('</g>')
     body = '\n  '.join(parts)
-    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" role="img" aria-label="Monoform — one calm, fast window for every everyday file">
-  <style>{CSS}</style>
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" role="img" aria-label="Monoform — one window to rule them all">
+  <style>{CSS}
+  {reel_css()}</style>
   {body}
 </svg>
 '''

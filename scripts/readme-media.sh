@@ -9,7 +9,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 SCENES=("$@")
-STILLS=(start markdown pdf spreadsheet word svg html json model3d audio video archive checksums compare palette settings)
+STILLS=(pdf word spreadsheet compare svg model3d audio video json html archive settings)
 [ ${#SCENES[@]} -eq 0 ] && SCENES=(tour image markdown split "${STILLS[@]/#/still-}")
 BIN=${MF_BIN:-build/bin/monoform}
 OUT=docs/readme
@@ -27,7 +27,7 @@ sleep 1
 
 # Theme per scene: light or dark.
 declare -A THEME=([tour]=light [image]=dark [markdown]=light [split]=dark
-  [still-pdf]=dark [still-model3d]=dark [still-audio]=dark [still-video]=dark [still-palette]=dark [still-json]=dark [still-archive]=dark)
+  [still-pdf]=dark [still-model3d]=dark [still-audio]=dark [still-video]=dark [still-json]=dark [still-archive]=dark)
 
 waitlog() { # waitlog <file> <text> <seconds>
   for _ in $(seq $(($3 * 10))); do grep -q "$2" "$1" && return 0; sleep 0.1; done
