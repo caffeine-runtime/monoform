@@ -268,7 +268,7 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   installer detection doesn't force one); *For everyone* re-runs itself elevated and quiet (`--quiet --everyone`) into
   Program Files/HKLM. An install by the old NSIS installer is found by its uninstall key and removed first. The
   uninstaller is the setup itself (`uninstall.exe --uninstall`); since Windows can't delete a running program but
-  can move it, it moves itself to %TEMP% before deleting the folder and is deleted after it exits. Shortcuts are
+  can move it, it moves itself to %TEMP% before deleting the folder and is deleted after it exits; when %TEMP% is on another drive (a move isn't possible there) it removes everything but itself, and itself and the folder right after it exits (found by CI: its install folder is on D:). Shortcuts are
   written through PowerShell's WScript.Shell (a `.lnk` is a COM object; no cgo); the registry through
   `golang.org/x/sys/windows/registry` (BSD-3, already a dependency). The app's files are embedded gzipped
   (`cmd/setup/pack`). The setup's own UI needs WebView2: Wails' `-webview2 embed` bundles Microsoft's Evergreen

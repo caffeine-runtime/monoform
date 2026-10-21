@@ -177,8 +177,9 @@ jobs:
         shell: pwsh
         run: |
           $dir = Join-Path $env:RUNNER_TEMP 'Hold It All'
+          $log = Join-Path $env:TEMP 'hold-it-all-setup.log'
           $p = Start-Process dist/hold-it-all-amd64-installer.exe -ArgumentList '--quiet','--dir',"`"$dir`"",'--desktop','--defaults' -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "install exited $($p.ExitCode)" }
+          if ($p.ExitCode -ne 0) { throw "install exited $($p.ExitCode): $(Get-Content $log -ErrorAction SilentlyContinue)" }
           foreach ($f in 'hold-it-all.exe','holdit.exe','fileicon.ico','uninstall.exe') { if (-not (Test-Path (Join-Path $dir $f))) { throw "$f not installed" } }
           $u = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\HoldItAll'
           if ($u.DisplayVersion -ne $env:HIA_VERSION) { throw "uninstall entry version '$($u.DisplayVersion)'" }
@@ -187,8 +188,10 @@ jobs:
           if (-not (Test-Path "$env:LOCALAPPDATA\Microsoft\WindowsApps\holdit.cmd")) { throw 'no holdit command' }
           & (Join-Path $dir 'holdit.exe') version
           $p = Start-Process (Join-Path $dir 'uninstall.exe') -ArgumentList '--uninstall','--quiet' -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "uninstall exited $($p.ExitCode)" }
-          if (Test-Path $dir) { throw 'folder left after uninstall' }
+          if ($p.ExitCode -ne 0) { throw "uninstall exited $($p.ExitCode): $(Get-Content $log -ErrorAction SilentlyContinue)" }
+          # The uninstaller may only go (with the folder) after it exits.
+          for ($i = 0; $i -lt 30 -and (Test-Path $dir); $i++) { Start-Sleep -Milliseconds 500 }
+          if (Test-Path $dir) { throw "folder left after uninstall: $((Get-ChildItem $dir).Name -join ', ')" }
           if (Test-Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\HoldItAll') { throw 'uninstall entry left' }
           if (Test-Path 'HKCU:\Software\Classes\HoldItAll.md') { throw 'file class left' }
           if (Test-Path (Join-Path ([Environment]::GetFolderPath('Programs')) 'Hold It All.lnk')) { throw 'shortcut left' }

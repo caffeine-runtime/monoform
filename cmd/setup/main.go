@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 
 	"github.com/wailsapp/wails/v2"
@@ -59,7 +60,9 @@ func main() {
 			err = s.Install(o)
 		}
 		if err != nil {
+			// A windowless program has no console to show this: also in %TEMP%.
 			fmt.Fprintln(os.Stderr, err)
+			_ = os.WriteFile(filepath.Join(os.TempDir(), "hold-it-all-setup.log"), []byte(err.Error()+"\n"), 0o644)
 			os.Exit(1)
 		}
 		return
