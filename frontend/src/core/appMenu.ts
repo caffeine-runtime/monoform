@@ -89,7 +89,7 @@ const LAYOUT: Entry[] = [
   },
   'app.settings',
   '-',
-  { label: 'Tabs', items: ['tab.close', 'tab.closeOthers', 'tab.closeAll', 'tab.reopen', '-', 'tab.next', 'tab.prev'] },
+  { label: 'Tabs', items: ['tab.new', 'tab.newWindow', '-', 'tab.close', 'tab.closeOthers', 'tab.closeAll', 'tab.reopen', '-', 'tab.next', 'tab.prev'] },
   { label: 'Help', items: ['help.welcome', 'help.shortcuts'] },
 ];
 

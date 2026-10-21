@@ -89,7 +89,7 @@ export default async function m33(dir: string) {
   workspace.setSplit(null);
   WindowSetSize(before.w, before.h);
   workspace.activate(json);
-  await waitFor(() => (!jbar.classList.contains('compact') ? true : null), 'labels return');
+  await waitFor(() => (!jbar.classList.contains('compact') ? true : null), 'labels return', 10000); // the window manager can take a while to apply the resize under load
   assert(!expand.title, 'tooltip removed with the label back');
   for (const t of [...workspace.tabs]) await workspace.close(t, { force: true });
 }

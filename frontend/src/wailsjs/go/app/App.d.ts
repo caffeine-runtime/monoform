@@ -120,6 +120,8 @@ export function MediaRelease(arg1:string):Promise<void>;
 
 export function MediaURL(arg1:string):Promise<string>;
 
+export function NewWindow(arg1:Array<string>,arg2:number,arg3:number):Promise<void>;
+
 export function OcrAddLanguage(arg1:string):Promise<string>;
 
 export function OcrLanguages():Promise<Array<app.OcrLanguage>>;
@@ -195,6 +197,8 @@ export function SemanticStatus(arg1:string):Promise<semantic.Status>;
 export function SemanticUnload():Promise<void>;
 
 export function SetDirtyCount(arg1:number):Promise<void>;
+
+export function SetStartPosition(arg1:number,arg2:number):Promise<void>;
 
 export function SetTitle(arg1:string):Promise<void>;
 

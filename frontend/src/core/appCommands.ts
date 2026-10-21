@@ -6,6 +6,7 @@ import { formatShortcut } from './keys';
 import { settings } from './settings.svelte';
 import { sidebar } from './sidebar.svelte';
 import { peek } from './peek.svelte';
+import { moveToNewWindow } from './windows';
 import { workspace } from './tabs.svelte';
 import { theme } from './theme.svelte';
 import { tree } from './tree.svelte';
@@ -104,6 +105,8 @@ export function registerAppCommands() {
     { id: 'tab.next', title: 'Next tab', category: 'Tabs', shortcut: ['Ctrl+Tab', 'Ctrl+PageDown', 'Mod+Alt+ArrowRight'], when: hasTab, run: () => workspace.cycle(1) },
     { id: 'tab.prev', title: 'Previous tab', category: 'Tabs', shortcut: ['Ctrl+Shift+Tab', 'Ctrl+PageUp', 'Mod+Alt+ArrowLeft'], when: hasTab, run: () => workspace.cycle(-1) },
     { id: 'tab.reopen', title: 'Reopen closed tab', category: 'Tabs', shortcut: 'Mod+Shift+T', run: () => workspace.reopenClosed() },
+    { id: 'tab.new', title: 'New tab', category: 'Tabs', shortcut: 'Mod+T', run: () => workspace.openTool('start') },
+    { id: 'tab.newWindow', title: 'Move tab to a new window', category: 'Tabs', when: () => !!workspace.active?.filePath, run: () => workspace.active && void moveToNewWindow(workspace.active) },
     ...Array.from({ length: 9 }, (_, i) => ({
       id: `tab.goto${i + 1}`,
       title: `Go to tab ${i + 1}`,

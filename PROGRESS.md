@@ -378,6 +378,16 @@
   still confident about it and it isn't background. On a portrait, a click on the face selects the whole person
   and a click on the suit the whole suit. Alt-click exclusions still use the model's top choice. "Select subject"
   (whole image) is unchanged — it already found people well in the test photos.
+- **M39 — Tabs: new tab, drag to reorder, drag out to a new window.** A **+** after the last tab (Ctrl+T) opens a
+  start page in a tab; whatever is opened from it takes its place. Tabs drag with the mouse (pointer events instead
+  of HTML drag and drop, which webviews handle differently): along the bar to reorder, with a mark where the tab will
+  land and the tab following the pointer; onto a view's edge to split (as before); **out of the window to give the
+  file a window of its own** — it opens where the tab was dropped (kept on screen), and the tab closes here. A tab
+  with unsaved changes asks to save first. Also in the tab's menu and Tabs › *Move tab to a new window*. The new
+  window is a second app process (`--new-window`, Wails v2 has one window per process): it shows just that file,
+  doesn't restore or save the session (the main window's tabs come back as they were) and doesn't index for search
+  by meaning; settings it changes (theme…) are saved without touching the main window's session. Checked with real
+  mouse drags under X11 (xdotool): reorder, no text selection sweeping over the editor, the second window appears.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

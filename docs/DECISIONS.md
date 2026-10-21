@@ -235,6 +235,20 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   renders the mask through the same transform, so it stays aligned. Brush hides / eraser shows by default
   (the brush covering things up matches "paint it out"); X swaps. In `.ora` the layer PNG has the mask applied
   (what GIMP/Krita show); `hia:raw` and `hia:mask` entries keep both parts for us — OpenRaster has no masks.
+- **Tabs drag with pointer events, not HTML drag and drop.** HTML DnD inside a webview behaves differently per
+  engine (WebView2 with file drop enabled, WebKitGTK, WKWebView) and can't tell "dropped outside the window" from
+  "cancelled". With the pointer captured after a 6 px threshold, moves keep arriving outside the window, so one
+  gesture covers reorder (the tab bar ± 16 px), split (over the views; the split overlay reads `tabDrag`) and tear-off
+  (outside). Text selection is prevented on press, otherwise the native selection sweeps across editors.
+- **A torn-off tab becomes a second process** (`App.NewWindow`: the same executable with `--new-window --at=X,Y
+  <file>`). Wails v2 has one window per process; v3's multi-window API is still alpha. That process skips the
+  single-instance lock (so files opened from the OS still go to the main window), doesn't restore or persist the
+  session, doesn't run the search-by-meaning indexer (one writer per index), and when it saves settings it keeps
+  the session that is on disk (`keepSession`). Moving unsaved changes across processes was rejected in favour of
+  "save first" (no half-written temp state). New windows are 1100×720, placed under the pointer and clamped to the
+  screen. Rejected: dragging tabs between windows (needs cross-process drag state; for now the new window has its
+  own tabs and Open). The "+" opens a start-page tab (module `start`) that is replaced by what is opened from it,
+  like a browser's new tab.
 - **Side panels float in narrow panes** (< 600 px, `isNarrow`): over the content with a shadow, closed when the
   pane becomes narrow, opened from the toolbar — a 260 px panel beside a 400 px pane would leave the canvas or
   table unusable.

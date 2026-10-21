@@ -206,6 +206,10 @@ export function MediaURL(arg1) {
   return window['go']['app']['App']['MediaURL'](arg1);
 }
 
+export function NewWindow(arg1, arg2, arg3) {
+  return window['go']['app']['App']['NewWindow'](arg1, arg2, arg3);
+}
+
 export function OcrAddLanguage(arg1) {
   return window['go']['app']['App']['OcrAddLanguage'](arg1);
 }
@@ -356,6 +360,10 @@ export function SemanticUnload() {
 
 export function SetDirtyCount(arg1) {
   return window['go']['app']['App']['SetDirtyCount'](arg1);
+}
+
+export function SetStartPosition(arg1, arg2) {
+  return window['go']['app']['App']['SetStartPosition'](arg1, arg2);
 }
 
 export function SetTitle(arg1) {

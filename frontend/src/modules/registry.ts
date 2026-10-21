@@ -209,6 +209,14 @@ export function registerBuiltinModules() {
     load: () => import('./history'),
   });
   modules.register({
+    id: 'start',
+    name: 'New tab',
+    extensions: [],
+    mimeTypes: [],
+    tool: true,
+    load: () => import('./start'),
+  });
+  modules.register({
     id: 'settings',
     name: 'Settings',
     extensions: [],

@@ -34,9 +34,10 @@
   });
 
   // Persist the session whenever tabs, the active tab, folder or tree change
-  // (not while quick-peeking: that would replace the user's session).
+  // (not while quick-peeking or in a window a tab was moved to: that would
+  // replace the user's session).
   $effect(() => {
-    if (peek.on) return;
+    if (peek.on || boot.extraWindow) return;
     void workspace.version;
     void workspace.tabs.length;
     void workspace.folder;

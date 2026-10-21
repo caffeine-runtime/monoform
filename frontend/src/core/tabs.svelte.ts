@@ -6,6 +6,7 @@ import { modules } from './modules';
 import { basename, dirname } from './paths';
 import { settings } from './settings.svelte';
 import { ui, toastError } from './ui.svelte';
+import type { Accepts, Transfer } from './transfer.svelte';
 
 export type TabSource =
   | { kind: 'file'; path: string }
@@ -37,9 +38,16 @@ export interface TabHandlers {
   /** Module state persisted in the session (view mode, scroll position...). */
   getState?: () => unknown;
   focus?: () => void;
+  /** What can be pasted or dropped here (images, text, files) and how it is taken. */
+  accept?: Accepts;
+  /** What Ctrl+C or a drag out of this view carries (the selection, the picture…). */
+  give?: () => Transfer | null | Promise<Transfer | null>;
 }
 
 let seq = 0;
+
+/** The start page shown as a tab ("new tab"). */
+const isStart = (t: Tab) => t.source.kind === 'tool' && t.source.tool === 'start';
 
 export class Tab {
   readonly id = `tab-${++seq}`;
@@ -331,6 +339,15 @@ class Workspace {
 
   private add(tab: Tab, activate: boolean) {
     const idx = this.tabs.findIndex((t) => t.id === this.activeId);
+    // Opening something from a "new tab" (the start page) puts it in that tab's place.
+    const start = activate && idx >= 0 && isStart(this.tabs[idx]) && !isStart(tab) ? this.tabs[idx] : null;
+    if (start) {
+      this.tabs.splice(idx, 1, tab);
+      if (this.split?.panes.includes(start.id)) this.split = { ...this.split, panes: this.split.panes.map((p) => (p === start.id ? tab.id : p)) };
+      this.activate(tab);
+      this.touch();
+      return;
+    }
     const at = idx >= 0 ? idx + 1 : this.tabs.length;
     this.tabs.splice(at, 0, tab);
     if (activate || !this.activeId) this.activate(tab);

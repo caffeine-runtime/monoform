@@ -10,11 +10,71 @@
   import { formatShortcut } from '../core/keys';
   import { copyText } from './treeActions';
   import Columns2 from '@lucide/svelte/icons/columns-2';
+  import Plus from '@lucide/svelte/icons/plus';
   import { dropInto } from '../core/split';
+  import { insertionIndex, tabDrag, zoneOf } from '../core/tabdrag.svelte';
+  import { moveToNewWindow } from '../core/windows';
 
-  let dragIndex = -1;
-  let dropIndex = $state(-1);
   let strip: HTMLDivElement;
+  let bar: HTMLDivElement;
+
+  // ---- dragging a tab: along the bar to reorder, onto a view to split, out of the window for a new one ----
+  let press: { t: Tab; i: number; x: number; y: number; pointer: number; el: HTMLElement } | null = null;
+  let dropTo = $state(-1); // the index the tab would move to
+  let dragFrom = $state(-1);
+  let justDragged = false; // the click after a drag isn't a click
+
+  function down(e: PointerEvent, t: Tab, i: number) {
+    if (e.button !== 0 || (e.target as Element).closest('.close')) return;
+    e.preventDefault(); // no text selection sweeping over the editor while dragging
+    press = { t, i, x: e.clientX, y: e.clientY, pointer: e.pointerId, el: e.currentTarget as HTMLElement };
+  }
+
+  function drag(e: PointerEvent) {
+    const p = press;
+    if (!p) return;
+    if (!tabDrag.id) {
+      if (Math.hypot(e.clientX - p.x, e.clientY - p.y) < 6) return;
+      // Captured, the pointer keeps reporting outside the window too.
+      try {
+        p.el.setPointerCapture(p.pointer);
+      } catch {
+        /* not a live pointer (synthetic events) */
+      }
+      tabDrag.id = p.t.id;
+      dragFrom = p.i;
+    }
+    tabDrag.x = e.clientX;
+    tabDrag.y = e.clientY;
+    tabDrag.zone = zoneOf(e.clientX, e.clientY, bar.getBoundingClientRect(), innerWidth, innerHeight);
+    dropTo = tabDrag.zone === 'strip' ? insertionIndex(e.clientX, [...strip.querySelectorAll<HTMLElement>('.tab')].map((el) => el.getBoundingClientRect()), p.i) : -1;
+  }
+
+  function drop(e: PointerEvent) {
+    const p = press;
+    press = null;
+    const id = tabDrag.id;
+    if (!p || !id) return;
+    justDragged = true;
+    setTimeout(() => (justDragged = false));
+    const zone = tabDrag.zone;
+    const to = dropTo;
+    tabDrag.id = null;
+    dropTo = dragFrom = -1;
+    if (zone === 'strip') workspace.move(p.i, to);
+    else if (zone === 'views') tabDrag.dropOnViews?.(id, e.clientX, e.clientY);
+    else void moveToNewWindow(p.t, { x: e.screenX, y: e.screenY });
+  }
+
+  function cancelDrag() {
+    press = null;
+    tabDrag.id = null;
+    dropTo = dragFrom = -1;
+  }
+
+  /** Where the insertion mark goes: before the tab at this index (the length means after the last). */
+  const markAt = $derived(dropTo < 0 || dropTo === dragFrom ? -1 : dropTo > dragFrom ? dropTo + 1 : dropTo);
+  const dragged = $derived(tabDrag.id ? workspace.tabs.find((t) => t.id === tabDrag.id) : undefined);
 
   function kindOf(t: Tab) {
     const m = t.moduleId;
@@ -58,6 +118,7 @@
       { label: 'Close others', run: () => workspace.closeAll(t) },
       { label: 'Close all', run: () => workspace.closeAll() },
       { separator: true },
+      ...(t.filePath ? [{ label: 'Move to a new window', run: () => void moveToNewWindow(t) }] : []),
       ...(workspace.tabs.length > 1 && !inSplit
         ? [
             { label: 'Open side by side (split right)', run: () => splitWith(t, 'right') },
@@ -87,7 +148,8 @@
   });
 </script>
 
-<div class="tabbar" class:mac-collapsed={boot.platform === 'darwin' && !settings.value.sidebarVisible}>
+<svelte:window onpointermove={drag} onpointerup={drop} onpointercancel={cancelDrag} onkeydown={(e) => tabDrag.id && e.key === 'Escape' && cancelDrag()} />
+<div class="tabbar" bind:this={bar} class:mac-collapsed={boot.platform === 'darwin' && !settings.value.sidebarVisible}>
   {#if !settings.value.sidebarVisible}
     <button class="icon-btn toggle" title="Show sidebar" onclick={() => commands.execute('view.toggleSidebar')}><Icon icon={PanelLeft} /></button>
   {/if}
@@ -97,35 +159,19 @@
         class="tab"
         class:active={workspace.activeId === t.id}
         class:in-split={!!workspace.split?.panes.includes(t.id)}
-        class:drop-before={dropIndex === i}
+        class:drop-before={markAt === i}
+        class:drop-after={markAt === workspace.tabs.length && i === workspace.tabs.length - 1}
+        class:dragging={tabDrag.id === t.id}
         data-tab={t.id}
         role="tab"
         tabindex="0"
         aria-selected={workspace.activeId === t.id}
         title={t.subtitle || t.title}
-        draggable="true"
-        onclick={() => workspace.activate(t)}
+        onclick={() => !justDragged && workspace.activate(t)}
+        onpointerdown={(e) => down(e, t, i)}
         onkeydown={(e) => e.key === 'Enter' && workspace.activate(t)}
         onmouseup={(e) => mouseup(e, t)}
         oncontextmenu={(e) => tabMenu(e, t)}
-        ondragstart={(e) => {
-          dragIndex = i;
-          e.dataTransfer?.setData('text/plain', t.id);
-          // Dropping on a view splits it (see SplitOverlay).
-          e.dataTransfer?.setData('application/x-hia-tab', t.id);
-        }}
-        ondragover={(e) => {
-          if (dragIndex < 0) return;
-          e.preventDefault();
-          dropIndex = i;
-        }}
-        ondragleave={() => (dropIndex = -1)}
-        ondrop={(e) => {
-          e.preventDefault();
-          workspace.move(dragIndex, i);
-          dragIndex = dropIndex = -1;
-        }}
-        ondragend={() => (dragIndex = dropIndex = -1)}
       >
         <span class="ico"><Icon icon={iconFor(t.name, kindOf(t))} size={14} /></span>
         <span class="name">{t.title}</span>
@@ -145,11 +191,19 @@
         </button>
       </div>
     {/each}
+    <button class="icon-btn newtab" title="New tab ({formatShortcut('Mod+T')})" aria-label="New tab" onclick={() => commands.execute('tab.new')}><Icon icon={Plus} size={15} /></button>
   </div>
   {#if workspace.tabs.length > 1}
     <button class="icon-btn layout" class:on={!!workspace.split} title="Split view: show 2–4 tabs side by side ({formatShortcut('Mod+\\')})" onclick={layoutMenu}><Icon icon={Columns2} size={15} /></button>
   {/if}
 </div>
+{#if dragged}
+  <!-- Kept inside the window, so "release for a new window" stays readable at its edge. -->
+  <div class="tab-ghost" style:left="{Math.max(8, Math.min(tabDrag.x + 12, innerWidth - 270))}px" style:top="{Math.max(8, Math.min(tabDrag.y + 14, innerHeight - 60))}px" aria-hidden="true">
+    <span class="gname">{dragged.title}</span>
+    {#if tabDrag.zone === 'outside'}<span class="ghint">{dragged.filePath ? 'Release for a new window' : 'Only files can have their own window'}</span>{/if}
+  </div>
+{/if}
 
 <style>
   .tabbar {
@@ -217,6 +271,8 @@
     cursor: pointer;
     flex: none;
     white-space: nowrap;
+    user-select: none;
+    touch-action: none;
     --wails-draggable: no-drag;
     transition: background 0.12s var(--ease), color 0.12s var(--ease);
   }
@@ -227,6 +283,48 @@
   .tab.active {
     background: var(--bg);
     color: var(--text);
+  }
+  .tab.dragging {
+    opacity: 0.45;
+  }
+  .tab.drop-after::after {
+    content: '';
+    position: absolute;
+    right: -2px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+  .newtab {
+    flex: none;
+    align-self: center;
+    margin: 0 2px;
+    --wails-draggable: no-drag;
+  }
+  .tab-ghost {
+    position: fixed;
+    z-index: 500;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-width: 260px;
+    padding: 6px 10px;
+    border-radius: var(--radius);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow);
+    font-size: var(--fs-small);
+  }
+  .gname {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ghint {
+    color: var(--accent-text);
   }
   .tab.drop-before::before {
     content: '';
