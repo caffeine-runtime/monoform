@@ -6,7 +6,7 @@
   // source) or edit the source with a live preview. The preview renders the
   // SVG through an <img> from a blob URL; the design canvas uses a sanitized
   // inline copy (no scripts, handlers or outside references). Export to PNG.
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { xml } from '@codemirror/lang-xml';
   import type { Tab } from '../../core/tabs.svelte';
   import { workspace } from '../../core/tabs.svelte';
@@ -235,6 +235,23 @@
   function ready(c: TextController) {
     ctl = c;
     tab.handlers.getState = () => ({ view });
+    // Pictures and text from other tabs go into the drawing (in the design view).
+    tab.handlers.accept = {
+      kinds: ['image', 'text'],
+      take: async (t, at) => {
+        if (tab.readOnly) return false;
+        if (view !== 'design') {
+          svgViews.get(tab.id)?.set('design');
+          at = undefined; // the drawing moves; put it in the middle
+        }
+        // Just opened or switched: wait (briefly) for the drawing to be built.
+        for (let i = 0; i < 60 && !design?.ready(); i++) {
+          await tick();
+          await new Promise((r) => requestAnimationFrame(r));
+        }
+        return design?.insert(t, at) ?? false;
+      },
+    };
   }
 
   onMount(() => {

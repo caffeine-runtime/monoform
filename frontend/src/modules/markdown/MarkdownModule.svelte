@@ -14,7 +14,7 @@
   import { boot } from '../../core/boot';
   import TextEditor from '../text/TextEditor.svelte';
   import type { TextController } from '../text/controller';
-  import { assetHandlers } from './assets';
+  import { assetHandlers, noteAccepts } from './assets';
   import { markdownViews, type ViewMode } from './views';
   import MdWorker from './mdWorker?worker';
   import './preview.css';
@@ -80,6 +80,7 @@
   function ready(c: TextController) {
     ctl = c;
     tab.handlers.getState = () => ({ view });
+    tab.handlers.accept = noteAccepts(tab, c.view);
     const prevShow = tab.handlers.onShow;
     tab.handlers.onShow = () => {
       prevShow?.();

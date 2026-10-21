@@ -28,6 +28,8 @@
   import * as P from './project';
   import { videoViews, type VideoOp } from './views';
   import FxStage from './FxStage.svelte';
+  import GiveButton from '../../shell/GiveButton.svelte';
+  import type { Transfer } from '../../core/transfer.svelte';
   import FxTracks from './FxTracks.svelte';
   import FxPanel from './FxPanel.svelte';
   import type { Compositor } from './compositor';
@@ -760,8 +762,9 @@
     return true;
   }
 
-  async function snapshot() {
-    if (!el || !natural.w) return ui.toast('No picture to save yet.', 'info');
+  /** The picture at the playhead, upright (without effects). */
+  function frameCanvas(): HTMLCanvasElement | null {
+    if (!el || !natural.w || el.readyState < 2) return null;
     const c = document.createElement('canvas');
     const rot = edit.rotate % 180 !== 0;
     c.width = rot ? natural.h : natural.w;
@@ -770,6 +773,79 @@
     g.translate(c.width / 2, c.height / 2);
     g.rotate((edit.rotate * Math.PI) / 180);
     g.drawImage(el, -natural.w / 2, -natural.h / 2);
+    return c;
+  }
+
+  /** The frame for another tab (Ctrl+C, a drag). */
+  function giveFrame(): Transfer | null {
+    const c = frameCanvas();
+    if (!c) {
+      ui.toast('No picture at the playhead yet.', 'info');
+      return null;
+    }
+    return { kind: 'image', image: c, name: `${stem(tab.title)} ${formatTime(time, 2).replace(/:/g, '-')}` };
+  }
+
+  /** Text as a picture for an overlay: white with a dark edge, wrapped to most of the frame. */
+  async function textBitmap(text: string): Promise<ImageBitmap> {
+    const size = Math.max(16, Math.round(outH / 12));
+    const font = `600 ${size}px "Inter Variable", system-ui, sans-serif`;
+    const g0 = document.createElement('canvas').getContext('2d')!;
+    g0.font = font;
+    const maxW = outW * 0.8;
+    const lines: string[] = [];
+    for (const para of text.trim().split(/\r?\n/).slice(0, 8)) {
+      let line = '';
+      for (const word of para.split(/\s+/)) {
+        const next = line ? `${line} ${word}` : word;
+        if (line && g0.measureText(next).width > maxW) {
+          lines.push(line);
+          line = word;
+        } else line = next;
+      }
+      lines.push(line);
+    }
+    const pad = Math.ceil(size / 4);
+    const c = document.createElement('canvas');
+    c.width = Math.ceil(Math.min(maxW, Math.max(...lines.map((l) => g0.measureText(l).width)))) + pad * 2;
+    c.height = Math.ceil(lines.length * size * 1.25) + pad * 2;
+    const g = c.getContext('2d')!;
+    g.font = font;
+    g.textBaseline = 'top';
+    g.textAlign = 'center';
+    g.lineJoin = 'round';
+    g.lineWidth = Math.max(2, size / 8);
+    g.strokeStyle = 'rgba(0,0,0,0.75)';
+    g.fillStyle = '#fff';
+    lines.forEach((l, i) => {
+      g.strokeText(l, c.width / 2, pad + i * size * 1.25);
+      g.fillText(l, c.width / 2, pad + i * size * 1.25);
+    });
+    return createImageBitmap(c);
+  }
+
+  /** From another tab: a picture or text becomes an overlay (where it was dropped), image files too. */
+  async function take(t: Transfer, at?: { x: number; y: number }): Promise<boolean> {
+    if (!needEditable() || !outW) return false;
+    const p = at && stage && inside(stage.getBoundingClientRect(), at) ? dropPoint(at.x, at.y) : undefined;
+    if (t.kind === 'image') await addImageBitmap(await createImageBitmap(t.image), t.name || 'Image', p);
+    else if (t.kind === 'text') await addImageBitmap(await textBitmap(t.text), `Text: ${t.text.trim().slice(0, 24)}`, p);
+    else {
+      const imgs = t.paths.filter((x) => IMAGE_EXT.includes(extname(x)));
+      if (!imgs.length) {
+        ui.toast('Only pictures can go on top of a video.', 'info');
+        return false;
+      }
+      await addImages(imgs, p);
+    }
+    return true;
+  }
+  const inside = (r: DOMRect, q: { x: number; y: number }) => q.x >= r.left && q.x <= r.right && q.y >= r.top && q.y <= r.bottom;
+
+  async function snapshot() {
+    if (!el || !natural.w) return ui.toast('No picture to save yet.', 'info');
+    const c = frameCanvas();
+    if (!c) return ui.toast('No picture to save yet.', 'info');
     let blob: Blob | null = null;
     try {
       blob = await new Promise<Blob | null>((r) => c.toBlob(r, 'image/png'));
@@ -876,7 +952,7 @@
   }
 
   onMount(() => {
-    tab.handlers = { ...tab.handlers, save, saveAs, reload: () => load(), onShow: () => updateStatus(), getState: () => undefined };
+    tab.handlers = { ...tab.handlers, save, saveAs, reload: () => load(), onShow: () => updateStatus(), getState: () => undefined, give: giveFrame, accept: { kinds: ['image', 'text', 'files'], take } };
     void load();
     return () => {
       videoViews.delete(tab.id);
@@ -1043,6 +1119,7 @@
     <button class="icon-btn" title="Redo ({formatShortcut('Mod+Shift+Z')})" disabled={!canRedo} onclick={() => doEdit('redo')}><Icon icon={Redo2} size={15} /></button>
     <span class="sep"></span>
     <button class="icon-btn" title="Add an image on top of the video (or drop one on the picture)" onclick={() => void addImages()}><Icon icon={ImagePlus} size={15} /></button>
+    <GiveButton {tab} get={giveFrame} what="this frame" />
     <button class="icon-btn" title="Blur an area (faces, plates…); it can follow a moving object" onclick={blurMenu}><Icon icon={Droplet} size={15} /></button>
     <button class="icon-btn" class:on={fx.speeds.length > 0} title="Speed up or slow down the selection (or the whole video)" onclick={speedMenu}><Icon icon={Gauge} size={15} /></button>
     <button class="icon-btn" class:on={fxPanel} title="Effects panel: overlays, keyframes, curves, fades, transitions" onclick={() => (fxPanel = !fxPanel)}><Icon icon={Wand} size={15} /></button>

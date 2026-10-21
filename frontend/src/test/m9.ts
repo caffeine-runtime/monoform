@@ -96,7 +96,7 @@ export default async function m9(dir: string) {
   await h.paste();
   await waitFor(() => (ed.state().layers.length === 2 ? true : null), 'pasted layer');
   const pasted = ed.state().layers[1];
-  assertEq(pasted.name, 'Pasted', 'pasted layer name');
+  assertEq(pasted.name, 'subject (part)', 'pasted layer named after where it was copied from');
   ed.setActive(ed.state().layers[0].id);
   ed.setPixelSelection(selection.fromPath(selection.rectPath(r), r, ed.width, ed.height));
   ed.clearSelectionPixels();

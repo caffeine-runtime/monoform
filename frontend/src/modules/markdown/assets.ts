@@ -4,6 +4,7 @@ import { api, endpoint, postBytes } from '../../core/backend';
 import { dropHandlers } from '../../core/drop';
 import { basename, extname } from '../../core/paths';
 import type { Tab } from '../../core/tabs.svelte';
+import type { Accepts } from '../../core/transfer.svelte';
 import { workspace } from '../../core/tabs.svelte';
 import { toastError, ui } from '../../core/ui.svelte';
 import { controllers } from '../text/controllers';
@@ -70,6 +71,30 @@ async function insertPaths(tab: Tab, view: EditorView, pos: number, paths: strin
     }
   }
   if (links.length) insertAt(view, pos, links.join('\n'));
+}
+
+/**
+ * What a note takes from other tabs: an image is saved into assets/ and
+ * linked, files are linked where they are (images copied), text is inserted —
+ * at the drop point or the cursor.
+ */
+export function noteAccepts(tab: Tab, view: EditorView): Accepts {
+  return {
+    kinds: ['image', 'text', 'files'],
+    take: async (t, at) => {
+      if (tab.readOnly || view.state.readOnly) return false;
+      const pos = (at && view.posAtCoords(at)) ?? view.state.selection.main.head;
+      if (t.kind === 'text') insertAt(view, pos, t.text);
+      else if (t.kind === 'files') await insertPaths(tab, view, pos, t.paths, false);
+      else {
+        const blob = await new Promise<Blob | null>((r) => t.image.toBlob(r, 'image/png'));
+        if (!blob) return false;
+        const name = `${(t.name || 'image').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 60)}-${stamp()}.png`;
+        await insertBlobs(tab, view, pos, [new File([blob], name, { type: 'image/png' })]);
+      }
+      return true;
+    },
+  };
 }
 
 export function assetHandlers(tab: Tab) {

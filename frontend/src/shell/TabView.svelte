@@ -6,6 +6,7 @@
   import { workspace, type Tab } from '../core/tabs.svelte';
   import ExternalChangeBanner from './ExternalChangeBanner.svelte';
   import { paneRect } from '../core/split';
+  import { give, type Transfer } from '../core/transfer.svelte';
 
   let { tab }: { tab: Tab } = $props();
   const active = $derived(workspace.activeId === tab.id);
@@ -17,6 +18,39 @@
     return s && i >= 0 ? paneRect(s, i) : null;
   });
   const pct = (v: number) => `${(v * 100).toFixed(3)}%`;
+
+  // HTML drops the module itself didn't take (text dragged out of an editor,
+  // a file from the sidebar, a picture from a browser) go to the tab's accept.
+  function fromDrop(e: DragEvent): Transfer | Promise<Transfer> | null {
+    const dt = e.dataTransfer;
+    if (!dt) return null;
+    const path = dt.getData('application/x-hia-path');
+    if (path) return { kind: 'files', paths: [path] };
+    const img = Array.from(dt.files).find((f) => f.type.startsWith('image/'));
+    if (img)
+      return createImageBitmap(img).then((b) => {
+        const c = document.createElement('canvas');
+        c.width = b.width;
+        c.height = b.height;
+        c.getContext('2d')!.drawImage(b, 0, 0);
+        b.close();
+        return { kind: 'image', image: c, name: img.name.replace(/\.[^.]+$/, '') } as Transfer;
+      });
+    const text = dt.getData('text/plain');
+    return text ? { kind: 'text', text } : null;
+  }
+  function takes(e: DragEvent): boolean {
+    const kinds = tab.handlers.accept?.kinds ?? [];
+    const types = e.dataTransfer?.types ?? [];
+    return (types.includes('application/x-hia-path') && kinds.includes('files')) || (types.includes('Files') && kinds.includes('image')) || (types.includes('text/plain') && kinds.includes('text'));
+  }
+  async function drop(e: DragEvent) {
+    if (e.defaultPrevented || !takes(e)) return;
+    const t = fromDrop(e);
+    if (!t) return;
+    e.preventDefault();
+    await give(tab, await t, { x: e.clientX, y: e.clientY });
+  }
   let mod = $state<LoadedModule | null>(null);
   let error = $state('');
   let slow = $state(false);
@@ -54,6 +88,8 @@
   style:width={rect ? pct(rect.width) : null}
   style:height={rect ? pct(rect.height) : null}
   onpointerdowncapture={() => !active && shown && workspace.activate(tab)}
+  ondragover={(e) => !e.defaultPrevented && takes(e) && e.preventDefault()}
+  ondrop={drop}
   onfocusin={() => !active && shown && workspace.activate(tab)}
 >
   {#if tab.external}

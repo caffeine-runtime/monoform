@@ -249,6 +249,16 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   screen. Rejected: dragging tabs between windows (needs cross-process drag state; for now the new window has its
   own tabs and Open). The "+" opens a start-page tab (module `start`) that is replaced by what is opened from it,
   like a browser's new tab.
+- **One transfer model between editors** (`core/transfer.svelte.ts`): a `Transfer` is a picture (canvas + name),
+  text or file paths. A tab declares `handlers.accept` (kinds + take at an optional window point) and
+  `handlers.give`; the app clipboard, the drag and HTML/OS drops all end in `give(tab, transfer, point)`. Ctrl+C
+  writes the system clipboard (PNG or text) and keeps the full transfer (names, paths) in the app; Ctrl+V reads the
+  system clipboard first (it may hold something newer from another app) and falls back to the app's copy when the
+  webview can't read it. Generic Copy/Paste commands are registered first, so editors with their own (image, audio,
+  text fields) keep theirs. Drags use pointer events (as tabs do) from an explicit copy/drag button rather than
+  dragging on the canvas, where a drag already means move/draw/select. Files dropped from the system still open as
+  tabs unless the view claims them (`claimsDrop`: the image editor, for pictures), so dropping a PDF on an editor
+  never inserts its path by surprise.
 - **Side panels float in narrow panes** (< 600 px, `isNarrow`): over the content with a shadow, closed when the
   pane becomes narrow, opened from the toolbar — a 260 px panel beside a 400 px pane would leave the canvas or
   table unusable.

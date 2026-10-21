@@ -7,6 +7,7 @@ import { settings } from './settings.svelte';
 import { sidebar } from './sidebar.svelte';
 import { peek } from './peek.svelte';
 import { moveToNewWindow } from './windows';
+import { copyTransfer, describe, pasteInto } from './transfer.svelte';
 import { workspace } from './tabs.svelte';
 import { theme } from './theme.svelte';
 import { tree } from './tree.svelte';
@@ -106,6 +107,22 @@ export function registerAppCommands() {
     { id: 'tab.prev', title: 'Previous tab', category: 'Tabs', shortcut: ['Ctrl+Shift+Tab', 'Ctrl+PageUp', 'Mod+Alt+ArrowLeft'], when: hasTab, run: () => workspace.cycle(-1) },
     { id: 'tab.reopen', title: 'Reopen closed tab', category: 'Tabs', shortcut: 'Mod+Shift+T', run: () => workspace.reopenClosed() },
     { id: 'tab.new', title: 'New tab', category: 'Tabs', shortcut: 'Mod+T', run: () => workspace.openTool('start') },
+    // Copy out of / paste into views that aren't text fields (a video frame, a picture…); editors with their own copy and paste override these.
+    {
+      id: 'edit.copyOut',
+      title: 'Copy (to paste into another tab)',
+      category: 'Edit',
+      shortcut: 'Mod+C',
+      inInputs: false,
+      when: () => !!workspace.active?.handlers.give && !window.getSelection()?.toString(),
+      run: async () => {
+        const t = await workspace.active?.handlers.give?.();
+        if (!t) return;
+        await copyTransfer(t);
+        ui.toast(`Copied ${describe(t)}`, 'success');
+      },
+    },
+    { id: 'edit.pasteIn', title: 'Paste', category: 'Edit', shortcut: 'Mod+V', inInputs: false, when: () => !!workspace.active?.handlers.accept, run: () => void pasteInto() },
     { id: 'tab.newWindow', title: 'Move tab to a new window', category: 'Tabs', when: () => !!workspace.active?.filePath, run: () => workspace.active && void moveToNewWindow(workspace.active) },
     ...Array.from({ length: 9 }, (_, i) => ({
       id: `tab.goto${i + 1}`,

@@ -47,6 +47,7 @@ const scenarios: Record<string, () => Promise<{ default: (arg: string) => Promis
   m37: () => import('./m37'),
   m38: () => import('./m38'),
   m39: () => import('./m39'),
+  m40: () => import('./m40'),
   windowchild: () => import('./m39').then((m) => ({ default: m.windowChild })),
   uiaudit: () => import('./uiaudit'),
   menushot: () => import('./menushot'),

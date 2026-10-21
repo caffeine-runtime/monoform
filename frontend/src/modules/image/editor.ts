@@ -1157,6 +1157,12 @@ export class ImageEditor {
   }
 
   /** Paste an image as a new layer, at (x, y) or centred in the view. */
+  /** A window point in document pixels. */
+  docPoint(clientX: number, clientY: number): { x: number; y: number } {
+    const r = this.stage.container().getBoundingClientRect();
+    return { x: (clientX - r.left - this.view.x) / this.view.zoom, y: (clientY - r.top - this.view.y) / this.view.zoom };
+  }
+
   pasteImage(c: HTMLCanvasElement, at?: { x: number; y: number }, name = 'Pasted') {
     const p = at ?? { x: Math.round((this.docW - c.width) / 2), y: Math.round((this.docH - c.height) / 2) };
     this.addLayer(name, c, p);
