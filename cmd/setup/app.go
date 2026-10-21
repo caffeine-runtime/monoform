@@ -195,11 +195,20 @@ func (s *Setup) Uninstall(removeData bool) error {
 	if !s.demo && setup.Running(setup.Exe) {
 		return errors.New("Hold It All is open — close it, then try again")
 	}
+	sys := s.sys
 	moved := ""
 	if !s.demo {
 		moved = moveSelfOut(in.Dir)
+		if moved == "" {
+			// It couldn't move (the temp folder is on another drive): remove
+			// everything but itself now, itself and the folder once it exits.
+			if exe, err := os.Executable(); err == nil && inside(in.Dir, exe) {
+				moved = exe
+				sys = keepRunning{sys, exe}
+			}
+		}
 	}
-	if err := setup.Uninstall(s.sys, in, setup.Assocs, s.progress); err != nil {
+	if err := setup.Uninstall(sys, in, setup.Assocs, s.progress); err != nil {
 		return err
 	}
 	if !s.demo {
@@ -261,15 +270,45 @@ func moveSelfOut(dir string) string {
 	if err != nil || runtime.GOOS != "windows" {
 		return ""
 	}
-	rel, err := filepath.Rel(dir, exe)
-	if err != nil || strings.HasPrefix(rel, "..") {
-		return "" // not running from inside it
+	if !inside(dir, exe) {
+		return ""
 	}
 	tmp := filepath.Join(os.TempDir(), fmt.Sprintf("hold-it-all-uninstall-%d.exe", os.Getpid()))
 	if err := os.Rename(exe, tmp); err != nil {
 		return ""
 	}
 	return tmp
+}
+
+func inside(dir, p string) bool {
+	rel, err := filepath.Rel(dir, p)
+	return err == nil && rel != "." && !strings.HasPrefix(rel, "..")
+}
+
+// keepRunning removes a folder except the running uninstaller in it.
+type keepRunning struct {
+	setup.System
+	self string
+}
+
+func (k keepRunning) RemoveAll(dir string) error {
+	if !inside(dir, k.self) {
+		return k.System.RemoveAll(dir)
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		p := filepath.Join(dir, e.Name())
+		if strings.EqualFold(p, k.self) {
+			continue
+		}
+		if err := k.System.RemoveAll(p); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // scheduleSelfDelete removes the moved uninstaller once it has exited (and
