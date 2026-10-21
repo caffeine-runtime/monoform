@@ -1,6 +1,6 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/readme/hero-dark.svg">
-  <img src="docs/readme/hero-light.svg" width="100%" alt="Monoform — one calm, fast window for every everyday file">
+  <img src="docs/readme/hero-light.svg" width="100%" alt="Monoform — one window to rule them all">
 </picture>
 
 <p align="center">
@@ -23,17 +23,18 @@ open files with.** One fast desktop window for notes and Markdown, PDFs, images,
 and other audio, videos, JSON/YAML/CSV, Word, Excel and OpenDocument files, archives and file hashes. It runs on
 Windows, macOS and Linux, works offline, collects no telemetry, needs no account and saves everything as plain files.
 
-<p align="center"><img src="docs/readme/tour.webp" width="100%" alt="Clicking through a trip folder: a Markdown plan, a PDF guide, a picture, a budget, an SVG tile, a 3D souvenir, a song and a video, each opening in the same window"></p>
+<p align="center"><img src="docs/readme/tour.webp" width="100%" alt="Clicking through a project folder: Markdown notes, a PDF fact sheet, a NASA photo, a spreadsheet, an SVG, the 3DBenchy model, a piano recording and NASA landing footage, each opening in the same window"></p>
 
 ## One window, every file
 
 ### Edit pictures without a separate photo app
 
-Layers, selections that snap to edges, colour adjustments limited to what you selected, text, masks — and one-click
-background removal. Below: the magic wand takes the tram, Hue turns it red; then *Remove background* from the search
-box. An optional, offline model makes subject selection sharper and can **remove objects and fill the gap**.
+Layers, selections that snap to edges, colour adjustments limited to what you selected, text, masks and one-click
+background removal. Below: *Select subject* finds Space Shuttle Atlantis in a NASA photo; copied and pasted into a
+note, it is saved next to the note as a cut-out. An optional, offline model makes subject selection sharper and can
+**remove objects and fill the gap**.
 
-<p align="center"><img src="docs/readme/image.webp" width="100%" alt="Recolouring a selected tram with the Hue slider, then removing the background of a portrait"></p>
+<p align="center"><img src="docs/readme/image.webp" width="100%" alt="Selecting the Space Shuttle Atlantis in a NASA photo with Select subject, copying it and pasting the cut-out into a Markdown note"></p>
 
 ### Write with a live preview
 
@@ -47,7 +48,7 @@ draw as you type; pictures paste straight into `assets/`.
 <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>⌘</kbd><kbd>K</kbd> on macOS) finds any command, file name or text inside files. Split the window into
 two, three or four views and keep a note, a PDF, a picture and a model open together.
 
-<p align="center"><img src="docs/readme/split.webp" width="100%" alt="Searching for “split four” and four files appearing side by side"></p>
+<p align="center"><img src="docs/readme/split.webp" width="100%" alt="Searching for “split four”: notes, a PDF, a photo and the 3DBenchy model side by side"></p>
 
 ## What it opens
 
@@ -90,19 +91,6 @@ Everything is keyboard-reachable: press **Ctrl+K** (**⌘K** on macOS) and type.
 
 </details>
 
-## Gallery
-
-<table>
-<tr><td width="50%"><img src="docs/screenshots/start.png" alt="Start page"><br><sub>Start page</sub></td><td width="50%"><img src="docs/screenshots/pdf.png" alt="PDF with page thumbnails"><br><sub>PDF with page thumbnails</sub></td></tr>
-<tr><td width="50%"><img src="docs/screenshots/markdown.png" alt="Markdown with a live preview"><br><sub>Markdown with a live preview</sub></td><td width="50%"><img src="docs/screenshots/compare.png" alt="Comparing two versions of a note"><br><sub>Comparing two versions of a note</sub></td></tr>
-<tr><td width="50%"><img src="docs/screenshots/spreadsheet.png" alt="Excel workbook, formulas calculated"><br><sub>Excel workbook, formulas calculated</sub></td><td width="50%"><img src="docs/screenshots/word.png" alt="Word document"><br><sub>Word document</sub></td></tr>
-<tr><td width="50%"><img src="docs/screenshots/svg.png" alt="SVG editor"><br><sub>SVG editor</sub></td><td width="50%"><img src="docs/screenshots/html.png" alt="Web page preview"><br><sub>Web page preview</sub></td></tr>
-<tr><td width="50%"><img src="docs/screenshots/model3d.png" alt="3D model"><br><sub>3D model</sub></td><td width="50%"><img src="docs/screenshots/json.png" alt="JSON as a tree"><br><sub>JSON as a tree</sub></td></tr>
-<tr><td width="50%"><img src="docs/screenshots/audio.png" alt="Audio editor"><br><sub>Audio editor</sub></td><td width="50%"><img src="docs/screenshots/video.png" alt="Video with a thumbnail timeline"><br><sub>Video with a thumbnail timeline</sub></td></tr>
-<tr><td width="50%"><img src="docs/screenshots/archive.png" alt="Inside a ZIP"><br><sub>Inside a ZIP</sub></td><td width="50%"><img src="docs/screenshots/checksums.png" alt="Checking a SHA256SUMS file"><br><sub>Checking a SHA256SUMS file</sub></td></tr>
-<tr><td width="50%"><img src="docs/screenshots/palette.png" alt="One search for files, text and commands"><br><sub>One search for files, text and commands</sub></td><td width="50%"><img src="docs/screenshots/settings.png" alt="Settings and the optional AI models"><br><sub>Settings and the optional AI models</sub></td></tr>
-</table>
-
 ## Download
 
 Get the latest version from **[Releases](https://github.com/caffeine-runtime/monoform/releases/latest)** (each release lists SHA-256 checksums in `SHA256SUMS`). Builds of unreleased commits are under **Actions → Build → a run → Artifacts**.
@@ -121,32 +109,12 @@ Get the latest version from **[Releases](https://github.com/caffeine-runtime/mon
   for its file types, and `./install.sh --uninstall` removes it. It needs WebKitGTK 4.1 (`libwebkit2gtk-4.1-0`;
   Ubuntu 24.04+, Debian 13, Fedora 40+).
 
-### Command line, quick peek and preview mode
+### Quick view and preview mode
 
-`monoform` ships with the app (the Windows installer puts it on the PATH, `install.sh` installs it on Linux; on macOS
-use **Settings → Install the monoform command**):
-
-```sh
-monoform report.pdf notes.md          # open in the app (a running window takes them)
-monoform --peek photo.heic            # a small read-only quick view; Edit opens it in the full editor
-monoform --preview *.csv              # open in preview mode (read-only until you click Edit)
-monoform hash *.iso                   # SHA-256 like sha256sum; -a md5,sha1,sha512,blake3 or -a all
-monoform verify SHA256SUMS            # exit code 1 if anything is missing or differs
-monoform info scan.pdf                # type, size, pages / image size
-monoform convert IMG_0042.HEIC photo.jpg
-```
-
-**Quick peek** is also in the file manager: *Open With → Quick peek* on Linux, *Quick peek with Monoform* in the
-Windows Explorer context menu. On Windows, **pictures open in a quick view** when Monoform is their default app (just
-the picture, ← / → for the rest of the folder); **Edit** — or *Edit with Monoform* on right-click — opens the full
-editor. Pressing Space in Finder or Explorer can't open it — that needs a native Quick Look /
-preview-handler plug-in. **Preview mode** (status bar: *Preview · Edit*, `Ctrl+Alt+E`, or *Settings → Open files in
-preview mode*) shows any file read-only until you choose to edit it.
-
-### Publishing a release
-
-Run the **Build** workflow with a version (or push a `v*` tag); CI tests, builds and publishes the release.
-Step-by-step: [docs/RELEASING.md](docs/RELEASING.md).
+On Windows, **pictures open in a quick view** when Monoform is their default app (just the picture, ← / → for the rest
+of the folder); **Edit**, or *Edit with Monoform* on right-click, opens the full editor. **Preview mode** (status bar:
+*Preview · Edit*, `Ctrl+Alt+E`, or *Settings → Open files in preview mode*) shows any file read-only until you choose
+to edit it.
 
 ## Build from source
 
@@ -205,10 +173,21 @@ from the app (Settings › AI models).
   `scripts/licenses.py` audits the built binary and the bundled npm packages)
 - [docs/TESTING.md](docs/TESTING.md): automated scenarios and the manual checklist
 - [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): tools to install, commands, layout and rules for contributors and coding agents ([CLAUDE.md](CLAUDE.md) is the short version)
-- [docs/RELEASING.md](docs/RELEASING.md): publishing a new version
 
 ## Licence
 
 [MIT](LICENSE). Monoform is written by AI (Anthropic's Claude, directed and reviewed by its maintainer) and uses
-permissively licensed components only. The README's clips and screenshots are recorded from the real app by
-`scripts/readme-media.sh`.
+permissively licensed components only.
+
+## Gallery
+
+<table>
+<tr><td width="25%" align="center"><a href="docs/screenshots/pdf.png"><img src="docs/screenshots/pdf.png" alt="PDF"></a><br><sub>PDF</sub></td><td width="25%" align="center"><a href="docs/screenshots/word.png"><img src="docs/screenshots/word.png" alt="Word document"></a><br><sub>Word document</sub></td><td width="25%" align="center"><a href="docs/screenshots/spreadsheet.png"><img src="docs/screenshots/spreadsheet.png" alt="Excel, formulas calculated"></a><br><sub>Excel, formulas calculated</sub></td><td width="25%" align="center"><a href="docs/screenshots/compare.png"><img src="docs/screenshots/compare.png" alt="Two versions compared"></a><br><sub>Two versions compared</sub></td></tr>
+<tr><td width="25%" align="center"><a href="docs/screenshots/svg.png"><img src="docs/screenshots/svg.png" alt="SVG editor"></a><br><sub>SVG editor</sub></td><td width="25%" align="center"><a href="docs/screenshots/model3d.png"><img src="docs/screenshots/model3d.png" alt="3D model (STL)"></a><br><sub>3D model (STL)</sub></td><td width="25%" align="center"><a href="docs/screenshots/audio.png"><img src="docs/screenshots/audio.png" alt="Audio editor"></a><br><sub>Audio editor</sub></td><td width="25%" align="center"><a href="docs/screenshots/video.png"><img src="docs/screenshots/video.png" alt="Video"></a><br><sub>Video</sub></td></tr>
+<tr><td width="25%" align="center"><a href="docs/screenshots/json.png"><img src="docs/screenshots/json.png" alt="JSON tree"></a><br><sub>JSON tree</sub></td><td width="25%" align="center"><a href="docs/screenshots/html.png"><img src="docs/screenshots/html.png" alt="Web page preview"></a><br><sub>Web page preview</sub></td><td width="25%" align="center"><a href="docs/screenshots/archive.png"><img src="docs/screenshots/archive.png" alt="Inside a ZIP"></a><br><sub>Inside a ZIP</sub></td><td width="25%" align="center"><a href="docs/screenshots/settings.png"><img src="docs/screenshots/settings.png" alt="Settings and AI models"></a><br><sub>Settings and AI models</sub></td></tr>
+</table>
+
+<sub>Shown in the clips and screenshots: photos and footage of Space Shuttle Atlantis by NASA (public domain:
+ISS015-E-12854, JSC2011-E-067588, KSC-09-S-00143); [#3DBenchy](https://www.3dbenchy.com) by Creative Tools (public
+domain, CC0); Bach's Goldberg Variations played by Kimiko Ishizaka, *The Open Goldberg Variations* (CC0); the rocket
+from Microsoft's [Fluent Emoji](https://github.com/microsoft/fluentui-emoji) (MIT).</sub>

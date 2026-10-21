@@ -85,7 +85,7 @@ builds and runs its demo.
 | Make test fixtures | `python3 scripts/fixtures.py /tmp/fx` (re-run before each self-test session; it resets outputs) |
 | Run one self-test | `scripts/selftest.sh m12 /tmp/fx` (exit 0 = PASS; prints timings and UI-frame measurements) |
 | Screenshot the app | `scripts/screenshot.sh out.png "<folder>|<files>|<commands>|<search>|<palette query>|<wait ms>"` (`SHOT_DELAY=6` for slow scenes) |
-| README clips and screenshots | `scripts/readme-media.sh [scene…]` (after a build; needs ffmpeg) → `docs/readme/*.webp`, `docs/screenshots/*.png`; `python3 scripts/readme_hero.py` redraws the banner (needs `pip install fonttools brotli`) |
+| README clips and screenshots | `scripts/readme-media.sh [scene…]` (after a build; needs ffmpeg) → `docs/readme/*.webp`, `docs/screenshots/*.png` (the first run downloads the demo media, ~30 MB, into `~/.cache/monoform-demo`); `python3 scripts/readme_hero.py` redraws the banner (needs `pip install fonttools brotli`) |
 
 Self-test scenarios and what each checks are listed in [TESTING.md](TESTING.md). Special ones: `m0-setup` then
 `m0-restore` share a settings file (third argument); `m9` needs `MF_TIMEOUT=400`; `m6b` needs the search model

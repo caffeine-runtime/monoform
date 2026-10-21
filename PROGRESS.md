@@ -434,12 +434,16 @@
   file with no folder open, an export from an unsaved tab) was offered the working directory, which is
   `C:\Windows\System32` when Windows starts the app from Explorer or the installer. It now opens in the folder you
   last saved into, else Documents (Windows' known folder, so OneDrive redirection is followed; XDG on Linux).
-- **A project page.** The README opens with an animated banner (light/dark), clips recorded from the app (opening
-  every kind of file in one window, recolouring a selection and removing a background, Markdown with a live diagram,
-  four files side by side), the file types with their icons, and a gallery of 16 fresh screenshots — all made by
-  `scripts/readme-media.sh` from a generated demo folder. Found on the way and fixed: a **PDF at Fit width didn't
-  refit** when the window or its split pane changed size (self-test `m33`), and **Excel files written by scripts
-  showed formulas without results as empty cells** — they're calculated on open now (Go test).
+- **A project page.** The README opens with an animated banner (light/dark; the file-type icons swipe past with motion
+  blur), clips recorded from the app (opening every kind of file in one window; selecting the Space Shuttle in a NASA
+  photo, copying it and pasting the cut-out into a note; Markdown with a live diagram; four files side by side, the
+  3DBenchy model among them), the file types with their icons, and a gallery at the bottom — made by
+  `scripts/readme-media.sh` from real, freely licensed media (NASA, #3DBenchy, The Open Goldberg Variations). Found on
+  the way and fixed: a **PDF at Fit width didn't refit** when the window or its split pane changed size (self-test
+  `m33`); **Excel files written by scripts showed formulas without results as empty cells**, now calculated on open
+  (Go test); and **the 3D floor grid drew stray grey triangles** on software OpenGL (VMs, no GPU driver) — it is now
+  one shader-drawn plane that fades out around the model (self-test `m11`); and **STL/3MF/AMF models lay on their
+  side** (Z-up files shown Y-up) — they now stand as in a slicer (`m11`).
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

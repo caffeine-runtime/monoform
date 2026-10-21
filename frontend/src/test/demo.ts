@@ -8,6 +8,7 @@ import { compareFiles } from '../core/compare';
 import { join } from '../core/paths';
 import { settings } from '../core/settings.svelte';
 import { workspace, type Tab } from '../core/tabs.svelte';
+import { pasteInto } from '../core/transfer.svelte';
 import { ui } from '../core/ui.svelte';
 import { WindowSetSize } from '../wailsjs/runtime/runtime';
 import { log, press, sleep, waitFor } from './harness';
@@ -18,7 +19,7 @@ const H = 800;
 // ------------------------------------------------------------- the pointer
 
 const ARROW =
-  '<svg width="26" height="30" viewBox="0 0 26 30"><path d="M3 2 L3 24 L9 18.5 L13 27.5 L17 25.8 L13 17 L21 17 Z" fill="#fff" stroke="#111" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+  '<svg width="28" height="32" viewBox="0 0 28 32"><path transform="translate(1.2 2)" d="M3 2 L3 24 L9 18.5 L13 27.5 L17 25.8 L13 17 L21 17 Z" fill="#000" opacity=".28" stroke="#000" stroke-width="2.4" stroke-linejoin="round"/><path d="M3 2 L3 24 L9 18.5 L13 27.5 L17 25.8 L13 17 L21 17 Z" fill="#fff" stroke="#111" stroke-width="1.6" stroke-linejoin="round"/></svg>';
 
 let cursor: HTMLDivElement;
 let at = { x: W * 0.6, y: H * 0.55 };
@@ -32,7 +33,6 @@ function addCursor() {
     top: '0',
     zIndex: '2147483647',
     pointerEvents: 'none',
-    filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.35))',
     transform: `translate(${at.x}px, ${at.y}px)`,
   });
   document.body.appendChild(cursor);
@@ -129,11 +129,28 @@ async function openFromTree(dir: string, name: string, hold: number) {
   return tab;
 }
 
-async function spin(tab: Tab, speed = 3) {
-  const h = await waitFor(() => (tab as unknown as { modelTest?: { viewer: () => any } }).modelTest?.viewer(), 'model viewer');
-  h.controls.autoRotate = true;
-  h.controls.autoRotateSpeed = speed;
-  h.kick?.();
+/** Turn the model at `rpm` turns a minute by the clock, not per frame: a heavy
+ * model on software OpenGL draws few frames, and OrbitControls' auto-rotate
+ * would crawl. */
+async function spin(tab: Tab, rpm = 6) {
+  const v = await waitFor(() => (tab as unknown as { modelTest?: { viewer: () => any; loading: () => boolean } }).modelTest, 'model view');
+  await waitFor(() => (!v.loading() && v.viewer() ? true : null), 'model loaded', 60000);
+  await sleep(400); // the view frames the model once laid out
+  const viewer = v.viewer();
+  const c = viewer.controls;
+  const t0 = performance.now();
+  const start = Math.atan2(viewer.camera.position.x - c.target.x, viewer.camera.position.z - c.target.z);
+  const r = Math.hypot(viewer.camera.position.x - c.target.x, viewer.camera.position.z - c.target.z);
+  const turn = () => {
+    if (!viewer.renderer.domElement.isConnected) return;
+    const a = start + ((performance.now() - t0) / 60000) * rpm * 2 * Math.PI;
+    viewer.camera.position.x = c.target.x + r * Math.sin(a);
+    viewer.camera.position.z = c.target.z + r * Math.cos(a);
+    viewer.camera.lookAt(c.target);
+    viewer.kick();
+    requestAnimationFrame(turn);
+  };
+  requestAnimationFrame(turn);
 }
 
 async function palette(query: string) {
@@ -149,73 +166,82 @@ async function palette(query: string) {
 
 // ------------------------------------------------------------------ scenes
 
-/** Every kind of file in one window: click through the trip folder. */
+/** Every kind of file in one window: click through the project folder. */
 async function tour(dir: string) {
   await moveTo(140, 300, 400);
-  await openFromTree(dir, 'Plan.md', 1900);
-  await openFromTree(dir, 'Lisbon guide.pdf', 1700);
-  await openFromTree(dir, 'tram-28.png', 1500);
-  await openFromTree(dir, 'Budget.xlsx', 1500);
-  await openFromTree(dir, 'azulejo.svg', 1400);
-  const glb = await openFromTree(dir, 'souvenir.glb', 0);
-  await spin(glb, 6);
-  await sleep(1900);
-  await openFromTree(dir, 'Fado sketch.wav', 1500);
-  await openFromTree(dir, 'Sunset.webm', 1800);
+  await openFromTree(dir, 'Notes.md', 1900);
+  await openFromTree(dir, 'Shuttle fact sheet.pdf', 1700);
+  await openFromTree(dir, 'Atlantis in orbit.jpg', 1500);
+  await openFromTree(dir, 'Fleet.xlsx', 1500);
+  await openFromTree(dir, 'Rocket.svg', 1400);
+  const model = await openFromTree(dir, '3DBenchy.stl', 0);
+  await cut(spin(model, 8));
+  await sleep(2400);
+  await openFromTree(dir, 'Goldberg Variation 1.ogg', 1500);
+  await openFromTree(dir, 'Atlantis landing.webm', 1800);
 }
 
-/** The image editor: a magic-wand selection recoloured, then a background removed. */
+/** A key press, shown as a keycap for a moment. */
+async function keycap(label: string) {
+  const k = document.createElement('div');
+  k.textContent = label;
+  Object.assign(k.style, {
+    position: 'fixed',
+    left: `${at.x + 26}px`,
+    top: `${at.y + 18}px`,
+    padding: '6px 12px',
+    borderRadius: '8px',
+    font: '600 15px Inter, sans-serif',
+    color: '#fff',
+    background: 'rgba(20, 20, 20, .82)',
+    boxShadow: '0 2px 8px rgba(0,0,0,.35)',
+    zIndex: '2147483646',
+    pointerEvents: 'none',
+  });
+  document.body.appendChild(k);
+  await sleep(900);
+  k.remove();
+}
+
+/** NASA's photo of Atlantis: select the shuttle, copy it, paste it into a note. */
 async function image(dir: string) {
-  const tab = workspace.findByPath(join(dir, 'tram-28.png'))!;
+  const tab = workspace.findByPath(join(dir, 'Atlantis in orbit.jpg'))!;
+  const note = workspace.findByPath(join(dir, 'notes', 'Moodboard.md'))!;
   const h = await waitFor(() => (tab as unknown as { imageTest?: any }).imageTest, 'image editor');
   await waitFor(() => h.editor(), 'editor');
   await sleep(400);
-  // Pick the magic wand from the toolbar, click the tram.
-  const wand = await waitFor(() => document.querySelector<HTMLElement>('button[aria-label="Magic wand"]'), 'wand');
-  await click(wand);
-  await sleep(300);
-  const canvas = await waitFor(() => pane(tab)?.querySelector<HTMLCanvasElement>('canvas'), 'canvas');
-  const r = canvas.getBoundingClientRect();
-  const { w, h: ih } = h.natural() ?? { w: 1600, h: 1000 };
-  const scale = Math.min(r.width / w, r.height / ih);
-  const ox = r.left + (r.width - w * scale) / 2;
-  const oy = r.top + (r.height - ih * scale) / 2;
-  await moveTo(ox + 760 * scale, oy + 820 * scale);
-  await ripple();
-  await h.wandAt(760, 820, 'replace');
-  await sleep(700);
-  // Adjust › Hue: the tram turns red.
-  h.setPanel('adjust');
-  const a = await waitFor(() => h.adjust(), 'adjust panel');
+  // The object tool, then Select subject: the shuttle is found.
+  await click(await waitFor(() => document.querySelector<HTMLElement>('button[aria-label="Select object"]'), 'object tool'));
   await sleep(400);
-  const hue = document.querySelector<HTMLElement>('input[type="range"][max="180"][min="-180"]');
-  if (hue) {
-    const hr = hue.getBoundingClientRect();
-    await moveTo(hr.left + hr.width / 2, hr.top + hr.height / 2);
-    await ripple();
-    for (let i = 0; i <= 24; i++) {
-      const v = -Math.round((i / 24) * 48);
-      a.test.set('hue', v);
-      cursor.style.transition = 'none';
-      cursor.style.transform = `translate(${hr.left + hr.width / 2 + (v / 360) * hr.width}px, ${hr.top + hr.height / 2}px)`;
-      await sleep(40);
-    }
-    at = { x: hr.left + hr.width / 2 - (48 / 360) * hr.width, y: hr.top + hr.height / 2 };
-  }
-  await sleep(1300);
-  // A portrait: Remove background, from the command search.
-  const photo = workspace.findByPath(join(dir, 'portrait.jpg'))!;
-  await click(document.querySelector<HTMLElement>(`.tab[data-tab="${photo.id}"]`)!);
-  await sleep(900);
-  await palette('remove backg');
-  await sleep(600);
-  await cut(waitFor(() => (document.body.textContent?.includes('Background removed') ? true : null), 'background removed', 30000));
-  await sleep(2400);
+  const subject = await waitFor(() => [...pane(tab)!.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('Select subject')), 'Select subject');
+  await click(subject);
+  await sleep(300);
+  await cut(waitFor(() => (!h.busy() && h.editor().selection ? true : null), 'subject selected', 60000));
+  await sleep(1400);
+  // Copy, from the selection bar.
+  const copy = await waitFor(() => [...pane(tab)!.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === 'Copy'), 'Copy');
+  await click(copy);
+  await sleep(700);
+  // Into the note: its tab, the end of the text, paste.
+  await click(document.querySelector<HTMLElement>(`.tab[data-tab="${note.id}"]`)!);
+  await sleep(700);
+  const el = await waitFor(() => pane(note)?.querySelector<HTMLElement>('.cm-editor'), 'note editor');
+  const view = EditorView.findFromDOM(el)!;
+  const c = centre(el);
+  await moveTo(c.x - 40, c.y - 60);
+  await ripple();
+  view.dispatch({ selection: { anchor: view.state.doc.length } });
+  view.focus();
+  void keycap('Ctrl  V');
+  await sleep(300);
+  await pasteInto(note);
+  await waitFor(() => pane(note)?.querySelector('.preview img, .md-preview img, img[src*="assets"]') ?? null, 'pasted picture shown', 15000);
+  await sleep(2800);
 }
 
 /** Writing Markdown with a live preview, a diagram included. */
 async function markdown(dir: string) {
-  const tab = workspace.findByPath(join(dir, 'notes', 'Packing.md'))!;
+  const tab = workspace.findByPath(join(dir, 'notes', 'Poster.md'))!;
   const el = await waitFor(() => pane(tab)?.querySelector<HTMLElement>('.cm-editor'), 'editor');
   const view = EditorView.findFromDOM(el)!;
   await sleep(700);
@@ -223,23 +249,23 @@ async function markdown(dir: string) {
   await moveTo(c.x, c.y + 120);
   await ripple();
   view.dispatch({ selection: { anchor: view.state.doc.length } });
-  await typeCode(view, '- sunglasses\n\n## Before we go\n\n1. **print** the boarding passes\n2. water the plants\n\n');
-  // The diagram a line at a time (half a line of Mermaid is an error).
-  for (const line of ['```mermaid\n', 'flowchart LR\n', '  Pack --> Fly\n', '  Fly --> Tram --> Nata\n', '```\n']) {
-    const pos = view.state.selection.main.head;
-    view.dispatch({ changes: { from: pos, insert: line }, selection: { anchor: pos + line.length }, userEvent: 'input.paste', scrollIntoView: true });
-    await sleep(420);
-  }
+  await typeCode(view, '- the landing video on a loop\n\n## The talk\n\n1. **launch**\n2. orbit and docking\n3. the landing\n\n');
+  // A diagram, whole (half a Mermaid block is an error), then one more step.
+  const pos = view.state.selection.main.head;
+  const block = '```mermaid\nflowchart LR\n  Launch --> Orbit\n```\n';
+  view.dispatch({ changes: { from: pos, insert: block }, selection: { anchor: pos + block.length - 4 }, userEvent: 'input.paste', scrollIntoView: true });
+  await sleep(1400);
+  await typeCode(view, '  Orbit --> Landing\n');
   await sleep(2600);
 }
 
 /** Search for a command, then four files side by side. */
-async function split(dir: string) {
-  const glb = workspace.tabs.at(-1)!;
+async function split() {
+  const model = workspace.tabs.at(-1)!;
   await sleep(600);
   await palette('split four');
   await sleep(500);
-  await spin(glb, 4);
+  await spin(model, 6);
   await sleep(1200);
   // Move between the views.
   for (const t of workspace.tabs.slice(0, 3)) {
@@ -250,40 +276,34 @@ async function split(dir: string) {
   await sleep(1400);
 }
 
-const FILES = ['notes/Plan (draft).md', 'Plan.md', 'Lisbon guide.pdf', 'tram-28.png', 'Budget.xlsx', 'azulejo.svg', 'souvenir.glb', 'Fado sketch.wav', 'Sunset.webm', 'portrait.jpg', 'notes/Packing.md'];
+const FILES = ['notes/Notes (draft).md', 'Notes.md', 'Shuttle fact sheet.pdf', 'Atlantis in orbit.jpg', 'Fleet.xlsx', 'Rocket.svg', '3DBenchy.stl', 'Goldberg Variation 1.ogg', 'Atlantis landing.webm', 'notes/Moodboard.md', 'notes/Poster.md'];
 
 const SCENES: Record<string, (dir: string) => Promise<void>> = { tour, image, markdown, split };
 
 // Stills for the gallery ("still-<name>"): the folder open, one view staged.
 const open = (f: string) => (d: string) => workspace.openPath(join(d, f)).then(() => undefined);
 const STILLS: Record<string, (dir: string) => Promise<void>> = {
-  start: async () => undefined,
-  markdown: open('Plan.md'),
-  pdf: open('Lisbon guide.pdf'),
-  spreadsheet: open('Budget.xlsx'),
-  svg: open('azulejo.svg'),
-  model3d: async (d) => {
-    const t = (await workspace.openPath(join(d, 'souvenir.glb')))!;
-    await spin(t, 2);
-  },
-  audio: open('Fado sketch.wav'),
-  video: open('Sunset.webm'),
+  pdf: open('Shuttle fact sheet.pdf'),
+  word: open('Report.docx'),
+  spreadsheet: open('Fleet.xlsx'),
   compare: async (d) => {
-    compareFiles(join(d, 'notes', 'Plan (draft).md'), join(d, 'Plan.md'));
+    compareFiles(join(d, 'notes', 'Notes (draft).md'), join(d, 'Notes.md'));
   },
-  word: open('Itinerary.docx'),
+  svg: open('Rocket.svg'),
+  model3d: async (d) => {
+    const t = (await workspace.openPath(join(d, '3DBenchy.stl')))!;
+    await spin(t, 0);
+  },
+  audio: open('Goldberg Variation 1.ogg'),
+  video: open('Atlantis landing.webm'),
   json: async (d) => {
-    const t = (await workspace.openPath(join(d, 'itinerary.json')))!;
+    const t = (await workspace.openPath(join(d, 'missions.json')))!;
     const tree = await waitFor(() => (t as unknown as { dataTest?: { tree: () => { expandAll: () => Promise<void> } | undefined } }).dataTest?.tree(), 'JSON tree');
     await sleep(500);
     await tree.expandAll();
   },
-  html: open('trip.html'),
+  html: open('museums.html'),
   archive: open('photos.zip'),
-  checksums: open('SHA256SUMS'),
-  palette: async () => {
-    ui.openPalette('pdf');
-  },
   settings: async () => {
     workspace.openTool('settings');
     const h = await waitFor(() => [...document.querySelectorAll('h2, h3')].find((e) => e.textContent?.includes('AI models')), 'AI models section');
@@ -315,11 +335,11 @@ export default async function demo(arg: string) {
     return;
   }
   if (scene === 'image') {
-    await workspace.openPath(join(dir, 'portrait.jpg'));
-    await workspace.openPath(join(dir, 'tram-28.png'));
+    await workspace.openPath(join(dir, 'notes', 'Moodboard.md'));
+    await workspace.openPath(join(dir, 'Atlantis in orbit.jpg'));
   }
-  if (scene === 'markdown') await workspace.openPath(join(dir, 'notes', 'Packing.md'));
-  if (scene === 'split') for (const f of ['Plan.md', 'Lisbon guide.pdf', 'tram-28.png', 'souvenir.glb']) await workspace.openPath(join(dir, f));
+  if (scene === 'markdown') await workspace.openPath(join(dir, 'notes', 'Poster.md'));
+  if (scene === 'split') for (const f of ['Notes.md', 'Shuttle fact sheet.pdf', 'Atlantis in orbit.jpg', '3DBenchy.stl']) await workspace.openPath(join(dir, f));
   await sleep(1500);
   addCursor();
   await sleep(200);
