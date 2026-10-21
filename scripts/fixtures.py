@@ -66,6 +66,37 @@ w("img/photo.png", png_fn(400, 300, lambda x, y: (0, 0, 0) if x < 200 and (x // 
 # A photo-like image (smooth gradients + texture): stored losslessly it compresses badly.
 w("img/big.png", png_fn(1200, 900, lambda x, y: (int(128 + 90 * math.sin(x / 41)) , int(128 + 80 * math.cos(y / 29)), (x * 7 + y * 3) % 256)))
 w("img/vector.svg", b'<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80" viewBox="0 0 120 80"><rect width="120" height="80" rx="12" fill="#d97757"/><circle cx="60" cy="40" r="22" fill="#fff"/></svg>')
+
+def _cad_svg():
+    """A technical drawing like CAD exports: layers of lines, dashed centre
+    lines, polygons, a gear outline as one 1400-point polyline, text."""
+    out = ['<?xml version="1.0" encoding="UTF-8"?>',
+           '<svg xmlns="http://www.w3.org/2000/svg" width="420mm" height="297mm" viewBox="0 0 420 297">',
+           '<style>text{font-family:sans-serif;fill:#000}</style><rect width="420" height="297" fill="#fff"/>',
+           '<g id="frame" fill="none" stroke="#000" stroke-width="0.5"><polygon points="20,287 410,287 410,10 20,10"/></g>',
+           '<g id="center" fill="none" stroke="#000" stroke-width="0.18" stroke-dasharray="6 1.5 1 1.5">']
+    for i in range(160):
+        x, y = 30 + (i * 37) % 360, 20 + (i * 53) % 250
+        out.append(f'<line x1="{x}" y1="{y}" x2="{x + 9}" y2="{y + (i % 3) * 4}"/>')
+    out.append('</g><g id="visible" fill="none" stroke="#000" stroke-width="0.35">')
+    for i in range(70):
+        x, y = 40 + (i * 29) % 330, 30 + (i * 41) % 220
+        out.append(f'<polygon points="{x},{y} {x + 12},{y} {x + 12},{y + 7} {x},{y + 7}"/>')
+    for g in range(4):
+        cx, cy, pts = 120 + g * 60, 110 + (g % 2) * 60, []
+        for k in range(1400 if g == 0 else 300):
+            a = k / (1400 if g == 0 else 300) * 2 * math.pi
+            r = 25 + 2.5 * (1 if (k // 25) % 2 else -1)
+            pts.append(f"{cx + r * math.cos(a):.3f},{cy + r * math.sin(a):.3f}")
+        out.append(f'<polyline points="{" ".join(pts)}"/>')
+    for i in range(28):
+        out.append(f'<circle cx="{60 + i * 12}" cy="250" r="{2 + i % 4}"/>')
+    out.append('</g><g id="text">')
+    for i in range(47):
+        out.append(f'<text x="{30 + (i * 61) % 360}" y="{40 + (i * 23) % 230}" font-size="3.5">Ø{10 + i} H7</text>')
+    out.append('</g></svg>')
+    return "\n".join(out).encode()
+w("img/cad-drawing.svg", _cad_svg())
 # A 2-frame GIF (built by hand: 2x2 pixels, global palette of 2 colours). LZW: a clear
 # code before every pixel keeps the code size at 3 bits.
 def _lzw(pixels):
