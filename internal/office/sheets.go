@@ -102,14 +102,22 @@ func (bs *Books) Open(path string) (BookInfo, error) {
 		return info, fmt.Errorf("unsupported spreadsheet type .%s", ext)
 	}
 	for _, name := range b.f.GetSheetList() {
-		rows, ok := b.rows[name] // .ods: the text the file shows
-		if !ok {
-			var err error
-			if rows, err = b.f.GetRows(name); err != nil {
-				return info, err
-			}
-			b.rows[name] = rows
+		if _, ok := b.rows[name]; ok { // .ods: the text the file shows
+			continue
 		}
+		rows, err := b.f.GetRows(name)
+		if err != nil {
+			return info, err
+		}
+		b.rows[name] = rows
+	}
+	// Workbooks written by scripts often store formulas without results;
+	// spreadsheet apps calculate those on open, and so does this.
+	if b.ods == nil && b.missingResults() {
+		b.recalc()
+	}
+	for _, name := range b.f.GetSheetList() {
+		rows := b.rows[name]
 		info.Sheets = append(info.Sheets, SheetInfo{Name: name, Rows: len(rows), Cols: maxCols(rows)})
 	}
 	bs.mu.Lock()
@@ -434,6 +442,22 @@ func (bs *Books) Complete(id, sheet string, col int, typed string) (string, erro
 	return found, nil
 }
 
+// extent is how far a sheet's cells reach: its stored dimension (which
+// includes formulas whose result was never calculated, cells GetRows leaves
+// out at the end of a row) or the rows read, whichever is larger.
+func (b *book) extent(sheet string) (rows, cols int) {
+	rs := b.rows[sheet]
+	rows, cols = len(rs), maxCols(rs)
+	if dim, err := b.f.GetSheetDimension(sheet); err == nil {
+		if _, end, ok := strings.Cut(dim, ":"); ok {
+			if c, r, err := excelize.CellNameToCoordinates(end); err == nil {
+				rows, cols = max(rows, r), max(cols, c)
+			}
+		}
+	}
+	return rows, cols
+}
+
 // indexFormulas finds the formula cells of every sheet (once).
 func (b *book) indexFormulas() {
 	for _, sheet := range b.f.GetSheetList() {
@@ -441,23 +465,44 @@ func (b *book) indexFormulas() {
 			continue
 		}
 		var refs []string
-		rows := b.rows[sheet]
-		cells := 0
-		for r, row := range rows {
-			cells += len(row)
-			if cells > maxIndexedCells {
-				refs = nil
-				break
-			}
-			for c := range row {
-				ref, _ := excelize.CoordinatesToCellName(c+1, r+1)
-				if fm, _ := b.f.GetCellFormula(sheet, ref); fm != "" {
-					refs = append(refs, ref)
+		rows, cols := b.extent(sheet)
+		if rows*cols <= maxIndexedCells {
+			for r := 0; r < rows; r++ {
+				for c := 0; c < cols; c++ {
+					ref, _ := excelize.CoordinatesToCellName(c+1, r+1)
+					if fm, _ := b.f.GetCellFormula(sheet, ref); fm != "" {
+						refs = append(refs, ref)
+					}
 				}
 			}
 		}
 		b.formulas[sheet] = refs
 	}
+}
+
+// openScanCells bounds the check for missing results when a workbook opens
+// (bigger ones are indexed on the first edit, as before).
+const openScanCells = 100_000
+
+// missingResults reports whether a formula has no stored result.
+func (b *book) missingResults() bool {
+	cells := 0
+	for _, sheet := range b.f.GetSheetList() {
+		r, c := b.extent(sheet)
+		cells += r * c
+	}
+	if cells > openScanCells {
+		return false
+	}
+	b.indexFormulas()
+	for sheet, refs := range b.formulas {
+		for _, ref := range refs {
+			if v, _ := b.f.GetCellValue(sheet, ref, excelize.Options{RawCellValue: true}); v == "" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (b *book) hasFormulas() bool {
