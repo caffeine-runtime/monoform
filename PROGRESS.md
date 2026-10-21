@@ -388,6 +388,16 @@
   doesn't restore or save the session (the main window's tabs come back as they were) and doesn't index for search
   by meaning; settings it changes (theme…) are saved without touching the main window's session. Checked with real
   mouse drags under X11 (xdotool): reorder, no text selection sweeping over the editor, the second window appears.
+- **M40 — Between editors: copy, paste and drag.** Pictures and text move from one tab to another. The image editor
+  and the video player have a copy/drag button (click copies; drag it onto another tab's view): the image editor gives
+  the selection or the picture as it looks, the video the frame at the playhead. Ctrl+C / Ctrl+V do the same where no
+  text field has focus. While dragging, a chip shows what it is and whether the view under the pointer takes it (the
+  view is outlined); hovering a tab in the tab bar brings it up, so it doesn't have to be in split view. Who takes
+  what: **video** — a picture or picture files become an overlay where dropped, text a text overlay; **image editor** —
+  a picture or picture files become layers, text a text object (picture files dropped from the system go in as layers
+  instead of opening); **Markdown note** — a picture is saved into assets/ and linked, files are linked, text
+  inserted; **text/code** — text; **SVG** — a picture is embedded, text becomes a text element. Text dragged out of
+  an editor and files dragged from the sidebar can be dropped the same way. A tab that can't take something says so.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

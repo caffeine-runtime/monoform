@@ -36,8 +36,10 @@
   import PaintBucket from '@lucide/svelte/icons/paint-bucket';
   import SquaresUnite from '@lucide/svelte/icons/squares-unite';
   import Save from '@lucide/svelte/icons/save';
-  import { api, endpoint, fileUrl, saveFile } from '../../core/backend';
+  import { api, endpoint, fileUrl, readFile, saveFile } from '../../core/backend';
   import { basename, extname, stem, dirname, join } from '../../core/paths';
+  import { copyTransfer, readTransfer, type Transfer } from '../../core/transfer.svelte';
+  import GiveButton from '../../shell/GiveButton.svelte';
   import { workspace, type Tab } from '../../core/tabs.svelte';
   import { settings } from '../../core/settings.svelte';
   import { ui, toastError, menu } from '../../core/ui.svelte';
@@ -497,33 +499,51 @@
     if (!editor) return;
     const { canvas, x, y } = editor.copySelection(merged);
     clip = { canvas, x, y, at: Date.now() };
-    try {
-      // The PNG promise lets the write start inside the key/click gesture.
-      void navigator.clipboard.write([new ClipboardItem({ 'image/png': raster.toPNG(canvas) })]).catch(() => {});
-    } catch {
-      /* internal clipboard still works */
-    }
+    // Also on the system clipboard and for any other tab (Ctrl+V in a video, a note…).
+    void copyTransfer({ kind: 'image', image: canvas, name: `${stem(tab.title)}${editor.selection ? ' (part)' : ''}` });
     if (cut) editor.clearSelectionPixels();
     ui.toast(`${cut ? 'Cut' : 'Copied'} ${canvas.width} × ${canvas.height} px`, 'success');
   }
 
   async function paste() {
     if (!editor) return;
-    try {
-      const items = await navigator.clipboard.read();
-      for (const it of items) {
-        const type = it.types.find((t) => t.startsWith('image/'));
-        if (!type) continue;
-        const c = await decodeBlob(await it.getType(type));
-        const same = clip && clip.canvas.width === c.width && clip.canvas.height === c.height && Date.now() - clip.at < 10 * 60_000;
-        editor.pasteImage(c, same ? { x: clip!.x, y: clip!.y } : undefined);
-        return;
+    const t = await readTransfer();
+    if (!t) return ui.toast('The clipboard is empty.', 'info');
+    if (t.kind === 'image') {
+      // Our own copy goes back where it came from.
+      const same = clip && clip.canvas.width === t.image.width && clip.canvas.height === t.image.height && Date.now() - clip.at < 10 * 60_000;
+      editor.pasteImage(t.image, same ? { x: clip!.x, y: clip!.y } : undefined, t.name || 'Pasted');
+    } else await take(t);
+  }
+
+  const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'avif', 'ico'];
+
+  /** The selection, or the picture as it looks, for another tab (a drag, Ctrl+C elsewhere). */
+  function giveImage(): Transfer | null {
+    if (!editor) return null;
+    const { canvas } = editor.copySelection(true);
+    return { kind: 'image', image: canvas, name: `${stem(tab.title)}${editor.selection ? ' (part)' : ''}` };
+  }
+
+  /** From another tab: a picture becomes a layer, text a text object, image files layers — at the drop point. */
+  async function take(t: Transfer, at?: { x: number; y: number }): Promise<boolean> {
+    if (!editor || !editable) return false;
+    const p = at ? editor.docPoint(at.x, at.y) : undefined;
+    const centred = (c: HTMLCanvasElement) => (p ? { x: Math.round(p.x - c.width / 2), y: Math.round(p.y - c.height / 2) } : undefined);
+    if (t.kind === 'image') editor.pasteImage(t.image, centred(t.image), t.name || 'Pasted');
+    else if (t.kind === 'text') await editor.addText(p ?? { x: Math.round(editor.width / 8), y: Math.round(editor.height / 8) }, t.text.trim().slice(0, 2000));
+    else {
+      const imgs = t.paths.filter((x) => IMAGE_EXT.includes(extname(x)));
+      if (!imgs.length) {
+        ui.toast('Only pictures can be added as layers.', 'info');
+        return false;
       }
-    } catch {
-      /* fall back to our own copy */
+      for (const f of imgs) {
+        const c = await decodeBlob(new Blob([await readFile(f)]));
+        editor.pasteImage(c, centred(c), stem(f));
+      }
     }
-    if (clip) editor.pasteImage(raster.clone(clip.canvas), { x: clip.x, y: clip.y });
-    else ui.toast('The clipboard has no image.', 'info');
+    return true;
   }
 
   // ---- controller ----
@@ -881,6 +901,8 @@
       reload: load,
       onShow: () => updateStatus(),
       getState: () => undefined,
+      give: giveImage,
+      accept: { kinds: ['image', 'text', 'files'], take, claimsDrop: (paths) => editable && paths.every((p) => IMAGE_EXT.includes(extname(p))) },
     };
     void load();
     const ro = new ResizeObserver(() => imgMode && imgFitted && imgFit());
@@ -1036,6 +1058,7 @@
   {/if}
   <span class="spacer"></span>
   {#if editable}
+    <GiveButton {tab} get={giveImage} what={es?.pixelSelection ? 'the selection' : 'the picture'} />
     <button class="btn ghost" title="Save options" onclick={saveMenu}><Icon icon={Save} size={14} /> Save ▾</button>
     <span class="sep"></span>
   {/if}

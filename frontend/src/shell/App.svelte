@@ -3,6 +3,7 @@
   import TabBar from './TabBar.svelte';
   import TabView from './TabView.svelte';
   import SplitOverlay from './SplitOverlay.svelte';
+  import TransferOverlay from './TransferOverlay.svelte';
   import StatusBar from './StatusBar.svelte';
   import Palette from './Palette.svelte';
   import Overlays from './Overlays.svelte';
@@ -92,6 +93,7 @@
         <Welcome />
       {/if}
       <SplitOverlay />
+      <TransferOverlay />
     </div>
   </main>
   <div class="statusbar"><StatusBar /></div>

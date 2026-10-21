@@ -22,6 +22,18 @@
       find: () => ctl.find(),
       reload: () => ctl.load(),
       focus: () => ctl.view.focus(),
+      // Text from another tab goes in at the drop point or the cursor.
+      accept: {
+        kinds: ['text'],
+        take: (t, at) => {
+          if (tab.readOnly || ctl.view.state.readOnly || t.kind !== 'text') return false;
+          const text = t.text;
+          const pos = (at && ctl.view.posAtCoords(at)) ?? ctl.view.state.selection.main.head;
+          ctl.view.dispatch({ changes: { from: pos, insert: text }, selection: { anchor: pos + text.length } });
+          ctl.view.focus();
+          return true;
+        },
+      },
       onShow: () => {
         ctl.view.requestMeasure();
         ctl.updateStatus();

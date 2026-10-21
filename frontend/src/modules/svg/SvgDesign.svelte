@@ -15,6 +15,7 @@
   import Hand from '@lucide/svelte/icons/hand';
   import { clampZoom, fitZoom, centered, zoomAt, type View } from '../image/geometry';
   import { ui } from '../../core/ui.svelte';
+  import type { Transfer } from '../../core/transfer.svelte';
 
   export type Tool = 'select' | 'hand' | 'rect' | 'ellipse' | 'line' | 'pen' | 'text';
 
@@ -349,6 +350,30 @@
     const esc = t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
     onchange([appendChild(text, els[0], `<text x="${r2(p[0])}" y="${r2(p[1])}" font-family="sans-serif" font-size="${Math.max(8, Math.round(size.h / 12))}" fill="${style.fill === 'none' ? '#000000' : style.fill}">${esc}</text>`, els)], els.length);
     tool = 'select';
+  }
+
+  /** The drawing is on screen and can take things. */
+  export function ready(): boolean {
+    return !!root && els.length > 0;
+  }
+
+  /** From another tab: a picture (embedded as PNG) or text, at the drop point or in the middle. */
+  export function insert(t: Transfer, at?: { x: number; y: number }): boolean {
+    if (!root || !els.length || t.kind === 'files') return false;
+    const rm = screenCTM(root);
+    const p: [number, number] = at && rm ? toLocal(rm, at.x, at.y) : [size.w / 2, size.h / 2];
+    if (t.kind === 'text') {
+      const esc = t.text.trim().slice(0, 2000).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      onchange([appendChild(text, els[0], `<text x="${r2(p[0])}" y="${r2(p[1])}" font-family="sans-serif" font-size="${Math.max(8, Math.round(size.h / 12))}" fill="${style.fill === 'none' ? '#000000' : style.fill}">${esc}</text>`, els)], els.length);
+      return true;
+    }
+    // Fitted into half the drawing, centred on the point.
+    const k = Math.min(1, (size.w * 0.5) / t.image.width, (size.h * 0.5) / t.image.height);
+    const w = t.image.width * k;
+    const h = t.image.height * k;
+    const href = t.image.toDataURL('image/png');
+    onchange([appendChild(text, els[0], `<image x="${r2(p[0] - w / 2)}" y="${r2(p[1] - h / 2)}" width="${r2(w)}" height="${r2(h)}" href="${href}"/>`, els)], els.length);
+    return true;
   }
 
   function wheel(e: WheelEvent) {

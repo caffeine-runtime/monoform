@@ -5,6 +5,7 @@
 import type { Tab } from './tabs.svelte';
 import { workspace } from './tabs.svelte';
 import { ui } from './ui.svelte';
+import { dropHandlers } from './drop';
 
 export type Transfer =
   | { kind: 'image'; image: HTMLCanvasElement; name: string }
@@ -17,6 +18,8 @@ export interface Accepts {
   kinds: TransferKind[];
   /** Take it (at a window point when dropped); false if it couldn't. */
   take: (t: Transfer, at?: { x: number; y: number }) => boolean | Promise<boolean>;
+  /** Files dropped from the operating system go in here (true) instead of opening as tabs. */
+  claimsDrop?: (paths: string[]) => boolean;
 }
 
 export const describe = (t: Transfer) => (t.kind === 'image' ? t.name || 'image' : t.kind === 'text' ? 'text' : t.paths.length === 1 ? t.paths[0].split(/[\\/]/).pop()! : `${t.paths.length} files`);
@@ -115,6 +118,8 @@ class TransferDrag {
   y = $state(0);
   /** The tab under the pointer and whether it takes this. */
   over = $state<{ id: string; ok: boolean } | null>(null);
+  /** True right after a drag ended, so the click that follows isn't taken as one. */
+  justDropped = false;
 
   /** Start dragging t from a pointerdown (on a grip, a frame…); it follows the pointer until release. */
   start(e: PointerEvent, from: Tab, get: () => Transfer | null | Promise<Transfer | null>) {
@@ -146,6 +151,9 @@ class TransferDrag {
     const up = (u: PointerEvent) => {
       const item = this.item;
       stop();
+      if (!started) return;
+      this.justDropped = true;
+      setTimeout(() => (this.justDropped = false));
       if (!item) return;
       const tab = tabAt(u.clientX, u.clientY);
       if (tab && tab.id !== item.from) void give(tab, item.t, { x: u.clientX, y: u.clientY }).then((ok) => ok && workspace.activate(tab));
@@ -164,3 +172,12 @@ class TransferDrag {
 }
 
 export const transferDrag = new TransferDrag();
+
+// Files dropped from the operating system onto a view that claims them (after
+// the modules' own drop handlers; otherwise they are opened as tabs).
+dropHandlers.push((x, y, paths) => {
+  const tab = tabAt(x, y);
+  if (!tab?.handlers.accept?.claimsDrop?.(paths)) return false;
+  void give(tab, { kind: 'files', paths }, { x, y });
+  return true;
+});
