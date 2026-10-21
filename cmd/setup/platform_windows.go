@@ -11,6 +11,9 @@ import (
 
 func system() setup.System { return setup.Windows{} }
 
-func hide(cmd *exec.Cmd) {
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: windows.CREATE_NO_WINDOW}
+// startRaw starts a program with this exact command line, hidden, without waiting.
+func startRaw(exe, cmdline string) error {
+	cmd := exec.Command(exe)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: windows.CREATE_NO_WINDOW, CmdLine: cmdline}
+	return cmd.Start()
 }
