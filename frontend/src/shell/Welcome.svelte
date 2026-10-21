@@ -13,17 +13,17 @@
   import { basename, dirname, tildify } from '../core/paths';
   import { boot } from '../core/boot';
 
-  // A tile per kind of new file, each with its own colour.
-  const KIND: Record<string, { icon: Component<any>; hue: string }> = {
-    markdown: { icon: NotebookPen, hue: '#5b8def' },
-    docx: { icon: FileText, hue: '#3f7be0' },
-    xlsx: { icon: FileSpreadsheet, hue: '#2f9e64' },
-    csv: { icon: Table, hue: '#1f9e9a' },
-    image: { icon: ImageIcon, hue: '#9b6ce0' },
-    svg: { icon: PenTool, hue: '#e07b3f' },
-    html: { icon: Globe, hue: '#d9a020' },
-    json: { icon: Braces, hue: '#c9605a' },
-    text: { icon: Type, hue: '#8a8a8a' },
+  // A tile per kind of new file.
+  const KIND: Record<string, Component<any>> = {
+    markdown: NotebookPen,
+    docx: FileText,
+    xlsx: FileSpreadsheet,
+    csv: Table,
+    image: ImageIcon,
+    svg: PenTool,
+    html: Globe,
+    json: Braces,
+    text: Type,
   };
   const kinds = NEW_KINDS.filter((k) => KIND[k.kind]);
 
@@ -43,7 +43,7 @@
 <div class="welcome">
   <div class="inner">
     <section class="drop" aria-label="Open">
-      <span class="dropicon"><Icon icon={ArrowDownToLine} size={22} /></span>
+      <span class="dropicon"><Icon icon={ArrowDownToLine} size={18} /></span>
       <div class="droptext">
         <strong>Drop files here</strong>
         <span>or open something from your computer</span>
@@ -57,8 +57,8 @@
     <h3>Create</h3>
     <div class="kinds">
       {#each kinds as k (k.kind)}
-        <button class="kind" data-kind={k.kind} style:--hue={KIND[k.kind].hue} title="New {k.label.toLowerCase()} — {k.detail}" onclick={() => void newFileOfKind(undefined, k.kind)}>
-          <span class="badge"><Icon icon={KIND[k.kind].icon} size={22} /></span>
+        <button class="kind" data-kind={k.kind} title="New {k.label.toLowerCase()} — {k.detail}" onclick={() => void newFileOfKind(undefined, k.kind)}>
+          <span class="badge"><Icon icon={KIND[k.kind]} size={17} /></span>
           <span class="kn">{k.label}</span>
         </button>
       {/each}
@@ -106,8 +106,8 @@
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 14px 18px;
-    padding: 22px 24px;
+    gap: 12px 16px;
+    padding: 18px 20px;
     border: 1.5px dashed var(--border);
     border-radius: 18px;
     background: var(--bg-sidebar);
@@ -115,11 +115,11 @@
   .dropicon {
     display: grid;
     place-items: center;
-    width: calc(46px * var(--ui-scale));
-    height: calc(46px * var(--ui-scale));
+    width: calc(38px * var(--ui-scale));
+    height: calc(38px * var(--ui-scale));
     border-radius: 50%;
-    background: var(--accent-soft);
-    color: var(--accent);
+    background: var(--bg-hover);
+    color: var(--text-muted);
     flex: none;
   }
   .droptext {
@@ -153,53 +153,56 @@
     margin: 30px 0 12px;
     color: var(--text-muted);
   }
-  /* Square tiles: a coloured badge per file type, the name under it. */
+  /* Small tiles in the app's own colours: a cream badge, the name under it. */
   .kinds {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(calc(104px * var(--ui-scale)), 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(calc(100px * var(--ui-scale)), 1fr));
+    gap: 8px;
   }
   .kind {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    aspect-ratio: 1 / 0.86;
-    padding: 12px 8px;
+    gap: 7px;
+    padding: 12px 6px 10px;
     border: 1px solid var(--border-soft);
-    border-radius: 16px;
-    background: var(--bg);
+    border-radius: 12px;
+    background: transparent;
     cursor: pointer;
     color: var(--text);
     transition:
-      transform 0.12s var(--ease),
-      border-color 0.12s var(--ease),
-      box-shadow 0.12s var(--ease);
+      background 0.12s var(--ease),
+      border-color 0.12s var(--ease);
   }
   .kind:hover {
-    transform: translateY(-2px);
-    border-color: color-mix(in srgb, var(--hue) 45%, var(--border-soft));
-    box-shadow: 0 6px 18px color-mix(in srgb, var(--hue) 18%, transparent);
+    background: var(--bg-hover);
+    border-color: var(--border);
+  }
+  .kind:hover .badge {
+    color: var(--text);
   }
   .kind:focus-visible {
-    outline: 2px solid var(--hue);
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
   .badge {
     display: grid;
     place-items: center;
-    width: calc(46px * var(--ui-scale));
-    height: calc(46px * var(--ui-scale));
-    border-radius: 14px;
-    background: color-mix(in srgb, var(--hue) 16%, transparent);
-    color: var(--hue);
+    width: calc(34px * var(--ui-scale));
+    height: calc(34px * var(--ui-scale));
+    border-radius: 10px;
+    background: var(--bg-hover);
+    color: var(--text-muted);
+    transition: color 0.12s var(--ease);
   }
   .kn {
+    max-width: 100%;
     font-size: var(--fs-small);
     text-align: center;
-    line-height: 1.25;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   /* Tools: light chips, shortcuts in the tooltip. */
   .tools {

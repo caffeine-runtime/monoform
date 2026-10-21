@@ -345,7 +345,18 @@
   with a large drop area ("Drop files here") with Open file / Open folder, then **Create** as square tiles with a
   coloured badge per file type (instead of rows of icon + label + shortcut), **Tools** as rounded chips (hash
   check, screenshot, compare, file history, all commands — shortcuts in the tooltips), and **Recent** with
-  file-type icons. The renaming itself is postponed.
+  file-type icons. The renaming itself is postponed. Then, on feedback, the badges lost their per-type colours
+  (green, blue…): every icon now uses the app's own neutral tones and is smaller (17 px in a 34 px badge, tiles
+  ~100 px wide).
+- **M37 — First-run welcome.** On the very first start (not when the app is opened with a file, in quick peek or
+  in a self-test) a short welcome walks through four steps: what opens, that edits keep history, that it's
+  offline, and a theme choice (like my computer / light / dark) with the Ctrl+K tip. Skip, Back/Next, dots, ← → Enter
+  and Esc; app shortcuts are off while it's shown. Finishing records `welcomeDone`; Help › Welcome shows it again.
+  It's a separate lazily loaded chunk, so the entry bundle doesn't grow.
+- **Fixed: a second hash request while one was running was dropped.** Ticking another algorithm (or the tool's
+  own first run still going when one was ticked) left that digest missing; choosing another file mid-run could
+  show the earlier file's digests. Requests now queue: when a hash ends, what is still missing for the file
+  chosen now is computed, and results for a file no longer chosen are discarded. (Showed up as a rare m6 stall.)
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

@@ -46,6 +46,8 @@ class UIState {
   picker = $state<PickRequest | null>(null);
   dialog = $state<DialogRequest | null>(null);
   paletteOpen = $state(false);
+  /** The first-run welcome is showing. */
+  firstRun = $state(false);
   paletteQuery = $state('');
   private seq = 0;
 

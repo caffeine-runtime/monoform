@@ -34,6 +34,13 @@ export default async function m6(dir: string) {
   await waitFor(() => !h.running() && h.results().sha256, 'sha256 only');
   h.setExpected('900150983cd24fb0d6963f7d28e17f72');
   await waitFor(() => h.verdict().kind === 'match' && h.verdict().algo === 'md5', 'md5 computed on demand');
+  // Another algorithm asked for while a hash runs is computed once it ends, not dropped.
+  h.setExpected('');
+  h.setAlgos(['sha256']);
+  h.setFile(join(H, 'abc.txt')); // starts a run
+  h.setAlgos(['sha256', 'sha1']);
+  await h.run(); // waits for the running hash and the follow-up
+  assertEq(h.results().sha1, 'a9993e364706816aba3e25717850c26c9cd0d89d', 'sha1 asked for mid-run');
   await workspace.close(tab, { force: true });
 
   // Checksum file.

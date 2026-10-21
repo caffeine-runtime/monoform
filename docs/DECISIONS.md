@@ -201,6 +201,13 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   submenu for its category (the open file type's commands, before Tools). Long per-type lists (> 14) split off
   "Tool: …" commands and editing / viewing ones by title. Rejected: separate windows for groups of commands —
   the command palette (Ctrl+K) already finds any command by name, and Settings already is a tab.
+- **Start-page and welcome icons are neutral** (`--bg-hover` badge, `--text-muted` stroke): per-type hues
+  (green spreadsheet, blue document…) clashed with the single-accent palette. Type stays readable from the icon
+  shape and the label.
+- **First-run welcome is a 4-step overlay, not a separate window or a start-page banner** (`shell/FirstRun.svelte`,
+  loaded only when shown). It shows only when nothing was asked of the app yet: not with launch files, in quick
+  peek, or in self-tests (`core/firstrun.ts`). The step that matters is the theme choice; everything else is
+  skippable in one click. `welcomeDone` lives in the Go settings so a reinstall that keeps settings doesn't show it again.
 - **Side panels float in narrow panes** (< 600 px, `isNarrow`): over the content with a shadow, closed when the
   pane becomes narrow, opened from the toolbar — a 260 px panel beside a 400 px pane would leave the canvas or
   table unusable.

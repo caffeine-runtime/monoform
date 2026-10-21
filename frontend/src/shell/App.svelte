@@ -99,6 +99,9 @@
 {#if ui.paletteOpen}
   <Palette />
 {/if}
+{#if ui.firstRun}
+  {#await import('./FirstRun.svelte') then m}<m.default />{/await}
+{/if}
 {#if ui.picker}
   <QuickPick />
 {/if}

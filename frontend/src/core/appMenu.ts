@@ -90,7 +90,7 @@ const LAYOUT: Entry[] = [
   'app.settings',
   '-',
   { label: 'Tabs', items: ['tab.close', 'tab.closeOthers', 'tab.closeAll', 'tab.reopen', '-', 'tab.next', 'tab.prev'] },
-  { label: 'Help', items: ['help.shortcuts'] },
+  { label: 'Help', items: ['help.welcome', 'help.shortcuts'] },
 ];
 
 /** How long per-file-type lists are split: editing, then viewing and moving around. */

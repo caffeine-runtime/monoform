@@ -88,6 +88,8 @@ type Settings struct {
 	HistoryMaxMB int `json:"historyMaxMB"`
 	// HistoryKeep is how many versions each file keeps at most (0: 100).
 	HistoryKeep int `json:"historyKeep"`
+	// WelcomeDone is set once the first-run welcome has been seen.
+	WelcomeDone bool `json:"welcomeDone"`
 }
 
 func Defaults() Settings {
