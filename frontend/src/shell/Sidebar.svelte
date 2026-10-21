@@ -4,7 +4,7 @@
   import FileTree from './FileTree.svelte';
   import SearchPanel from './SearchPanel.svelte';
   import { ChevronRight, Clock, FilePlus, FolderOpen, FolderPlus, ListCollapse, Menu, Pin, RefreshCw, Search, X } from '../core/icons';
-  import { iconFor } from '../core/fileicons';
+  import { iconFor, kindOf } from '../core/fileicons';
   import { basename, dirname, tildify } from '../core/paths';
   import { settings } from '../core/settings.svelte';
   import { workspace } from '../core/tabs.svelte';
@@ -16,7 +16,6 @@
   import { formatShortcut } from '../core/keys';
   import { newFolderIn, copyText } from './treeActions';
   import { newFileOfKind } from '../core/newfile';
-  import { extname } from '../core/paths';
 
   let pinnedOpen = $state(true);
   let recentsOpen = $state(true);
@@ -25,16 +24,6 @@
   const activePath = $derived(workspace.active?.filePath);
   const recents = $derived(settings.value.recents.filter((p) => !settings.value.pinned.includes(p)).slice(0, 12));
 
-  function kindOf(p: string) {
-    const e = extname(p);
-    if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'].includes(e)) return 'image';
-    if (['md', 'markdown'].includes(e)) return 'markdown';
-    if (e === 'pdf') return 'pdf';
-    if (['json', 'yaml', 'yml'].includes(e)) return 'json';
-    if (['csv', 'tsv'].includes(e)) return 'csv';
-    if (['zip', 'tar', 'gz', 'tar.gz', '7z', 'rar', 'tgz'].includes(e)) return 'archive';
-    return 'text';
-  }
 
   function appMenu(e: MouseEvent) {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();

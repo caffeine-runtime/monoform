@@ -31,3 +31,15 @@ export function iconFor(name: string, kind?: string): Component<any> {
   if (CODE.has(extname(name))) return FileCode;
   return kind === 'text' ? FileText : File;
 }
+
+/** Kind of a file from its extension alone (lists of paths, before Go has looked at them). */
+export function kindOf(p: string): string {
+  const e = extname(p);
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'].includes(e)) return 'image';
+  if (['md', 'markdown'].includes(e)) return 'markdown';
+  if (e === 'pdf') return 'pdf';
+  if (['json', 'yaml', 'yml'].includes(e)) return 'json';
+  if (['csv', 'tsv'].includes(e)) return 'csv';
+  if (['zip', 'tar', 'gz', 'tar.gz', '7z', 'rar', 'tgz'].includes(e)) return 'archive';
+  return 'text';
+}

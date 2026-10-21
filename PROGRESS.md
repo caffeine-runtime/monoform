@@ -341,6 +341,11 @@
   they open on hover (short delay), click, Enter or →; ← / Esc go back a level; near the screen edge they open
   to the left. Fixed on the way: with a menu open, arrow keys were also handled by the app's shortcuts (← / →
   switched images in the image editor) — open menus now own the keyboard.
+- **Start page without the name, and less like an editor's welcome tab.** No title or tagline: the page opens
+  with a large drop area ("Drop files here") with Open file / Open folder, then **Create** as square tiles with a
+  coloured badge per file type (instead of rows of icon + label + shortcut), **Tools** as rounded chips (hash
+  check, screenshot, compare, file history, all commands — shortcuts in the tooltips), and **Recent** with
+  file-type icons. The renaming itself is postponed.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

@@ -1,8 +1,11 @@
 <script lang="ts">
+  // The start page: drop or open something, make something new, a few
+  // handy tools, and the files you had open recently.
   import type { Component } from 'svelte';
   import Icon from './Icon.svelte';
-  import { Braces, Camera, Command, FileSpreadsheet, FileText, FolderOpen, Globe, Hash, ImageIcon, NotebookPen, PenTool, Table, Type, X } from '../core/icons';
+  import { ArrowDownToLine, Braces, Camera, Command, Diff, FileSpreadsheet, FileText, FolderOpen, Globe, Hash, History, ImageIcon, NotebookPen, PenTool, Table, Type, X } from '../core/icons';
   import { commands } from '../core/commands';
+  import { iconFor, kindOf } from '../core/fileicons';
   import { formatShortcut } from '../core/keys';
   import { NEW_KINDS, newFileOfKind } from '../core/newfile';
   import { settings } from '../core/settings.svelte';
@@ -10,65 +13,71 @@
   import { basename, dirname, tildify } from '../core/paths';
   import { boot } from '../core/boot';
 
-  // One button per kind of new file.
-  const ICONS: Record<string, Component<any>> = {
-    markdown: NotebookPen,
-    docx: FileText,
-    xlsx: FileSpreadsheet,
-    csv: Table,
-    image: ImageIcon,
-    svg: PenTool,
-    html: Globe,
-    json: Braces,
-    text: Type,
+  // A tile per kind of new file, each with its own colour.
+  const KIND: Record<string, { icon: Component<any>; hue: string }> = {
+    markdown: { icon: NotebookPen, hue: '#5b8def' },
+    docx: { icon: FileText, hue: '#3f7be0' },
+    xlsx: { icon: FileSpreadsheet, hue: '#2f9e64' },
+    csv: { icon: Table, hue: '#1f9e9a' },
+    image: { icon: ImageIcon, hue: '#9b6ce0' },
+    svg: { icon: PenTool, hue: '#e07b3f' },
+    html: { icon: Globe, hue: '#d9a020' },
+    json: { icon: Braces, hue: '#c9605a' },
+    text: { icon: Type, hue: '#8a8a8a' },
   };
-  const kinds = NEW_KINDS.filter((k) => ICONS[k.kind]);
+  const kinds = NEW_KINDS.filter((k) => KIND[k.kind]);
 
-  const actions = [
-    { id: 'file.open', label: 'Open file', icon: FileText },
-    { id: 'file.openFolder', label: 'Open folder', icon: FolderOpen },
-    { id: 'tools.hash', label: 'Check a file hash', icon: Hash },
-    { id: 'screenshot.region', label: 'Take a screenshot', icon: Camera },
+  const tools = [
+    { id: 'tools.hash', label: 'Check a hash', icon: Hash },
+    { id: 'screenshot.region', label: 'Screenshot', icon: Camera },
+    { id: 'file.compare', label: 'Compare files', icon: Diff },
+    { id: 'history.all', label: 'File history', icon: History },
     { id: 'app.palette', label: 'All commands', icon: Command },
   ];
+  const tip = (label: string, id: string) => {
+    const sc = commands.shortcutOf(id);
+    return sc ? `${label} (${formatShortcut(sc)})` : label;
+  };
 </script>
 
 <div class="welcome">
   <div class="inner">
-    <h1>Hold It All</h1>
-    <p class="tag">Documents, spreadsheets, PDFs, images, 3D models, audio, video, data and archives — one calm window.</p>
+    <section class="drop" aria-label="Open">
+      <span class="dropicon"><Icon icon={ArrowDownToLine} size={22} /></span>
+      <div class="droptext">
+        <strong>Drop files here</strong>
+        <span>or open something from your computer</span>
+      </div>
+      <div class="dropbtns">
+        <button class="btn primary" title={tip('Open a file', 'file.open')} onclick={() => commands.execute('file.open')}><Icon icon={FileText} size={15} /> Open file</button>
+        <button class="btn" title={tip('Open a folder', 'file.openFolder')} onclick={() => commands.execute('file.openFolder')}><Icon icon={FolderOpen} size={15} /> Open folder</button>
+      </div>
+    </section>
 
-    <div class="sechead">
-      <h3>New</h3>
-      {#if commands.shortcutOf('file.newOf')}<button class="more" title="All new-file types" onclick={() => commands.execute('file.newOf')}><span class="kbd">{formatShortcut(commands.shortcutOf('file.newOf')!)}</span></button>{/if}
-    </div>
+    <h3>Create</h3>
     <div class="kinds">
       {#each kinds as k (k.kind)}
-        <button class="kind" data-kind={k.kind} title="New {k.label.toLowerCase()} — {k.detail}" onclick={() => void newFileOfKind(undefined, k.kind)}>
-          <Icon icon={ICONS[k.kind]} size={16} />
+        <button class="kind" data-kind={k.kind} style:--hue={KIND[k.kind].hue} title="New {k.label.toLowerCase()} — {k.detail}" onclick={() => void newFileOfKind(undefined, k.kind)}>
+          <span class="badge"><Icon icon={KIND[k.kind].icon} size={22} /></span>
           <span class="kn">{k.label}</span>
         </button>
       {/each}
     </div>
 
-    <div class="sechead"><h3>Open</h3></div>
-    <div class="actions">
-      {#each actions as a (a.id)}
-        {@const sc = commands.shortcutOf(a.id)}
-        <button class="action" onclick={() => commands.execute(a.id)}>
-          <Icon icon={a.icon} size={16} />
-          <span class="al">{a.label}</span>
-          {#if sc}<span class="kbd">{formatShortcut(sc)}</span>{/if}
-        </button>
+    <h3>Tools</h3>
+    <div class="tools">
+      {#each tools as t (t.id)}
+        <button class="tool" title={tip(t.label, t.id)} onclick={() => commands.execute(t.id)}><Icon icon={t.icon} size={15} /> {t.label}</button>
       {/each}
     </div>
 
     {#if settings.value.recents.length}
-      <div class="sechead"><h3>Recent</h3></div>
+      <h3>Recent</h3>
       <div class="recents">
         {#each settings.value.recents.slice(0, 8) as p (p)}
           <div class="rrow">
             <button class="recent" title={p} onclick={() => workspace.openPath(p)}>
+              <Icon icon={iconFor(p, kindOf(p))} size={16} />
               <span class="rn">{basename(p)}</span>
               <span class="rd">{tildify(dirname(p), boot.home)}</span>
             </button>
@@ -77,7 +86,6 @@
         {/each}
       </div>
     {/if}
-    <p class="hint">Drop files anywhere in this window to open them.</p>
   </div>
 </div>
 
@@ -90,111 +98,137 @@
     align-items: flex-start;
   }
   .inner {
-    width: min(640px, 100%);
-    padding: 10vh 28px 40px;
+    width: min(680px, 100%);
+    padding: 9vh 24px 40px;
   }
-  h1 {
-    font-size: calc(34px * var(--ui-scale));
-    margin: 0 0 6px;
-  }
-  .tag {
-    color: var(--text-muted);
-    margin: 0 0 8px;
-    font-size: calc(14px * var(--ui-scale));
-  }
-  .sechead {
+  /* Opening is what most visits are for: a big, friendly target. */
+  .drop {
     display: flex;
-    align-items: baseline;
-    gap: 10px;
-    margin: 28px 0 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px 18px;
+    padding: 22px 24px;
+    border: 1.5px dashed var(--border);
+    border-radius: 18px;
+    background: var(--bg-sidebar);
+  }
+  .dropicon {
+    display: grid;
+    place-items: center;
+    width: calc(46px * var(--ui-scale));
+    height: calc(46px * var(--ui-scale));
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    flex: none;
+  }
+  .droptext {
+    flex: 1 1 12em;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .droptext strong {
+    font-size: calc(16px * var(--ui-scale));
+    font-weight: 600;
+  }
+  .droptext span {
+    color: var(--text-muted);
+    font-size: var(--fs-small);
+  }
+  .dropbtns {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .dropbtns .btn {
+    height: calc(34px * var(--ui-scale));
+    padding: 0 14px;
+    border-radius: 10px;
   }
   h3 {
-    font-size: calc(15px * var(--ui-scale));
-    margin: 0;
+    font-size: calc(13px * var(--ui-scale));
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    margin: 30px 0 12px;
     color: var(--text-muted);
   }
-  .more {
-    margin-left: auto;
-    border: none;
-    background: transparent;
-    padding: 0;
-    cursor: pointer;
-  }
+  /* Square tiles: a coloured badge per file type, the name under it. */
   .kinds {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(calc(104px * var(--ui-scale)), 1fr));
+    gap: 10px;
   }
   .kind {
     display: flex;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 10px;
-    height: calc(42px * var(--ui-scale));
-    padding: 0 14px;
-    border: none;
-    border-radius: var(--radius-lg);
-    background: var(--bg-elevated);
+    aspect-ratio: 1 / 0.86;
+    padding: 12px 8px;
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    background: var(--bg);
     cursor: pointer;
-    text-align: left;
     color: var(--text);
-  }
-  .kind :global(svg),
-  .action :global(svg) {
-    flex: none;
-    color: var(--text-muted);
+    transition:
+      transform 0.12s var(--ease),
+      border-color 0.12s var(--ease),
+      box-shadow 0.12s var(--ease);
   }
   .kind:hover {
-    background: var(--bg-active);
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--hue) 45%, var(--border-soft));
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--hue) 18%, transparent);
+  }
+  .kind:focus-visible {
+    outline: 2px solid var(--hue);
+    outline-offset: 2px;
+  }
+  .badge {
+    display: grid;
+    place-items: center;
+    width: calc(46px * var(--ui-scale));
+    height: calc(46px * var(--ui-scale));
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--hue) 16%, transparent);
+    color: var(--hue);
   }
   .kn {
-    flex: 1;
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: var(--fs-small);
+    text-align: center;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
   }
-  .actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* Tools: light chips, shortcuts in the tooltip. */
+  .tools {
+    display: flex;
+    flex-wrap: wrap;
     gap: 8px;
   }
-  .action {
-    display: flex;
+  .tool {
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
-    height: calc(42px * var(--ui-scale));
+    gap: 7px;
+    height: calc(32px * var(--ui-scale));
     padding: 0 14px;
-    border: none;
-    border-radius: var(--radius-lg);
-    background: var(--bg-elevated);
-    cursor: pointer;
-    text-align: left;
+    border: 1px solid var(--border-soft);
+    border-radius: 999px;
+    background: transparent;
     color: var(--text);
+    cursor: pointer;
+    white-space: nowrap;
   }
-  .action:hover {
-    background: var(--bg-active);
+  .tool :global(svg) {
+    color: var(--text-muted);
   }
-  :global([data-theme='dark']) .action,
-  :global([data-theme='dark']) .kind {
+  .tool:hover {
     background: var(--bg-hover);
   }
-  :global([data-theme='dark']) .action:hover,
-  :global([data-theme='dark']) .kind:hover {
-    background: var(--bg-active);
-  }
-  .al {
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  @media (max-width: 560px) {
-    .kinds {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .actions {
-      grid-template-columns: minmax(0, 1fr);
-    }
+  .recents {
+    display: flex;
+    flex-direction: column;
   }
   .rrow {
     position: relative;
@@ -213,31 +247,35 @@
   .rrow:hover .rd {
     visibility: hidden;
   }
-  .recents {
-    display: flex;
-    flex-direction: column;
-  }
   .recent {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 10px;
-    height: calc(30px * var(--ui-scale));
+    height: calc(34px * var(--ui-scale));
     padding: 0 10px;
     margin: 0 -10px;
     width: calc(100% + 20px);
     border: none;
-    border-radius: var(--radius);
+    border-radius: 10px;
     background: transparent;
     cursor: pointer;
     text-align: left;
     white-space: nowrap;
     overflow: hidden;
+    color: var(--text);
+  }
+  .recent :global(svg) {
+    flex: none;
+    color: var(--text-muted);
   }
   .recent:hover {
     background: var(--bg-hover);
   }
   .rn {
     flex: none;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .rd {
     min-width: 0;
@@ -245,10 +283,5 @@
     font-size: var(--fs-small);
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-  .hint {
-    margin-top: 36px;
-    color: var(--text-faint);
-    font-size: var(--fs-small);
   }
 </style>
