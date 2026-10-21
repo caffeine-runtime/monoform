@@ -413,7 +413,7 @@
 
 <div class="db" bind:clientWidth={bodyW}>
   {#if !narrow || schemaOpen}
-  <aside class="schema" class:floating={narrow} class:left={narrow} aria-label="Database objects">
+  <aside data-sidepanel class="schema" class:floating={narrow} class:left={narrow} aria-label="Database objects">
     <input class="input" placeholder="Filter tables" bind:value={sidebarFilter} aria-label="Filter tables" />
     <h4>Tables <span class="muted">{tables.length}</span></h4>
     {#each shownTables as o (o.name)}

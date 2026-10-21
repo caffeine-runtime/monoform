@@ -187,6 +187,8 @@
   }
   function setPanel(p: 'layers' | 'adjust' | 'colours' | null) {
     panel = p;
+    // Asking for a panel shows side panels again if they were hidden.
+    if (p && settings.value.panelsHidden) settings.update((s) => (s.panelsHidden = false));
     try {
       localStorage.setItem('hia.image.panel', panel ?? 'none');
     } catch {
@@ -1181,7 +1183,7 @@
     {#if busy}<div class="busy"><span class="spinner"></span> {busy}</div>{/if}
   </div>
   {#if editable && panel && editor && es}
-    <aside class="panel" class:floating={narrow} class:right={narrow}>
+    <aside data-sidepanel class="panel" class:floating={narrow} class:right={narrow}>
       <div class="ptabs">
         <button class:on={panel === 'layers'} onclick={() => setPanel('layers')}>Layers</button>
         <button class:on={panel === 'adjust'} onclick={() => setPanel('adjust')}>Adjust</button>

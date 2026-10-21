@@ -36,7 +36,7 @@ func TestParseNewWindow(t *testing.T) {
 	if _, _, ok := parseAt([]string{"--at=nope"}); ok {
 		t.Error("bad --at accepted")
 	}
-	if singleInstance("window", nil) != nil || singleInstance("", nil) == nil {
-		t.Error("only a moved-out window runs without the single-instance lock")
+	if singleInstance("window", nil) != nil || singleInstance("peek", nil) != nil || singleInstance("", nil) == nil || singleInstance("preview", nil) == nil {
+		t.Error("only a moved-out window and quick peeks run without the single-instance lock")
 	}
 }

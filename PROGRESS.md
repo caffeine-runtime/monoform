@@ -407,6 +407,16 @@
   All?* with an option to delete settings, history and the search index too; file defaults go back to what they were.
   `--quiet` installs/uninstalls without a window (used by CI on a real Windows runner). Off Windows it runs as a demo
   that installs into a test folder (`scripts/setup-selftest.sh`).
+- **M42 — Path bar, side panels, quick view for pictures, per-type file icons.** The open file's **full path** shows
+  above it (*View › Show / hide the path bar*); each folder in it opens a small **folder browser**: the folder's
+  subfolders and files (the open file marked), `..` to go up, typing to filter, a click opens a file, *Open as folder*
+  makes it the sidebar folder and *Show in Explorer / Finder / the file manager* opens the system's. **Side panels**
+  (image layers/adjust/colours, video effects, SVG properties, CAD, 3D animations, database objects) hide and come back
+  with a tab bar button or *View › Show / hide side panels* (`Ctrl+Alt+B`). On Windows, **pictures open in a quick
+  view** (`--peek`) — just the picture, ← / → through the folder — and **Edit** hands it to the full editor (a running
+  window takes it); quick views are their own small processes, so several can be open next to the editor. **Each file
+  type has its own icon** in Explorer (text, Markdown, data, tables, PDF, pictures, vector, Word, archives, checksums,
+  web pages, audio, video, 3D) and the **app icon** fills its tile, so it no longer looks tiny on the taskbar.
 - **Fix: Save dialogs for new files opened in System32 on Windows.** A file without a folder yet (a new tab, a new
   file with no folder open, an export from an unsaved tab) was offered the working directory, which is
   `C:\Windows\System32` when Windows starts the app from Explorer or the installer. It now opens in the folder you

@@ -79,7 +79,7 @@
   }
 </script>
 
-<aside class="fxpanel" aria-label="Effects">
+<aside data-sidepanel class="fxpanel" aria-label="Effects">
   {#if selected && now}
     <div class="head">
       <input class="input name" value={selected.name} aria-label="Name" onchange={(e) => onlayer({ ...selected, name: (e.target as HTMLInputElement).value })} />

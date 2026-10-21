@@ -71,7 +71,7 @@ func main() {
 		OnBeforeClose: a.BeforeClose,
 		Bind:          []interface{}{a},
 		// One app per user: later launches hand their files to it — except a
-		// window a tab was moved to (--new-window), which is its own process.
+		// window a tab was moved to (--new-window) and a quick peek (--peek).
 		SingleInstanceLock: singleInstance(mode, func(d options.SecondInstanceData) {
 			files, mode := parseLaunch(d.Args, d.WorkingDirectory)
 			a.OpenFilesMode(files, mode)
@@ -100,7 +100,9 @@ func main() {
 }
 
 func singleInstance(mode string, onLaunch func(options.SecondInstanceData)) *options.SingleInstanceLock {
-	if mode == "window" {
+	// A moved-out tab's window and quick peeks are processes of their own:
+	// double-clicking pictures opens a light viewer each, not the editor.
+	if mode == "window" || mode == "peek" {
 		return nil
 	}
 	return &options.SingleInstanceLock{UniqueId: "dev.holditall.app", OnSecondInstanceLaunch: onLaunch}

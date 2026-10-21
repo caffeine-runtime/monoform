@@ -5,7 +5,6 @@ frontend/node_modules
 *.test
 /tmp/
 .DS_Store
-build/windows/fileicon.ico
 
 # setup program: its built UI and payload (made by the Windows build; see docs/RELEASING.md)
 cmd/setup/frontend/dist/*

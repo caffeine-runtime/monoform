@@ -179,7 +179,7 @@
     {#if error}<div class="empty-state overlay err">{error}</div>{/if}
   </div>
   {#if anims.length}
-    <aside class="anims" aria-label="Animations">
+    <aside data-sidepanel class="anims" aria-label="Animations">
       <h4><Icon icon={Film} size={14} /> Animations ({anims.length})</h4>
       <div class="list" role="listbox">
         {#each anims as a, i (i)}

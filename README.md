@@ -72,7 +72,7 @@ use **Settings → Install the holdit command**):
 
 ```sh
 holdit report.pdf notes.md          # open in the app (a running window takes them)
-holdit --peek photo.heic            # a small read-only preview window; "Open in editor" expands it
+holdit --peek photo.heic            # a small read-only quick view; Edit opens it in the full editor
 holdit --preview *.csv              # open in preview mode (read-only until you click Edit)
 holdit hash *.iso                   # SHA-256 like sha256sum; -a md5,sha1,sha512,blake3 or -a all
 holdit verify SHA256SUMS            # exit code 1 if anything is missing or differs
@@ -81,7 +81,9 @@ holdit convert IMG_0042.HEIC photo.jpg
 ```
 
 **Quick peek** is also in the file manager: *Open With → Quick peek* on Linux, *Quick peek with Hold It All* in the
-Windows Explorer context menu. Pressing Space in Finder or Explorer can't open it — that needs a native Quick Look /
+Windows Explorer context menu. On Windows, **pictures open in a quick view** when Hold It All is their default app (just
+the picture, ← / → for the rest of the folder); **Edit** — or *Edit with Hold It All* on right-click — opens the full
+editor. Pressing Space in Finder or Explorer can't open it — that needs a native Quick Look /
 preview-handler plug-in. **Preview mode** (status bar: *Preview · Edit*, `Ctrl+Alt+E`, or *Settings → Open files in
 preview mode*) shows any file read-only until you choose to edit it.
 

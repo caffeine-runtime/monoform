@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 
 	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
@@ -36,6 +37,43 @@ func (a *App) NewWindow(paths []string, x, y int) error {
 	}
 	go cmd.Wait() // reap it when it exits
 	return nil
+}
+
+var handoff struct {
+	sync.Mutex
+	last []string
+}
+
+// OpenInEditor hands files from a quick-peek window to the full editor and
+// closes the peek: a running main window takes them (single instance),
+// otherwise the started process becomes the main window. Quick peeks are
+// processes of their own, so several can be open next to the editor. In
+// self-test mode nothing is started or closed; TestLastHandoff reports it.
+func (a *App) OpenInEditor(paths []string) error {
+	if os.Getenv("HIA_TEST") != "" {
+		handoff.Lock()
+		handoff.last = append([]string{}, paths...)
+		handoff.Unlock()
+		return nil
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(exe, paths...)
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	go cmd.Wait()
+	a.Quit(0)
+	return nil
+}
+
+// TestLastHandoff is what the last OpenInEditor call handed over (self-test mode).
+func (a *App) TestLastHandoff() []string {
+	handoff.Lock()
+	defer handoff.Unlock()
+	return handoff.last
 }
 
 // childEnv is the environment for a new window. A self-test run gives the

@@ -91,7 +91,7 @@ jobs:
           M0=$RUNNER_TEMP/m0 && mkdir -p "$M0" && printf a >"$M0/a.txt" && printf b >"$M0/b.md" && printf c >"$M0/c.txt"
           scripts/selftest.sh m0-setup "$M0" "$RUNNER_TEMP/m0.json"
           scripts/selftest.sh m0-restore "$M0" "$RUNNER_TEMP/m0.json"
-          for s in m1 m2 m3 m4 m4b m5 m6 m8 m10 m11 m12 m13 m14 m15 m16 m18 m19 m20 m21 m22 m23 m24 m25 m26 m27 m28 m29 m30 m31 m32 m33 m34 m35 m36 m37 m38 m39 m40; do scripts/selftest.sh "$s" "$FX"; done
+          for s in m1 m2 m3 m4 m4b m5 m6 m8 m10 m11 m12 m13 m14 m15 m16 m18 m19 m20 m21 m22 m23 m24 m25 m26 m27 m28 m29 m30 m31 m32 m33 m34 m35 m36 m37 m38 m39 m40 m42; do scripts/selftest.sh "$s" "$FX"; done
           # Quick peek: started with --peek FILE.
           scripts/selftest.sh m32peek "$FX" "" --peek "$FX/diagrams/notes.md"
           HIA_TIMEOUT=400 scripts/selftest.sh m9 "$FX"
@@ -161,7 +161,7 @@ jobs:
           wails build -platform windows/amd64 -trimpath -o hold-it-all.exe -ldflags "$env:HIA_LDFLAGS"
           # Our own setup program (cmd/setup) with the app inside.
           npm --prefix frontend run build:setup
-          go run ./cmd/setup/pack build/bin/hold-it-all.exe build/bin/holdit.exe build/windows/fileicon.ico
+          go run ./cmd/setup/pack build/bin/hold-it-all.exe build/bin/holdit.exe @((Get-ChildItem build/windows/file-*.ico).FullName)
           Copy-Item build/windows/icon.ico cmd/setup/build/windows/icon.ico
           $v = $env:HIA_VERSION -replace '[-+].*$', ''
           node -e "const fs=require('fs');const p='cmd/setup/wails.json';const j=JSON.parse(fs.readFileSync(p));j.info.productVersion=process.argv[1];fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n')" "$v"
@@ -180,10 +180,12 @@ jobs:
           $log = Join-Path $env:TEMP 'hold-it-all-setup.log'
           $p = Start-Process dist/hold-it-all-amd64-installer.exe -ArgumentList '--quiet','--dir',"`"$dir`"",'--desktop','--defaults' -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "install exited $($p.ExitCode): $(Get-Content $log -ErrorAction SilentlyContinue)" }
-          foreach ($f in 'hold-it-all.exe','holdit.exe','fileicon.ico','uninstall.exe') { if (-not (Test-Path (Join-Path $dir $f))) { throw "$f not installed" } }
+          foreach ($f in 'hold-it-all.exe','holdit.exe','file-text.ico','file-image.ico','uninstall.exe') { if (-not (Test-Path (Join-Path $dir $f))) { throw "$f not installed" } }
           $u = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\HoldItAll'
           if ($u.DisplayVersion -ne $env:HIA_VERSION) { throw "uninstall entry version '$($u.DisplayVersion)'" }
           if ((Get-ItemProperty 'HKCU:\Software\Classes\.md').'(default)' -ne 'HoldItAll.md') { throw '.md not associated' }
+          if ((Get-ItemProperty 'HKCU:\Software\Classes\HoldItAll.png\DefaultIcon').'(default)' -notlike '*file-image.ico') { throw 'png has no picture icon' }
+          if ((Get-ItemProperty 'HKCU:\Software\Classes\HoldItAll.png\shell\open\command').'(default)' -notlike '*--peek*') { throw 'png does not open in quick view' }
           if (-not (Test-Path (Join-Path ([Environment]::GetFolderPath('Programs')) 'Hold It All.lnk'))) { throw 'no Start menu shortcut' }
           if (-not (Test-Path "$env:LOCALAPPDATA\Microsoft\WindowsApps\holdit.cmd")) { throw 'no holdit command' }
           & (Join-Path $dir 'holdit.exe') version

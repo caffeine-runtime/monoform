@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { basename, dirname, extname, formatBytes, join, relative, resolveRelative, stem, tildify } from './paths';
+import { ancestors, basename, dirname, extname, formatBytes, join, relative, resolveRelative, stem, tildify } from './paths';
 
 describe('paths', () => {
   it('handles posix paths', () => {
@@ -35,5 +35,12 @@ describe('paths', () => {
     expect(formatBytes(12)).toBe('12 B');
     expect(formatBytes(1536)).toBe('1.5 KB');
     expect(formatBytes(50 * 1024 * 1024)).toBe('50 MB');
+  });
+  it('lists the folders a file is in', () => {
+    const names = (p: string) => ancestors(p).map((a) => `${a.name}=${a.path}`);
+    expect(names('C:\\Projects\\beaver-fever\\iteration-07\\a.png')).toEqual(['C:=C:\\', 'Projects=C:\\Projects', 'beaver-fever=C:\\Projects\\beaver-fever', 'iteration-07=C:\\Projects\\beaver-fever\\iteration-07']);
+    expect(names('/home/u/notes.md')).toEqual(['/=/', 'home=/home', 'u=/home/u']);
+    expect(names('\\\\nas\\photos\\2026\\x.jpg')).toEqual(['\\\\nas\\photos=\\\\nas\\photos\\', '2026=\\\\nas\\photos\\2026']);
+    expect(names('d:\\x.txt')).toEqual(['D:=D:\\']);
   });
 });

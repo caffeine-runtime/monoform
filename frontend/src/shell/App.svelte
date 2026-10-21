@@ -9,6 +9,9 @@
   import Overlays from './Overlays.svelte';
   import Welcome from './Welcome.svelte';
   import QuickPick from './QuickPick.svelte';
+  import PathBar from './PathBar.svelte';
+  import Icon from './Icon.svelte';
+  import Pencil from '@lucide/svelte/icons/pencil';
   import { workspace } from '../core/tabs.svelte';
   import { settings } from '../core/settings.svelte';
   import { theme } from '../core/theme.svelte';
@@ -68,7 +71,7 @@
 </script>
 
 <svelte:window onkeydown={(e) => peek.on && e.key === 'Escape' && !e.defaultPrevented && !document.querySelector('.modal, .palette, .quickpick') && void api.Quit(0)} />
-<div class="app" data-platform={boot.platform} class:peek={peek.on}>
+<div class="app" data-platform={boot.platform} class:peek={peek.on} class:panels-hidden={settings.value.panelsHidden}>
   {#if settings.value.sidebarVisible && !peek.on}
     <Sidebar />
   {/if}
@@ -76,12 +79,15 @@
     {#if peek.on}
       <div class="peekbar">
         <span class="pt">{workspace.active?.title ?? ''}</span>
-        <span class="pd">Quick peek · Esc closes</span>
+        <span class="pd">Quick view · Esc closes</span>
         <span class="spacer"></span>
-        <button class="btn primary" onclick={() => void peek.expand()}>Open in editor</button>
+        <button class="btn primary edit" title="Edit in the full editor" onclick={() => void peek.expand()}><Icon icon={Pencil} size={14} /> Edit</button>
       </div>
     {:else}
       <TabBar />
+    {/if}
+    {#if !settings.value.pathBarOff}
+      <PathBar />
     {/if}
     <div class="views" class:split={!!workspace.split}>
       {#each workspace.tabs as tab (tab.id)}
@@ -132,6 +138,11 @@
   .peekbar .spacer {
     flex: 1;
   }
+  .peekbar .edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
   .app {
     display: grid;
     grid-template-columns: auto 1fr;
@@ -160,6 +171,10 @@
   /* The gap colour between panes in split view. */
   .views.split {
     background: var(--bg-sidebar);
+  }
+  /* View › Show / hide side panels: editors' panels (layers, effects, properties) give their room to the content. */
+  .app.panels-hidden :global([data-sidepanel]) {
+    display: none !important;
   }
   .statusbar {
     grid-column: 1 / -1;
