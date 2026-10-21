@@ -58,8 +58,8 @@ export default async function m18(dir: string) {
   key('ArrowDown', { ctrl: true, alt: true });
   key('ArrowDown', { ctrl: true, alt: true });
   assertEq(view.state.selection.ranges.length, 3, 'Ctrl+Alt+↓ adds cursors');
-  await sleep(50);
-  assert(tab.status.position?.includes('3 cursors'), `status bar counts cursors (${tab.status.position})`);
+  // The status bar follows on the next frame (later on a busy machine).
+  await waitFor(() => (tab.status.position?.includes('3 cursors') ? true : null), `status bar counts cursors (${tab.status.position})`, 3000);
   // Ctrl+Shift+L: a three-line selection becomes three.
   view.dispatch({ selection: EditorSelection.range(view.state.doc.line(20).from, view.state.doc.line(22).to) });
   key('L', { ctrl: true, shift: true });
