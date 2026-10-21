@@ -211,6 +211,8 @@ export default async function m9(dir: string) {
   log(`second click ${Math.round(performance.now() - t0)} ms: ${JSON.stringify(ob2)}`);
   assert(ob2 && near(ob2.x, 20, 1) && near(ob2.y, 20, 1) && near(ob2.width, 60, 2) && near(ob2.height, 60, 2), 'second object (square), exact edges');
   ed.deselect();
+  await people(dir);
+  workspace.activate(tab);
 
   // ---- canvas edge: pasteboard outside, a thin border around the document ----
   const priv = ed as unknown as { stage: { content: HTMLDivElement }; klayer: { getCanvas: () => { _canvas: HTMLCanvasElement; getPixelRatio: () => number } }; active: { objs: { getChildren: () => any[] } }; select: (n: unknown) => void };
@@ -285,4 +287,27 @@ export default async function m9(dir: string) {
   assertEq((await api.Stat(red)).modTime, redBefore.modTime, 'original kept');
   settings.update((s) => (s.imageKeepOriginal = false));
   await workspace.close(rt, { force: true });
+}
+
+/** One click on a person selects the whole person, not the badge or the face that was clicked. */
+async function people(dir: string) {
+  const t = (await workspace.openPath(join(dir, 'people', 'astronaut.jpg')))!;
+  const h = await waitFor(() => (hooks(t)?.editor() ? hooks(t) : null), 'portrait editor');
+  const ed = h.editor()!;
+  const inside = (x: number, y: number) => ed.selection!.mask.getContext('2d')!.getImageData(x, y, 1, 1).data[3] > 127;
+  // [click, what, points that must be selected]: a badge on the suit used to be all a click there gave, the face all a click on it gave.
+  const cases: [number, number, string, [number, number][]][] = [
+    [150, 400, 'the suit', [[150, 400], [190, 300], [80, 330], [320, 300]]],
+    [225, 120, 'the face', [[225, 120], [225, 40], [150, 400], [190, 300]]],
+  ];
+  for (const [x, y, what, must] of cases) {
+    const t0 = performance.now();
+    await h.objectAt(x, y, 'replace');
+    const b = ed.state().pixelSelection;
+    log(`click on ${what}: ${Math.round(performance.now() - t0)} ms, ${JSON.stringify(b)}`);
+    assert(b, `selected something for ${what}`);
+    for (const [px, py] of must) assert(inside(px, py), `click on ${what}: (${px}, ${py}) selected`);
+    assert(!inside(30, 200) && !inside(400, 150) && !inside(480, 30), `click on ${what}: flag, shuttle model and background not selected`);
+  }
+  await workspace.close(t, { force: true });
 }

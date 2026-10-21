@@ -372,6 +372,12 @@
   The layers panel shows the mask beside the layer; click either thumbnail to paint on it. Markup on a masked layer
   is masked too; flips, rotations, resizes, crops and moving the layer carry the mask along; merging bakes it in.
   `.ora` files keep it editable (other apps get the layer with the mask already applied).
+- **Fixed: "select object" on people picked a part.** One click on a person gave a badge, a pocket or just the face:
+  of Segment Anything's three answers (part, larger part, whole) the app took the one the model scored highest,
+  which for the small quantized model is usually the smallest. It now takes the whole object when the model is
+  still confident about it and it isn't background. On a portrait, a click on the face selects the whole person
+  and a click on the suit the whole suit. Alt-click exclusions still use the model's top choice. "Select subject"
+  (whole image) is unchanged — it already found people well in the test photos.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

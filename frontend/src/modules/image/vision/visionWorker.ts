@@ -6,6 +6,7 @@
 import * as ort from 'onnxruntime-web/wasm';
 import { initOrtWasm } from '../../../core/ortwasm';
 import { fetchBytes } from '../../../core/fetchbytes';
+import { measure, pickMask } from './pick';
 import { refineMask, sample } from './refine';
 import u2netpUrl from '../models/u2netp.onnx?url';
 import samEncUrl from '../models/slimsam-77-vision_encoder_quantized.onnx?url';
@@ -267,10 +268,13 @@ async function samDecode(key: string, points: { x: number; y: number; positive: 
     input_labels: new ort.Tensor('int64', labels, [1, 1, points.length]),
   });
   const iou = out.iou_scores.data as Float32Array;
-  let best = 0;
-  for (let i = 1; i < iou.length; i++) if (iou[i] > iou[best]) best = i;
   const masks = out.pred_masks.data as Float32Array; // [1,1,3,256,256] logits over the padded 1024² input
   const M = 256;
+  // The image covers the top-left of the padded square.
+  const vw = Math.max(1, Math.round((c.w * c.scale * M) / 1024));
+  const vh = Math.max(1, Math.round((c.h * c.scale * M) / 1024));
+  const cands = Array.from(iou, (score, i) => ({ score, ...measure(masks.subarray(i * M * M, (i + 1) * M * M), M, vw, vh) }));
+  const best = pickMask(cands, points.some((p) => !p.positive));
   const plane = masks.subarray(best * M * M, (best + 1) * M * M);
   const { work } = c;
   const k = (c.scale * M) / 1024 / work.s; // working px → mask px
