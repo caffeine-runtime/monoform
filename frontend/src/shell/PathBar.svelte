@@ -51,6 +51,9 @@
   const isRoot = $derived(!!pop && (parent === undefined || parent === pop.dir));
 
   const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+  // Case folded first: under the C locale WebKit's collator compares code
+  // points, which would put "SHA256SUMS" before "abc.txt".
+  const byName = (a: string, b: string) => collator.compare(a.toLowerCase(), b.toLowerCase()) || collator.compare(a, b);
 
   async function load(dir: string, from = '') {
     if (!pop) return;
@@ -63,7 +66,7 @@
       if (pop?.dir !== dir) return;
       items = list
         .filter((e) => settings.value.showHidden || !e.hidden)
-        .sort((a, b) => (a.isDir !== b.isDir ? (a.isDir ? -1 : 1) : collator.compare(a.name, b.name)));
+        .sort((a, b) => (a.isDir !== b.isDir ? (a.isDir ? -1 : 1) : byName(a.name, b.name)));
       const i = from ? items.findIndex((e) => e.path === from) : -1;
       sel = Math.max(0, i);
     } catch (e) {

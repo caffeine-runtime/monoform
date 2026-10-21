@@ -13,7 +13,14 @@ func TestDownloadRuntime(t *testing.T) {
 	if os.Getenv("MF_AI_NET") != "1" {
 		t.Skip("MF_AI_NET not set")
 	}
-	s := Store{Dir: t.TempDir()}
+	// Not t.TempDir: the library stays loaded until the process ends, and
+	// Windows can't delete a loaded DLL, so cleanup is best effort.
+	dir, err := os.MkdirTemp("", "mf-ai-net-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(dir) })
+	s := Store{Dir: dir}
 	var last, total int64
 	if err := s.Install(context.Background(), nil, Pack{ID: "none"}, func(d, n int64) { last, total = d, n }); err != nil {
 		t.Fatal(err)
