@@ -36,20 +36,6 @@ function barProblems(root: Element): string[] {
   return out;
 }
 
-/** Resize the window until ok() (a window manager under load can drop a request). */
-async function sizeTo<T>(w: number, h: number, ok: () => T | null, what: string): Promise<NonNullable<T>> {
-  WindowSetSize(w, h);
-  let asked = performance.now();
-  return waitFor(() => {
-    const v = ok();
-    if (v === null && performance.now() - asked > 1000) {
-      WindowSetSize(w, h);
-      asked = performance.now();
-    }
-    return v;
-  }, what, 10000);
-}
-
 export default async function m33(dir: string) {
   for (const t of [...workspace.tabs]) await workspace.close(t, { force: true });
   const before = await WindowGetSize();
@@ -72,14 +58,18 @@ export default async function m33(dir: string) {
     return w <= c.clientWidth + 2 && w >= c.clientWidth * 0.8 ? w : null;
   };
   workspace.activate(pdf);
-  const wide = await waitFor(fits, 'PDF fits the window');
-  const narrowW = await sizeTo(900, 640, () => (window.innerWidth < 1000 ? fits() : null), 'PDF refits a smaller window').catch(() => {
-    throw new Error(`PDF after the window shrank: ${fitInfo()}`);
+  const wide = await waitFor(fits, 'PDF fits its view');
+  // Narrow the view itself (window managers can ignore a resize request).
+  const view = pane(pdf)!;
+  view.style.maxWidth = '480px';
+  const narrowW = await waitFor(fits, 'PDF refits a narrower view').catch(() => {
+    throw new Error(`PDF after its view narrowed: ${fitInfo()}`);
   });
   assert(narrowW < wide, `page narrower (${wide} → ${narrowW})`);
+  view.style.maxWidth = '';
+  await waitFor(() => ((fits() ?? 0) > narrowW ? true : null), 'and wide again');
 
   // ---- wide: one tab, labels shown ----
-  await sizeTo(before.w, before.h, () => (window.innerWidth >= before.w - 40 ? true : null), 'window back to size');
   workspace.activate(json);
   await sleep(300);
   const jbar = pane(json)!.querySelector<HTMLElement>('.fit')!;
