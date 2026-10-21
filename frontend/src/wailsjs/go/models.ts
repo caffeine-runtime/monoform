@@ -1611,6 +1611,7 @@ export namespace settings {
 	    historyOff: boolean;
 	    historyMaxMB: number;
 	    historyKeep: number;
+	    welcomeDone: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -1641,6 +1642,7 @@ export namespace settings {
 	        this.historyOff = source["historyOff"];
 	        this.historyMaxMB = source["historyMaxMB"];
 	        this.historyKeep = source["historyKeep"];
+	        this.welcomeDone = source["welcomeDone"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

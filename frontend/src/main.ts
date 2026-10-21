@@ -14,6 +14,7 @@ import { workspace } from './core/tabs.svelte';
 import { theme } from './core/theme.svelte';
 import { tree } from './core/tree.svelte';
 import { ui, menu } from './core/ui.svelte';
+import { showWelcome } from './core/firstrun';
 import { dropHandlers } from './core/drop';
 import { registerBuiltinModules } from './modules/registry';
 import { registerArchiveIntegration } from './core/archives';
@@ -34,6 +35,7 @@ function wireEvents() {
     (e) => {
       if (ui.dialog) return; // dialogs handle their own keys
       if (ui.picker) return;
+      if (ui.firstRun) return; // the welcome handles its own keys
       if (menu.open) return; // menus handle their own keys (arrows, Enter, Esc)
       if (ui.paletteOpen && !(e.key === 'k' && (e.ctrlKey || e.metaKey))) return;
       commands.handleKey(e, inEditable(e.target));
@@ -116,6 +118,8 @@ async function start() {
     for (const p of info.launchFiles ?? []) await workspace.openPath(p, info.launchMode === 'preview' ? { preview: true } : {});
   }
   semantic.start();
+  // First start: a short welcome.
+  if (showWelcome(info)) ui.firstRun = true;
 
   if (info.testScript) {
     const { runSelfTest } = await import('./test/selftest');

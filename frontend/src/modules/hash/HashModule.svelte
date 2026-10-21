@@ -58,27 +58,58 @@
     progress = { ...progress, done: p.done, total: p.total };
   }
 
-  async function run() {
-    if (!file || jobId) return;
+  // One hash at a time. Asking again while one runs (another algorithm ticked,
+  // another file chosen) isn't dropped: when it ends, whatever is still
+  // missing for the current file is hashed, and a finished hash of a file
+  // that is no longer chosen is thrown away.
+  let running: Promise<void> | null = null;
+  let again = false;
+
+  function run(): Promise<void> {
+    if (!file) return Promise.resolve();
+    if (running) {
+      again = true;
+      return running;
+    }
+    running = (async () => {
+      let want = [...algos];
+      for (;;) {
+        again = false;
+        if (!(await hashOnce(want))) break;
+        want = algos.filter((a) => !results[a]);
+        if (!again || !file || !want.length) break;
+      }
+    })().finally(() => (running = null));
+    return running;
+  }
+
+  /** Hashes `file` with `want`; false if it was cancelled or failed. */
+  async function hashOnce(want: string[]): Promise<boolean> {
+    const f = file;
     error = '';
     try {
-      size = (await api.Stat(file)).size;
+      size = (await api.Stat(f)).size;
     } catch (e) {
+      if (f !== file) return (again = true);
       error = String((e as Error).message ?? e);
-      return;
+      return false;
     }
-    const want = [...algos];
     progress = { done: 0, total: size ?? 0, started: performance.now() };
-    const done = await jobs.run<Record<string, string>>(`Hashing ${basename(file)}`, async () => (jobId = await api.HashFile(file, want)), { onProgress });
+    const done = await jobs.run<Record<string, string>>(`Hashing ${basename(f)}`, async () => (jobId = await api.HashFile(f, want)), { onProgress });
     jobId = '';
     progress = null;
-    if (done.cancelled) return;
+    if (f !== file) {
+      again = true; // chosen file changed meanwhile: start over on the new one
+      return true;
+    }
+    if (done.cancelled) return false;
     if (done.error) {
       error = done.error;
-      return;
+      return false;
     }
     results = { ...results, ...done.result };
     tab.status = { ...tab.status, info: `${formatBytes(size ?? 0)} in ${(done.millis / 1000).toFixed(1)} s` };
+    return true;
   }
 
   function setFile(p: string) {

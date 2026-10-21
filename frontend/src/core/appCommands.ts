@@ -159,6 +159,12 @@ export function registerAppCommands() {
     { id: 'view.themeLight', title: 'Theme: light', category: 'View', run: () => theme.set('light') },
     { id: 'view.toggleHidden', title: 'Show / hide hidden files', category: 'View', run: () => settings.update((s) => (s.showHidden = !s.showHidden)) },
     {
+      id: 'help.welcome',
+      title: 'Welcome',
+      category: 'Help',
+      run: () => (ui.firstRun = true),
+    },
+    {
       id: 'help.shortcuts',
       title: 'Keyboard shortcuts',
       category: 'Help',
