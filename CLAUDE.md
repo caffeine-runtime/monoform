@@ -17,6 +17,7 @@ go vet -tags webkit2_41 ./... && go test -tags webkit2_41 ./...  # needs fronten
 wails generate module -tags webkit2_41                         # after changing bound Go methods
 python3 scripts/fixtures.py /tmp/fx && scripts/selftest.sh m12 /tmp/fx   # in-app self-test (Xvfb)
 python3 scripts/licenses.py                                    # must say "0 need attention"
+scripts/readme-media.sh                                        # re-record README clips + gallery (after a build)
 ```
 
 Always pass `-tags webkit2_41` on Linux. On Windows/macOS run the Go/Vitest/svelte-check tests; CI runs the

@@ -114,6 +114,7 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 - **Image shortcuts are single keys** (C crop, A arrow, R rectangle, T text, B blur, P pixelate, [ ] rotate, 0 fit, 1 actual size, ←/→ previous/next) and only fire while an image tab is active and focus isn't in a text field.
 
 - **PDF viewer = pdf.js's own `PDFViewer` component** (lazy page rendering, text layer, find controller, annotation layer with forms, annotation editors). Writing our own would duplicate years of edge cases.
+- **Fit width / Fit page follow the view's size**: pdf.js computes these once, so a ResizeObserver on the viewer re-applies them when the window or a split pane changes size (a PDF opened in a narrow pane or in the background otherwise stayed at its first scale).
 - **pdf.js scripting is off** (no `PDFScriptingManager`; the QuickJS engine isn't shipped) — PDF JavaScript never runs.
 - **pdf.js resources are local**: CMaps, standard fonts, WASM image decoders (OpenJPEG BSD-2, JBIG2 BSD-3, QCMS MIT) and ICC profiles are copied into `dist/pdfjs/` by a small Vite plugin.
 - **"Low-res first, then sharpened"** uses pdf.js's built-in detail canvas: `maxCanvasPixels` is 1 MP, so a page first renders into a small CSS-scaled canvas, then pdf.js draws a sharp canvas for just the visible region.
@@ -149,7 +150,7 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   - Clicking a header selects its column (as in spreadsheets); sorting moved to a small ▾ button in the header.
 
 - **Office documents (added on request, M4b) are editable, not read-only.**
-  - **.xlsx/.xlsm** are edited through excelize (BSD-3) in Go: only cells you change are rewritten, so styles, number formats, other sheets, charts and defined names stay as they were. Input follows spreadsheet rules (`=…` formula, number, TRUE/FALSE, otherwise text). After every edit the sheet's formula cells are recomputed (excelize's calculation engine) so dependent values update live; on save the computed results are written into the formula cells' cached values **and** the workbook asks for full recalculation on load, so Excel, LibreOffice and file previews all show correct numbers.
+  - **.xlsx/.xlsm** are edited through excelize (BSD-3) in Go: only cells you change are rewritten, so styles, number formats, other sheets, charts and defined names stay as they were. Input follows spreadsheet rules (`=…` formula, number, TRUE/FALSE, otherwise text). After every edit the sheet's formula cells are recomputed (excelize's calculation engine) so dependent values update live; on save the computed results are written into the formula cells' cached values **and** the workbook asks for full recalculation on load, so Excel, LibreOffice and file previews all show correct numbers. Workbooks written by scripts (openpyxl, pandas, excelize) often store formulas **without** results; like Excel, opening one calculates them (for workbooks up to 100k cells; bigger ones are indexed on the first edit). Formula cells are found within the sheet's stored dimension, not just the rows read, since a never-calculated formula at the end of a row has no value to read.
   - **.docx** is edited on a page-like canvas. The XML is parsed in the webview; each paragraph/run keeps a pointer to its original element, and saving rebuilds `word/document.xml` reusing the original paragraph and run properties (fonts, sizes, colours, spacing, numbering). Every other package part (styles, headers/footers, images, comments, settings) is copied byte-for-byte. Paragraphs containing tracked changes, fields, content controls or equations are shown read-only and written back untouched. Bold/italic/underline/strike and Heading 1–3/Normal can be changed; pasting is plain text (foreign HTML can't be mapped onto Word formatting). Bullets/numbering are kept but can't be created yet.
   - **Legacy .xls and .doc can be opened and edited, but are saved as new .xlsx/.docx files next to the original** (which stays unchanged), with a clear note. There is no permissive library that writes the old binary formats faithfully: `shakinm/xlsReader` is GPL-3 (excluded), `extrame/xls` is read-only and unmaintained. We read them ourselves on top of `richardlehane/mscfb` (Apache-2.0): BIFF8 cell values (numbers, dates, text, booleans, cached formula results) and the Word 97 piece table (text). Formulas/formatting of .xls and images/tables/formatting of .doc are not carried over (said in the UI).
   - Images inside .docx are served from the package via `/__mf/zip`.
@@ -343,6 +344,20 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   pane becomes narrow, opened from the toolbar — a 260 px panel beside a 400 px pane would leave the canvas or
   table unusable.
 
+## Project page
+
+- **The README's clips and screenshots are recorded from the real app**, not mocked: `scripts/demo_files.py` writes
+  a small "Lisbon trip" folder (all generated, plus the public-domain NASA portrait the self-tests use), and the
+  `demo` scenario (`frontend/src/test/demo.ts`) plays scripted tours with a drawn pointer (a bare X server has no
+  visible cursor, and synthetic events don't move one) on a 1280×800 Xvfb display with no window manager, recorded
+  by ffmpeg. Re-running `scripts/readme-media.sh` after UI changes keeps the page truthful.
+- **Animated WebP, not GIF or video.** GitHub plays only uploaded videos, not ones in the repository; GIF's 256
+  colours band the UI and are ~10× larger. libwebp merges unchanged frames, so a 20 s clip is under 1 MB. Waits
+  that aren't worth watching (a model working) are marked by the scene and cut.
+- **The banner is an SVG with CSS animations** (light and dark versions through `<picture>`), text converted to
+  paths from the app's own fonts so it looks the same without them installed, and still for readers who ask for
+  reduced motion. Badges are static: shields.io can't read a private repository.
+
 ## Dependencies & licenses
 
 | Dependency | License | Where |
@@ -409,6 +424,7 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 | github.com/mewkiz/flac (+ mewkiz/pkg Unlicense, mewpkg/term Unlicense, icza/bitio Apache-2.0) | Unlicense | FLAC decoding and encoding |
 | github.com/jfreymuth/oggvorbis, jfreymuth/vorbis | MIT | Ogg Vorbis decoding |
 | github.com/dhowden/tag | BSD-2-Clause | audio tags and cover art |
+| Python tools for the demo folder and README banner — fontTools + brotli (MIT), openpyxl (MIT), python-docx (MIT), Pillow (MIT-CMU), numpy (BSD-3); ffmpeg and Chromium run as external programs — **dev only, not shipped** | permissive | `scripts/demo_files.py`, `scripts/readme_hero.py`, `scripts/readme-media.sh` |
 | github.com/pdfcpu/pdfcpu (+ hhrutter/tiff BSD-3, xdg-go/stringprep Apache-2.0, go.yaml.in/yaml Apache-2.0, mattn/go-runewidth MIT, clipperhouse/uax29 MIT) | Apache-2.0 | PDF page operations |
 
 `scripts/licenses.py` lists every Go module linked into the binary and every runtime npm package with its licence and fails on anything not on the permissive allow-list (MIT, BSD, Apache-2.0, ISC, CC0, OFL, PSF/Python, Unlicense, 0BSD). `argparse` (PSF-2.0) is only used by markdown-it's CLI and isn't bundled; `@napi-rs/canvas` is a Node-only optional dependency of pdfjs-dist and isn't bundled either.
