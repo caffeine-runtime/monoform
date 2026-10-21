@@ -10,6 +10,12 @@
 //
 // Pixel selections are document-sized masks (selection.ts); markup
 // selection uses Konva's transformer.
+//
+// A layer can have a mask: a canvas the size of its raster whose alpha says
+// how much of the layer shows (like a selection: opaque = shown). The raster
+// itself is never changed by it; what is drawn is raster ∘ mask (`shown`), or
+// — when the layer also has markup — the cached group with the mask drawn
+// over it as destination-in, so markup is masked too.
 import Konva from 'konva/lib/Core';
 import { Image as KImage } from 'konva/lib/shapes/Image';
 import { Rect as KRect } from 'konva/lib/shapes/Rect';
@@ -56,6 +62,8 @@ export interface LayerInfo {
   opacity: number;
   blend: Blend;
   objects: number;
+  mask: boolean;
+  maskOn: boolean;
 }
 
 export interface ObjectProps {
@@ -88,6 +96,8 @@ export interface EditorState {
   activeId: string;
   object: ObjectProps | null;
   adjusting: boolean;
+  /** Brush and eraser paint the active layer's mask instead of its pixels. */
+  editMask: boolean;
   version: number; // increments on every committed change
 }
 
@@ -106,6 +116,8 @@ export interface ToolOptions {
   shadow: boolean;
   wandTolerance: number;
   wandContiguous: boolean;
+  /** On a mask the brush hides (eraser shows); false swaps them. */
+  maskHide: boolean;
 }
 
 interface LayerModel {
@@ -121,6 +133,8 @@ interface LayerModel {
   visible: boolean;
   blend: Blend;
   objects: string[];
+  mask: HTMLCanvasElement | null;
+  maskOn: boolean;
 }
 
 interface Snapshot {
@@ -137,6 +151,12 @@ interface LiveLayer {
   group: Konva.Group;
   img: KImage;
   objs: Konva.Group;
+  mask: HTMLCanvasElement | null;
+  maskOn: boolean;
+  /** Draws the mask over the cached group (destination-in) when the layer has markup. */
+  maskNode: KImage;
+  /** raster ∘ mask for the current pair. */
+  shown: { canvas: HTMLCanvasElement; mask: HTMLCanvasElement; out: HTMLCanvasElement } | null;
 }
 
 const MAX_HISTORY = 40;
@@ -145,6 +165,20 @@ const ACCENT = '#d97757';
 
 let layerSeq = 0;
 const newId = () => `L${Date.now().toString(36)}${(++layerSeq).toString(36)}`;
+
+/** A new, untransformed, unmasked layer. */
+function plainLayer(name: string, canvas: HTMLCanvasElement): LayerModel {
+  return { id: newId(), name, canvas, x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, blend: 'source-over', objects: [], mask: null, maskOn: true };
+}
+
+/** c with the mask's alpha applied (a new canvas). */
+function applyMask(c: HTMLCanvasElement, mask: HTMLCanvasElement): HTMLCanvasElement {
+  const out = raster.clone(c);
+  const g = out.getContext('2d')!;
+  g.globalCompositeOperation = 'destination-in';
+  g.drawImage(mask, 0, 0, out.width, out.height);
+  return out;
+}
 
 export class ImageEditor {
   stage: Konva.Stage;
@@ -170,6 +204,10 @@ export class ImageEditor {
     before: HTMLCanvasElement;
     /** With a selection: the bare stroke, shown through the mask into `canvas` as it grows. */
     paint: HTMLCanvasElement | null;
+    /** Removes (destination-out) rather than paints. */
+    erase: boolean;
+    /** Painting the layer's mask. */
+    onMask: boolean;
   } | null = null;
   private docW: number;
   private docH: number;
@@ -190,7 +228,9 @@ export class ImageEditor {
     shadow: true,
     wandTolerance: 32,
     wandContiguous: true,
+    maskHide: true,
   };
+  editMask = false;
   selection: Selection | null = null;
   selectMode: SelectMode = 'replace';
   private adjuster: { a: Adjuster; layer: LiveLayer } | null = null;
@@ -231,7 +271,7 @@ export class ImageEditor {
     this.regionTr = new Transformer({ rotateEnabled: false, keepRatio: false, borderStroke: ACCENT, anchorStroke: ACCENT, anchorSize: 9, anchorCornerRadius: 3, ignoreStroke: true });
     this.tr = new Transformer({ borderStroke: ACCENT, anchorStroke: ACCENT, anchorSize: 9, anchorCornerRadius: 3, rotateEnabled: true, rotationSnaps: [0, 45, 90, 135, 180, 225, 270, 315] });
     this.klayer.add(this.regionTr, this.tr);
-    this.addLiveLayer({ id: newId(), name: 'Background', canvas: base, x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, blend: 'source-over', objects: [] });
+    this.addLiveLayer(plainLayer('Background', base));
     this.activeId = this.layers[0].id;
     this.history = [this.snapshot()];
     this.index = 0;
@@ -643,28 +683,62 @@ export class ImageEditor {
     const group = new Konva.Group({ x: m.x, y: m.y, rotation: m.rotation, scaleX: m.scaleX, scaleY: m.scaleY, opacity: m.opacity, visible: m.visible, globalCompositeOperation: m.blend, name: 'layer' });
     const img = new KImage({ image: m.canvas, x: 0, y: 0, width: m.canvas.width, height: m.canvas.height, name: 'raster' });
     const objs = new Konva.Group({ name: 'objects' });
-    group.add(img, objs);
+    const maskNode = new KImage({ image: m.mask ?? undefined, x: 0, y: 0, globalCompositeOperation: 'destination-in', visible: false, listening: false, name: 'mask' });
+    group.add(img, objs, maskNode);
     for (const json of m.objects) {
       const n = Konva.Node.create(json) as KNode;
       objs.add(n as Konva.Shape);
       this.decorate(n);
     }
     group.on('dragend transformend', () => this.commit());
-    const L: LiveLayer = { id: m.id, name: m.name, canvas: m.canvas, group, img, objs };
+    const L: LiveLayer = { id: m.id, name: m.name, canvas: m.canvas, group, img, objs, mask: m.mask, maskOn: m.maskOn, maskNode, shown: null };
     this.layers.splice(index, 0, L);
     this.docGroup.add(group);
     this.layers.forEach((l, i) => l.group.zIndex(i));
+    this.refreshCache(L);
     return L;
   }
 
-  private setCanvas(L: LiveLayer, c: HTMLCanvasElement) {
+  private setCanvas(L: LiveLayer, c: HTMLCanvasElement, mask: HTMLCanvasElement | null = L.mask) {
     L.canvas = c;
-    L.img.image(c);
+    L.mask = mask && mask.width === c.width && mask.height === c.height ? mask : null;
     L.img.size({ width: c.width, height: c.height });
+    this.refreshCache(L);
+  }
+
+  /** The layer's raster with its mask applied (kept until either changes). */
+  private shownOf(L: LiveLayer): HTMLCanvasElement {
+    const m = L.mask!;
+    if (L.shown?.canvas === L.canvas && L.shown.mask === m) return L.shown.out;
+    const out = raster.clone(L.canvas);
+    L.shown = { canvas: L.canvas, mask: m, out };
+    this.reshow(L, 0, 0, out.width, out.height);
+    return out;
+  }
+
+  /** Recompose part of `shown` after the raster or the mask changed there in place (strokes). */
+  private reshow(L: LiveLayer, x: number, y: number, w: number, h: number) {
+    if (!L.shown || !L.mask) return;
+    const g = L.shown.out.getContext('2d')!;
+    // destination-in clears everything outside what is drawn, so keep it to the rectangle.
+    g.save();
+    g.beginPath();
+    g.rect(x, y, w, h);
+    g.clip();
+    g.clearRect(x, y, w, h);
+    g.drawImage(L.canvas, 0, 0);
+    g.globalCompositeOperation = 'destination-in';
+    g.drawImage(L.mask, 0, 0);
+    g.restore();
   }
 
   layerInfo(): LayerInfo[] {
-    return this.layers.map((L) => ({ id: L.id, name: L.name, visible: L.group.visible(), opacity: L.group.opacity(), blend: (L.group.globalCompositeOperation() || 'source-over') as Blend, objects: L.objs.getChildren().length }));
+    return this.layers.map((L) => ({ id: L.id, name: L.name, visible: L.group.visible(), opacity: L.group.opacity(), blend: (L.group.globalCompositeOperation() || 'source-over') as Blend, objects: L.objs.getChildren().length, mask: !!L.mask, maskOn: L.maskOn }));
+  }
+
+  /** A layer's mask (null if it has none). */
+  layerMask(id: string): HTMLCanvasElement | null {
+    return this.layers.find((l) => l.id === id)?.mask ?? null;
   }
 
   /** The layer's raster canvas. */
@@ -676,11 +750,13 @@ export class ImageEditor {
   layerPreview(id: string): HTMLCanvasElement | null {
     const L = this.layers.find((l) => l.id === id);
     if (!L) return null;
-    return L.objs.getChildren().length ? this.renderLayerContentAt(L) : L.canvas;
+    const c = L.objs.getChildren().length ? this.renderLayerContentAt(L) : L.canvas;
+    return L.mask && L.maskOn ? applyMask(c, L.mask) : c;
   }
 
   setActive(id: string) {
     if (!this.layers.some((l) => l.id === id)) return;
+    if (id !== this.activeId) this.editMask = false;
     this.activeId = id;
     this.updateDraggable();
     this.select(null);
@@ -690,7 +766,7 @@ export class ImageEditor {
   addLayer(name?: string, canvas?: HTMLCanvasElement, at?: { x: number; y: number }): string {
     const c = canvas ?? raster.makeCanvas(this.docW, this.docH);
     const idx = this.layers.indexOf(this.active) + 1;
-    const L = this.addLiveLayer({ id: newId(), name: name ?? `Layer ${this.layers.length + 1}`, canvas: c, x: at?.x ?? 0, y: at?.y ?? 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, blend: 'source-over', objects: [] }, idx);
+    const L = this.addLiveLayer({ ...plainLayer(name ?? `Layer ${this.layers.length + 1}`, c), x: at?.x ?? 0, y: at?.y ?? 0 }, idx);
     this.activeId = L.id;
     this.updateDraggable();
     if (this.tool === 'move') this.tr.nodes([L.group]);
@@ -750,7 +826,7 @@ export class ImageEditor {
     const merged = this.renderLayers([below, top], true);
     this.layers.splice(i, 1);
     top.group.destroy();
-    this.resetLayer(below, merged);
+    this.resetLayer(below, merged, null); // both masks are in the merged pixels
     below.group.opacity(1);
     below.group.globalCompositeOperation('source-over');
     this.activeId = below.id;
@@ -763,15 +839,118 @@ export class ImageEditor {
     const flat = this.composite();
     for (const L of this.layers) L.group.destroy();
     this.layers = [];
-    const L = this.addLiveLayer({ id: newId(), name: 'Background', canvas: flat, x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, blend: 'source-over', objects: [] });
+    const L = this.addLiveLayer(plainLayer('Background', flat));
     this.activeId = L.id;
+    this.editMask = false;
     this.commit();
   }
 
-  /** Group opacity applies per child in Konva; cache groups with markup so it applies once. */
+  /**
+   * Show the raster (masked if the layer has a mask). Group opacity applies
+   * per child in Konva, and a mask must cover markup too: groups with markup
+   * that are translucent or masked are cached, so either applies once.
+   */
   private refreshCache(L: LiveLayer) {
     L.group.clearCache();
-    if (L.group.opacity() < 1 && L.objs.getChildren().length && L.group.visible()) L.group.cache();
+    const masked = !!L.mask && L.maskOn;
+    const markup = L.objs.getChildren().length > 0;
+    const viaCache = masked && markup;
+    L.maskNode.visible(viaCache);
+    if (viaCache) L.maskNode.setAttrs({ image: L.mask!, width: L.mask!.width, height: L.mask!.height });
+    L.img.image(masked && !viaCache ? this.shownOf(L) : L.canvas);
+    if (L.group.visible() && markup && (viaCache || L.group.opacity() < 1)) L.group.cache();
+  }
+
+  // ---- masks ----
+
+  /** Give the active layer a mask: everything shown, everything hidden, or the selection shown. */
+  addMask(from: 'show' | 'hide' | 'selection' = 'show') {
+    const L = this.active;
+    if (L.mask) return;
+    if (from === 'selection' && !this.selection) from = 'show';
+    // The mask lives in the layer's own pixels; a selection is in document pixels.
+    if (from === 'selection') this.bake(L);
+    const m = raster.makeCanvas(L.canvas.width, L.canvas.height);
+    const g = m.getContext('2d')!;
+    if (from === 'selection') g.drawImage(this.selection!.mask, 0, 0);
+    else if (from === 'show') {
+      g.fillStyle = '#fff';
+      g.fillRect(0, 0, m.width, m.height);
+    }
+    L.maskOn = true;
+    this.setCanvas(L, L.canvas, m);
+    this.editMask = true;
+    this.commit();
+  }
+
+  /** Show or hide the selection (or, without one, everything) on the active layer's mask. */
+  fillMask(show: boolean) {
+    const L = this.active;
+    if (!L.mask) return;
+    if (this.selection) this.bake(L);
+    const m = raster.clone(L.mask!);
+    const g = m.getContext('2d')!;
+    g.globalCompositeOperation = show ? 'source-over' : 'destination-out';
+    if (this.selection) g.drawImage(this.selection.mask, 0, 0);
+    else {
+      g.fillStyle = '#fff';
+      g.fillRect(0, 0, m.width, m.height);
+    }
+    this.setCanvas(L, L.canvas, m);
+    this.commit();
+  }
+
+  invertMask() {
+    const L = this.active;
+    if (!L.mask) return;
+    const m = raster.makeCanvas(L.mask.width, L.mask.height);
+    const g = m.getContext('2d')!;
+    g.fillStyle = '#fff';
+    g.fillRect(0, 0, m.width, m.height);
+    g.globalCompositeOperation = 'destination-out';
+    g.drawImage(L.mask, 0, 0);
+    this.setCanvas(L, L.canvas, m);
+    this.commit();
+  }
+
+  /** Turn the mask off and on without losing it. */
+  toggleMask(on = !this.active.maskOn) {
+    const L = this.active;
+    if (!L.mask) return;
+    L.maskOn = on;
+    this.refreshCache(L);
+    this.commit();
+  }
+
+  /** Make the mask permanent: hidden pixels are erased and the mask goes. */
+  applyMask() {
+    const L = this.active;
+    if (!L.mask) return;
+    this.bake(L);
+    const out = L.maskOn ? applyMask(L.canvas, L.mask!) : L.canvas;
+    this.editMask = false;
+    this.setCanvas(L, out, null);
+    this.commit();
+  }
+
+  deleteMask() {
+    const L = this.active;
+    if (!L.mask) return;
+    this.editMask = false;
+    this.setCanvas(L, L.canvas, null);
+    this.commit();
+  }
+
+  /** On a mask, the brush hides (true) or shows. */
+  setMaskHide(hide: boolean) {
+    this.opts.maskHide = hide;
+    this.emit();
+  }
+
+  /** Brush and eraser work on the mask (true) or the pixels. */
+  setEditMask(on: boolean) {
+    this.editMask = on && !!this.active.mask;
+    this.emit();
   }
 
   // ---- rendering ----
@@ -849,13 +1028,26 @@ export class ImageEditor {
   /** Bake a layer's transform and markup into a document-sized raster. */
   private bake(L: LiveLayer) {
     if (this.isBaked(L)) return;
-    this.resetLayer(L, this.renderLayers([L], false));
+    let mask: HTMLCanvasElement | null = null;
+    if (L.mask) {
+      // The mask goes through the same transform, as a picture of its own.
+      L.maskNode.visible(false);
+      L.objs.visible(false);
+      L.img.image(L.mask);
+      L.img.size({ width: L.mask.width, height: L.mask.height });
+      mask = this.renderLayers([L], false);
+      L.objs.visible(true);
+    }
+    L.maskNode.visible(false);
+    L.img.image(L.canvas);
+    const c = this.renderLayers([L], false);
+    this.resetLayer(L, c, mask);
   }
 
-  private resetLayer(L: LiveLayer, c: HTMLCanvasElement) {
+  private resetLayer(L: LiveLayer, c: HTMLCanvasElement, mask: HTMLCanvasElement | null = L.mask) {
     L.objs.destroyChildren();
     L.group.setAttrs({ x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 });
-    this.setCanvas(L, c);
+    this.setCanvas(L, c, mask);
     if (this.tr.nodes().some((n) => n === L.group || n.getParent() === L.objs)) this.tr.nodes(this.tool === 'move' ? [L.group] : []);
     this.refreshCache(L);
   }
@@ -875,7 +1067,7 @@ export class ImageEditor {
   private documentOp(op: (c: HTMLCanvasElement) => HTMLCanvasElement) {
     for (const L of this.layers) {
       this.bake(L);
-      this.setCanvas(L, op(L.canvas));
+      this.setCanvas(L, op(L.canvas), L.mask && op(L.mask));
     }
     const c = this.layers[0].canvas;
     this.docW = c.width;
@@ -991,9 +1183,11 @@ export class ImageEditor {
   private beginStroke(p: { x: number; y: number }) {
     const L = this.active;
     this.bake(L);
-    const before = L.canvas;
+    const onMask = this.editMask && !!L.mask;
+    const before = onMask ? L.mask! : L.canvas;
     const canvas = raster.clone(before);
-    const eraser = this.tool === 'eraser';
+    // On a mask, painting shows and erasing hides — unless the brush is set to hide.
+    const eraser = (this.tool === 'eraser') !== (onMask && this.opts.maskHide);
     // Inside a selection the stroke is drawn on its own canvas and shown only
     // through the selection mask, so painting never leaks outside it.
     const paint = this.selection ? raster.makeCanvas(before.width, before.height) : null;
@@ -1001,16 +1195,17 @@ export class ImageEditor {
     g.lineCap = 'round';
     g.lineJoin = 'round';
     g.lineWidth = this.brushSize();
-    g.strokeStyle = this.opts.color;
-    g.fillStyle = this.opts.color;
-    g.globalAlpha = eraser ? 1 : this.opts.brushOpacity;
+    g.strokeStyle = onMask ? '#fff' : this.opts.color;
+    g.fillStyle = g.strokeStyle;
+    g.globalAlpha = eraser && !onMask ? 1 : this.opts.brushOpacity;
     g.globalCompositeOperation = eraser && !paint ? 'destination-out' : 'source-over';
     g.beginPath();
     g.arc(p.x, p.y, g.lineWidth / 2, 0, Math.PI * 2);
     g.fill();
-    this.stroke = { canvas, g, last: p, before, paint };
+    this.stroke = { canvas, g, last: p, before, paint, erase: eraser, onMask };
     this.showStroke(p, p);
-    this.setCanvas(L, canvas);
+    if (onMask) this.setCanvas(L, L.canvas, canvas);
+    else this.setCanvas(L, canvas);
     this.klayer.batchDraw();
   }
 
@@ -1021,8 +1216,15 @@ export class ImageEditor {
     s.g.lineTo(p.x, p.y);
     s.g.stroke();
     this.showStroke(s.last, p);
+    const L = this.active;
+    if (L.mask && L.maskOn) {
+      // The canvas changed in place: recompose just this segment of the masked view.
+      const pad = Math.ceil(s.g.lineWidth / 2) + 2;
+      const x = Math.max(0, Math.floor(Math.min(s.last.x, p.x) - pad));
+      const y = Math.max(0, Math.floor(Math.min(s.last.y, p.y) - pad));
+      this.reshow(L, x, y, Math.min(L.canvas.width, Math.ceil(Math.max(s.last.x, p.x) + pad)) - x, Math.min(L.canvas.height, Math.ceil(Math.max(s.last.y, p.y) + pad)) - y);
+    }
     s.last = p;
-    this.active.img.image(s.canvas);
     this.klayer.batchDraw();
   }
 
@@ -1044,7 +1246,7 @@ export class ImageEditor {
     const g = s.canvas.getContext('2d')!;
     g.clearRect(x, y, w, h);
     g.drawImage(s.before, x, y, w, h, x, y, w, h);
-    g.globalCompositeOperation = this.tool === 'eraser' ? 'destination-out' : 'source-over';
+    g.globalCompositeOperation = s.erase ? 'destination-out' : 'source-over';
     g.drawImage(t, x, y);
     g.globalCompositeOperation = 'source-over';
   }
@@ -1223,7 +1425,7 @@ export class ImageEditor {
     try {
       const a = new Adjuster(L.canvas, this.selection?.mask ?? null);
       this.adjuster = { a, layer: L };
-      L.img.image(a.canvas);
+      this.showAdjusted();
       this.emit();
       return true;
     } catch {
@@ -1234,8 +1436,14 @@ export class ImageEditor {
   previewAdjust(a: Adjustments) {
     if (!this.adjuster) return;
     this.adjuster.a.render(a);
-    this.adjuster.layer.img.image(this.adjuster.a.canvas);
+    this.showAdjusted();
     this.klayer.batchDraw();
+  }
+
+  /** The adjuster's live result in place of the layer's raster (masked like it). */
+  private showAdjusted() {
+    const { a, layer: L } = this.adjuster!;
+    L.img.image(L.mask && L.maskOn ? applyMask(a.canvas, L.mask) : a.canvas);
   }
 
   applyAdjust(a: Adjustments) {
@@ -1254,7 +1462,7 @@ export class ImageEditor {
     if (!ad) return;
     ad.a.destroy();
     this.adjuster = null;
-    ad.layer.img.image(ad.layer.canvas);
+    this.refreshCache(ad.layer);
     this.klayer.batchDraw();
     this.emit();
   }
@@ -1276,6 +1484,8 @@ export class ImageEditor {
       visible: g.visible(),
       blend: (g.globalCompositeOperation() || 'source-over') as Blend,
       objects: L.objs.getChildren().map((n) => n.toJSON()),
+      mask: L.mask,
+      maskOn: L.maskOn,
     };
   }
 
@@ -1294,9 +1504,11 @@ export class ImageEditor {
     let pixels = 0;
     for (let i = this.history.length - 1; i >= 0; i--) {
       for (const m of this.history[i].layers) {
-        if (!seen.has(m.canvas)) {
-          seen.add(m.canvas);
-          pixels += m.canvas.width * m.canvas.height;
+        for (const c of [m.canvas, m.mask]) {
+          if (c && !seen.has(c)) {
+            seen.add(c);
+            pixels += c.width * c.height;
+          }
         }
       }
       if ((pixels > MAX_HISTORY_PIXELS || this.history.length - i > MAX_HISTORY) && i < this.index) {
@@ -1319,6 +1531,7 @@ export class ImageEditor {
     this.docH = s.height;
     for (const m of s.layers) this.addLiveLayer(m);
     this.activeId = s.active;
+    if (!this.active.mask) this.editMask = false;
     if (this.tool === 'move') this.tr.nodes([this.active.group]);
     this.updateDraggable();
     this.version++;
@@ -1354,7 +1567,7 @@ export class ImageEditor {
   }
 
   /** Replace everything with a layered image (.ora). */
-  loadLayers(w: number, h: number, layers: { name: string; canvas: HTMLCanvasElement; x?: number; y?: number; opacity?: number; visible?: boolean; blend?: Blend; objects?: string[] }[]) {
+  loadLayers(w: number, h: number, layers: { name: string; canvas: HTMLCanvasElement; x?: number; y?: number; opacity?: number; visible?: boolean; blend?: Blend; objects?: string[]; mask?: HTMLCanvasElement | null; maskOn?: boolean }[]) {
     this.cancelAdjust();
     this.tr.nodes([]);
     this.cancelRegion();
@@ -1364,9 +1577,11 @@ export class ImageEditor {
     this.docW = w;
     this.docH = h;
     for (const l of layers) {
-      this.addLiveLayer({ id: newId(), name: l.name, canvas: l.canvas, x: l.x ?? 0, y: l.y ?? 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: l.opacity ?? 1, visible: l.visible ?? true, blend: l.blend ?? 'source-over', objects: l.objects ?? [] });
+      const mask = l.mask && l.mask.width === l.canvas.width && l.mask.height === l.canvas.height ? l.mask : null;
+      this.addLiveLayer({ ...plainLayer(l.name, l.canvas), x: l.x ?? 0, y: l.y ?? 0, opacity: l.opacity ?? 1, visible: l.visible ?? true, blend: l.blend ?? 'source-over', objects: l.objects ?? [], mask, maskOn: l.maskOn ?? true });
     }
     this.activeId = this.layers[this.layers.length - 1].id;
+    this.editMask = false;
     this.updateDraggable();
     this.history = [this.snapshot()];
     this.index = 0;
@@ -1375,8 +1590,12 @@ export class ImageEditor {
     this.fit();
   }
 
-  /** Layers for saving (.ora): raster without markup, plus markup JSON. */
-  exportLayers(): { name: string; canvas: HTMLCanvasElement; x: number; y: number; opacity: number; visible: boolean; blend: Blend; objects: string[] }[] {
+  /**
+   * Layers for saving (.ora): the pixels as other apps should show them
+   * (markup and mask applied), plus markup JSON and the mask, so editing can
+   * go on here (with rawLayers()).
+   */
+  exportLayers(): { name: string; canvas: HTMLCanvasElement; x: number; y: number; opacity: number; visible: boolean; blend: Blend; objects: string[]; mask?: HTMLCanvasElement; maskOn?: boolean }[] {
     return this.layers.map((L) => {
       // ORA layers can only be offset, so transformed layers are baked first.
       const g = L.group;
@@ -1384,8 +1603,10 @@ export class ImageEditor {
       if (!simple) this.bake(L);
       const objects = L.objs.getChildren().map((n) => n.toJSON());
       // Rasterise markup into the PNG too, so other apps show it.
-      const canvas = objects.length ? this.renderLayerContentAt(L) : L.canvas;
-      return { name: L.name, canvas, x: L.group.x(), y: L.group.y(), opacity: L.group.opacity(), visible: L.group.visible(), blend: (L.group.globalCompositeOperation() || 'source-over') as Blend, objects };
+      const content = objects.length ? this.renderLayerContentAt(L) : L.canvas;
+      const canvas = L.mask && L.maskOn ? applyMask(content, L.mask) : content;
+      const masked = L.mask ? { mask: L.mask, maskOn: L.maskOn } : {};
+      return { name: L.name, canvas, x: L.group.x(), y: L.group.y(), opacity: L.group.opacity(), visible: L.group.visible(), blend: (L.group.globalCompositeOperation() || 'source-over') as Blend, objects, ...masked };
     });
   }
 
@@ -1398,6 +1619,7 @@ export class ImageEditor {
       L.group.setAttrs({ x: 0, y: 0, opacity: 1, visible: true });
       L.group.clearCache();
       L.img.visible(false);
+      L.maskNode.visible(false); // the mask is applied by the caller, to raster and markup alike
       const r = L.group.toCanvas({ x: 0, y: 0, width: L.canvas.width, height: L.canvas.height, pixelRatio: 1 }) as HTMLCanvasElement;
       L.img.visible(true);
       L.group.setAttrs({ x: t.x, y: t.y, opacity: t.o, visible: t.v });
@@ -1408,9 +1630,9 @@ export class ImageEditor {
     return out;
   }
 
-  /** Markup-free rasters of layers that have markup (null otherwise), bottom first. */
+  /** Rasters without markup or mask, of layers that have either (null otherwise), bottom first. */
   rawLayers(): (HTMLCanvasElement | null)[] {
-    return this.layers.map((L) => (L.objs.getChildren().length ? L.canvas : null));
+    return this.layers.map((L) => (L.objs.getChildren().length || L.mask ? L.canvas : null));
   }
 
   get layerCount() {
@@ -1432,6 +1654,7 @@ export class ImageEditor {
       activeId: this.activeId,
       object: this.objectProps(),
       adjusting: !!this.adjuster,
+      editMask: this.editMask,
       version: this.version,
     };
   }

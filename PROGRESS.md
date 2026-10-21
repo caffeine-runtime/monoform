@@ -357,6 +357,21 @@
   own first run still going when one was ticked) left that digest missing; choosing another file mid-run could
   show the earlier file's digests. Requests now queue: when a hash ends, what is still missing for the file
   chosen now is computed, and results for a file no longer chosen are discarded. (Showed up as a rare m6 stall.)
+- **Fixed: a video blur "stopped working" after a few seconds.** A new blur or image overlay covered only the 5 s
+  after the playhead (and nothing before it), so playing or scrubbing past that showed the plain video. They now
+  cover the whole clip (or the selection, if there is one); the panel's **Whole video** button resets a shortened
+  one. Checked on a 14 s clip: pixelation holds through playback and every seek.
+- **M38 — Masks.** *Video:* the blur button offers an ellipse (faces), a rectangle (plates, screens, text) or **any
+  shape** — drag around the object on the picture to draw its outline (simplified to ≤ 64 points), then drag its
+  points, double-click the outline to add one, right-click a point to remove it. Any area can be **inverted** (blur
+  everything else) and has a soft edge. Image overlays get the same mask (rectangle, ellipse or freeform), or *cut
+  this shape out*. Masks follow the layer's movement, scale and rotation (and tracking) and are rendered into the
+  export. *Images:* every layer can have a **layer mask** that hides parts of it without erasing them: add it
+  showing everything, hiding everything or from the selection; paint it with the brush (hides) and eraser (shows),
+  X swaps; hide/show the selection on it, invert it, turn it off (Shift+click its thumbnail), apply or delete it.
+  The layers panel shows the mask beside the layer; click either thumbnail to paint on it. Markup on a masked layer
+  is masked too; flips, rotations, resizes, crops and moving the layer carry the mask along; merging bakes it in.
+  `.ora` files keep it editable (other apps get the layer with the mask already applied).
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

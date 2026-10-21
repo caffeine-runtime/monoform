@@ -2,7 +2,9 @@
 // stack.xml) read by GIMP, Krita and MyPaint. Used to save work with its
 // layers. Text and shapes are flattened into their layer's pixels; we also
 // store their Konva description in a namespaced attribute so Hold It All
-// can reopen them editable (other apps ignore it).
+// can reopen them editable (other apps ignore it). A layer mask is applied
+// to the layer's PNG too; the unmasked pixels and the mask are stored beside
+// it (hia:raw, hia:mask) so the mask stays editable here.
 import { endpoint } from '../../core/backend';
 
 export interface OraLayer {
@@ -14,6 +16,10 @@ export interface OraLayer {
   visible: boolean;
   composite: string; // ORA composite-op, e.g. "svg:src-over"
   objects?: string; // JSON array of Konva nodes (ours)
+  /** Our layer mask: the entry with its PNG (alpha = shown), and whether it is on. */
+  mask?: { src: string; on: boolean };
+  /** Our entry with the layer's pixels before markup and mask. */
+  raw?: string;
 }
 
 export interface OraImage {
@@ -58,7 +64,7 @@ export async function writeOra(img: OraImage): Promise<ArrayBuffer> {
     top
       .map(
         (l, i) =>
-          `  <layer name="${esc(l.name)}" src="data/layer${top.length - 1 - i}.png" x="${Math.round(l.x)}" y="${Math.round(l.y)}" opacity="${l.opacity.toFixed(3)}" visibility="${l.visible ? 'visible' : 'hidden'}" composite-op="${l.composite}"${l.objects ? ` hia:objects="${esc(l.objects)}"` : ''}/>`,
+          `  <layer name="${esc(l.name)}" src="data/layer${top.length - 1 - i}.png" x="${Math.round(l.x)}" y="${Math.round(l.y)}" opacity="${l.opacity.toFixed(3)}" visibility="${l.visible ? 'visible' : 'hidden'}" composite-op="${l.composite}"${l.objects ? ` hia:objects="${esc(l.objects)}"` : ''}${l.raw ? ` hia:raw="${esc(l.raw)}"` : ''}${l.mask ? ` hia:mask="${esc(l.mask.src)}"${l.mask.on ? '' : ' hia:mask-off="1"'}` : ''}/>`,
       )
       .join('\n') +
     `\n </stack>\n</image>\n`;
@@ -92,7 +98,11 @@ export interface OraStackLayer {
   visible: boolean;
   blend: GlobalCompositeOperation;
   objects?: string;
+  mask?: { src: string; on: boolean };
+  raw?: string;
 }
+
+const hia = (l: Element, name: string) => l.getAttribute(`hia:${name}`) ?? l.getAttributeNS('https://holditall.dev/ora', name) ?? undefined;
 
 /** Read an .ora file from disk through the zip endpoint. Layers bottom first. */
 export async function readOra(path: string): Promise<{ width: number; height: number; layers: (OraStackLayer & { bitmap: ImageBitmap })[] }> {
@@ -115,7 +125,9 @@ export async function readOra(path: string): Promise<{ width: number; height: nu
     opacity: Number(l.getAttribute('opacity') ?? 1),
     visible: (l.getAttribute('visibility') ?? 'visible') !== 'hidden',
     blend: oraToBlend(l.getAttribute('composite-op')),
-    objects: l.getAttribute('hia:objects') ?? l.getAttributeNS('https://holditall.dev/ora', 'objects') ?? undefined,
+    objects: hia(l, 'objects'),
+    mask: hia(l, 'mask') ? { src: hia(l, 'mask')!, on: hia(l, 'mask-off') !== '1' } : undefined,
+    raw: hia(l, 'raw'),
   }));
   const layers = await Promise.all(
     stackLayers

@@ -4,7 +4,7 @@
 // part during a transition and applies fades. Coordinates are output pixels
 // with y down; frame and FBO textures keep row 0 at the top.
 
-import { stateAt, visibleAt, type Layer, type TransitionKind } from './project';
+import { MAX_POINTS, NO_MASK, maskOf, stateAt, visibleAt, type Layer, type Mask, type TransitionKind } from './project';
 
 const VERT = `#version 300 es
 in vec2 p;
@@ -21,13 +21,41 @@ void main() {
   gl_Position = vec4(c.x, flipY ? -c.y : c.y, 0.0, 1.0);
 }`;
 
+// A layer's mask: l is the point in its box (-1..1, y down, rotation undone).
+// mShape: 0 rectangle, 1 ellipse, 2 freeform outline (mPts, box -0.5..0.5), 3 none.
+const MASK = `
+uniform int mShape, mN;
+uniform float mFeather;
+uniform bool mInvert;
+uniform vec2 mPts[${MAX_POINTS}];
+float maskAt(vec2 l) {
+  float m = 1.0;
+  if (mShape == 2) {
+    bool inside = false;
+    float d = 1e9;
+    for (int i = 0; i < ${MAX_POINTS}; i++) {
+      if (i >= mN) break;
+      vec2 a = mPts[i] * 2.0, b = mPts[(i + 1) % mN] * 2.0, e = b - a;
+      if ((a.y > l.y) != (b.y > l.y) && l.x < e.x * (l.y - a.y) / e.y + a.x) inside = !inside;
+      float t = clamp(dot(l - a, e) / max(dot(e, e), 1e-9), 0.0, 1.0);
+      d = min(d, length(l - a - e * t));
+    }
+    m = inside ? smoothstep(0.0, max(mFeather, 0.002), d) : 0.0;
+  } else if (mShape != 3) {
+    float r = mShape == 0 ? max(abs(l.x), abs(l.y)) : length(l);
+    m = 1.0 - smoothstep(1.0 - max(mFeather, 0.002), 1.0, r);
+  }
+  return mInvert ? 1.0 - m : m;
+}`;
+
 const DRAW = `#version 300 es
 precision highp float;
 in vec2 uv;
 out vec4 o;
 uniform sampler2D tex;
 uniform float opacity;
-void main() { vec4 c = texture(tex, uv); o = vec4(c.rgb, c.a * opacity); }`;
+${MASK}
+void main() { vec4 c = texture(tex, uv); o = vec4(c.rgb, c.a * opacity * maskAt((uv - 0.5) * 2.0)); }`;
 
 const BLUR = `#version 300 es
 precision highp float;
@@ -35,16 +63,16 @@ in vec2 px;
 out vec4 o;
 uniform sampler2D src;
 uniform vec2 size, c, hs, dir;
-uniform float angle, feather, amount, opacity;
-uniform int kind, shape, n;
+uniform float angle, amount, opacity;
+uniform int kind, n;
+${MASK}
 vec4 at(vec2 p) { return texture(src, clamp(p, vec2(0.5), size - 0.5) / size); }
 void main() {
   vec4 orig = at(px);
   float ca = cos(-angle), sa = sin(-angle);
   vec2 d = px - c;
   vec2 l = vec2(d.x * ca - d.y * sa, d.x * sa + d.y * ca) / max(hs, vec2(1.0));
-  float r = shape == 0 ? max(abs(l.x), abs(l.y)) : length(l);
-  float mask = 1.0 - smoothstep(1.0 - max(feather, 0.002), 1.0, r);
+  float mask = maskAt(l);
   if (mask <= 0.0) { o = orig; return; }
   vec4 acc = vec4(0.0);
   if (kind == 1) {
@@ -89,6 +117,7 @@ void main() {
 
 const TRANS: Record<TransitionKind, number> = { crossfade: 0, dip: 0, wipe: 2, slide: 3, zoom: 4 };
 const BLURS: Record<string, number> = { gaussian: 0, lens: 0, pixelate: 1, motion: 2, zoom: 3 };
+const SHAPES: Record<Exclude<Mask['shape'], 'path'>, number> = { rect: 0, ellipse: 1, none: 3 };
 
 type Mat = number[]; // column-major 3×3
 const mul = (a: Mat, b: Mat): Mat => {
@@ -132,6 +161,7 @@ export class Compositor {
   private gl: WebGL2RenderingContext;
   private draw: WebGLProgram;
   private blur: WebGLProgram;
+  private ptBuf = new Float32Array(MAX_POINTS * 2);
   private mixP: WebGLProgram;
   private frameTex: WebGLTexture;
   private targets: Target[] = [];
@@ -250,6 +280,21 @@ export class Compositor {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
+  private setMask(p: WebGLProgram, m: Mask) {
+    const gl = this.gl;
+    const u = (k: string) => gl.getUniformLocation(p, k);
+    const pts = m.shape === 'path' && m.points && m.points.length >= 3 ? m.points.slice(0, MAX_POINTS) : null;
+    gl.uniform1i(u('mShape'), pts ? 2 : SHAPES[m.shape === 'path' ? 'none' : m.shape]);
+    gl.uniform1f(u('mFeather'), m.feather);
+    gl.uniform1i(u('mInvert'), m.invert ? 1 : 0);
+    gl.uniform1i(u('mN'), pts?.length ?? 0);
+    if (pts) {
+      this.ptBuf.fill(0);
+      pts.forEach(([x, y], i) => this.ptBuf.set([x, y], i * 2));
+      gl.uniform2fv(u('mPts'), this.ptBuf);
+    }
+  }
+
   /** Frame + layers into targets[base] (uses base and base+1); returns the target holding the result. */
   private scene(side: Side, rotate: number, layers: Layer[], base: number): Target {
     const gl = this.gl;
@@ -264,6 +309,7 @@ export class Compositor {
     gl.bindTexture(gl.TEXTURE_2D, this.frameTex);
     gl.uniform1i(gl.getUniformLocation(this.draw, 'tex'), 0);
     gl.uniform1f(gl.getUniformLocation(this.draw, 'opacity'), 1);
+    this.setMask(this.draw, NO_MASK);
     this.quad(this.draw, frameMatrix(rotate, side.frameW, side.frameH, this.W, this.H), cur.fb);
     const full = S(this.W, this.H);
     for (const l of layers) {
@@ -277,6 +323,7 @@ export class Compositor {
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this.images.get(l.asset)!);
         gl.uniform1f(gl.getUniformLocation(this.draw, 'opacity'), s.opacity);
+        this.setMask(this.draw, maskOf(l));
         this.quad(this.draw, layerMatrix(s.x, s.y, l.w, l.h, s.scale, s.rotation), cur.fb);
         gl.disable(gl.BLEND);
       } else if (l.kind === 'blur' && l.blur) {
@@ -290,13 +337,12 @@ export class Compositor {
         gl.uniform2f(u('c'), s.x, s.y);
         gl.uniform2f(u('hs'), (l.w * s.scale) / 2, (l.h * s.scale) / 2);
         gl.uniform1f(u('angle'), (s.rotation * Math.PI) / 180);
-        gl.uniform1f(u('feather'), b.feather);
+        this.setMask(p, maskOf(l));
         const amount = b.amount;
         gl.uniform1f(u('amount'), amount);
         gl.uniform1f(u('opacity'), s.opacity);
         const kind = BLURS[b.kind] ?? 0;
         gl.uniform1i(u('kind'), kind);
-        gl.uniform1i(u('shape'), b.shape === 'ellipse' ? 1 : 0);
         const ang = (b.angle * Math.PI) / 180;
         gl.uniform2f(u('dir'), Math.cos(ang), Math.sin(ang));
         gl.uniform1i(u('n'), Math.max(8, Math.min(kind === 0 ? 128 : 96, Math.ceil(kind === 0 ? amount * amount * 0.6 : amount * 2))));

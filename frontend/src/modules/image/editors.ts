@@ -1,6 +1,8 @@
 // Per-tab controllers for image commands.
 import { workspace } from '../../core/tabs.svelte';
 
+export type MaskOp = 'add' | 'edit' | 'invert' | 'toggle' | 'apply' | 'delete' | 'hide' | 'show' | 'swap';
+
 export interface ImageController {
   fit(): void;
   actual(): void;
@@ -26,6 +28,7 @@ export interface ImageController {
   newLayer(): void;
   mergeDown(): void;
   flatten(): void;
+  mask(op: MaskOp): void;
   removeBackground(): void;
   selectSubject(): void;
   saveCopy(): void;

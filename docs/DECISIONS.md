@@ -208,6 +208,22 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   loaded only when shown). It shows only when nothing was asked of the app yet: not with launch files, in quick
   peek, or in self-tests (`core/firstrun.ts`). The step that matters is the theme choice; everything else is
   skippable in one click. `welcomeDone` lives in the Go settings so a reinstall that keeps settings doesn't show it again.
+- **New video overlays and blurs span the whole clip** (or the selection). They used to cover 5 s from the
+  playhead, which read as "the blur stops working" while playing; shortening one is a drag in its track or
+  Start here / End here.
+- **Video masks are one `Mask` view over both layer kinds** (`maskOf`/`withMask` in `video/project.ts`): blurs keep
+  their area in `blur` (shape, feather, invert, points — older projects stay valid), image overlays in `mask`.
+  The compositor evaluates it per pixel in the layer's own box (so it follows move/scale/rotation and tracking):
+  rectangle and ellipse by distance, freeform by an even-odd inside test plus distance to the nearest edge for the
+  soft edge, over up to 64 points in a uniform array (`MAX_POINTS`). A drawn outline is simplified with
+  Ramer–Douglas–Peucker and becomes the box; every key shifts with the box centre so animation is kept.
+- **Image layer masks are separate canvases, never baked until asked** (`editor.ts`). Shown pixels = raster ∘ mask
+  (`destination-in`), cached per (raster, mask) pair and recomposed only in the brush segment's rectangle while
+  painting (≈ 4 ms per stroke on the VM). A masked layer with markup is drawn as a cached group with the mask as a
+  last `destination-in` node, so text and shapes are masked like pixels. Baking (transforms, pixel operations)
+  renders the mask through the same transform, so it stays aligned. Brush hides / eraser shows by default
+  (the brush covering things up matches "paint it out"); X swaps. In `.ora` the layer PNG has the mask applied
+  (what GIMP/Krita show); `hia:raw` and `hia:mask` entries keep both parts for us — OpenRaster has no masks.
 - **Side panels float in narrow panes** (< 600 px, `isNarrow`): over the content with a shadow, closed when the
   pane becomes narrow, opened from the toolbar — a 260 px panel beside a 400 px pane would leave the canvas or
   table unusable.

@@ -1,5 +1,6 @@
 <script lang="ts">
-  // Layer list: top layer first, like every image editor.
+  // Layer list: top layer first, like every image editor. A layer with a
+  // mask shows it beside its thumbnail: click either to paint on it.
   import Icon from '../../shell/Icon.svelte';
   import Eye from '@lucide/svelte/icons/eye';
   import EyeOff from '@lucide/svelte/icons/eye-off';
@@ -9,7 +10,8 @@
   import ArrowUp from '@lucide/svelte/icons/arrow-up';
   import ArrowDown from '@lucide/svelte/icons/arrow-down';
   import Merge from '@lucide/svelte/icons/merge';
-  import { ui } from '../../core/ui.svelte';
+  import Contrast from '@lucide/svelte/icons/contrast';
+  import { menu, ui, type MenuItem } from '../../core/ui.svelte';
   import type { Blend, EditorState, ImageEditor } from './editor';
 
   let { editor, es }: { editor: ImageEditor; es: EditorState } = $props();
@@ -56,6 +58,62 @@
     };
   }
 
+  /** Draw a mask thumbnail: shown parts white on black. */
+  function maskThumb(node: HTMLCanvasElement, args: { id: string; v: number }) {
+    const draw = (a: { id: string; v: number }) => {
+      const m = editor.layerMask(a.id);
+      const g = node.getContext('2d')!;
+      g.fillStyle = '#000';
+      g.fillRect(0, 0, node.width, node.height);
+      if (!m) return;
+      const k = Math.min(node.width / m.width, node.height / m.height);
+      const w = m.width * k;
+      const h = m.height * k;
+      const t = document.createElement('canvas');
+      t.width = node.width;
+      t.height = node.height;
+      const tg = t.getContext('2d')!;
+      tg.fillStyle = '#fff';
+      tg.fillRect(0, 0, t.width, t.height);
+      tg.globalCompositeOperation = 'destination-in';
+      tg.drawImage(m, (node.width - w) / 2, (node.height - h) / 2, w, h);
+      g.drawImage(t, 0, 0);
+    };
+    draw(args);
+    return { update: draw };
+  }
+
+  function pick(e: MouseEvent, id: string, mask: boolean) {
+    e.stopPropagation();
+    editor.setActive(id);
+    if (mask && e.shiftKey) editor.toggleMask();
+    else editor.setEditMask(mask);
+  }
+
+  function maskMenu(e: MouseEvent) {
+    if (!active) return;
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const sel = !!es.pixelSelection;
+    const items: MenuItem[] = !active.mask
+      ? [
+          { label: 'Show all (paint to hide)', run: () => editor.addMask('show') },
+          { label: 'Hide all (paint to show)', run: () => editor.addMask('hide') },
+          { label: 'Show only the selection', disabled: !sel, run: () => editor.addMask('selection') },
+        ]
+      : [
+          { label: es.editMask ? 'Paint on the pixels' : 'Paint on the mask', run: () => editor.setEditMask(!es.editMask) },
+          { separator: true },
+          { label: sel ? 'Hide the selection' : 'Hide everything', run: () => editor.fillMask(false) },
+          { label: sel ? 'Show the selection' : 'Show everything', run: () => editor.fillMask(true) },
+          { label: 'Invert the mask', run: () => editor.invertMask() },
+          { separator: true },
+          { label: active.maskOn ? 'Turn the mask off' : 'Turn the mask on', run: () => editor.toggleMask() },
+          { label: 'Apply the mask (erase what it hides)', run: () => editor.applyMask() },
+          { label: 'Delete the mask', run: () => editor.deleteMask() },
+        ];
+    menu.show({ clientX: r.left, clientY: r.top - 4 }, items);
+  }
+
   async function rename(id: string, name: string) {
     const n = await ui.prompt('Layer name', name, 'Rename');
     if (n && n !== name) editor.setLayerProps(id, { name: n });
@@ -69,12 +127,27 @@
         <button class="icon-btn xs eye" title={l.visible ? 'Hide layer' : 'Show layer'} aria-label={l.visible ? `Hide ${l.name}` : `Show ${l.name}`} onclick={(e) => (e.stopPropagation(), editor.setLayerProps(l.id, { visible: !l.visible }))}>
           <Icon icon={l.visible ? Eye : EyeOff} size={13} />
         </button>
-        <canvas class="thumb checker-sm" width="40" height="30" use:thumb={{ id: l.id, v: es.version }}></canvas>
+        <canvas class="thumb checker-sm" class:target={l.id === es.activeId && l.mask && !es.editMask} width="40" height="30" use:thumb={{ id: l.id, v: es.version }} onclick={(e) => pick(e, l.id, false)}></canvas>
+        {#if l.mask}
+          <canvas
+            class="thumb mask"
+            class:target={l.id === es.activeId && es.editMask}
+            class:off={!l.maskOn}
+            width="40"
+            height="30"
+            title="Mask: shown parts are white (click to paint on it, Shift+click to turn it {l.maskOn ? 'off' : 'on'})"
+            use:maskThumb={{ id: l.id, v: es.version }}
+            onclick={(e) => pick(e, l.id, true)}
+          ></canvas>
+        {/if}
         <span class="name" title="{l.name} (double-click to rename)">{l.name}</span>
         {#if l.opacity < 1}<span class="op">{Math.round(l.opacity * 100)}%</span>{/if}
       </div>
     {/each}
   </div>
+  {#if active?.mask && es.editMask}
+    <p class="masknote">Painting the mask: the brush {editor.opts.maskHide ? 'hides' : 'shows'}, the eraser {editor.opts.maskHide ? 'shows' : 'hides'}.</p>
+  {/if}
   {#if active}
     <div class="props">
       <label class="row">
@@ -95,6 +168,7 @@
     <button class="icon-btn" title="Duplicate layer" onclick={() => editor.duplicateLayer()}><Icon icon={Copy} size={15} /></button>
     <button class="icon-btn" title="Move up" disabled={activeIndex >= es.layers.length - 1} onclick={() => editor.moveLayer(es.activeId, 1)}><Icon icon={ArrowUp} size={15} /></button>
     <button class="icon-btn" title="Move down" disabled={activeIndex <= 0} onclick={() => editor.moveLayer(es.activeId, -1)}><Icon icon={ArrowDown} size={15} /></button>
+    <button class="icon-btn" class:on={active?.mask} title={active?.mask ? 'Mask…' : 'Add a mask: hide parts of the layer without erasing them'} onclick={maskMenu}><Icon icon={Contrast} size={15} /></button>
     <button class="icon-btn" title="Merge down" disabled={activeIndex <= 0} onclick={() => editor.mergeDown()}><Icon icon={Merge} size={15} /></button>
     <button class="icon-btn" title="Delete layer" disabled={es.layers.length < 2} onclick={() => editor.deleteLayer()}><Icon icon={Trash} size={15} /></button>
   </div>
@@ -135,6 +209,19 @@
     border-radius: 3px;
     flex: none;
     box-shadow: 0 0 0 1px var(--border-soft);
+  }
+  .thumb.target {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .thumb.mask.off {
+    opacity: 0.35;
+  }
+  .masknote {
+    margin: 0;
+    padding: 6px 10px;
+    border-top: 1px solid var(--border-soft);
+    font-size: var(--fs-small);
+    color: var(--text-muted);
   }
   .checker-sm {
     background-color: var(--checker-b);

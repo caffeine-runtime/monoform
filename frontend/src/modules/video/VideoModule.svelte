@@ -442,16 +442,28 @@
     updateLayer(P.place(l, time, st, autoKey), done);
   }
 
+  /** Drawing a freeform outline on the picture (for the selected layer). */
+  let drawing = $state(false);
+
+  /** A drawn outline becomes the layer's box and freeform mask; every key moves with the box's centre. */
+  function drawOutline(l: P.Layer, outline: P.Pt[]) {
+    drawing = false;
+    const r = P.outlineToBox(outline, P.stateAt({ ...l, fadeIn: 0, fadeOut: 0 }, time));
+    if (!r) return;
+    const keys = l.keys.map((k) => ({ ...k, x: Math.round(k.x + r.shift[0]), y: Math.round(k.y + r.shift[1]) }));
+    updateLayer(P.withMask({ ...l, w: r.w, h: r.h, keys }, { shape: 'path', points: r.points }), true);
+  }
+
   function addLayer(l: P.Layer) {
     setFx({ ...fx, layers: [...fx.layers, l] }, true);
     selId = l.id;
     fxPanel = true;
   }
 
-  /** Where a new overlay goes in time: the selection, else 5 s from the playhead. */
+  /** A new overlay or blur covers the selection, or else the whole clip (it can be shortened in its track). */
   function span(): { start: number; end: number } {
     if (sel) return { start: sel[0], end: sel[1] };
-    return { start: time, end: Math.min(dur, time + 5) };
+    return { start: 0, end: dur };
   }
 
   async function addImageBitmap(bmp: ImageBitmap, name: string, at?: { x: number; y: number }) {
@@ -477,9 +489,20 @@
     }
   }
 
-  function addBlur() {
+  function addBlur(shape: 'ellipse' | 'rect' | 'path' = 'ellipse') {
     if (!needEditable() || !outW) return;
-    addLayer(P.newLayer('blur', { ...span(), x: outW / 2, y: outH / 2, w: Math.round(outW / 3), h: Math.round(outH / 3) }, { name: `Blur ${fx.layers.filter((l) => l.kind === 'blur').length + 1}` }));
+    const l = P.newLayer('blur', { ...span(), x: outW / 2, y: outH / 2, w: Math.round(outW / 3), h: Math.round(outH / 3) }, { name: `Blur ${fx.layers.filter((l) => l.kind === 'blur').length + 1}` });
+    addLayer(P.withMask(l, { shape }));
+    drawing = shape === 'path';
+  }
+
+  function blurMenu(e: MouseEvent) {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    menu.show({ clientX: r.left, clientY: r.bottom + 4 }, [
+      { label: 'Ellipse (faces)', run: () => addBlur('ellipse') },
+      { label: 'Rectangle (plates, screens, text)', run: () => addBlur('rect') },
+      { label: 'Draw any shape…', run: () => addBlur('path') },
+    ]);
   }
 
   function speedMenu(e: MouseEvent) {
@@ -897,6 +920,8 @@
     setFx: (p: P.Project) => setFx(p, true),
     addImageBitmap,
     addBlur,
+    drawOutline,
+    drawing: () => drawing,
     selectLayer: (id: string | null) => (selId = id),
     stageChange,
     trackLayer,
@@ -935,7 +960,7 @@
   <video bind:this={el2} class="el2" muted preload="auto" crossorigin="anonymous"></video>
   <canvas bind:this={fxCanvas} class="fxcanvas" class:hidden={!fxOn}></canvas>
   {#if fxOn && outW}
-    <FxStage W={outW} H={outH} {stageW} {stageH} layers={fx.layers} selected={selId} {time} onselect={(id) => ((selId = id), id && (fxPanel = true))} onchange={stageChange} />
+    <FxStage W={outW} H={outH} {stageW} {stageH} layers={fx.layers} selected={selId} {time} bind:drawing onselect={(id) => ((selId = id), id && (fxPanel = true))} onchange={stageChange} onlayer={updateLayer} ondraw={drawOutline} />
   {/if}
   {#if loading}<div class="overlay"><span class="spinner"></span></div>{/if}
   {#if error}<div class="overlay err">{error}</div>{/if}
@@ -1018,7 +1043,7 @@
     <button class="icon-btn" title="Redo ({formatShortcut('Mod+Shift+Z')})" disabled={!canRedo} onclick={() => doEdit('redo')}><Icon icon={Redo2} size={15} /></button>
     <span class="sep"></span>
     <button class="icon-btn" title="Add an image on top of the video (or drop one on the picture)" onclick={() => void addImages()}><Icon icon={ImagePlus} size={15} /></button>
-    <button class="icon-btn" title="Blur an area (faces, plates…); it can follow a moving object" onclick={addBlur}><Icon icon={Droplet} size={15} /></button>
+    <button class="icon-btn" title="Blur an area (faces, plates…); it can follow a moving object" onclick={blurMenu}><Icon icon={Droplet} size={15} /></button>
     <button class="icon-btn" class:on={fx.speeds.length > 0} title="Speed up or slow down the selection (or the whole video)" onclick={speedMenu}><Icon icon={Gauge} size={15} /></button>
     <button class="icon-btn" class:on={fxPanel} title="Effects panel: overlays, keyframes, curves, fades, transitions" onclick={() => (fxPanel = !fxPanel)}><Icon icon={Wand} size={15} /></button>
     <button class="btn ghost" onclick={saveMenu}><Icon icon={Save} size={14} /> {fxOn ? 'Render ▾' : 'Save ▾'}</button>
@@ -1034,7 +1059,9 @@
     project={fx}
     selected={selLayer}
     {time}
+    duration={dur}
     bind:autoKey
+    bind:drawing
     {tracking}
     onselect={(id) => (selId = id)}
     onlayer={(l) => updateLayer(l)}

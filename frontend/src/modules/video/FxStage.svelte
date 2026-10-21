@@ -1,8 +1,10 @@
 <script lang="ts">
   // Boxes over the preview for the layers visible now: drag to move, the
   // corner to scale, the knob to rotate. The selected layer also shows its
-  // motion path with a dot per keyframe.
-  import { stateAt, visibleAt, type Layer, type State } from './project';
+  // motion path with a dot per keyframe. A freeform mask shows its outline
+  // with draggable points; in drawing mode a drag over the picture draws a
+  // new outline.
+  import { maskOf, stateAt, visibleAt, withMask, type Layer, type Pt, type State } from './project';
 
   let {
     W,
@@ -12,8 +14,11 @@
     layers,
     selected,
     time,
+    drawing = $bindable(false),
     onselect,
     onchange,
+    onlayer,
+    ondraw,
   }: {
     W: number;
     H: number;
@@ -23,8 +28,13 @@
     selected: string | null;
     time: number;
     onselect: (id: string | null) => void;
+    drawing?: boolean;
     /** Live change while dragging (done = pointer released). */
     onchange: (l: Layer, s: Partial<State>, done: boolean) => void;
+    /** The layer itself changed (outline points), live while dragging. */
+    onlayer: (l: Layer, done: boolean) => void;
+    /** An outline was drawn over the picture (video pixels) for the selected layer. */
+    ondraw: (l: Layer, outline: Pt[]) => void;
   } = $props();
 
   const k = $derived(W && H ? Math.min(stageW / W, stageH / H) : 1);
@@ -58,6 +68,94 @@
     drag = { l, mode, x: e.clientX, y: e.clientY, s0, cx: root.left + ox + s0.x * k, cy: root.top + oy + s0.y * k };
   }
 
+  // ---- freeform outline: points in the box (-0.5..0.5, y down, before rotation) ----
+
+  /** Screen point → point in the layer's box. */
+  function toBox(e: { clientX: number; clientY: number }, l: Layer, root: DOMRect): Pt {
+    const s = stateAt({ ...l, fadeIn: 0, fadeOut: 0 }, time);
+    const dx = e.clientX - (root.left + ox + s.x * k);
+    const dy = e.clientY - (root.top + oy + s.y * k);
+    const a = (-s.rotation * Math.PI) / 180;
+    return [(dx * Math.cos(a) - dy * Math.sin(a)) / (l.w * s.scale * k), (dx * Math.sin(a) + dy * Math.cos(a)) / (l.h * s.scale * k)];
+  }
+  const rootOf = (e: Event) => (e.currentTarget as Element).closest('.fx-stage')!.getBoundingClientRect();
+  const round = (p: Pt): Pt => [Math.round(p[0] * 1000) / 1000, Math.round(p[1] * 1000) / 1000];
+
+  let vdrag: { l: Layer; i: number; root: DOMRect } | null = null;
+
+  function startPoint(e: PointerEvent, l: Layer, i: number) {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    vdrag = { l, i, root: rootOf(e) };
+  }
+
+  function movePoint(e: PointerEvent, done = false) {
+    if (!vdrag) return;
+    const pts = [...(maskOf(vdrag.l).points ?? [])];
+    pts[vdrag.i] = round(toBox(e, vdrag.l, vdrag.root));
+    onlayer(withMask(vdrag.l, { points: pts }), done);
+    if (done) vdrag = null;
+  }
+
+  function removePoint(e: MouseEvent, l: Layer, i: number) {
+    e.preventDefault();
+    e.stopPropagation();
+    const pts = maskOf(l).points ?? [];
+    if (pts.length > 3) onlayer(withMask(l, { points: pts.filter((_, j) => j !== i) }), true);
+  }
+
+  /** Double-click on a freeform layer: a new point on the nearest edge. */
+  function addPoint(e: MouseEvent, l: Layer) {
+    e.stopPropagation();
+    const pts = maskOf(l).points ?? [];
+    if (maskOf(l).shape !== 'path' || pts.length < 3) return;
+    const p = toBox(e, l, rootOf(e));
+    let best = 0;
+    let bd = Infinity;
+    pts.forEach((a, i) => {
+      const b = pts[(i + 1) % pts.length];
+      const ex = b[0] - a[0];
+      const ey = b[1] - a[1];
+      const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * ex + (p[1] - a[1]) * ey) / (ex * ex + ey * ey || 1)));
+      const d = Math.hypot(p[0] - a[0] - ex * t, p[1] - a[1] - ey * t);
+      if (d < bd) {
+        bd = d;
+        best = i;
+      }
+    });
+    onlayer(withMask(l, { points: [...pts.slice(0, best + 1), round(p), ...pts.slice(best + 1)] }), true);
+  }
+
+  // ---- drawing a new outline ----
+  let outline = $state<Pt[] | null>(null);
+
+  function drawStart(e: PointerEvent) {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    const r = rootOf(e);
+    outline = [[(e.clientX - r.left - ox) / k, (e.clientY - r.top - oy) / k]];
+  }
+
+  function drawMove(e: PointerEvent) {
+    if (!outline) return;
+    const r = rootOf(e);
+    const p: Pt = [(e.clientX - r.left - ox) / k, (e.clientY - r.top - oy) / k];
+    const q = outline[outline.length - 1];
+    if (Math.hypot(p[0] - q[0], p[1] - q[1]) * k >= 3) outline = [...outline, p];
+  }
+
+  function drawEnd() {
+    const o = outline;
+    outline = null;
+    if (!o || !sel) return;
+    drawing = false;
+    if (o.length >= 3) ondraw(sel, o);
+  }
+
   function move(e: PointerEvent, done = false) {
     if (!drag) return;
     const d = drag;
@@ -83,12 +181,14 @@
   {#if path}<svg class="path" width={W * k} height={H * k}><polyline points={path} />{#each sel!.keys as key (key.t)}<circle cx={key.x * k} cy={key.y * k} r="3.5" />{/each}</svg>{/if}
   {#each shown as l (l.id)}
     {@const s = stateAt({ ...l, fadeIn: 0, fadeOut: 0 }, time)}
+    {@const m = maskOf(l)}
     <div
       class="box"
       class:sel={l.id === selected}
       class:blur={l.kind === 'blur'}
       class:ghost={!visibleAt(l, time)}
-      class:round={l.blur?.shape === 'ellipse'}
+      class:round={m.shape === 'ellipse'}
+      class:free={m.shape === 'path'}
       style:left="{s.x * k}px"
       style:top="{s.y * k}px"
       style:width="{l.w * s.scale * k}px"
@@ -102,8 +202,25 @@
       onpointerup={(e) => move(e, true)}
       onclick={(e) => e.stopPropagation()}
       onkeydown={(e) => e.stopPropagation()}
-      ondblclick={(e) => e.stopPropagation()}
+      ondblclick={(e) => addPoint(e, l)}
     >
+      {#if m.shape === 'path' && m.points}
+        <svg class="outline" viewBox="-0.5 -0.5 1 1" preserveAspectRatio="none" aria-hidden="true"><polygon points={m.points.map((p) => p.join(',')).join(' ')} /></svg>
+        {#if l.id === selected && !drawing}
+          {#each m.points as p, i (i)}
+            <span
+              class="pt"
+              role="presentation"
+              style:left="{(p[0] + 0.5) * 100}%"
+              style:top="{(p[1] + 0.5) * 100}%"
+              onpointerdown={(e) => startPoint(e, l, i)}
+              onpointermove={(e) => movePoint(e)}
+              onpointerup={(e) => movePoint(e, true)}
+              oncontextmenu={(e) => removePoint(e, l, i)}
+            ></span>
+          {/each}
+        {/if}
+      {/if}
       {#if l.id === selected}
         <span class="h scale" role="presentation" onpointerdown={(e) => start(e, l, 'scale')} onpointermove={(e) => move(e)} onpointerup={(e) => move(e, true)}></span>
         <span class="h rot" role="presentation" onpointerdown={(e) => start(e, l, 'rotate')} onpointermove={(e) => move(e)} onpointerup={(e) => move(e, true)}></span>
@@ -111,7 +228,22 @@
       {/if}
     </div>
   {/each}
+  {#if drawing && sel}
+    <div class="draw" role="presentation" title="Drag around what {sel.name} should cover" onpointerdown={drawStart} onpointermove={drawMove} onpointerup={drawEnd} onclick={(e) => e.stopPropagation()} ondblclick={(e) => e.stopPropagation()}>
+      {#if outline}<svg width={W * k} height={H * k}><polyline points={outline.map(([x, y]) => `${x * k},${y * k}`).join(' ')} /></svg>{/if}
+    </div>
+  {/if}
 </div>
+<svelte:window
+  onkeydown={(e) => {
+    if (drawing && e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      outline = null;
+      drawing = false;
+    }
+  }}
+/>
 
 <style>
   .fx-stage {
@@ -142,6 +274,56 @@
   }
   .box.round {
     border-radius: 50%;
+  }
+  .box.free {
+    outline-color: rgba(255, 255, 255, 0.25);
+  }
+  .outline {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+  .outline polygon {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.8));
+  }
+  .box.sel .outline polygon {
+    stroke: var(--accent);
+  }
+  .pt {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    margin: -5px 0 0 -5px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--accent);
+    cursor: grab;
+    touch-action: none;
+  }
+  .draw {
+    position: absolute;
+    inset: 0;
+    pointer-events: auto;
+    cursor: crosshair;
+    touch-action: none;
+    background: rgba(0, 0, 0, 0.12);
+  }
+  .draw svg {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+  }
+  .draw polyline {
+    fill: rgba(217, 119, 87, 0.15);
+    stroke: var(--accent);
+    stroke-width: 2;
   }
   .box.sel {
     outline: 2px solid var(--accent);

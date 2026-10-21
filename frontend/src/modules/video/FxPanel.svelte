@@ -3,14 +3,16 @@
   // timing curves), or — with nothing selected — the project's overlays,
   // speed changes, transitions and fades.
   import BezierEditor from './BezierEditor.svelte';
-  import { BLUR_KINDS, EASINGS, TRANSITIONS, bezierOf, stateAt, type Easing, type Layer, type Project, type State } from './project';
+  import { BLUR_KINDS, EASINGS, TRANSITIONS, bezierOf, maskOf, stateAt, withMask, type Easing, type Layer, type Mask, type Project, type State } from './project';
   import { formatTime } from '../audio/waveform';
 
   let {
     project,
     selected,
     time,
+    duration,
     autoKey = $bindable(),
+    drawing = $bindable(false),
     tracking,
     onselect,
     onlayer,
@@ -23,7 +25,10 @@
     project: Project;
     selected: Layer | null;
     time: number;
+    duration: number;
     autoKey: boolean;
+    /** Drawing a freeform outline on the picture. */
+    drawing?: boolean;
     tracking: string;
     onselect: (id: string | null) => void;
     onlayer: (l: Layer) => void;
@@ -59,6 +64,19 @@
   }
 
   const num = (e: Event) => +(e.target as HTMLInputElement).value;
+
+  const mask = $derived(selected ? maskOf(selected) : null);
+  const SHAPES: { id: Mask['shape']; label: string; title: string }[] = [
+    { id: 'none', label: 'Whole', title: 'Show all of the image' },
+    { id: 'rect', label: 'Rectangle', title: 'A rectangle filling the box' },
+    { id: 'ellipse', label: 'Ellipse', title: 'An ellipse filling the box' },
+    { id: 'path', label: 'Freeform', title: 'Any outline: draw it on the picture, then drag its points' },
+  ];
+  function setShape(id: Mask['shape']) {
+    if (!selected) return;
+    onlayer(withMask(selected, { shape: id }));
+    drawing = id === 'path' && !(maskOf(selected).points?.length);
+  }
 </script>
 
 <aside class="fxpanel" aria-label="Effects">
@@ -75,6 +93,7 @@
       <span class="btns">
         <button class="btn ghost sm" title="Start at the playhead" onclick={() => onlayer({ ...selected, start: Math.min(time, selected.end - 0.1) })}>Start here</button>
         <button class="btn ghost sm" title="End at the playhead" onclick={() => onlayer({ ...selected, end: Math.max(time, selected.start + 0.1) })}>End here</button>
+        <button class="btn ghost sm" title="From the start to the end of the video" onclick={() => onlayer({ ...selected, start: 0, end: duration })}>Whole video</button>
       </span>
       <label for="fi">Fade in</label>
       <span class="rng"><input id="fi" type="range" min="0" max="3" step="0.1" value={selected.fadeIn} oninput={(e) => onlayer({ ...selected, fadeIn: num(e) })} /> {selected.fadeIn.toFixed(1)} s</span>
@@ -104,18 +123,36 @@
       <div class="grid">
         <label for="am">Strength</label>
         <span class="rng"><input id="am" type="range" min="1" max="80" step="1" value={b.amount} oninput={(e) => onlayer({ ...selected, blur: { ...b, amount: num(e) } })} /> {b.amount}</span>
-        <label for="fe">Soft edge</label>
-        <span class="rng"><input id="fe" type="range" min="0" max="1" step="0.05" value={b.feather} oninput={(e) => onlayer({ ...selected, blur: { ...b, feather: num(e) } })} /> {Math.round(b.feather * 100)}%</span>
         {#if b.kind === 'motion'}
           <label for="an">Direction</label>
           <span class="rng"><input id="an" type="range" min="-180" max="180" step="1" value={b.angle} oninput={(e) => onlayer({ ...selected, blur: { ...b, angle: num(e) } })} /> {b.angle}°</span>
         {/if}
-        <span>Shape</span>
-        <span class="btns">
-          <button class="btn ghost sm" class:on={b.shape === 'ellipse'} onclick={() => onlayer({ ...selected, blur: { ...b, shape: 'ellipse' } })}>Ellipse</button>
-          <button class="btn ghost sm" class:on={b.shape === 'rect'} onclick={() => onlayer({ ...selected, blur: { ...b, shape: 'rect' } })}>Rectangle</button>
-        </span>
       </div>
+    {/if}
+
+    {#if mask}
+      <h4>{selected.kind === 'blur' ? 'Area' : 'Mask'}</h4>
+      <div class="chips" role="radiogroup" aria-label="Shape">
+        {#each SHAPES.filter((x) => x.id !== 'none' || selected.kind === 'image') as x (x.id)}
+          <button class="chip" class:on={mask.shape === x.id} role="radio" aria-checked={mask.shape === x.id} title={x.title} onclick={() => setShape(x.id)}>{x.label}</button>
+        {/each}
+      </div>
+      {#if mask.shape !== 'none'}
+        <div class="grid">
+          <label for="fe">Soft edge</label>
+          <span class="rng"><input id="fe" type="range" min="0" max="1" step="0.05" value={mask.feather} oninput={(e) => onlayer(withMask(selected, { feather: num(e) }))} /> {Math.round(mask.feather * 100)}%</span>
+        </div>
+        <label class="chk" title={selected.kind === 'blur' ? 'Blur everything except this area' : 'Hide this part of the image instead of showing only it'}>
+          <input type="checkbox" checked={mask.invert} onchange={(e) => onlayer(withMask(selected, { invert: (e.target as HTMLInputElement).checked }))} />
+          {selected.kind === 'blur' ? 'Blur everything else' : 'Cut this shape out'}
+        </label>
+      {/if}
+      {#if mask.shape === 'path'}
+        <div class="btns">
+          <button class="btn ghost sm" class:on={drawing} title="Drag over the picture to draw the outline" onclick={() => (drawing = !drawing)}>{drawing ? 'Drawing… (Esc stops)' : 'Draw outline'}</button>
+        </div>
+        <p class="muted hint">Drag a point to move it, double-click the outline to add one, right-click a point to remove it.</p>
+      {/if}
     {/if}
 
     <h4>Movement</h4>
@@ -325,6 +362,10 @@
   }
   .note {
     margin: 6px 0;
+  }
+  .hint {
+    margin: 6px 0 0;
+    font-size: var(--fs-small);
   }
   .danger {
     color: var(--danger);
