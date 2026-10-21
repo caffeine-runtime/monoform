@@ -3,6 +3,7 @@
 // lines; buttons that dropped their text to an icon are named on hover; side
 // panels (image, PDF thumbnails, database tables) float instead of squeezing
 // the content and open from the toolbar; with room again the labels return.
+// A PDF at "Fit width" refits when the window or its pane changes size.
 import { commands } from '../core/commands';
 import { join } from '../core/paths';
 import { workspace, type Tab } from '../core/tabs.svelte';
@@ -35,16 +36,50 @@ function barProblems(root: Element): string[] {
   return out;
 }
 
+/** Resize the window until ok() (a window manager under load can drop a request). */
+async function sizeTo<T>(w: number, h: number, ok: () => T | null, what: string): Promise<NonNullable<T>> {
+  WindowSetSize(w, h);
+  let asked = performance.now();
+  return waitFor(() => {
+    const v = ok();
+    if (v === null && performance.now() - asked > 1000) {
+      WindowSetSize(w, h);
+      asked = performance.now();
+    }
+    return v;
+  }, what, 10000);
+}
+
 export default async function m33(dir: string) {
   for (const t of [...workspace.tabs]) await workspace.close(t, { force: true });
   const before = await WindowGetSize();
+  const pdf = (await workspace.openPath(join(dir, 'pdf', 'three.pdf')))!;
   const json = (await workspace.openPath(join(dir, 'data', 'people.json')))!;
   const img = (await workspace.openPath(join(dir, 'img', 'photo.png')))!;
   const db = (await workspace.openPath(join(dir, 'db', 'shop.db')))!;
-  const pdf = (await workspace.openPath(join(dir, 'pdf', 'three.pdf')))!;
   await waitFor(() => pane(json)?.querySelector('.fit'), 'json toolbar');
 
+  // A PDF at "Fit width" refits when its view changes size.
+  const fitInfo = () => {
+    const c = pane(pdf)!.querySelector<HTMLElement>('.container');
+    return `${c?.querySelector('.pdfViewer .page')?.getBoundingClientRect().width} px page, ${c?.clientWidth} px view`;
+  };
+  const fits = () => {
+    const c = pane(pdf)?.querySelector<HTMLElement>('.container');
+    const pg = c?.querySelector<HTMLElement>('.pdfViewer .page');
+    if (!c?.clientWidth || !pg) return null;
+    const w = pg.getBoundingClientRect().width;
+    return w <= c.clientWidth + 2 && w >= c.clientWidth * 0.8 ? w : null;
+  };
+  workspace.activate(pdf);
+  const wide = await waitFor(fits, 'PDF fits the window');
+  const narrowW = await sizeTo(900, 640, () => (window.innerWidth < 1000 ? fits() : null), 'PDF refits a smaller window').catch(() => {
+    throw new Error(`PDF after the window shrank: ${fitInfo()}`);
+  });
+  assert(narrowW < wide, `page narrower (${wide} → ${narrowW})`);
+
   // ---- wide: one tab, labels shown ----
+  await sizeTo(before.w, before.h, () => (window.innerWidth >= before.w - 40 ? true : null), 'window back to size');
   workspace.activate(json);
   await sleep(300);
   const jbar = pane(json)!.querySelector<HTMLElement>('.fit')!;
@@ -65,6 +100,10 @@ export default async function m33(dir: string) {
       throw new Error(`${t.title}: ${barProblems(pane(t)!).join('; ')}`);
     });
   }
+
+  await waitFor(fits, 'PDF page fits the pane width', 5000).catch(() => {
+    throw new Error(`PDF page doesn't fit its pane: ${fitInfo()}`);
+  });
 
   // Icons only, named on hover.
   await waitFor(() => (jbar.classList.contains('compact') ? true : null), 'json toolbar shows icons only');

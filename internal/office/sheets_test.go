@@ -1,6 +1,7 @@
 package office
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -164,5 +165,36 @@ func TestSetCellsBatchUndoAndComplete(t *testing.T) {
 	}
 	if c, _ := bs.Complete(info.ID, "Sheet1", 0, "1"); c != "" {
 		t.Errorf("numbers don't complete: %q", c)
+	}
+}
+
+// A workbook written by a script: formulas without stored results, some at
+// the end of their rows. Opening calculates them, as spreadsheet apps do.
+func TestFormulasWithoutResultsCalculateOnOpen(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "script.xlsx")
+	f := excelize.NewFile()
+	for i, r := range [][]any{{"Item", "Planned", "Spent"}, {"Flights", 190, 184}, {"Flat", 320, 312}} {
+		f.SetSheetRow("Sheet1", fmt.Sprintf("A%d", i+1), &r)
+	}
+	f.SetCellFormula("Sheet1", "D2", "B2-C2")
+	f.SetCellFormula("Sheet1", "D3", "B3-C3")
+	f.SetCellValue("Sheet1", "A4", "Total")
+	f.SetCellFormula("Sheet1", "B4", "SUM(B2:B3)")
+	f.SetCellFormula("Sheet1", "C4", "SUM(C2:C3)")
+	f.SetCellFormula("Sheet1", "D4", "SUM(D2:D3)")
+	if err := f.SaveAs(path); err != nil {
+		t.Fatal(err)
+	}
+	bs := NewBooks()
+	info, err := bs.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := info.Sheets[0]; s.Rows != 4 || s.Cols != 4 {
+		t.Errorf("size %d×%d", s.Rows, s.Cols)
+	}
+	rows, _ := bs.Rows(info.ID, "Sheet1", 0, 4, 4)
+	if rows[1][3] != "6" || rows[2][3] != "8" || rows[3][1] != "510" || rows[3][2] != "496" || rows[3][3] != "14" {
+		t.Fatalf("rows %v", rows)
 	}
 }

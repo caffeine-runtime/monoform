@@ -162,6 +162,31 @@
     });
   }
 
+  // pdf.js works out "Fit width" / "Fit page" once; refit when the view
+  // changes size (window, split view, a tab opened in the background).
+  $effect(() => {
+    const el = container;
+    if (!el) return;
+    let raf = 0;
+    let w = 0;
+    let h = 0;
+    const ro = new ResizeObserver(() => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        if (!el.clientWidth || (el.clientWidth === w && el.clientHeight === h)) return;
+        w = el.clientWidth;
+        h = el.clientHeight;
+        const v = viewer?.currentScaleValue;
+        if (v === 'page-width' || v === 'page-fit' || v === 'auto') viewer!.currentScaleValue = v;
+      });
+    });
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      cancelAnimationFrame(raf);
+    };
+  });
+
   let loadStart = 0;
   const timings: Record<string, number> = {};
   (tab as unknown as { pdfTimings: Record<string, number> }).pdfTimings = timings;
