@@ -215,6 +215,14 @@ export async function loadModel(ext: string, data: ArrayBuffer, base: string, na
       throw new Error(`.${ext} files are not supported`);
   }
   await done;
+  // STL, 3MF and AMF come from CAD and 3D printing, where Z is up; three.js
+  // has Y up, so stand them upright (a printed boat would lie on its side).
+  if (ext === 'stl' || ext === '3mf' || ext === 'amf') {
+    const upright = new THREE.Group();
+    upright.rotation.x = -Math.PI / 2;
+    upright.add(scene);
+    scene = upright;
+  }
   scene.name ||= name;
   return { scene, animations };
 }

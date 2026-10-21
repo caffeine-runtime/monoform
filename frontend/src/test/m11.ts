@@ -1,11 +1,12 @@
 // M11: 3D viewer — GLB (embedded texture, two animations), FBX (two
 // animation stacks), Draco glTF, PBR with the baked environment, OBJ+MTL with a texture from the folder, STL, PLY point
 // cloud, Collada (main-thread loader); animation list playback, wireframe
-// and lighting toggles, rendering.
+// and lighting toggles, the floor grid (a shader-drawn plane), rendering.
 import * as THREE from 'three';
 import { api } from '../core/backend';
 import { join } from '../core/paths';
 import { workspace, type Tab } from '../core/tabs.svelte';
+import { FloorGrid } from '../modules/model3d/grid';
 import type { ModelViewer, ModelStats, AnimState } from '../modules/model3d/viewer';
 import { assert, assertEq, log, measureJank, sleep, waitFor } from './harness';
 
@@ -37,12 +38,28 @@ async function open(p: string): Promise<{ tab: Tab; h: Hooks; ms: number; jank: 
 function meshes(v: ModelViewer): THREE.Mesh[] {
   const out: THREE.Mesh[] = [];
   v.scene.traverse((o) => {
-    if ((o as THREE.Mesh).isMesh) out.push(o as THREE.Mesh);
+    if ((o as THREE.Mesh).isMesh && !(o instanceof FloorGrid)) out.push(o as THREE.Mesh);
   });
   return out;
 }
 
 /** Does the centre of the rendered view differ from the background? */
+/** How many pixels of a fresh frame differ from the background. */
+function drawnPixels(v: ModelViewer): number {
+  v.renderer.render(v.scene, v.camera);
+  const src = v.renderer.domElement;
+  const c = document.createElement('canvas');
+  c.width = src.width;
+  c.height = src.height;
+  const g = c.getContext('2d')!;
+  g.drawImage(src, 0, 0);
+  const px = g.getImageData(0, 0, c.width, c.height).data;
+  const bg = (v.scene.background as THREE.Color).clone().convertLinearToSRGB();
+  let n = 0;
+  for (let i = 0; i < px.length; i += 4) if (Math.abs(px[i] - bg.r * 255) + Math.abs(px[i + 1] - bg.g * 255) + Math.abs(px[i + 2] - bg.b * 255) > 6) n++;
+  return n;
+}
+
 function drawsSomething(v: ModelViewer): boolean {
   v.renderer.render(v.scene, v.camera);
   const src = v.renderer.domElement;
@@ -142,6 +159,15 @@ export default async function m11(dir: string) {
   assert((meshes(v)[0].material as THREE.MeshBasicMaterial).map === tex, 'unlit keeps the texture');
   glb.h.toggle('lighting');
   assert(meshes(v)[0].material instanceof THREE.MeshStandardMaterial && !!v.scene.environment, 'lighting back on');
+  // The floor grid is one plane whose lines its shader draws (GridHelper's
+  // lines, clipped behind the camera, came out of software GL as stray
+  // triangles); it draws, and the toggle hides it.
+  assert(v.scene.children.some((o) => o instanceof FloorGrid && o.visible), 'floor grid in the scene');
+  const withGrid = drawnPixels(v);
+  glb.h.toggle('grid');
+  const without = drawnPixels(v);
+  glb.h.toggle('grid');
+  assert(withGrid > without + 200, `grid draws lines (${withGrid} vs ${without} pixels)`);
   await workspace.close(glb.tab, { force: true });
 
   // FBX with two animation stacks.
@@ -197,6 +223,11 @@ export default async function m11(dir: string) {
   assertEq(stl.h.stats()!.triangles, 12, 'stl triangles');
   assert(drawsSomething(stl.h.viewer()!), 'stl rendered');
   await workspace.close(stl.tab, { force: true });
+  // STL is Z-up (CAD, 3D printing): a box tall along Z stands upright.
+  const tower = await open(join(M, 'tower.stl'));
+  const [tx, ty, tz] = tower.h.stats()!.size;
+  assert(ty > 3 * tx && ty > 3 * tz, `tower.stl stands (size ${tx}×${ty}×${tz})`);
+  await workspace.close(tower.tab, { force: true });
   const ply = await open(join(M, 'spiral.ply'));
   assertEq(ply.h.stats()!.points, 1000, 'ply points');
   await workspace.close(ply.tab, { force: true });

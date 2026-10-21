@@ -10,6 +10,7 @@
 // is held however many models are open.
 import * as THREE from 'three';
 import { roomEnvironment } from './env';
+import { FloorGrid } from './grid';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 export interface ModelStats {
@@ -81,7 +82,7 @@ export class ModelViewer {
   private clips: THREE.AnimationClip[] = [];
   private mixer: THREE.AnimationMixer | null = null;
   private action: THREE.AnimationAction | null = null;
-  private grid: THREE.GridHelper;
+  private grid = new FloorGrid();
   private lights: THREE.Group;
   private envTexture: THREE.Texture | null = null;
   private shared: Shared;
@@ -104,9 +105,6 @@ export class ModelViewer {
     const fill = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
     this.lights.add(key, fill);
     this.scene.add(this.lights);
-    this.grid = new THREE.GridHelper(10, 20, 0x666666, 0x3a3a3a);
-    (this.grid.material as THREE.Material).transparent = true;
-    (this.grid.material as THREE.Material).opacity = 0.5;
     this.scene.add(this.grid);
     this.controls = new OrbitControls(this.camera);
     this.controls.enableDamping = true;
@@ -220,10 +218,9 @@ export class ModelViewer {
     this.camera.updateProjectionMatrix();
     this.controls.target.copy(centre);
     this.controls.update();
-    // Grid on the model's floor, scaled to it.
+    // Grid on the model's floor: cells of a round size, fading out around it.
     const g = Math.pow(10, Math.ceil(Math.log10(Math.max(size.x, size.z, 1e-6) * 2)));
-    this.grid.scale.setScalar(g / 10);
-    this.grid.position.set(centre.x, box.min.y, centre.z);
+    this.grid.fit(centre.x, box.min.y, centre.z, g / 20, g * 0.75);
     this.kick();
   }
 
@@ -419,8 +416,7 @@ export class ModelViewer {
     this.ro.disconnect();
     this.clear();
     this.controls.dispose();
-    this.grid.geometry.dispose();
-    (this.grid.material as THREE.Material).dispose();
+    this.grid.dispose();
     if (this.attached) {
       this.shared.owner = null;
       this.renderer.domElement.remove();
