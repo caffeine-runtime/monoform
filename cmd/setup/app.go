@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -317,7 +316,6 @@ func scheduleSelfDelete(exe, dir string) {
 	if runtime.GOOS != "windows" || exe == "" {
 		return
 	}
-	cmd := exec.Command("cmd.exe", "/C", fmt.Sprintf(`ping 127.0.0.1 -n 3 > nul & del /f /q "%s" & if exist "%s" rmdir /s /q "%s"`, exe, dir, dir))
-	hide(cmd)
-	_ = cmd.Start()
+	// cmd.exe gets this line as is (Go's argument quoting would escape the quotes in a way cmd doesn't read).
+	_ = startRaw("cmd.exe", fmt.Sprintf(`cmd.exe /D /C "ping 127.0.0.1 -n 3 > nul & del /f /q "%s" & if exist "%s" rmdir /s /q "%s""`, exe, dir, dir))
 }

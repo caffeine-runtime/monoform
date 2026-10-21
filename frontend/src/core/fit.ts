@@ -67,16 +67,23 @@ export function fitBar(el: HTMLElement) {
   // Buttons that come and go (selection tools, status) change what fits; text
   // that ticks (a playing time) is checked at most a few times a second.
   let timer = 0;
-  const mo = new MutationObserver(() => {
+  // Content can widen without the bar resizing: text, buttons coming and
+  // going, a button enabled or restyled (attributes), web fonts arriving.
+  // The bar's own classes and the names layoutBar sets don't count.
+  const mo = new MutationObserver((records) => {
+    if (!records.some((r) => r.type !== 'attributes' || (r.target !== el && !(r.attributeName ?? '').startsWith('data-fit')))) return;
     if (!timer) timer = window.setTimeout(() => ((timer = 0), schedule()), 200);
   });
   ro.observe(el);
-  mo.observe(el, { childList: true, subtree: true, characterData: true });
+  mo.observe(el, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class', 'style', 'disabled', 'hidden'] });
+  const fonts = () => schedule();
+  document.fonts?.addEventListener('loadingdone', fonts);
   schedule();
   return {
     destroy() {
       ro.disconnect();
       mo.disconnect();
+      document.fonts?.removeEventListener('loadingdone', fonts);
       cancelAnimationFrame(frame);
       clearTimeout(timer);
     },

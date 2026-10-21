@@ -4,7 +4,6 @@ package main
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/caffeine-runtime/hold-it-all/internal/setup"
@@ -15,4 +14,4 @@ func system() setup.System {
 	return setup.NewRecord(filepath.Join(os.TempDir(), "hold-it-all-setup-demo"))
 }
 
-func hide(*exec.Cmd) {}
+func startRaw(exe, cmdline string) error { return nil }
