@@ -129,11 +129,11 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   - **Results** show files whose best passage scores within 0.08 of the top hit (unrelated passages score only ~0.1 lower than real matches, so a fixed threshold doesn't work); Enter opens the file at the passage's line.
 
 - **Packaging (M7).** CI (`.github/workflows/build.yml`) runs on pushes to `main`, pull requests and manual dispatch: type check, unit tests, `go vet`, the license audit, the Linux in-app self-tests under Xvfb (with qpdf/poppler/7z/unzip verification), and packages for all three platforms as workflow artifacts. **Releases**: a pushed `v*` tag (or a manual run with a version) stamps the version into the binary (`-X …/internal/app.Version`) and the Windows product version, waits for checks + self-tests + all packages, and publishes a GitHub release with the packages, `SHA256SUMS` and notes from `.github/release-notes.md` (suffixed versions become pre-releases). It uses the preinstalled `gh` CLI rather than a third-party action, and the version input is validated before use. Wails v2.17.0 is pinned. LibreOffice-based Office verification and the search-model scenario (`m6b`, needs the 206 MB model) stay local-only to keep CI fast and offline-friendly.
-  - **Windows:** Wails' NSIS installer, customised (`build/windows/installer/project.nsi`): a components page where **"Open supported files with Hold It All by default" is unchecked**; the app always registers under `Applications\hold-it-all.exe\SupportedTypes` so it shows in *Open with*. The stock uninstall macro would blank `.ext` defaults even when nothing was associated, so it only runs when our marker key says associations were made. Desktop shortcut is opt-in too. Executable and installer use `hold-it-all` (no spaces). Also a portable zip.
+  - **Windows:** our own setup program (`cmd/setup`, M41; replaced the customised NSIS installer, still in git history). **"Open supported files with Hold It All by default" is unchecked**; the app always registers under `Applications\hold-it-all.exe\SupportedTypes` and each type's `OpenWithProgids`, so it shows in *Open with*. Defaults that are taken are backed up (`<ProgID>_backup`) and given back on uninstall. Desktop shortcut is opt-in too. Executable and setup use `hold-it-all` (no spaces). Also a portable zip.
   - **macOS:** universal `.app` (zipped with `ditto`), bundle id `dev.holditall.app`, `CFBundleDocumentTypes` from `wails.json` with **`LSHandlerRank` = `Alternate`** — listed in *Open With*, never made default automatically (macOS has no installer step to ask). Unsigned: signing/notarization needs an Apple Developer account.
   - **Linux:** tarball with the binary, icon, a `.desktop` file declaring the MIME types (validated with `desktop-file-validate`) and `install.sh` (per-user, no root; `--set-default` opts in to `xdg-mime default`, `--uninstall`). No `.deb`/AppImage/Flatpak in v1: the WebKitGTK 4.1 dependency is better satisfied by the distro, and AppImage bundling of WebKitGTK is fragile.
   - One document icon (`build/fileicon.png`, from `build/icon/fileicon.svg`) for all associated types; Wails derives `.ico`/`.icns` from it.
-  - The same 48 extensions (documents, images, archives, checksums, web pages, audio, video, 3D models) are listed in `wails.json`, the NSIS `HIA_OPENWITH` macro and the `.desktop` MIME list.
+  - The same 48 extensions (documents, images, archives, checksums, web pages, audio, video, 3D models) are listed in `wails.json` (the setup's list is generated from it: `go generate ./internal/setup`, checked by a test) and the `.desktop` MIME list.
 
 - **New files come from Go templates** (`internal/newfile`): Markdown starts with the file name as a heading; Word documents reuse the minimal package (with Normal/Heading 1–3 styles) that legacy `.doc` conversion writes; spreadsheets are excelize's empty workbook; images are PNGs up to 8192 px per side. Creation is exclusive (`O_EXCL` or an existence check), so nothing is overwritten. With a folder open, files go into it with a free "Untitled N" name; otherwise a save dialog asks where.
 - **Recents can be turned off** (`recentsOff`); turning it off also clears both lists, and Go's settings normalization enforces that. Removing single entries is an × on hover (sidebar, welcome page, settings) besides the existing context-menu item.
@@ -259,6 +259,23 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   dragging on the canvas, where a drag already means move/draw/select. Files dropped from the system still open as
   tabs unless the view claims them (`claimsDrop`: the image editor, for pictures), so dropping a PDF on an editor
   never inserts its path by surprise.
+- **The Windows setup is the app's own program, not a stock installer** (M41, requested: "custom installer, not
+  just a standard looking windows one"). `cmd/setup` is a small Wails window (580×440, frameless, the app's tokens
+  and fonts; UI in `frontend/setup`) around `internal/setup`, which does what the NSIS script did: files, Start menu
+  (and optional desktop) shortcut, the `holdit` shim in the per-user WindowsApps folder, *Open with* entries, the
+  *Quick peek* verb, optional defaults with backup/restore, and the Settings › Apps entry. It installs **per user by
+  default** (`%LOCALAPPDATA%\Programs\Hold It All`, HKCU — no UAC prompt; the manifest says `asInvoker` so Windows'
+  installer detection doesn't force one); *For everyone* re-runs itself elevated and quiet (`--quiet --everyone`) into
+  Program Files/HKLM. An install by the old NSIS installer is found by its uninstall key and removed first. The
+  uninstaller is the setup itself (`uninstall.exe --uninstall`); since Windows can't delete a running program but
+  can move it, it moves itself to %TEMP% before deleting the folder and is deleted after it exits. Shortcuts are
+  written through PowerShell's WScript.Shell (a `.lnk` is a COM object; no cgo); the registry through
+  `golang.org/x/sys/windows/registry` (BSD-3, already a dependency). The app's files are embedded gzipped
+  (`cmd/setup/pack`). The setup's own UI needs WebView2: Wails' `-webview2 embed` bundles Microsoft's Evergreen
+  bootstrapper (redistributable, as the NSIS installer did) and installs the runtime before the window opens. All
+  steps go through a `System` interface, so tests (and a demo on Linux that installs into a test folder) use a
+  recording implementation; CI also runs a quiet install/uninstall on a real Windows runner. Rejected: a custom
+  NSIS skin (still NSIS pages and widgets), MSIX (signing required, no `holdit` on PATH, restricted registry).
 - **Side panels float in narrow panes** (< 600 px, `isNarrow`): over the content with a shadow, closed when the
   pane becomes narrow, opened from the toolbar — a 260 px panel beside a 400 px pane would leave the canvas or
   table unusable.

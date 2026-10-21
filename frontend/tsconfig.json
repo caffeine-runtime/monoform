@@ -16,6 +16,6 @@
     "verbatimModuleSyntax": true,
     "types": ["vite/client"]
   },
-  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte"],
+  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte", "setup/**/*.ts", "setup/**/*.svelte"],
   "exclude": ["src/wailsjs/**/*.js"]
 }

@@ -51,10 +51,11 @@ Everything is keyboard-reachable: press **Ctrl+K** (**⌘K** on macOS) and type.
 
 Download the latest version from the repository's **Releases** page (each release lists SHA-256 checksums in `SHA256SUMS`). Builds of unreleased commits are under **Actions → Build → a run → Artifacts**.
 
-- **Windows:** `hold-it-all-amd64-installer.exe`. The installer has an **unchecked** option to make Hold It All
-  the default app for its file types. Without it, the app is still listed under *Open with*. Uninstalling restores
-  the previous defaults. There is also a portable `.zip`. The app uses the WebView2 runtime, which the installer
-  fetches if it is missing.
+- **Windows:** `hold-it-all-amd64-installer.exe` — Hold It All's own setup, in the app's look. It installs for you
+  (no administrator needed; *For everyone* is an option), and has an **unchecked** option to make Hold It All the
+  default app for its file types. Without it, the app is still listed under *Open with*. Uninstalling (Settings ›
+  Apps) restores the previous defaults. There is also a portable `.zip`. The app uses the WebView2 runtime, which
+  the setup installs if it is missing.
 - **macOS:** `hold-it-all-macos-universal.zip` contains `Hold It All.app` for Apple Silicon and Intel. The build
   is not signed, so the first time, right-click the app and choose **Open**. The app declares its file types at the
   lowest rank, so it appears in *Open With* but never takes over a default. To make it the default, use
@@ -98,7 +99,7 @@ Prerequisites:
 - Go **1.26.0+**, Node.js **22** with npm
 - Wails CLI **v2.17.0**: `go install github.com/wailsapp/wails/v2/cmd/wails@v2.17.0`
 - Linux: `sudo apt install libgtk-3-dev libwebkit2gtk-4.1-dev` (or your distro's equivalents)
-- Windows: the WebView2 runtime (preinstalled on Windows 10/11); [NSIS](https://nsis.sourceforge.io) for the installer
+- Windows: the WebView2 runtime (preinstalled on Windows 10/11)
 - macOS: Xcode command-line tools (`xcode-select --install`)
 
 ```sh
@@ -108,7 +109,7 @@ cd frontend && npm ci && cd ..
 ./scripts/build.sh                                   # → build/bin/hold-it-all
 
 # Windows
-wails build -platform windows/amd64 -nsis            # → build/bin/hold-it-all.exe + installer
+wails build -platform windows/amd64                 # → build/bin/hold-it-all.exe (setup: see docs/RELEASING.md)
 
 # macOS
 wails build -platform darwin/universal               # → build/bin/Hold It All.app

@@ -48,7 +48,6 @@ WebKitGTK **4.1** needs the Go build tag `webkit2_41` — `scripts/build.sh` add
 ### Windows 10/11
 
 - WebView2 runtime (preinstalled on current Windows).
-- [NSIS](https://nsis.sourceforge.io) 3.x for the installer (`choco install nsis`), `makensis` on `PATH`.
 - No C compiler is needed (Wails uses pure-Go WebView2 bindings on Windows).
 - The in-app self-tests use Linux tools (Xvfb); on Windows run the Go/Vitest/svelte-check tests and rely on CI
   for self-tests.
@@ -68,7 +67,9 @@ go mod download
 ./scripts/build.sh            # Linux/macOS: frontend + app → build/bin/
 ```
 
-Windows: `cd frontend && npm ci && npm run build && cd .. && wails build -platform windows/amd64 -nsis`.
+Windows: `cd frontend && npm ci && npm run build && cd .. && wails build -platform windows/amd64`. The setup program
+(`cmd/setup`) is built as in the Windows step of `.github/workflows/build.yml`; on Linux `scripts/setup-selftest.sh`
+builds and runs its demo.
 
 ## Everyday commands
 
@@ -117,7 +118,8 @@ frontend/src/modules    one folder per file type; registered in modules/registry
 frontend/src/test       in-app self-test scenarios (only loaded when HIA_TEST is set)
 frontend/src/wailsjs    generated bindings (don't edit by hand)
 scripts/                build, self-test, fixtures, verifiers, license audit, screenshots
-build/                  packaging: icons, Windows installer (NSIS), macOS Info.plist, Linux .desktop + install.sh
+build/                  packaging: icons, macOS Info.plist, Linux .desktop + install.sh
+cmd/setup/              the Windows setup program (Wails; UI in frontend/setup, logic in internal/setup)
 third_party/            our own replacement for a dependency with an unwanted license (see DECISIONS.md)
 docs/                   DECISIONS (design + every dependency's license), TESTING, RELEASING, this file
 PROGRESS.md             what's done, measured performance, known issues

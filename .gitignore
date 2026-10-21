@@ -5,6 +5,14 @@ frontend/node_modules
 *.test
 /tmp/
 .DS_Store
-build/windows/installer/wails_tools.nsh
-build/windows/installer/tmp/
 build/windows/fileicon.ico
+
+# setup program: its built UI and payload (made by the Windows build; see docs/RELEASING.md)
+cmd/setup/frontend/dist/*
+!cmd/setup/frontend/dist/.gitkeep
+cmd/setup/payload/*
+!cmd/setup/payload/.gitkeep
+cmd/setup/build/windows/icon.ico
+cmd/setup/build/bin/
+cmd/setup/build/appicon.png
+cmd/setup/frontend/wailsjs/

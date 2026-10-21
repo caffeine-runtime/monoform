@@ -101,6 +101,8 @@ jobs:
           scripts/verify-archives.sh "$FX"
           scripts/verify-images.sh "$FX"
           scripts/verify-ocr.sh "$FX"
+          # The setup program, as its Linux demo (installs into a test folder through its window).
+          scripts/setup-selftest.sh
 
   build:
     name: Package (${{ matrix.name }})
@@ -154,17 +156,43 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
-            if (-not (Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) { choco install nsis -y --no-progress }
-            "${env:ProgramFiles(x86)}\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Append
-            $env:PATH = "${env:ProgramFiles(x86)}\NSIS;$env:PATH"
-          }
           New-Item -ItemType Directory -Force build/bin | Out-Null
           go build -trimpath -ldflags "-X main.version=$env:HIA_VERSION" -o build/bin/holdit.exe ./cmd/holdit
-          wails build -platform windows/amd64 -nsis -trimpath -o hold-it-all.exe -ldflags "$env:HIA_LDFLAGS"
+          wails build -platform windows/amd64 -trimpath -o hold-it-all.exe -ldflags "$env:HIA_LDFLAGS"
+          # Our own setup program (cmd/setup) with the app inside.
+          npm --prefix frontend run build:setup
+          go run ./cmd/setup/pack build/bin/hold-it-all.exe build/bin/holdit.exe build/windows/fileicon.ico
+          Copy-Item build/windows/icon.ico cmd/setup/build/windows/icon.ico
+          $v = $env:HIA_VERSION -replace '[-+].*$', ''
+          node -e "const fs=require('fs');const p='cmd/setup/wails.json';const j=JSON.parse(fs.readFileSync(p));j.info.productVersion=process.argv[1];fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n')" "$v"
+          Push-Location cmd/setup
+          wails build -platform windows/amd64 -s -skipbindings -webview2 embed -trimpath -o hold-it-all-amd64-installer.exe -ldflags "-X main.version=$env:HIA_VERSION"
+          Pop-Location
           New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item build/bin/hold-it-all-amd64-installer.exe dist/
+          Copy-Item cmd/setup/build/bin/hold-it-all-amd64-installer.exe dist/
           Compress-Archive -Path build/bin/hold-it-all.exe,build/bin/holdit.exe -DestinationPath dist/hold-it-all-windows-amd64-portable.zip
+
+      - name: Setup program (Windows, quiet install and uninstall)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'Hold It All'
+          $p = Start-Process dist/hold-it-all-amd64-installer.exe -ArgumentList '--quiet','--dir',"`"$dir`"",'--desktop','--defaults' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "install exited $($p.ExitCode)" }
+          foreach ($f in 'hold-it-all.exe','holdit.exe','fileicon.ico','uninstall.exe') { if (-not (Test-Path (Join-Path $dir $f))) { throw "$f not installed" } }
+          $u = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\HoldItAll'
+          if ($u.DisplayVersion -ne $env:HIA_VERSION) { throw "uninstall entry version '$($u.DisplayVersion)'" }
+          if ((Get-ItemProperty 'HKCU:\Software\Classes\.md').'(default)' -ne 'HoldItAll.md') { throw '.md not associated' }
+          if (-not (Test-Path (Join-Path ([Environment]::GetFolderPath('Programs')) 'Hold It All.lnk'))) { throw 'no Start menu shortcut' }
+          if (-not (Test-Path "$env:LOCALAPPDATA\Microsoft\WindowsApps\holdit.cmd")) { throw 'no holdit command' }
+          & (Join-Path $dir 'holdit.exe') version
+          $p = Start-Process (Join-Path $dir 'uninstall.exe') -ArgumentList '--uninstall','--quiet' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "uninstall exited $($p.ExitCode)" }
+          if (Test-Path $dir) { throw 'folder left after uninstall' }
+          if (Test-Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\HoldItAll') { throw 'uninstall entry left' }
+          if (Test-Path 'HKCU:\Software\Classes\HoldItAll.md') { throw 'file class left' }
+          if (Test-Path (Join-Path ([Environment]::GetFolderPath('Programs')) 'Hold It All.lnk')) { throw 'shortcut left' }
+          "setup: quiet install and uninstall OK"
 
       - name: Build (macOS)
         if: runner.os == 'macOS'
