@@ -12,6 +12,9 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 
 ## Architecture
 
+- **Save dialogs never start in the working directory** (`internal/app/savedir.go`). Windows starts GUI apps from
+  Explorer, file associations and the installer with the working directory at `C:\Windows\System32` (or the install
+  folder), so a suggested name without a folder now goes to the folder last saved into, else Documents.
 - **File bytes travel over HTTP, not JSON bindings.** Wails bindings JSON-encode everything; a 50 MB log or a PDF would be base64'd through `ExecJS`. Instead the Wails asset server routes `/__hia/*` to `internal/server` (Range-capable `GET /__hia/file`, `POST /__hia/save` → atomic write). Bindings are used only for small calls.
 - **File history is a local, content-addressed store, not Git.** Versioning must work for any file the app saves
   (binary images and documents included), in any folder, without a repository or tools to install. Every app
