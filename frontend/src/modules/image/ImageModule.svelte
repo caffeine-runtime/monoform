@@ -36,6 +36,7 @@
   import PaintBucket from '@lucide/svelte/icons/paint-bucket';
   import SquaresUnite from '@lucide/svelte/icons/squares-unite';
   import Save from '@lucide/svelte/icons/save';
+  import Eraser2 from '@lucide/svelte/icons/brush-cleaning';
   import { api, endpoint, fileUrl, readFile, saveFile } from '../../core/backend';
   import { basename, extname, stem, dirname, join } from '../../core/paths';
   import { copyTransfer, readTransfer, type Transfer } from '../../core/transfer.svelte';
@@ -49,6 +50,9 @@
   import { imageControllers, type MaskOp } from './editors';
   import * as raster from './raster';
   import * as selection from './selection';
+  import { eraseRect } from './vision/erase';
+  import { aiModels } from '../../core/aimodels.svelte';
+  import { jobs } from '../../core/jobs.svelte';
   import type { SelectMode } from './selection';
   import { availableFonts, fontLabel } from './fonts';
   import { vision, type MaskResult } from './vision/vision';
@@ -457,10 +461,17 @@
     }
   }
 
+  let subjectTipShown = false;
   async function subjectMask(): Promise<MaskResult | null> {
     if (!editor) return null;
     busy = 'Finding the subject…';
     try {
+      // The optional BiRefNet model when installed (much better on people and hair), else the bundled U²-Netp.
+      if (await aiModels.installed('subject')) return await vision.subjectAI(editor.base, endpoint('ai'));
+      if (!subjectTipShown && aiModels.pack('subject')?.supported) {
+        subjectTipShown = true;
+        ui.toast('Not precise enough? A better subject finder is an optional download.', 'info', { label: 'Get it', run: () => void aiModels.install('subject') }, 8000);
+      }
       return await vision.removeBackground(editor.base);
     } catch (e) {
       toastError(e, 'Background removal failed');
@@ -482,6 +493,34 @@
     const r = await subjectMask();
     if (!r || !editor) return;
     editor.setPixelSelection(selection.fromMask(maskCanvas(r), r.bounds, { canvas: r.edges, scale: r.edgeScale }), editor.selectMode);
+  }
+
+  /** Remove what's selected and fill the gap (optional Moebius model). */
+  async function removeObject() {
+    if (!editor || busy) return;
+    const s = editor.selection;
+    if (!s) {
+      ui.toast('Select what to remove first — lasso around it, or click it with Select object.', 'info');
+      return;
+    }
+    if (!(await aiModels.installed('eraser')) && !(await aiModels.install('eraser'))) return;
+    const rect = eraseRect(s.bounds, editor.width, editor.height);
+    busy = 'Removing the object…';
+    try {
+      const started = await vision.eraseBegin(editor.composite(), s.mask, rect, endpoint('ai'), Math.floor(Math.random() * 2 ** 31));
+      const done = await jobs.run('Removing the object', () => Promise.resolve(started.job));
+      if (done.cancelled) return;
+      if (done.error) throw new Error(done.error);
+      const { patch } = await vision.eraseFinish(started, endpoint('ai'));
+      editor.paintPatch(patch, rect.x, rect.y);
+      patch.close();
+      editor.deselect();
+      ui.toast('Removed. Not right? Undo and run it again for a different fill.', 'success');
+    } catch (e) {
+      toastError(e, 'Object removal failed');
+    } finally {
+      busy = '';
+    }
   }
 
   async function invertSelection() {
@@ -611,6 +650,7 @@
     },
     removeBackground: () => void removeBackground(),
     selectSubject: () => void selectSubject(),
+    removeObject: () => void removeObject(),
     saveCopy: () => void saveCopy(),
     saveLayers: () => void saveWithLayers(),
     panel: (p: 'layers' | 'adjust' | 'colours') => setPanel(p),
@@ -877,6 +917,7 @@
       { separator: true },
       { label: 'Remove background', run: () => void removeBackground() },
       { label: 'Select subject', run: () => void selectSubject() },
+      { label: 'Remove object (fill the gap)', disabled: !es?.pixelSelection, run: () => void removeObject() },
       { separator: true },
       { label: 'New layer', shortcut: formatShortcut('Mod+Shift+N'), run: () => ed.addLayer() },
       { label: 'Flatten image', run: () => ed.flatten() },
@@ -927,6 +968,7 @@
     objectAt,
     removeBackground,
     selectSubject,
+    removeObject,
     copy,
     paste,
     saveCopy,
@@ -1117,6 +1159,7 @@
     <button class="btn ghost" title="Copy ({formatShortcut('Mod+C')})" onclick={() => copy()}><Icon icon={Copy} size={14} /> Copy</button>
     <button class="btn ghost" title="Cut ({formatShortcut('Mod+X')})" onclick={() => copy(true)}><Icon icon={Scissors} size={14} /> Cut</button>
     <button class="btn ghost" title="New layer from selection ({formatShortcut('Mod+J')})" onclick={() => editor?.layerFromSelection()}><Icon icon={SquaresUnite} size={14} /> To layer</button>
+    <button class="btn ghost remove-object" title="Remove the selected object and fill the gap with what could be behind it" onclick={() => void removeObject()}><Icon icon={Eraser2} size={14} /> Remove</button>
     <button class="btn ghost" title="Delete pixels (Delete)" onclick={() => editor?.clearSelectionPixels()}><Icon icon={Trash} size={14} /></button>
     <button class="btn ghost" title="Fill with colour" onclick={() => editor?.fillSelection()}><Icon icon={PaintBucket} size={14} /></button>
     <button class="btn ghost" title="Blur the selection: opens Adjust → Blur (Gaussian, motion, zoom, spin, lens, tilt-shift, surface)" onclick={() => setPanel('adjust')}><Icon icon={Droplets} size={14} /></button>

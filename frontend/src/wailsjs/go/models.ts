@@ -1,5 +1,35 @@
 export namespace app {
 	
+	export class AIPack {
+	    id: string;
+	    name: string;
+	    purpose: string;
+	    model: string;
+	    license: string;
+	    source: string;
+	    installed: boolean;
+	    supported: boolean;
+	    download: number;
+	    disk: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new AIPack(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.purpose = source["purpose"];
+	        this.model = source["model"];
+	        this.license = source["license"];
+	        this.source = source["source"];
+	        this.installed = source["installed"];
+	        this.supported = source["supported"];
+	        this.download = source["download"];
+	        this.disk = source["disk"];
+	    }
+	}
 	export class AnimFrame {
 	    path: string;
 	    delay: number;

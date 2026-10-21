@@ -34,6 +34,7 @@ func (a *App) registerRoutes() {
 			server.Error(w, server.StatusFor(err), err)
 		}
 	})
+	a.registerAIRoutes()
 	// OCR language data: ?f=/<lang>.traineddata.gz (the worker appends the file name).
 	a.Server.Handle("GET /__hia/tessdata", a.serveTessdata)
 	// One part of a zip-based document (images inside .docx).

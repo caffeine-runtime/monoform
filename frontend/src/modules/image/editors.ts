@@ -31,6 +31,7 @@ export interface ImageController {
   mask(op: MaskOp): void;
   removeBackground(): void;
   selectSubject(): void;
+  removeObject(): void;
   saveCopy(): void;
   saveLayers(): void;
   panel(p: 'layers' | 'adjust'): void;

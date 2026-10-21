@@ -57,6 +57,8 @@ jobs:
         run: |
           go vet -tags webkit2_41 ./...
           go test -tags webkit2_41 ./...
+      - name: Model runtime (download from NuGet with the app's code, run a tiny model)
+        run: HIA_AI_NET=1 go test -tags webkit2_41 ./internal/ai -run DownloadRuntime -v
       - name: License audit (permissive only)
         run: |
           go build -tags webkit2_41 -o /tmp/hold-it-all .
@@ -94,6 +96,7 @@ jobs:
           for s in m1 m2 m3 m4 m4b m5 m6 m8 m10 m11 m12 m13 m14 m15 m16 m18 m19 m20 m21 m22 m23 m24 m25 m26 m27 m28 m29 m30 m31 m32 m33 m34 m35 m36 m37 m38 m39 m40 m42; do scripts/selftest.sh "$s" "$FX"; done
           # Quick peek: started with --peek FILE.
           scripts/selftest.sh m32peek "$FX" "" --peek "$FX/diagrams/notes.md"
+          HIA_AI_FAKE=1 HIA_CACHE="$(mktemp -d)" scripts/selftest.sh m43 "$FX"
           HIA_TIMEOUT=400 scripts/selftest.sh m9 "$FX"
           # Pointer maths with a scaled interface (rows and controls at 125 %).
           python3 scripts/fixtures.py "$RUNNER_TEMP/fx125" && echo '{"uiScale":1.25}' > "$RUNNER_TEMP/scale.json" && scripts/selftest.sh m14 "$RUNNER_TEMP/fx125" "$RUNNER_TEMP/scale.json"
@@ -171,6 +174,13 @@ jobs:
           New-Item -ItemType Directory -Force dist | Out-Null
           Copy-Item cmd/setup/build/bin/hold-it-all-amd64-installer.exe dist/
           Compress-Archive -Path build/bin/hold-it-all.exe,build/bin/holdit.exe -DestinationPath dist/hold-it-all-windows-amd64-portable.zip
+
+      - name: Model runtime (Windows DLL loading, wide-char model paths)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:HIA_AI_NET = '1'
+          go test ./internal/ai -run DownloadRuntime -v
 
       - name: Setup program (Windows, quiet install and uninstall)
         if: runner.os == 'Windows'

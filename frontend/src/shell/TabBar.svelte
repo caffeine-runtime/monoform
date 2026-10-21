@@ -320,8 +320,9 @@
   }
   .newtab {
     flex: none;
-    align-self: center;
-    margin: 0 2px;
+    /* Centred on the tabs (which sit at the bottom of the bar), not on the bar. */
+    align-self: flex-end;
+    margin: 0 2px calc(1.5px * var(--ui-scale));
     --wails-draggable: no-drag;
   }
   .tab-ghost {

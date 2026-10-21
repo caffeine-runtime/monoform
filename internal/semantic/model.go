@@ -6,15 +6,12 @@ package semantic
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
-	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
+
+	"github.com/caffeine-runtime/hold-it-all/internal/download"
 )
 
 // ModelFile is one file of the pinned model revision.
@@ -78,96 +75,22 @@ func Installed(dir string) bool {
 // already present with the right size are kept. Partial downloads are
 // removed. progress receives bytes done/total.
 func Download(ctx context.Context, dir, baseURL string, client *http.Client, progress func(done, total int64)) error {
-	if client == nil {
-		client = &http.Client{Timeout: 0}
-	}
 	total := ModelBytes()
 	var done int64
 	for _, f := range Model.Files {
 		dst := filepath.Join(dir, filepath.FromSlash(f.Path))
-		if st, err := os.Stat(dst); err == nil && st.Size() == f.Size {
+		file := download.File{URL: baseURL + "/" + f.Path, Size: f.Size, SHA256: f.SHA256}
+		if download.Present(dst, file) {
 			done += f.Size
 			progress(done, total)
 			continue
 		}
-		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-			return err
-		}
 		base := done
-		err := fetch(ctx, client, baseURL+"/"+f.Path, dst, f, func(n int64) { progress(base+n, total) })
-		if err != nil {
+		if err := download.Fetch(ctx, client, dst, file, func(n int64) { progress(base+n, total) }); err != nil {
 			return err
 		}
 		done += f.Size
 	}
-	return nil
-}
-
-func fetch(ctx context.Context, client *http.Client, url, dst string, f ModelFile, progress func(int64)) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("download %s: %s", f.Path, resp.Status)
-	}
-	tmp, err := os.CreateTemp(filepath.Dir(dst), ".part-*")
-	if err != nil {
-		return err
-	}
-	ok := false
-	defer func() {
-		if !ok {
-			tmp.Close()
-			os.Remove(tmp.Name())
-		}
-	}()
-	h := sha256.New()
-	buf := make([]byte, 1<<20)
-	var n int64
-	last := time.Now()
-	for {
-		k, rerr := resp.Body.Read(buf)
-		if k > 0 {
-			if _, err := tmp.Write(buf[:k]); err != nil {
-				return err
-			}
-			h.Write(buf[:k])
-			n += int64(k)
-			if n > f.Size {
-				return fmt.Errorf("download %s: larger than expected", f.Path)
-			}
-			if time.Since(last) > 100*time.Millisecond {
-				progress(n)
-				last = time.Now()
-			}
-		}
-		if rerr == io.EOF {
-			break
-		}
-		if rerr != nil {
-			return rerr
-		}
-	}
-	if n != f.Size {
-		return fmt.Errorf("download %s: got %d bytes, expected %d", f.Path, n, f.Size)
-	}
-	if got := hex.EncodeToString(h.Sum(nil)); got != f.SHA256 {
-		return fmt.Errorf("download %s: checksum mismatch", f.Path)
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp.Name(), dst); err != nil {
-		return err
-	}
-	ok = true
-	progress(n)
 	return nil
 }
 

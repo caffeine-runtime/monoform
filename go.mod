@@ -6,6 +6,7 @@ require (
 	github.com/Eyevinn/mp4ff v0.60.0
 	github.com/HugoSmits86/nativewebp v1.3.0
 	github.com/dhowden/tag v0.0.0-20240417053706-3d75831295e8
+	github.com/ebitengine/purego v0.11.2
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/hajimehoshi/go-mp3 v0.3.4
