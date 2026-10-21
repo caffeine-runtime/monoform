@@ -434,6 +434,9 @@ _here = os.path.dirname(os.path.abspath(__file__))
 for _f in ("tone.mp3", "tone.flac", "tone.ogg", "tone.opus"):
     w("audio/" + _f, open(os.path.join(_here, "..", "internal", "audio", "testdata", _f), "rb").read())
 w("audio/tone.m4a", open(os.path.join(_here, "fixture-data", "tone.m4a"), "rb").read())
+# A real photo of a person for object selection: NASA portrait of astronaut Eileen Collins
+# (public domain, a work of the US government; scikit-image's `data.astronaut()`), JPEG 512×512.
+w("people/astronaut.jpg", open(os.path.join(_here, "fixture-data", "astronaut.jpg"), "rb").read())
 
 # ---- code editor (M18): symbols, indentation, repeated words, enough lines to scroll ----
 _code = ["// Sample module for the code editor test.", "export function parseRecord(line: string): Record {",
