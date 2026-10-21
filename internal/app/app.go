@@ -49,7 +49,8 @@ type App struct {
 	dirty       int
 	forceQuit   bool
 	launchFiles []string
-	launchMode  string // "peek", "preview" or ""
+	launchMode  string  // "peek", "preview", "window" or ""
+	startAt     *[2]int // screen point to place the window at (see SetStartPosition)
 }
 
 // New creates the app. start is the process start time used for the
@@ -167,7 +168,7 @@ type BootInfo struct {
 	Platform    string            `json:"platform"`
 	Version     string            `json:"version"`
 	LaunchFiles []string          `json:"launchFiles"`
-	LaunchMode  string            `json:"launchMode"` // "peek", "preview" or ""
+	LaunchMode  string            `json:"launchMode"` // "peek", "preview", "window" or ""
 	Home        string            `json:"home"`
 	PathSep     string            `json:"pathSep"`
 	TestScript  string            `json:"testScript"`
@@ -182,6 +183,7 @@ func (a *App) Boot() BootInfo {
 	a.pending = nil
 	a.ready = true
 	a.mu.Unlock()
+	a.placeWindow()
 	return BootInfo{
 		Token:       a.Server.Token(),
 		Settings:    a.Settings.Get(),
@@ -221,6 +223,9 @@ func (a *App) Quit(code int) {
 // --- settings ---
 
 func (a *App) SaveSettings(s settings.Settings) error {
+	if a.launchMode == "window" {
+		s = keepSession(s, a.Settings.Path())
+	}
 	if err := a.Settings.Set(s); err != nil {
 		return err
 	}

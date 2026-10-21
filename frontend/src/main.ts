@@ -85,7 +85,7 @@ async function start() {
   const info = await api.Boot();
   const tBoot = performance.now();
   setToken(info.token);
-  Object.assign(boot, { platform: info.platform, home: info.home, version: info.version, token: info.token });
+  Object.assign(boot, { platform: info.platform, home: info.home, version: info.version, token: info.token, extraWindow: info.launchMode === 'window' });
   settings.init(info.settings);
   theme.apply();
 
@@ -113,11 +113,15 @@ async function start() {
     // Quick peek: just the file, read-only; the session is left alone.
     peek.on = true;
     for (const p of info.launchFiles) await workspace.openPath(p, { preview: true, quiet: true });
+  } else if (boot.extraWindow) {
+    // A tab moved to its own window: just its file; the main window keeps the session.
+    for (const p of info.launchFiles ?? []) await workspace.openPath(p, { quiet: true });
   } else {
     await workspace.restore(info.settings.session);
     for (const p of info.launchFiles ?? []) await workspace.openPath(p, info.launchMode === 'preview' ? { preview: true } : {});
   }
-  semantic.start();
+  // Search by meaning indexes from the main window only (one writer per index).
+  if (!boot.extraWindow) semantic.start();
   // First start: a short welcome.
   if (showWelcome(info)) ui.firstRun = true;
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"io/fs"
 	"log"
 	"os"
@@ -38,10 +39,17 @@ func main() {
 	wd, _ := os.Getwd()
 	files, mode := parseLaunch(os.Args[1:], wd)
 	a := app.New(processStart, files, mode)
+	if x, y, ok := parseAt(os.Args[1:]); ok {
+		a.SetStartPosition(x, y)
+	}
 	width, height := 1280, 820
-	if mode == "peek" {
+	switch mode {
+	case "peek":
 		// Quick peek: a small window; "Open in editor" makes it full size.
 		width, height = 960, 680
+	case "window":
+		// A tab moved out: a little smaller than the main window, so both fit.
+		width, height = 1100, 720
 	}
 	if dist, err := fs.Sub(assets, "frontend/dist"); err == nil {
 		a.Assets = dist
@@ -62,13 +70,12 @@ func main() {
 		OnShutdown:    a.Shutdown,
 		OnBeforeClose: a.BeforeClose,
 		Bind:          []interface{}{a},
-		SingleInstanceLock: &options.SingleInstanceLock{
-			UniqueId: "dev.holditall.app",
-			OnSecondInstanceLaunch: func(d options.SecondInstanceData) {
-				files, mode := parseLaunch(d.Args, d.WorkingDirectory)
-				a.OpenFilesMode(files, mode)
-			},
-		},
+		// One app per user: later launches hand their files to it — except a
+		// window a tab was moved to (--new-window), which is its own process.
+		SingleInstanceLock: singleInstance(mode, func(d options.SecondInstanceData) {
+			files, mode := parseLaunch(d.Args, d.WorkingDirectory)
+			a.OpenFilesMode(files, mode)
+		}),
 		DragAndDrop: &options.DragAndDrop{EnableFileDrop: true},
 		Mac: &mac.Options{
 			TitleBar: mac.TitleBarHiddenInset(),
@@ -92,8 +99,30 @@ func main() {
 	}
 }
 
+func singleInstance(mode string, onLaunch func(options.SecondInstanceData)) *options.SingleInstanceLock {
+	if mode == "window" {
+		return nil
+	}
+	return &options.SingleInstanceLock{UniqueId: "dev.holditall.app", OnSecondInstanceLaunch: onLaunch}
+}
+
+// parseAt reads --at=X,Y: where (screen pixels) a window a tab was dragged
+// out to should appear.
+func parseAt(args []string) (int, int, bool) {
+	for _, a := range args {
+		if v, ok := strings.CutPrefix(a, "--at="); ok {
+			var x, y int
+			if _, err := fmt.Sscanf(v, "%d,%d", &x, &y); err == nil {
+				return x, y, true
+			}
+		}
+	}
+	return 0, 0, false
+}
+
 // parseLaunch splits the command line into files to open (existing paths,
-// made absolute) and the mode: "peek" (--peek), "preview" (--preview) or "".
+// made absolute) and the mode: "peek" (--peek), "preview" (--preview),
+// "window" (--new-window: a tab moved to a window of its own) or "".
 func parseLaunch(args []string, wd string) ([]string, string) {
 	mode := ""
 	var rest []string
@@ -105,6 +134,8 @@ func parseLaunch(args []string, wd string) ([]string, string) {
 			if mode == "" {
 				mode = "preview"
 			}
+		case "--new-window":
+			mode = "window"
 		default:
 			if !strings.HasPrefix(a, "-") { // ignore other flags (macOS adds -psn_…)
 				rest = append(rest, a)

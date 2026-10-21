@@ -4,4 +4,6 @@ export const boot = {
   home: '',
   version: '',
   token: '',
+  /** A window a tab was moved to (--new-window): it leaves the session alone. */
+  extraWindow: false,
 };

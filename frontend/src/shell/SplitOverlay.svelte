@@ -2,21 +2,25 @@
   // Split view chrome over the tab views: draggable dividers between panes,
   // and drop zones while a tab is dragged from the tab bar (drop on an edge
   // to split, in the middle to replace).
+  import { onMount } from 'svelte';
   import { workspace } from '../core/tabs.svelte';
+  import { tabDrag } from '../core/tabdrag.svelte';
   import { dividers, dropInto, paneRect, type Edge, type Rect } from '../core/split';
 
   let host = $state<HTMLDivElement>();
-  let dragging = $state(false); // a tab is being dragged over the views
-  let hover = $state<{ target: string; edge: Edge; rect: Rect } | null>(null);
+  // A tab is being dragged over the views (with another tab to split with).
+  const dragging = $derived(!!tabDrag.id && tabDrag.zone === 'views' && workspace.tabs.length > 1);
+  const hover = $derived(dragging ? zoneAt(tabDrag.x, tabDrag.y) : null);
   const s = $derived(workspace.split);
   const dv = $derived(s ? dividers(s) : { x: false, y: false });
 
   /** The pane (or whole view) under a point and the edge zone within it. */
-  function zoneAt(e: DragEvent): { target: string; edge: Edge; rect: Rect } | null {
+  function zoneAt(x: number, y: number): { target: string; edge: Edge; rect: Rect } | null {
     if (!host) return null;
     const r = host.getBoundingClientRect();
-    const fx = (e.clientX - r.left) / r.width;
-    const fy = (e.clientY - r.top) / r.height;
+    const fx = (x - r.left) / r.width;
+    const fy = (y - r.top) / r.height;
+    if (fx < 0 || fx > 1 || fy < 0 || fy > 1) return null;
     let target = workspace.activeId;
     let pr: Rect = { left: 0, top: 0, width: 1, height: 1 };
     if (s) {
@@ -44,37 +48,24 @@
     return { target, edge, rect: half[edge] };
   }
 
-  function isTabDrag(e: DragEvent) {
-    return !!e.dataTransfer?.types.includes('application/x-hia-tab');
-  }
-
-  // A tab drag from the tab bar turns the overlay on, so the views below don't take the drop.
-  function onWindowDragStart(e: DragEvent) {
-    if (isTabDrag(e) && workspace.tabs.length > 1) dragging = true;
-  }
-
-  function over(e: DragEvent) {
-    if (!isTabDrag(e)) return;
-    e.preventDefault();
-    dragging = true;
-    hover = zoneAt(e);
-  }
-
-  function drop(e: DragEvent) {
-    const id = e.dataTransfer?.getData('application/x-hia-tab');
-    dragging = false;
-    const z = hover ?? zoneAt(e);
-    hover = null;
-    if (!id || !z) return;
-    e.preventDefault();
+  /** Drop a tab on the view under a point: an edge splits, the middle replaces. */
+  function drop(id: string, x: number, y: number): boolean {
+    const z = zoneAt(x, y);
     const tab = workspace.tabs.find((t) => t.id === id);
-    if (!tab) return;
+    if (!z || !tab || workspace.tabs.length < 2) return false;
     if (z.edge === 'center' && !s) workspace.activate(tab);
     else {
       workspace.setSplit(dropInto(s, id, z.target, z.edge));
       workspace.activate(tab);
     }
+    return true;
   }
+  onMount(() => {
+    tabDrag.dropOnViews = drop;
+    return () => {
+      if (tabDrag.dropOnViews === drop) tabDrag.dropOnViews = null;
+    };
+  });
 
   // ---- dividers ----
   let drag = $state<'x' | 'y' | null>(null);
@@ -113,9 +104,8 @@
   const pct = (v: number) => `${(v * 100).toFixed(3)}%`;
 </script>
 
-<svelte:window ondragstart={onWindowDragStart} ondragend={() => ((dragging = false), (hover = null))} />
 
-<div class="split-overlay" class:active={dragging} bind:this={host} role="presentation" ondragover={over} ondragenter={over} ondragleave={(e) => e.target === host && ((dragging = false), (hover = null))} ondrop={drop}>
+<div class="split-overlay" class:active={dragging} bind:this={host} role="presentation">
   {#if s}
     {#if dv.x}
       <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->

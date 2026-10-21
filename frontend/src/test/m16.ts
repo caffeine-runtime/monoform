@@ -71,25 +71,18 @@ export default async function m16(dir: string) {
 
   // ---- drag a tab onto a pane's edge ----
   const second = (await workspace.openPath(join(dir, 'models', 'spiral.ply'), { activate: false }))!;
-  let dropped = false;
-  try {
-    const dt = new DataTransfer();
-    dt.setData('application/x-hia-tab', second.id);
-    const overlay = document.querySelector<HTMLElement>('.split-overlay')!;
-    window.dispatchEvent(new DragEvent('dragstart', { dataTransfer: dt, bubbles: true }));
-    await tick();
-    const r = box(csv);
-    const at = { clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, dataTransfer: dt, bubbles: true, cancelable: true };
-    overlay.dispatchEvent(new DragEvent('dragover', at));
-    await tick();
-    assert(document.querySelector('.split-overlay .zone'), 'drop zone shown while dragging a tab');
-    overlay.dispatchEvent(new DragEvent('drop', at));
-    window.dispatchEvent(new DragEvent('dragend', { bubbles: true }));
-    dropped = true;
-  } catch (e) {
-    log(`synthetic drag not supported here: ${e}`);
-  }
-  if (dropped) {
+  // Drag the tab from the tab bar onto the middle of the CSV pane (pointer events, as a mouse would).
+  const tabEl = document.querySelector<HTMLElement>(`.tabbar .tab[data-tab="${second.id}"]`)!;
+  const tr = tabEl.getBoundingClientRect();
+  const r = box(csv);
+  const p = (type: string, x: number, y: number) => tabEl.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, button: 0, pointerId: 9, bubbles: true }));
+  p('pointerdown', tr.left + 10, tr.top + 10);
+  p('pointermove', tr.left + 20, tr.top + 10);
+  p('pointermove', r.left + r.width / 2, r.top + r.height / 2);
+  await tick();
+  assert(document.querySelector('.split-overlay .zone'), 'drop zone shown while dragging a tab');
+  p('pointerup', r.left + r.width / 2, r.top + r.height / 2);
+  {
     await tick();
     assert(panes().includes(second.id) && !panes().includes(csv.id), 'dropping in the middle of a pane replaces its tab');
     await sleep(800);
