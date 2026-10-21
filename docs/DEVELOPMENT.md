@@ -61,7 +61,7 @@ WebKitGTK **4.1** needs the Go build tag `webkit2_41` — `scripts/build.sh` add
 ## First setup
 
 ```sh
-git clone <repo> && cd Hold-It-All
+git clone https://github.com/caffeine-runtime/monoform && cd monoform
 cd frontend && npm ci && cd ..
 go mod download
 ./scripts/build.sh            # Linux/macOS: frontend + app → build/bin/
