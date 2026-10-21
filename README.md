@@ -8,8 +8,7 @@ other audio, videos, JSON/YAML/CSV, Word, Excel and OpenDocument files, archives
 macOS and Linux, works offline, collects no telemetry and needs no account, and saves everything as plain files.
 
 Monoform is written by AI (Anthropic's Claude, directed and reviewed by its maintainer) and released under permissive
-licences only. It was called *Hold It All* until 2.0.0-beta.8: updating from it keeps your settings, file history
-and downloaded models.
+licences only.
 
 ![Markdown in split view](docs/screenshots/markdown.png)
 

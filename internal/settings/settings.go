@@ -291,26 +291,3 @@ func clone(v Settings) Settings {
 	}
 	return v
 }
-
-// MoveOldData moves what the app kept under its earlier name (Hold It All)
-// to the new one, once: a "HoldItAll" folder in the user's config folder
-// (settings, file history) and cache folder (search index, AI models)
-// becomes "Monoform", unless that already exists.
-func MoveOldData() {
-	for _, base := range []func() (string, error){os.UserConfigDir, os.UserCacheDir} {
-		if d, err := base(); err == nil {
-			moveOld(d)
-		}
-	}
-}
-
-func moveOld(base string) bool {
-	old, cur := filepath.Join(base, "HoldItAll"), filepath.Join(base, "Monoform")
-	if _, err := os.Stat(cur); err == nil {
-		return false
-	}
-	if st, err := os.Stat(old); err != nil || !st.IsDir() {
-		return false
-	}
-	return os.Rename(old, cur) == nil
-}

@@ -9,6 +9,6 @@
 `SHA256SUMS` lists the checksums of all files (Monoform can verify it: open the file in the app).
 
 Builds are not code-signed yet, so Windows SmartScreen and macOS Gatekeeper will warn on first launch.
-Everything runs offline; no telemetry, no account. Monoform is free and open source (formerly *Hold It All*: installing it replaces the old app and keeps your settings and history).
+Everything runs offline; no telemetry, no account. Monoform is free and open source (MIT).
 
 Version {{VERSION}}. What's done and what's known not to work yet: see `PROGRESS.md` in the repository.

@@ -402,7 +402,7 @@ func quantize(v []float32) (float32, []int8) {
 //	{"model","dims","root","files":[{path,size,mod,lines,snippets}]},
 //	then for each file in header order, for each passage:
 //	float32 LE scale + dims int8 values.
-const magic = "MFIDX1\n\n" // an index from before the rename (HIAIDX1) is rebuilt
+const magic = "MFIDX1\n\n"
 
 type header struct {
 	Model string       `json:"model"`

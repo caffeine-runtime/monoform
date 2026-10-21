@@ -50,24 +50,20 @@ func (s *Setup) startup(ctx context.Context) { s.ctx = ctx }
 
 // Info is what the window shows first.
 type Info struct {
-	Mode        string            `json:"mode"`
-	Version     string            `json:"version"`
-	UserDir     string            `json:"userDir"`
-	EveryoneDir string            `json:"everyoneDir"`
-	Installed   *setup.Installed  `json:"installed"`
-	Old         *setup.OldInstall `json:"old"`
-	Running     bool              `json:"running"`
-	Demo        bool              `json:"demo"`
-	Test        bool              `json:"test"`
+	Mode        string           `json:"mode"`
+	Version     string           `json:"version"`
+	UserDir     string           `json:"userDir"`
+	EveryoneDir string           `json:"everyoneDir"`
+	Installed   *setup.Installed `json:"installed"`
+	Running     bool             `json:"running"`
+	Demo        bool             `json:"demo"`
+	Test        bool             `json:"test"`
 }
 
 func (s *Setup) Info() Info {
 	i := Info{Mode: s.mode, Version: version, UserDir: s.userDir(), EveryoneDir: s.everyoneDir(), Demo: s.demo, Test: os.Getenv("MF_SETUP_TEST") != ""}
 	if in, ok := setup.Find(s.sys); ok {
 		i.Installed = &in
-	}
-	if old, ok := setup.FindOld(s.sys); ok {
-		i.Old = &old
 	}
 	i.Running = !s.demo && setup.Running(setup.Exe)
 	return i
@@ -152,20 +148,8 @@ func (s *Setup) Install(o setup.Options) error {
 		s.progress("Done", 1, 1)
 		return nil
 	}
-	if !s.demo && (setup.Running(setup.Exe) || setup.Running(setup.OldExe)) {
-		return errors.New("Monoform (or Hold It All) is open — close it, then try again")
-	}
-	if old, ok := setup.FindOld(s.sys); ok {
-		s.progress("Removing the earlier version", 0, 1)
-		if s.demo {
-			root := setup.User
-			if old.Everyone {
-				root = setup.Machine
-			}
-			_ = s.sys.DeleteKey(root, old.Key)
-		} else if err := setup.RunCommandLine(old.Uninstall, old.Everyone); err != nil {
-			return errors.New("the earlier version couldn't be removed: " + err.Error())
-		}
+	if !s.demo && setup.Running(setup.Exe) {
+		return errors.New("Monoform is open — close it, then try again")
 	}
 	me, err := self()
 	if err != nil {
@@ -220,12 +204,10 @@ func (s *Setup) Uninstall(removeData bool) error {
 			os.RemoveAll(filepath.Join(d, setup.Exe))
 			if removeData {
 				os.RemoveAll(filepath.Join(d, "Monoform"))
-				os.RemoveAll(filepath.Join(d, "HoldItAll")) // left by the earlier name, if never moved
 			}
 		}
 		if d, err := os.UserCacheDir(); err == nil && removeData {
 			os.RemoveAll(filepath.Join(d, "Monoform"))
-			os.RemoveAll(filepath.Join(d, "HoldItAll"))
 		}
 		scheduleSelfDelete(moved, in.Dir)
 	}

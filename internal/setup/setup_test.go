@@ -131,25 +131,6 @@ func TestEveryoneAndNoDefaults(t *testing.T) {
 	}
 }
 
-func TestFindOld(t *testing.T) {
-	sys := NewRecord(t.TempDir())
-	if _, ok := FindOld(sys); ok {
-		t.Fatal("found nothing")
-	}
-	// The NSIS installer (Hold It All 1.x).
-	sys.SetString(Machine, OldUninstKeys[1], "UninstallString", `"C:\Program Files\Hold It All\Hold It All\uninstall.exe"`)
-	old, ok := FindOld(sys)
-	if !ok || !old.Everyone || old.Uninstall != `"C:\Program Files\Hold It All\Hold It All\uninstall.exe" /S` || old.Key != OldUninstKeys[1] {
-		t.Errorf("%+v", old)
-	}
-	// Hold It All's own setup (2.0 betas) wins: it has a quiet uninstall.
-	sys.SetString(User, OldUninstKeys[0], "QuietUninstallString", `"C:\Users\ana\AppData\Local\Programs\Hold It All\uninstall.exe" --uninstall --quiet`)
-	old, ok = FindOld(sys)
-	if !ok || old.Everyone || !strings.HasSuffix(old.Uninstall, "--uninstall --quiet") || old.Key != OldUninstKeys[0] {
-		t.Errorf("%+v", old)
-	}
-}
-
 func TestAssocsMatchWailsJSON(t *testing.T) {
 	data, err := os.ReadFile("../../wails.json")
 	if err != nil {

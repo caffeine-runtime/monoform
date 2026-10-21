@@ -8,9 +8,8 @@ import "errors"
 
 var errNotWindows = errors.New("only on Windows")
 
-func Elevated() bool                                  { return false }
-func RunElevated(exe string, args []string) error     { return errNotWindows }
-func RunCommandLine(line string, elevated bool) error { return errNotWindows }
-func Running(exeName string) bool                     { return false }
-func AskToClose(exeName string) error                 { return errNotWindows }
-func Launch(exe string) error                         { return errNotWindows }
+func Elevated() bool                              { return false }
+func RunElevated(exe string, args []string) error { return errNotWindows }
+func Running(exeName string) bool                 { return false }
+func AskToClose(exeName string) error             { return errNotWindows }
+func Launch(exe string) error                     { return errNotWindows }
