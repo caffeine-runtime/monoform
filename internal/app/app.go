@@ -51,6 +51,7 @@ type App struct {
 	launchFiles []string
 	launchMode  string  // "peek", "preview", "window" or ""
 	startAt     *[2]int // screen point to place the window at (see SetStartPosition)
+	lastSaveDir string  // folder of the last Save dialog answer (see saveDir)
 }
 
 // New creates the app. start is the process start time used for the
@@ -337,13 +338,26 @@ func (a *App) OpenFolderDialog(title string) (string, error) {
 }
 
 func (a *App) SaveFileDialog(title, defaultPath string, filters []FileFilter) (string, error) {
-	return wruntime.SaveFileDialog(a.ctx, wruntime.SaveDialogOptions{
+	a.mu.Lock()
+	last := a.lastSaveDir
+	a.mu.Unlock()
+	name := ""
+	if defaultPath != "" {
+		name = filepath.Base(defaultPath)
+	}
+	p, err := wruntime.SaveFileDialog(a.ctx, wruntime.SaveDialogOptions{
 		Title:                title,
-		DefaultDirectory:     filepath.Dir(defaultPath),
-		DefaultFilename:      filepath.Base(defaultPath),
+		DefaultDirectory:     saveDir(defaultPath, last, documentsDir()),
+		DefaultFilename:      name,
 		Filters:              toFilters(filters),
 		CanCreateDirectories: true,
 	})
+	if err == nil && p != "" {
+		a.mu.Lock()
+		a.lastSaveDir = filepath.Dir(p)
+		a.mu.Unlock()
+	}
+	return p, err
 }
 
 // --- window / lifecycle ---

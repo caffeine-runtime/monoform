@@ -407,6 +407,10 @@
   All?* with an option to delete settings, history and the search index too; file defaults go back to what they were.
   `--quiet` installs/uninstalls without a window (used by CI on a real Windows runner). Off Windows it runs as a demo
   that installs into a test folder (`scripts/setup-selftest.sh`).
+- **Fix: Save dialogs for new files opened in System32 on Windows.** A file without a folder yet (a new tab, a new
+  file with no folder open, an export from an unsaved tab) was offered the working directory, which is
+  `C:\Windows\System32` when Windows starts the app from Explorer or the installer. It now opens in the folder you
+  last saved into, else Documents (Windows' known folder, so OneDrive redirection is followed; XDG on Linux).
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
