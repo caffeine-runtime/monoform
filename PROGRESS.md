@@ -48,7 +48,7 @@
   unloaded when idle. Seven no-shared-words test queries rank the right file first.
 
 - **M7 — Packaging.** GitHub Actions: checks, Linux self-tests under Xvfb with external verifiers, and packages for
-  Windows (NSIS installer with opt-in file associations + portable zip), macOS (universal .app, listed in Open With
+  Windows (own setup program with opt-in file associations + portable zip), macOS (universal .app, listed in Open With
   without taking defaults) and Linux (tarball with .desktop file and per-user installer with opt-in defaults).
   README with build instructions and screenshots.
 
@@ -398,6 +398,15 @@
   instead of opening); **Markdown note** — a picture is saved into assets/ and linked, files are linked, text
   inserted; **text/code** — text; **SVG** — a picture is embedded, text becomes a text element. Text dragged out of
   an editor and files dragged from the sidebar can be dropped the same way. A tab that can't take something says so.
+- **M41 — Our own Windows setup.** The NSIS installer is replaced by Hold It All's own setup program, in the app's
+  look: one card with the app icon, *Install* (or *Update*, showing the version it replaces), and an *Options* fold
+  with the folder, *For everyone on this computer*, desktop shortcut, the `holdit` command and the (unchecked) default
+  app choice; then a progress bar and *Open Hold It All*. It installs for the current user without asking for
+  administrator rights; *For everyone* asks. It notices a running Hold It All (and can close it), and removes an
+  install made by the old installer first. The uninstaller (Settings › Apps) is the same program: *Remove Hold It
+  All?* with an option to delete settings, history and the search index too; file defaults go back to what they were.
+  `--quiet` installs/uninstalls without a window (used by CI on a real Windows runner). Off Windows it runs as a demo
+  that installs into a test folder (`scripts/setup-selftest.sh`).
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

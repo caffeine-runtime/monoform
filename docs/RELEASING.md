@@ -39,7 +39,7 @@ building.
    package. Agents pass `"skip_macos": true` with the inputs.
 4. **Run workflow.** It takes about 10–15 minutes.
 5. When the run is green, the release is on the repository's **Releases** page with:
-   - `hold-it-all-amd64-installer.exe` — Windows installer
+   - `hold-it-all-amd64-installer.exe` — Windows setup (our own, `cmd/setup`)
    - `hold-it-all-windows-amd64-portable.zip` — Windows, no install
    - `hold-it-all-macos-universal.zip` — macOS app (Apple Silicon + Intel)
    - `hold-it-all-linux-amd64.tar.gz` — Linux binary, the `holdit` command, `.desktop` files (app and Quick peek)
@@ -79,8 +79,12 @@ Agents with the GitHub MCP tools use `actions_run_trigger` with `method: run_wor
    verifiers.
 3. **build** (Linux, Windows, macOS in parallel) — sets the version: it is compiled into the binary
    (`-ldflags -X github.com/caffeine-runtime/hold-it-all/internal/app.Version=<version>`, shown in **Settings**) and
-   written as `productVersion` (the `x.y.z` part) into `wails.json`, which the Windows installer and macOS
-   `Info.plist` use. `wails.json` in the repository is not changed.
+   written as `productVersion` (the `x.y.z` part) into `wails.json`, which the Windows setup and macOS
+   `Info.plist` use. `wails.json` in the repository is not changed. On Windows the setup program is built next:
+   `npm --prefix frontend run build:setup` (its UI), `go run ./cmd/setup/pack` (the app's files, gzipped, into
+   `cmd/setup/payload`), then `wails build -webview2 embed` in `cmd/setup`. The job then installs it quietly into a
+   temporary folder, checks the files, uninstall entry, file class, Start menu shortcut and `holdit` command, and
+   uninstalls it again (checking that nothing is left).
 4. **release** — only when a version was given or a `v*` tag was pushed, and only if all jobs above passed:
    downloads the three packages, writes `SHA256SUMS`, and runs `gh release create` with the notes from
    `.github/release-notes.md` (`{{VERSION}}` is replaced) followed by GitHub's automatic list of changes.

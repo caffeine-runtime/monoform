@@ -1,0 +1,17 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "Hold It All Setup",
+  "outputfilename": "hold-it-all-setup",
+  "frontend:install": "",
+  "frontend:build": "",
+  "author": {
+    "name": "Hold It All contributors"
+  },
+  "info": {
+    "companyName": "Hold It All",
+    "productName": "Hold It All Setup",
+    "productVersion": "1.0.0",
+    "copyright": "Copyright © 2026 Hold It All contributors",
+    "comments": "Installs Hold It All."
+  }
+}
