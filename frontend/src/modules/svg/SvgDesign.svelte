@@ -15,6 +15,7 @@
   import Hand from '@lucide/svelte/icons/hand';
   import { clampZoom, fitZoom, centered, zoomAt, type View } from '../image/geometry';
   import { ui } from '../../core/ui.svelte';
+  import { untrack } from 'svelte';
   import type { Transfer } from '../../core/transfer.svelte';
 
   export type Tool = 'select' | 'hand' | 'rect' | 'ellipse' | 'line' | 'pen' | 'text';
@@ -46,6 +47,9 @@
   let parseError = $state('');
   let box = $state<{ x: number; y: number; w: number; h: number } | null>(null);
   let version = $state(0); // bumps when the inline copy is rebuilt
+  let builds = 0;
+  let loading = $state(true);
+  let pending = 0;
 
   // ---- inline copy ----
   function measure(svg: Element): { w: number; h: number } {
@@ -66,6 +70,7 @@
 
   function rebuild() {
     if (!stage) return;
+    builds++;
     const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
     const rootEl = doc.documentElement;
     if (doc.querySelector('parsererror') || rootEl.localName !== 'svg') {
@@ -85,22 +90,60 @@
     stage.replaceChildren(node);
     root = node;
     if (fitted) fit();
-    place();
+    layOut();
     version++;
   }
 
+  // The inline copy follows the text, and only the text: rebuild() reads and
+  // writes the view (fit, layOut), and tracking those made the effect re-run
+  // itself until Svelte gave up — ~1000 rebuilds, half a minute frozen for a
+  // CAD drawing on open and after every edit. The first build waits a frame so
+  // "Opening the drawing…" shows while a big one is laid out.
   $effect(() => {
     void text;
-    rebuild();
+    untrack(() => {
+      if (root) return rebuild();
+      cancelAnimationFrame(pending);
+      pending = requestAnimationFrame(() => {
+        pending = requestAnimationFrame(() => {
+          rebuild();
+          loading = false;
+        });
+      });
+    });
+  });
+  $effect(() => () => {
+    cancelAnimationFrame(pending);
+    clearTimeout(settle);
   });
 
-  function place() {
+  // While zooming, the drawing is scaled as a picture (a CSS transform of what
+  // is already drawn: cheap) and laid out at the new size once the zoom rests,
+  // so a big drawing isn't re-laid-out and repainted on every wheel step.
+  let drawn = { zoom: 0, x: 0, y: 0 };
+  let settle: ReturnType<typeof setTimeout> | undefined;
+
+  function layOut() {
     if (!root) return;
+    clearTimeout(settle);
+    drawn = { ...pv };
+    root.style.transform = '';
     root.style.left = `${pv.x}px`;
     root.style.top = `${pv.y}px`;
     root.style.width = `${size.w * pv.zoom}px`;
     root.style.height = `${size.h * pv.zoom}px`;
     measureBox();
+  }
+
+  function place() {
+    if (!root) return;
+    if (!drawn.zoom || pv.zoom === drawn.zoom) return layOut();
+    const k = pv.zoom / drawn.zoom;
+    root.style.transformOrigin = '0 0';
+    root.style.transform = `translate(${pv.x - drawn.x}px, ${pv.y - drawn.y}px) scale(${k})`;
+    measureBox();
+    clearTimeout(settle);
+    settle = setTimeout(layOut, 180);
   }
 
   $effect(() => {
@@ -194,6 +237,8 @@
 
   function down(e: PointerEvent) {
     if (!root || !host) return;
+    // Coordinates come from the laid-out drawing: finish a zoom in progress.
+    if (pv.zoom !== drawn.zoom) layOut();
     if (e.button === 1 || tool === 'hand' || (e.button === 0 && e.altKey && tool === 'select')) {
       drag = { kind: 'pan', x: e.clientX, y: e.clientY, vx: pv.x, vy: pv.y };
       capture(e);
@@ -360,6 +405,7 @@
   /** From another tab: a picture (embedded as PNG) or text, at the drop point or in the middle. */
   export function insert(t: Transfer, at?: { x: number; y: number }): boolean {
     if (!root || !els.length || t.kind === 'files') return false;
+    if (pv.zoom !== drawn.zoom) layOut();
     const rm = screenCTM(root);
     const p: [number, number] = at && rm ? toLocal(rm, at.x, at.y) : [size.w / 2, size.h / 2];
     if (t.kind === 'text') {
@@ -426,7 +472,7 @@
     return () => ro.disconnect();
   });
 
-  export const test = { rootEl: () => root, inline, pv: () => pv, box: () => box, tool: () => tool };
+  export const test = { rootEl: () => root, inline, pv: () => pv, box: () => box, tool: () => tool, builds: () => builds };
 </script>
 
 <div class="design">
@@ -455,6 +501,7 @@
       </div>
     {/if}
     {#if parseError}<div class="err">{parseError}</div>{/if}
+    {#if loading && !parseError}<div class="loading"><span class="spinner"></span> Opening the drawing…</div>{/if}
   </div>
 </div>
 
@@ -535,6 +582,26 @@
     margin-left: -6px;
     border-radius: 50%;
     cursor: grab;
+  }
+  .loading {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 14px;
+    border-radius: 14px;
+    background: var(--bg-elevated);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    /* Only for drawings that take a moment: small ones never show it. */
+    animation: appear 0.2s 0.15s both;
+  }
+  @keyframes appear {
+    from {
+      opacity: 0;
+    }
   }
   .err {
     position: absolute;

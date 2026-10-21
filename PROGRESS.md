@@ -444,6 +444,11 @@
   (Go test); and **the 3D floor grid drew stray grey triangles** on software OpenGL (VMs, no GPU driver) — it is now
   one shader-drawn plane that fades out around the model (self-test `m11`); and **STL/3MF/AMF models lay on their
   side** (Z-up files shown Y-up) — they now stand as in a slicer (`m11`).
+- **Fix: the SVG editor froze on big drawings.** Opening a CAD export (a 98 KB gear-pump drawing, ~380 elements)
+  took 38–75 s with the window frozen, every edit froze it again, and closing was slow: the design view's build
+  effect re-ran itself ~1000 times. It now builds once (~0.4 s, with "Opening the drawing…" while it does), zooming
+  scales the drawing until the wheel rests (≤ 50 ms frames instead of ~130 ms), and an edit is one rebuild. Self-test
+  `m44` on a generated CAD drawing.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
