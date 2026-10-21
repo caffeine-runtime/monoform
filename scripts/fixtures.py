@@ -723,15 +723,17 @@ with zipfile.ZipFile(os.path.join(d, "packages", "app.apk"), "w") as z:
     zadd(z, "res/values/strings.txt", b"hello from apk\n")
 
 _pos, _nor, _uv, _idx = _cube()
-def _stl():
+def _stl(scale=(20, 20, 20)):
     tris = [(_idx[i], _idx[i + 1], _idx[i + 2]) for i in range(0, len(_idx), 3)]
     out = bytearray(b"monoform fixture".ljust(80, b" ")) + struct.pack("<I", len(tris))
     for a, b, c in tris:
         out += struct.pack("<3f", *_nor[a])
-        for v in (a, b, c): out += struct.pack("<3f", *[x * 20 for x in _pos[v]])
+        for v in (a, b, c): out += struct.pack("<3f", *[x * k for x, k in zip(_pos[v], scale)])
         out += b"\0\0"
     return bytes(out)
 w("models/cube.stl", _stl())
+# Tall along Z, the "up" of STL files from CAD and 3D printing: it should stand.
+w("models/tower.stl", _stl((10, 10, 40)))
 obj = ["mtllib textured.mtl", "o Box", "usemtl Checker"] + ["v %g %g %g" % tuple(p) for p in _pos] + ["vt %g %g" % (u, 1 - v) for u, v in _uv] + ["vn %g %g %g" % tuple(n) for n in _nor]
 obj += ["f %d/%d/%d %d/%d/%d %d/%d/%d" % tuple(x for v in _idx[i:i + 3] for x in (v + 1, v + 1, v + 1)) for i in range(0, len(_idx), 3)]
 w("models/textured.obj", ("\n".join(obj) + "\n").encode())
