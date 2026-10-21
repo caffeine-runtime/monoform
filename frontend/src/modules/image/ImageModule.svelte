@@ -44,7 +44,7 @@
   import { formatShortcut } from '../../core/keys';
   import { ImageEditor, SELECT_TOOLS, type EditorState, type Tool, type ToolOptions } from './editor';
   import { centered, fitZoom, keepAspect, stepZoom, zoomAt, clampZoom, type View } from './geometry';
-  import { imageControllers } from './editors';
+  import { imageControllers, type MaskOp } from './editors';
   import * as raster from './raster';
   import * as selection from './selection';
   import type { SelectMode } from './selection';
@@ -265,8 +265,19 @@
         const layers = ora.layers.map((l) => ({ name: l.name, canvas: raster.fromImage(l.bitmap, l.bitmap.width, l.bitmap.height), x: l.x, y: l.y, opacity: l.opacity, visible: l.visible, blend: l.blend as never, objects: parseObjects(l.objects) }));
         await tick();
         if (!editor) createEditor(raster.makeCanvas(ora.width, ora.height));
-        // Our own .ora files carry markup separately; drop the flattened copy of it from the raster.
-        editor!.loadLayers(ora.width, ora.height, await Promise.all(layers.map(async (l, i) => (l.objects.length ? { ...l, canvas: await rawLayer(i) ?? l.canvas } : l))));
+        // Our own .ora files carry markup and masks separately; take the pixels from before them.
+        editor!.loadLayers(
+          ora.width,
+          ora.height,
+          await Promise.all(
+            layers.map(async (l, i) => {
+              const o = ora.layers[i];
+              const raw = o.raw || l.objects.length ? await oraEntry(o.raw ?? `data/raw${i}.png`) : null;
+              const mask = o.mask ? await oraEntry(o.mask.src) : null;
+              return { ...l, canvas: raw ?? l.canvas, mask: raw && mask ? mask : null, maskOn: o.mask?.on ?? true };
+            }),
+          ),
+        );
         return;
       }
       let canvas: HTMLCanvasElement;
@@ -300,9 +311,9 @@
   }
 
   /** Our .ora files keep the markup-free raster as data/raw<i>.png next to the flattened layer. */
-  async function rawLayer(i: number): Promise<HTMLCanvasElement | null> {
+  async function oraEntry(entry: string): Promise<HTMLCanvasElement | null> {
     try {
-      const r = await fetch(endpoint('zip', { path: tab.filePath!, entry: `data/raw${i}.png` }));
+      const r = await fetch(endpoint('zip', { path: tab.filePath!, entry }));
       return r.ok ? await decodeBlob(await r.blob()) : null;
     } catch {
       return null;
@@ -314,6 +325,7 @@
     editor.askText = (initial) => ui.prompt(initial ? 'Edit text' : 'Add text', initial, initial ? 'Update' : 'Add');
     editor.onChange = (s) => {
       es = s;
+      if (opts && opts.maskHide !== editor!.opts.maskHide) opts.maskHide = editor!.opts.maskHide;
       tab.dirty = s.dirty;
       updateStatus();
     };
@@ -562,6 +574,19 @@
     newLayer: () => editor?.addLayer(),
     mergeDown: () => editor?.mergeDown(),
     flatten: () => editor?.flatten(),
+    mask: (op: MaskOp) => {
+      if (!editor) return;
+      if (op === 'add') {
+        editor.addMask(editor.selection ? 'selection' : 'show');
+        setPanel('layers');
+      } else if (op === 'edit') editor.setEditMask(!editor.editMask);
+      else if (op === 'invert') editor.invertMask();
+      else if (op === 'toggle') editor.toggleMask();
+      else if (op === 'apply') editor.applyMask();
+      else if (op === 'delete') editor.deleteMask();
+      else if (op === 'hide' || op === 'show') editor.fillMask(op === 'show');
+      else editor.setMaskHide(!editor.opts.maskHide);
+    },
     removeBackground: () => void removeBackground(),
     selectSubject: () => void selectSubject(),
     saveCopy: () => void saveCopy(),
@@ -683,10 +708,26 @@
     const buf = await writeOra({
       width: editor.width,
       height: editor.height,
-      layers: await Promise.all(layers.map(async (l) => ({ name: l.name, png: await raster.toPNG(l.canvas), x: l.x, y: l.y, opacity: l.opacity, visible: l.visible, composite: blendToOra(l.blend), objects: l.objects.length ? JSON.stringify(l.objects) : undefined }))),
+      layers: await Promise.all(
+        layers.map(async (l, i) => ({
+          name: l.name,
+          png: await raster.toPNG(l.canvas),
+          x: l.x,
+          y: l.y,
+          opacity: l.opacity,
+          visible: l.visible,
+          composite: blendToOra(l.blend),
+          objects: l.objects.length ? JSON.stringify(l.objects) : undefined,
+          raw: raws[i] ? `data/raw${i}.png` : undefined,
+          mask: l.mask ? { src: `data/mask${i}.png`, on: l.maskOn ?? true } : undefined,
+        })),
+      ),
       merged: await raster.toPNG(merged),
       thumbnail: await raster.toPNG(thumb),
-      extra: await Promise.all(raws.map(async (c, i) => (c ? { name: `data/raw${i}.png`, png: await raster.toPNG(c) } : null))),
+      extra: [
+        ...(await Promise.all(raws.map(async (c, i) => (c ? { name: `data/raw${i}.png`, png: await raster.toPNG(c) } : null)))),
+        ...(await Promise.all(layers.map(async (l, i) => (l.mask ? { name: `data/mask${i}.png`, png: await raster.toPNG(l.mask) } : null)))),
+      ],
     });
     const entry = await saveFile(path, buf);
     tab.size = entry.size;
@@ -956,6 +997,13 @@
     {:else if tool === 'brush' || tool === 'eraser'}
       <label class="opt">Size <input type="range" min="1" max="300" value={opts.brushSize || 12} oninput={(e) => setOpt('brushSize', +(e.target as HTMLInputElement).value)} /><span class="v">{opts.brushSize || 'auto'}</span></label>
       {#if tool === 'brush'}<label class="opt">Opacity <input type="range" min="5" max="100" value={Math.round(opts.brushOpacity * 100)} oninput={(e) => setOpt('brushOpacity', +(e.target as HTMLInputElement).value / 100)} /></label>{/if}
+      {#if es?.editMask}
+        <span class="chips" role="radiogroup" aria-label="On the mask the brush">
+          <button class="chip" role="radio" aria-checked={opts.maskHide} class:on={opts.maskHide} title="The brush hides, the eraser shows (X swaps)" onclick={() => editor?.setMaskHide(true)}>Hide</button>
+          <button class="chip" role="radio" aria-checked={!opts.maskHide} class:on={!opts.maskHide} title="The brush shows, the eraser hides (X swaps)" onclick={() => editor?.setMaskHide(false)}>Show</button>
+        </span>
+        <button class="btn ghost" title="Paint on the layer's pixels again" onclick={() => editor?.setEditMask(false)}>Done with mask</button>
+      {/if}
       <span class="sep"></span>
     {:else if shapeTool || obj}
       <label class="opt" title="Line width">Width <input type="range" min="1" max="60" value={obj?.strokeWidth ?? (opts.strokeWidth || 6)} oninput={(e) => (obj ? editor?.updateObject({ strokeWidth: +(e.target as HTMLInputElement).value }) : setOpt('strokeWidth', +(e.target as HTMLInputElement).value))} /></label>
@@ -1342,5 +1390,23 @@
   }
   .selbar {
     gap: 2px;
+  }
+  .chips {
+    display: inline-flex;
+    gap: 4px;
+  }
+  .chip {
+    padding: 3px 10px;
+    border: none;
+    border-radius: 999px;
+    background: var(--bg-hover);
+    color: inherit;
+    font: inherit;
+    font-size: var(--fs-small);
+    cursor: pointer;
+  }
+  .chip.on {
+    background: var(--accent-soft);
+    color: var(--accent-text);
   }
 </style>

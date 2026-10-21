@@ -45,6 +45,7 @@ const scenarios: Record<string, () => Promise<{ default: (arg: string) => Promis
   m35: () => import('./m35'),
   m36: () => import('./m36'),
   m37: () => import('./m37'),
+  m38: () => import('./m38'),
   uiaudit: () => import('./uiaudit'),
   menushot: () => import('./menushot'),
   welcomeshot: () => import('./welcomeshot'),

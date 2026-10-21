@@ -52,9 +52,120 @@ export interface Layer {
   h: number;
   /** image: asset id (see assets in the module) */
   asset?: string;
-  blur?: { kind: BlurKind; amount: number; shape: 'rect' | 'ellipse'; feather: number; angle: number };
+  blur?: { kind: BlurKind; amount: number; shape: 'rect' | 'ellipse' | 'path'; feather: number; angle: number; invert?: boolean; points?: Pt[] };
+  /** image: the part of the picture shown (none = all of it). Blurs keep theirs in `blur`. */
+  mask?: Mask;
   /** Keys came from tracking an object (shown in the UI; editing a key keeps it). */
   tracked?: boolean;
+}
+
+/** A point of a freeform outline, in the layer's box: -0.5..0.5 across, y down. */
+export type Pt = [number, number];
+
+/** Which part of a layer counts: a shape in its box with a soft edge, or everything outside it. */
+export interface Mask {
+  shape: 'none' | 'rect' | 'ellipse' | 'path';
+  feather: number; // 0..1 of the way from the edge to the centre
+  invert: boolean;
+  points?: Pt[]; // shape 'path', ≥ 3
+}
+export const NO_MASK: Mask = { shape: 'none', feather: 0, invert: false };
+/** Most points kept in an outline (the compositor has room for this many). */
+export const MAX_POINTS = 64;
+
+export function maskOf(l: Layer): Mask {
+  if (l.kind === 'blur' && l.blur) return { shape: l.blur.shape, feather: l.blur.feather, invert: !!l.blur.invert, points: l.blur.points };
+  return l.mask ?? NO_MASK;
+}
+
+/** The layer with its mask changed (a blur can't lose its area: 'none' becomes a rectangle). */
+export function withMask(l: Layer, m: Partial<Mask>): Layer {
+  const next = { ...maskOf(l), ...m };
+  if (next.shape === 'path' && !(next.points && next.points.length >= 3)) next.points = ellipsePoints(12);
+  if (l.kind === 'blur' && l.blur) {
+    const shape = next.shape === 'none' ? 'rect' : next.shape;
+    return { ...l, blur: { ...l.blur, shape, feather: next.feather, invert: next.invert, points: next.points } };
+  }
+  return { ...l, mask: next.shape === 'none' && !next.invert ? undefined : next };
+}
+
+/** n points on the ellipse inscribed in the box. */
+export function ellipsePoints(n: number): Pt[] {
+  return Array.from({ length: n }, (_, i) => {
+    const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+    return [Math.round(Math.cos(a) * 0.5 * 1000) / 1000, Math.round(Math.sin(a) * 0.5 * 1000) / 1000] as Pt;
+  });
+}
+
+/** Indices of an open polyline kept by Ramer–Douglas–Peucker (ends excluded). */
+function rdp(pts: Pt[], a: number, b: number, tol: number, out: number[]) {
+  const [ax, ay] = pts[a];
+  const [bx, by] = pts[b];
+  const len = Math.hypot(bx - ax, by - ay) || 1e-9;
+  let far = -1;
+  let dmax = tol;
+  for (let i = a + 1; i < b; i++) {
+    const d = Math.abs((bx - ax) * (ay - pts[i][1]) - (ax - pts[i][0]) * (by - ay)) / len;
+    if (d > dmax) {
+      dmax = d;
+      far = i;
+    }
+  }
+  if (far < 0) return;
+  rdp(pts, a, far, tol, out);
+  out.push(far);
+  rdp(pts, far, b, tol, out);
+}
+
+/** Fewer points along a closed outline (Ramer–Douglas–Peucker), at most `max`. */
+export function simplify(pts: Pt[], tol: number, max = MAX_POINTS): Pt[] {
+  if (pts.length <= 3) return pts;
+  // Split the loop at the point farthest from the first, so both halves are open paths.
+  const d0 = (p: Pt) => Math.hypot(p[0] - pts[0][0], p[1] - pts[0][1]);
+  let far = 1;
+  for (let i = 2; i < pts.length; i++) if (d0(pts[i]) > d0(pts[far])) far = i;
+  const loop = [...pts, pts[0]];
+  const keep = [0];
+  rdp(loop, 0, far, tol, keep);
+  keep.push(far);
+  rdp(loop, far, loop.length - 1, tol, keep);
+  const out = keep.map((i) => pts[i]);
+  if (out.length > max) return simplify(out, Math.max(tol * 1.6, 1e-4), max);
+  return out.length >= 3 ? out : pts.slice(0, 3);
+}
+
+/**
+ * An outline drawn over the picture (video pixels) as the layer's new box and
+ * freeform points: the box is the outline's bounds in the layer's own frame
+ * (its rotation and scale at that moment), and `shift` is how far its centre moved.
+ */
+export function outlineToBox(outline: Pt[], s: { x: number; y: number; scale: number; rotation: number }): { w: number; h: number; points: Pt[]; shift: Pt } | null {
+  if (outline.length < 3) return null;
+  const a = (-s.rotation * Math.PI) / 180;
+  const ca = Math.cos(a);
+  const sa = Math.sin(a);
+  const local = outline.map(([x, y]): Pt => {
+    const dx = x - s.x;
+    const dy = y - s.y;
+    return [(dx * ca - dy * sa) / s.scale, (dx * sa + dy * ca) / s.scale];
+  });
+  const xs = local.map((p) => p[0]);
+  const ys = local.map((p) => p[1]);
+  const x0 = Math.min(...xs);
+  const x1 = Math.max(...xs);
+  const y0 = Math.min(...ys);
+  const y1 = Math.max(...ys);
+  const w = Math.max(4, x1 - x0);
+  const h = Math.max(4, y1 - y0);
+  const cx = (x0 + x1) / 2;
+  const cy = (y0 + y1) / 2;
+  const norm = local.map(([x, y]): Pt => [Math.round(((x - cx) / w) * 1000) / 1000, Math.round(((y - cy) / h) * 1000) / 1000]);
+  const points = simplify(norm, 0.006);
+  if (points.length < 3) return null;
+  // Centre offset back in video pixels.
+  const b = (s.rotation * Math.PI) / 180;
+  const shift: Pt = [(cx * Math.cos(b) - cy * Math.sin(b)) * s.scale, (cx * Math.sin(b) + cy * Math.cos(b)) * s.scale];
+  return { w: Math.round(w), h: Math.round(h), points, shift };
 }
 
 export interface Speed {
