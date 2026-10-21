@@ -134,10 +134,6 @@ export function Exists(arg1) {
   return window['go']['app']['App']['Exists'](arg1);
 }
 
-export function ExpandWindow() {
-  return window['go']['app']['App']['ExpandWindow']();
-}
-
 export function HashFile(arg1, arg2) {
   return window['go']['app']['App']['HashFile'](arg1, arg2);
 }
@@ -244,6 +240,10 @@ export function OpenFolderDialog(arg1) {
 
 export function OpenInBrowser(arg1) {
   return window['go']['app']['App']['OpenInBrowser'](arg1);
+}
+
+export function OpenInEditor(arg1) {
+  return window['go']['app']['App']['OpenInEditor'](arg1);
 }
 
 export function PageRoot(arg1) {
@@ -422,6 +422,10 @@ export function SheetSetCells(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['SheetSetCells'](arg1, arg2, arg3, arg4);
 }
 
+export function ShowInFolder(arg1) {
+  return window['go']['app']['App']['ShowInFolder'](arg1);
+}
+
 export function Siblings(arg1, arg2) {
   return window['go']['app']['App']['Siblings'](arg1, arg2);
 }
@@ -432,6 +436,14 @@ export function Stat(arg1) {
 
 export function TempPath(arg1) {
   return window['go']['app']['App']['TempPath'](arg1);
+}
+
+export function TestLastHandoff() {
+  return window['go']['app']['App']['TestLastHandoff']();
+}
+
+export function TestLastShown() {
+  return window['go']['app']['App']['TestLastShown']();
 }
 
 export function TestServedPages() {

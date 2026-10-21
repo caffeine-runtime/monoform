@@ -69,6 +69,7 @@
   --row-h: calc(28px * var(--ui-scale));
   --tabbar-h: calc(38px * var(--ui-scale));
   --statusbar-h: calc(26px * var(--ui-scale));
+  --pathbar-h: calc(26px * var(--ui-scale));
   --ease: cubic-bezier(0.2, 0, 0, 1);
 }
 

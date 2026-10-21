@@ -19,7 +19,7 @@ func payload(names ...string) []File {
 	return out
 }
 
-var testAssocs = []Assoc{{Ext: "md", ProgID: "HoldItAll.md", Description: "Markdown document"}, {Ext: "png", ProgID: "HoldItAll.png", Description: "PNG image"}}
+var testAssocs = []Assoc{{Ext: "md", ProgID: "HoldItAll.md", Description: "Markdown document", Icon: "file-markdown"}, {Ext: "png", ProgID: "HoldItAll.png", Description: "PNG image", Icon: "file-image"}}
 
 func TestInstallAndUninstall(t *testing.T) {
 	root := t.TempDir()
@@ -27,14 +27,14 @@ func TestInstallAndUninstall(t *testing.T) {
 	// Another app had .png before.
 	sys.SetString(User, `Classes\.png`, "", "Photos.png")
 	dir := `C:\Users\ana\AppData\Local\Programs\Hold It All`
-	files := payload(Exe, "holdit.exe", "fileicon.ico")
+	files := payload(append([]string{Exe, "holdit.exe"}, Icons(testAssocs)...)...)
 	self := payload("hold-it-all-setup.exe")[0]
 	var steps []string
 	o := Options{Dir: dir, Desktop: true, Defaults: true, Command: true, Version: "2.0.0"}
 	if err := Install(sys, files, self, o, testAssocs, func(s string, done, total int64) { steps = append(steps, s) }); err != nil {
 		t.Fatal(err)
 	}
-	for _, f := range []string{Exe, "holdit.exe", "fileicon.ico", UninstallExe} {
+	for _, f := range []string{Exe, "holdit.exe", "file-markdown.ico", "file-image.ico", UninstallExe} {
 		if _, err := os.Stat(filepath.Join(root, "Users/ana/AppData/Local/Programs/Hold It All", f)); err != nil {
 			t.Errorf("%s not written: %v", f, err)
 		}
@@ -54,6 +54,16 @@ func TestInstallAndUninstall(t *testing.T) {
 	}
 	if get(`Classes\HoldItAll.md\shell\open\command`, "") != `"`+join(dir, Exe)+`" "%1"` {
 		t.Errorf("open command %q", get(`Classes\HoldItAll.md\shell\open\command`, ""))
+	}
+	// Each type has its own icon; pictures open in a quick view, Edit opens the editor.
+	if get(`Classes\HoldItAll.md\DefaultIcon`, "") != join(dir, "file-markdown.ico") || get(`Classes\HoldItAll.png\DefaultIcon`, "") != join(dir, "file-image.ico") {
+		t.Errorf("icons %q %q", get(`Classes\HoldItAll.md\DefaultIcon`, ""), get(`Classes\HoldItAll.png\DefaultIcon`, ""))
+	}
+	if get(`Classes\HoldItAll.png\shell\open\command`, "") != `"`+join(dir, Exe)+`" --peek "%1"` || get(`Classes\HoldItAll.png\shell\edit\command`, "") != `"`+join(dir, Exe)+`" "%1"` {
+		t.Errorf("png open %q edit %q", get(`Classes\HoldItAll.png\shell\open\command`, ""), get(`Classes\HoldItAll.png\shell\edit\command`, ""))
+	}
+	if get(`Classes\HoldItAll.md\shell\edit\command`, "") != "" {
+		t.Error("edit verb on a type that opens in the editor anyway")
 	}
 	if get(`Classes\*\shell\HoldItAll.Peek\command`, "") == "" || get(`Classes\Applications\hold-it-all.exe\SupportedTypes`, ".md") != "" {
 		t.Error("peek verb / open with")
@@ -152,6 +162,20 @@ func TestAssocsMatchWailsJSON(t *testing.T) {
 	for i, a := range w.Info.FileAssociations {
 		if Assocs[i].Ext != a.Ext || Assocs[i].ProgID != a.Name {
 			t.Errorf("%d: %v vs %v (run go generate ./internal/setup)", i, Assocs[i], a)
+		}
+	}
+}
+
+func TestIcons(t *testing.T) {
+	got := Icons(Assocs)
+	if len(got) < 10 || got[0] != "file-text.ico" {
+		t.Errorf("%v", got)
+	}
+	for _, a := range Assocs {
+		if a.Icon == "" {
+			t.Errorf("%s has no icon", a.Ext)
+		} else if _, err := os.Stat(filepath.Join("..", "..", "build", "windows", a.Icon+".ico")); err != nil {
+			t.Errorf("%s: %v (run scripts/icons.py)", a.Ext, err)
 		}
 	}
 }

@@ -21,336 +21,336 @@
         "ext": "txt",
         "name": "HoldItAll.txt",
         "description": "Text document",
-        "iconName": "fileicon",
+        "iconName": "file-text",
         "role": "Editor"
       },
       {
         "ext": "log",
         "name": "HoldItAll.log",
         "description": "Text document",
-        "iconName": "fileicon",
+        "iconName": "file-text",
         "role": "Editor"
       },
       {
         "ext": "md",
         "name": "HoldItAll.md",
         "description": "Markdown document",
-        "iconName": "fileicon",
+        "iconName": "file-markdown",
         "role": "Editor"
       },
       {
         "ext": "markdown",
         "name": "HoldItAll.markdown",
         "description": "Markdown document",
-        "iconName": "fileicon",
+        "iconName": "file-markdown",
         "role": "Editor"
       },
       {
         "ext": "json",
         "name": "HoldItAll.json",
         "description": "JSON document",
-        "iconName": "fileicon",
+        "iconName": "file-data",
         "role": "Editor"
       },
       {
         "ext": "yaml",
         "name": "HoldItAll.yaml",
         "description": "YAML document",
-        "iconName": "fileicon",
+        "iconName": "file-data",
         "role": "Editor"
       },
       {
         "ext": "yml",
         "name": "HoldItAll.yml",
         "description": "YAML document",
-        "iconName": "fileicon",
+        "iconName": "file-data",
         "role": "Editor"
       },
       {
         "ext": "csv",
         "name": "HoldItAll.csv",
         "description": "CSV table",
-        "iconName": "fileicon",
+        "iconName": "file-table",
         "role": "Editor"
       },
       {
         "ext": "tsv",
         "name": "HoldItAll.tsv",
         "description": "CSV table",
-        "iconName": "fileicon",
+        "iconName": "file-table",
         "role": "Editor"
       },
       {
         "ext": "pdf",
         "name": "HoldItAll.pdf",
         "description": "PDF document",
-        "iconName": "fileicon",
+        "iconName": "file-pdf",
         "role": "Editor"
       },
       {
         "ext": "png",
         "name": "HoldItAll.png",
         "description": "Image",
-        "iconName": "fileicon",
+        "iconName": "file-image",
         "role": "Editor"
       },
       {
         "ext": "jpg",
         "name": "HoldItAll.jpg",
         "description": "Image",
-        "iconName": "fileicon",
+        "iconName": "file-image",
         "role": "Editor"
       },
       {
         "ext": "jpeg",
         "name": "HoldItAll.jpeg",
         "description": "Image",
-        "iconName": "fileicon",
+        "iconName": "file-image",
         "role": "Editor"
       },
       {
         "ext": "gif",
         "name": "HoldItAll.gif",
         "description": "Image",
-        "iconName": "fileicon",
+        "iconName": "file-image",
         "role": "Editor"
       },
       {
         "ext": "webp",
         "name": "HoldItAll.webp",
         "description": "Image",
-        "iconName": "fileicon",
+        "iconName": "file-image",
         "role": "Editor"
       },
       {
         "ext": "bmp",
         "name": "HoldItAll.bmp",
         "description": "Image",
-        "iconName": "fileicon",
+        "iconName": "file-image",
         "role": "Editor"
       },
       {
         "ext": "svg",
         "name": "HoldItAll.svg",
         "description": "SVG image",
-        "iconName": "fileicon",
+        "iconName": "file-vector",
         "role": "Viewer"
       },
       {
         "ext": "docx",
         "name": "HoldItAll.docx",
         "description": "Word document",
-        "iconName": "fileicon",
+        "iconName": "file-word",
         "role": "Editor"
       },
       {
         "ext": "doc",
         "name": "HoldItAll.doc",
         "description": "Word document",
-        "iconName": "fileicon",
+        "iconName": "file-word",
         "role": "Editor"
       },
       {
         "ext": "xlsx",
         "name": "HoldItAll.xlsx",
         "description": "Excel workbook",
-        "iconName": "fileicon",
+        "iconName": "file-table",
         "role": "Editor"
       },
       {
         "ext": "xls",
         "name": "HoldItAll.xls",
         "description": "Excel workbook",
-        "iconName": "fileicon",
+        "iconName": "file-table",
         "role": "Editor"
       },
       {
         "ext": "zip",
         "name": "HoldItAll.zip",
         "description": "Archive",
-        "iconName": "fileicon",
+        "iconName": "file-archive",
         "role": "Viewer"
       },
       {
         "ext": "7z",
         "name": "HoldItAll.7z",
         "description": "Archive",
-        "iconName": "fileicon",
+        "iconName": "file-archive",
         "role": "Viewer"
       },
       {
         "ext": "rar",
         "name": "HoldItAll.rar",
         "description": "Archive",
-        "iconName": "fileicon",
+        "iconName": "file-archive",
         "role": "Viewer"
       },
       {
         "ext": "tar",
         "name": "HoldItAll.tar",
         "description": "Archive",
-        "iconName": "fileicon",
+        "iconName": "file-archive",
         "role": "Viewer"
       },
       {
         "ext": "gz",
         "name": "HoldItAll.gz",
         "description": "Archive",
-        "iconName": "fileicon",
+        "iconName": "file-archive",
         "role": "Viewer"
       },
       {
         "ext": "tgz",
         "name": "HoldItAll.tgz",
         "description": "Archive",
-        "iconName": "fileicon",
+        "iconName": "file-archive",
         "role": "Viewer"
       },
       {
         "ext": "sha256",
         "name": "HoldItAll.sha256",
         "description": "Checksum list",
-        "iconName": "fileicon",
+        "iconName": "file-checksum",
         "role": "Viewer"
       },
       {
         "ext": "md5",
         "name": "HoldItAll.md5",
         "description": "Checksum list",
-        "iconName": "fileicon",
+        "iconName": "file-checksum",
         "role": "Viewer"
       },
       {
         "ext": "html",
         "name": "HoldItAll.html",
         "description": "Web page",
-        "iconName": "fileicon",
+        "iconName": "file-web",
         "role": "Editor"
       },
       {
         "ext": "htm",
         "name": "HoldItAll.htm",
         "description": "Web page",
-        "iconName": "fileicon",
+        "iconName": "file-web",
         "role": "Editor"
       },
       {
         "ext": "mp3",
         "name": "HoldItAll.mp3",
         "description": "MP3 audio",
-        "iconName": "fileicon",
+        "iconName": "file-audio",
         "role": "Editor"
       },
       {
         "ext": "wav",
         "name": "HoldItAll.wav",
         "description": "WAV audio",
-        "iconName": "fileicon",
+        "iconName": "file-audio",
         "role": "Editor"
       },
       {
         "ext": "flac",
         "name": "HoldItAll.flac",
         "description": "FLAC audio",
-        "iconName": "fileicon",
+        "iconName": "file-audio",
         "role": "Editor"
       },
       {
         "ext": "ogg",
         "name": "HoldItAll.ogg",
         "description": "OGG audio",
-        "iconName": "fileicon",
+        "iconName": "file-audio",
         "role": "Editor"
       },
       {
         "ext": "m4a",
         "name": "HoldItAll.m4a",
         "description": "M4A audio",
-        "iconName": "fileicon",
+        "iconName": "file-audio",
         "role": "Editor"
       },
       {
         "ext": "opus",
         "name": "HoldItAll.opus",
         "description": "Opus audio",
-        "iconName": "fileicon",
+        "iconName": "file-audio",
         "role": "Editor"
       },
       {
         "ext": "mp4",
         "name": "HoldItAll.mp4",
         "description": "MP4 video",
-        "iconName": "fileicon",
+        "iconName": "file-video",
         "role": "Editor"
       },
       {
         "ext": "mov",
         "name": "HoldItAll.mov",
         "description": "QuickTime video",
-        "iconName": "fileicon",
+        "iconName": "file-video",
         "role": "Editor"
       },
       {
         "ext": "webm",
         "name": "HoldItAll.webm",
         "description": "WebM video",
-        "iconName": "fileicon",
+        "iconName": "file-video",
         "role": "Editor"
       },
       {
         "ext": "mkv",
         "name": "HoldItAll.mkv",
         "description": "Matroska video",
-        "iconName": "fileicon",
+        "iconName": "file-video",
         "role": "Editor"
       },
       {
         "ext": "glb",
         "name": "HoldItAll.glb",
         "description": "glTF 3D model",
-        "iconName": "fileicon",
+        "iconName": "file-model",
         "role": "Viewer"
       },
       {
         "ext": "gltf",
         "name": "HoldItAll.gltf",
         "description": "glTF 3D model",
-        "iconName": "fileicon",
+        "iconName": "file-model",
         "role": "Viewer"
       },
       {
         "ext": "stl",
         "name": "HoldItAll.stl",
         "description": "STL 3D model",
-        "iconName": "fileicon",
+        "iconName": "file-model",
         "role": "Viewer"
       },
       {
         "ext": "obj",
         "name": "HoldItAll.obj",
         "description": "OBJ 3D model",
-        "iconName": "fileicon",
+        "iconName": "file-model",
         "role": "Viewer"
       },
       {
         "ext": "fbx",
         "name": "HoldItAll.fbx",
         "description": "FBX 3D model",
-        "iconName": "fileicon",
+        "iconName": "file-model",
         "role": "Viewer"
       },
       {
         "ext": "3mf",
         "name": "HoldItAll.3mf",
         "description": "3MF 3D model",
-        "iconName": "fileicon",
+        "iconName": "file-model",
         "role": "Viewer"
       },
       {
         "ext": "ply",
         "name": "HoldItAll.ply",
         "description": "PLY 3D model",
-        "iconName": "fileicon",
+        "iconName": "file-model",
         "role": "Viewer"
       }
     ]

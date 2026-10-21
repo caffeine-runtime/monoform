@@ -19,7 +19,7 @@ export HIA_SETUP_DEMO_DIR="$OUT/demo" HIA_SETUP_TEST=1
 DIR="$HIA_SETUP_DEMO_DIR/Users/you/AppData/Local/Programs/Hold It All"
 timeout 60 "$OUT/setup" 2>&1 | grep -E "SETUP (PASS|FAIL)" | tee "$OUT/log"
 grep -q "SETUP PASS install" "$OUT/log"
-for f in hold-it-all.exe holdit.exe fileicon.ico uninstall.exe; do test -f "$DIR/$f" || { echo "FAIL setup: $f not installed"; exit 1; }; done
+for f in hold-it-all.exe holdit.exe file-text.ico file-image.ico uninstall.exe; do test -f "$DIR/$f" || { echo "FAIL setup: $f not installed"; exit 1; }; done
 python3 - "$HIA_SETUP_DEMO_DIR/registry.json" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1]))

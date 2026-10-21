@@ -1,7 +1,7 @@
 // Command pack fills cmd/setup/payload with the app's files (gzipped) and
 // files.json, before the setup program is built:
 //
-//	go run ./cmd/setup/pack build/bin/hold-it-all.exe build/bin/holdit.exe build/windows/fileicon.ico
+//	go run ./cmd/setup/pack build/bin/hold-it-all.exe build/bin/holdit.exe build/windows/file-*.ico
 package main
 
 import (

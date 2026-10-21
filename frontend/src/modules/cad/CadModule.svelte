@@ -1240,7 +1240,7 @@
     {#if info && !info.entities && !loading}<div class="empty-state overlay hint">This drawing is empty. Pick a drawing tool on the left to start.</div>{/if}
   </div>
   {#if info && (!narrow || panelOpen)}
-    <aside class="panel" class:floating={narrow} class:right={narrow}>
+    <aside data-sidepanel class="panel" class:floating={narrow} class:right={narrow}>
       <div class="ptabs">
         <button class:on={panel === 'props'} onclick={() => (panel = 'props')}>Properties</button>
         <button class:on={panel === 'layers'} onclick={() => (panel = 'layers')}>Layers</button>

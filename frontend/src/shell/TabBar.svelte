@@ -11,9 +11,14 @@
   import { copyText } from './treeActions';
   import Columns2 from '@lucide/svelte/icons/columns-2';
   import Plus from '@lucide/svelte/icons/plus';
+  import PanelRight from '@lucide/svelte/icons/panel-right';
   import { dropInto } from '../core/split';
   import { insertionIndex, tabDrag, zoneOf } from '../core/tabdrag.svelte';
   import { moveToNewWindow } from '../core/windows';
+
+  // Editors with side panels (layers, effects, properties) get a button to hide them.
+  const PANELS = new Set(['image', 'video', 'svg', 'cad', 'model3d', 'database']);
+  const hasPanels = $derived(!!workspace.active && PANELS.has(workspace.active.moduleId));
 
   let strip: HTMLDivElement;
   let bar: HTMLDivElement;
@@ -193,6 +198,15 @@
     {/each}
     <button class="icon-btn newtab" title="New tab ({formatShortcut('Mod+T')})" aria-label="New tab" onclick={() => commands.execute('tab.new')}><Icon icon={Plus} size={15} /></button>
   </div>
+  {#if hasPanels}
+    <button
+      class="icon-btn panels"
+      class:off={settings.value.panelsHidden}
+      title="{settings.value.panelsHidden ? 'Show' : 'Hide'} side panels ({formatShortcut('Mod+Alt+B')})"
+      aria-pressed={!settings.value.panelsHidden}
+      onclick={() => commands.execute('view.togglePanels')}><Icon icon={PanelRight} size={15} /></button
+    >
+  {/if}
   {#if workspace.tabs.length > 1}
     <button class="icon-btn layout" class:on={!!workspace.split} title="Split view: show 2–4 tabs side by side ({formatShortcut('Mod+\\')})" onclick={layoutMenu}><Icon icon={Columns2} size={15} /></button>
   {/if}
@@ -239,6 +253,13 @@
   .layout {
     margin: 0 0 5px 4px;
     --wails-draggable: no-drag;
+  }
+  .panels {
+    margin: 0 0 5px 4px;
+    --wails-draggable: no-drag;
+  }
+  .panels.off {
+    color: var(--text-faint);
   }
   .layout.on {
     color: var(--accent-text);

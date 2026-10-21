@@ -31,6 +31,7 @@ const LAYOUT: Entry[] = [
       'file.revert',
       'file.pin',
       'file.copyPath',
+      'file.showInFolder',
       'file.reveal',
       '-',
       'text.reopenEncoding',
@@ -66,6 +67,8 @@ const LAYOUT: Entry[] = [
     label: 'View',
     items: [
       'view.toggleSidebar',
+      'view.togglePanels',
+      'view.togglePathBar',
       'view.showFiles',
       'view.toggleHidden',
       '-',

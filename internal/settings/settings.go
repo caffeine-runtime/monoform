@@ -90,6 +90,10 @@ type Settings struct {
 	HistoryKeep int `json:"historyKeep"`
 	// WelcomeDone is set once the first-run welcome has been seen.
 	WelcomeDone bool `json:"welcomeDone"`
+	// PathBarOff hides the path above the open file.
+	PathBarOff bool `json:"pathBarOff"`
+	// PanelsHidden hides editors' side panels (layers, adjustments, …) for more room.
+	PanelsHidden bool `json:"panelsHidden"`
 }
 
 func Defaults() Settings {

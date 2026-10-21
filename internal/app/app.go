@@ -153,27 +153,6 @@ type OpenRequest struct {
 	Preview bool     `json:"preview"`
 }
 
-// ExpandWindow turns a quick-peek window into the full-size editor window.
-func (a *App) ExpandWindow() {
-	if a.ctx == nil {
-		return
-	}
-	wruntime.WindowSetSize(a.ctx, 1280, 820)
-	wruntime.WindowCenter(a.ctx)
-	// Window managers may drop a resize request (seen under X11 right after
-	// the window opened): ask again until it sticks, for up to ~2 s.
-	go func() {
-		for i := 0; i < 8; i++ {
-			time.Sleep(250 * time.Millisecond)
-			if w, h := wruntime.WindowGetSize(a.ctx); w >= 1280 && h >= 820 {
-				return
-			}
-			wruntime.WindowSetSize(a.ctx, 1280, 820)
-			wruntime.WindowCenter(a.ctx)
-		}
-	}()
-}
-
 // BootInfo is everything the frontend needs to paint the shell.
 type BootInfo struct {
 	Token       string            `json:"token"`

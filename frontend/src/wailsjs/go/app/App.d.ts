@@ -84,8 +84,6 @@ export function DocSave(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function Exists(arg1:Array<string>):Promise<Array<boolean>>;
 
-export function ExpandWindow():Promise<void>;
-
 export function HashFile(arg1:string,arg2:Array<string>):Promise<string>;
 
 export function HashVerify(arg1:string):Promise<string>;
@@ -139,6 +137,8 @@ export function OpenFilesMode(arg1:Array<string>,arg2:string):Promise<void>;
 export function OpenFolderDialog(arg1:string):Promise<string>;
 
 export function OpenInBrowser(arg1:string):Promise<void>;
+
+export function OpenInEditor(arg1:Array<string>):Promise<void>;
 
 export function PageRoot(arg1:string):Promise<string>;
 
@@ -228,11 +228,17 @@ export function SheetSet(arg1:string,arg2:string,arg3:number,arg4:number,arg5:st
 
 export function SheetSetCells(arg1:string,arg2:string,arg3:Array<office.CellEdit>,arg4:Array<office.CellRange>):Promise<Array<office.CellEdit>>;
 
+export function ShowInFolder(arg1:string):Promise<void>;
+
 export function Siblings(arg1:string,arg2:Array<string>):Promise<Array<string>>;
 
 export function Stat(arg1:string):Promise<fs.Entry>;
 
 export function TempPath(arg1:string):Promise<string>;
+
+export function TestLastHandoff():Promise<Array<string>>;
+
+export function TestLastShown():Promise<string>;
 
 export function TestServedPages():Promise<Array<string>>;
 

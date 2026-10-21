@@ -1612,6 +1612,8 @@ export namespace settings {
 	    historyMaxMB: number;
 	    historyKeep: number;
 	    welcomeDone: boolean;
+	    pathBarOff: boolean;
+	    panelsHidden: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -1643,6 +1645,8 @@ export namespace settings {
 	        this.historyMaxMB = source["historyMaxMB"];
 	        this.historyKeep = source["historyKeep"];
 	        this.welcomeDone = source["welcomeDone"];
+	        this.pathBarOff = source["pathBarOff"];
+	        this.panelsHidden = source["panelsHidden"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

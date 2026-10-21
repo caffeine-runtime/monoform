@@ -63,6 +63,38 @@ export function relative(root: string, p: string): string | null {
   return null;
 }
 
+/**
+ * The folders a path is in, outermost first, each with its name and full
+ * path: C:\a\b.png → C: (C:\), a (C:\a). A UNC share (\\server\share) is one root.
+ */
+export function ancestors(p: string): { name: string; path: string }[] {
+  const s = sep(p);
+  const out: { name: string; path: string }[] = [];
+  let rest: string;
+  if (p.startsWith('\\\\')) {
+    const m = /^\\\\[^\\/]+[\\/][^\\/]+/.exec(p);
+    if (!m) return [];
+    out.push({ name: m[0], path: m[0] + '\\' });
+    rest = p.slice(m[0].length);
+  } else if (/^[A-Za-z]:/.test(p)) {
+    out.push({ name: p.slice(0, 2).toUpperCase(), path: p.slice(0, 2).toUpperCase() + '\\' });
+    rest = p.slice(2);
+  } else if (p.startsWith('/')) {
+    out.push({ name: '/', path: '/' });
+    rest = p;
+  } else {
+    rest = p;
+  }
+  const parts = rest.split(/[\\/]+/).filter(Boolean);
+  parts.pop(); // the file itself
+  let cur = out.length ? out[out.length - 1].path : '';
+  for (const part of parts) {
+    cur = cur && !cur.endsWith(s) ? cur + s + part : cur + part;
+    out.push({ name: part, path: cur });
+  }
+  return out;
+}
+
 /** Shorten a path for display, replacing the home dir with ~. */
 export function tildify(p: string, home: string): string {
   if (home && (p === home || p.startsWith(home + '/') || p.startsWith(home + '\\'))) return '~' + p.slice(home.length);

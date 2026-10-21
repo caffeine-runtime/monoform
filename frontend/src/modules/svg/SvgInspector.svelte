@@ -81,7 +81,7 @@
   const val = (e: Event) => (e.target as HTMLInputElement).value;
 </script>
 
-<aside class="inspector" aria-label="Properties">
+<aside data-sidepanel class="inspector" aria-label="Properties">
   {#if el && el.index > 0}
     <div class="head">
       <strong>&lt;{el.tag}&gt;</strong>

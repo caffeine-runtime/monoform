@@ -158,6 +158,15 @@ export function registerAppCommands() {
     { id: 'view.previewByDefault', title: 'Open files in preview mode (on/off)', category: 'View', run: () => settings.update((s) => (s.openInPreview = !s.openInPreview)) },
     { id: 'peek.expand', title: 'Open in the full editor', category: 'View', when: () => peek.on, run: () => void peek.expand() },
     { id: 'view.toggleSidebar', title: 'Toggle sidebar', category: 'View', shortcut: 'Mod+B', run: () => settings.update((s) => (s.sidebarVisible = !s.sidebarVisible)) },
+    { id: 'view.togglePathBar', title: 'Show / hide the path bar', category: 'View', run: () => settings.update((s) => (s.pathBarOff = !s.pathBarOff)) },
+    {
+      id: 'view.togglePanels',
+      title: 'Show / hide side panels (layers, adjustments, …)',
+      category: 'View',
+      shortcut: 'Mod+Alt+B',
+      run: () => settings.update((s) => (s.panelsHidden = !s.panelsHidden)),
+    },
+    { id: 'file.showInFolder', title: 'Show current file in the system file manager', category: 'File', when: () => !!workspace.active?.filePath, run: () => api.ShowInFolder(workspace.active!.filePath!).catch((e: unknown) => toastError(e)) },
     { id: 'view.showFiles', title: 'Show files', category: 'View', shortcut: 'Mod+Shift+E', run: () => {
         settings.update((s) => (s.sidebarVisible = true));
         sidebar.mode = 'files';

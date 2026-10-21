@@ -17,6 +17,8 @@ class SettingsState {
     uiScale: 1,
     minimapOff: false,
     showWhitespace: false,
+    pathBarOff: false,
+    panelsHidden: false,
     session: { folder: '', tabs: [], active: 0, expanded: [] },
   } as unknown as Settings);
   private timer: ReturnType<typeof setTimeout> | undefined;

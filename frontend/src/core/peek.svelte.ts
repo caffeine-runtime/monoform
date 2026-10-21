@@ -1,28 +1,21 @@
 // Quick peek: the app was started with --peek to show one file in a small
-// window. "Open in editor" turns it into the full editor (and brings back the
-// session that peeking left alone).
+// window of its own (pictures opened from Explorer, the "Quick peek with Hold
+// It All" verb). Edit hands the file to the full editor, which opens it with
+// everything (session, panels, tools), and closes the peek.
 import { api } from './backend';
-import { settings } from './settings.svelte';
+import { toastError } from './ui.svelte';
 import { workspace } from './tabs.svelte';
 
 class Peek {
   on = $state(false);
 
   async expand() {
-    if (!this.on) return;
-    const keep = workspace.active;
-    this.on = false;
-    void api.ExpandWindow();
-    // Bring back the tabs of the last session (peeking didn't save over them).
-    const session = settings.value.session;
-    if (session?.tabs?.length) {
-      const open = new Set(workspace.tabs.map((t) => t.path));
-      const tabs = session.tabs.filter((t) => !t.path || !open.has(t.path));
-      await workspace.restore({ ...session, tabs, active: -1, split: undefined });
-    }
-    if (keep) {
-      await workspace.setPreview(keep, false);
-      workspace.activate(keep);
+    const p = workspace.active?.filePath;
+    if (!this.on || !p) return;
+    try {
+      await api.OpenInEditor([p]);
+    } catch (e) {
+      toastError(e, 'Could not open the editor');
     }
   }
 }

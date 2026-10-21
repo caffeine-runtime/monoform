@@ -78,7 +78,26 @@ type System interface {
 // Assoc is a file type the app opens (from wails.json).
 type Assoc struct {
 	Ext, ProgID, Description string
+	// Icon names the type's document icon, <Icon>.ico in the install folder.
+	Icon string
 }
+
+// Icons are the document icon files the file types use (installed with the app).
+func Icons(assocs []Assoc) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, a := range assocs {
+		if a.Icon != "" && !seen[a.Icon] {
+			seen[a.Icon] = true
+			out = append(out, a.Icon+".ico")
+		}
+	}
+	return out
+}
+
+// quickView are the types that open in a quick-view window (no session,
+// panels or tools until Edit): pictures, like the system's photo viewer.
+var quickView = map[string]bool{"png": true, "jpg": true, "jpeg": true, "gif": true, "webp": true, "bmp": true, "svg": true}
 
 // Options are the user's choices.
 type Options struct {
@@ -200,24 +219,39 @@ type regWrite struct {
 func registrations(o Options, assocs []Assoc) []regWrite {
 	exe := join(o.Dir, Exe)
 	open := fmt.Sprintf(`"%s" "%%1"`, exe)
-	icon := join(o.Dir, "fileicon.ico")
+	peek := fmt.Sprintf(`"%s" --peek "%%1"`, exe)
 	w := []regWrite{
 		{key: openWithKey, name: "FriendlyAppName", value: Product},
 		{key: openWithKey + `\shell\open\command`, value: open},
 		{key: peekVerb, value: "Quick peek with " + Product},
 		{key: peekVerb, name: "Icon", value: fmt.Sprintf(`"%s"`, exe)},
-		{key: peekVerb + `\command`, value: fmt.Sprintf(`"%s" --peek "%%1"`, exe)},
+		{key: peekVerb + `\command`, value: peek},
 	}
 	for _, a := range assocs {
+		icon := join(o.Dir, a.Icon+".ico")
+		if a.Icon == "" {
+			icon = fmt.Sprintf(`"%s",0`, exe)
+		}
+		cmd := open
+		if quickView[a.Ext] {
+			cmd = peek
+		}
 		w = append(w,
 			regWrite{key: openWithKey + `\SupportedTypes`, name: "." + a.Ext},
 			regWrite{key: `Classes\` + a.ProgID, value: a.Description},
 			regWrite{key: `Classes\` + a.ProgID + `\DefaultIcon`, value: icon},
 			regWrite{key: `Classes\` + a.ProgID + `\shell`, value: "open"},
 			regWrite{key: `Classes\` + a.ProgID + `\shell\open`, value: "Open with " + Product},
-			regWrite{key: `Classes\` + a.ProgID + `\shell\open\command`, value: open},
+			regWrite{key: `Classes\` + a.ProgID + `\shell\open\command`, value: cmd},
 			regWrite{key: `Classes\.` + a.Ext + `\OpenWithProgids`, name: a.ProgID},
 		)
+		if quickView[a.Ext] {
+			// The editor stays a right-click away.
+			w = append(w,
+				regWrite{key: `Classes\` + a.ProgID + `\shell\edit`, value: "Edit with " + Product},
+				regWrite{key: `Classes\` + a.ProgID + `\shell\edit\command`, value: open},
+			)
+		}
 	}
 	return w
 }
