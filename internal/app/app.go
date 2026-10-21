@@ -60,9 +60,6 @@ func New(start time.Time, launchFiles []string, launchMode string) *App {
 	a := &App{start: start, launchFiles: launchFiles, launchMode: launchMode, books: office.NewBooks()}
 	a.Server = server.New(server.NewToken())
 	server.RecordPages = os.Getenv("MF_TEST") != ""
-	if os.Getenv("MF_TEST") == "" && launchMode != "window" && launchMode != "peek" {
-		settings.MoveOldData() // from the app's earlier name, once
-	}
 	path, err := settings.DefaultPath()
 	if err != nil {
 		path = filepath.Join(os.TempDir(), "Monoform", "settings.json")

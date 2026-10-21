@@ -124,26 +124,3 @@ func TestRecentsOffClearsLists(t *testing.T) {
 		t.Fatalf("recents kept while off: %+v", got)
 	}
 }
-
-func TestMoveOld(t *testing.T) {
-	base := t.TempDir()
-	if moveOld(base) {
-		t.Fatal("nothing to move")
-	}
-	os.MkdirAll(filepath.Join(base, "HoldItAll", "history"), 0o755)
-	os.WriteFile(filepath.Join(base, "HoldItAll", "settings.json"), []byte(`{"theme":"dark"}`), 0o644)
-	if !moveOld(base) {
-		t.Fatal("not moved")
-	}
-	if b, err := os.ReadFile(filepath.Join(base, "Monoform", "settings.json")); err != nil || string(b) != `{"theme":"dark"}` {
-		t.Errorf("settings: %q %v", b, err)
-	}
-	if _, err := os.Stat(filepath.Join(base, "HoldItAll")); !os.IsNotExist(err) {
-		t.Error("old folder left")
-	}
-	// Once there's a Monoform folder, an old one is left alone.
-	os.MkdirAll(filepath.Join(base, "HoldItAll"), 0o755)
-	if moveOld(base) {
-		t.Error("moved over existing data")
-	}
-}

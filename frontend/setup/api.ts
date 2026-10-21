@@ -13,7 +13,6 @@ export interface Info {
   userDir: string;
   everyoneDir: string;
   installed: Installed | null;
-  old: { uninstall: string; everyone: boolean } | null;
   running: boolean;
   demo: boolean;
   test: boolean;

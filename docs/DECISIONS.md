@@ -17,11 +17,8 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   draws every icon from it. Everything carries the new name — window and product, binaries (`monoform`,
   `monoform-cli` for the Windows/macOS console command; on Linux the app binary answers `monoform hash …` itself),
   registry (`Monoform.<ext>` classes), the Go module path (`github.com/caffeine-runtime/monoform`), internal prefixes
-  (`/__mf/`, `MF_*` test variables, `mf-test.*` fixtures, rebuilt). What users have is carried over: the first start
-  renames the `HoldItAll` config and cache folders (settings, file history, search index, AI models) to `Monoform`
-  unless that exists; the setup finds Hold It All's own setup entry (or the older NSIS one) and runs its quiet
-  uninstall first (the user's data stays); Linux `install.sh` removes the old files; `.ora` files written with the old
-  `hia:` attributes still open; a search index with the old header is rebuilt.
+  (`/__mf/`, `MF_*` test variables, `mf-test.*` fixtures, rebuilt). Nothing carries data over from the old
+  name: only the maintainer ran it, so migration code would be dead weight.
 - **The path bar's folder browser is a popover, not the sidebar.** Clicking a folder in the path shows that folder's
   contents in place (one level at a time, `..` to go up), so browsing from a file never replaces the folder open in
   the sidebar; *Open as folder* does that on purpose. *Show in Explorer* uses `explorer.exe /select,"<file>"` (given as
@@ -300,7 +297,7 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   last `destination-in` node, so text and shapes are masked like pixels. Baking (transforms, pixel operations)
   renders the mask through the same transform, so it stays aligned. Brush hides / eraser shows by default
   (the brush covering things up matches "paint it out"); X swaps. In `.ora` the layer PNG has the mask applied
-  (what GIMP/Krita show); `mf:raw` and `mf:mask` entries keep both parts for us (files from before the rename use `hia:`, still read) — OpenRaster has no masks.
+  (what GIMP/Krita show); `mf:raw` and `mf:mask` entries keep both parts for us — OpenRaster has no masks.
 - **Tabs drag with pointer events, not HTML drag and drop.** HTML DnD inside a webview behaves differently per
   engine (WebView2 with file drop enabled, WebKitGTK, WKWebView) and can't tell "dropped outside the window" from
   "cancelled". With the pointer captured after a 6 px threshold, moves keep arriving outside the window, so one
@@ -332,7 +329,7 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   *Quick peek* verb, optional defaults with backup/restore, and the Settings › Apps entry. It installs **per user by
   default** (`%LOCALAPPDATA%\Programs\Monoform`, HKCU — no UAC prompt; the manifest says `asInvoker` so Windows'
   installer detection doesn't force one); *For everyone* re-runs itself elevated and quiet (`--quiet --everyone`) into
-  Program Files/HKLM. An install by the old NSIS installer is found by its uninstall key and removed first. The
+  Program Files/HKLM. The
   uninstaller is the setup itself (`uninstall.exe --uninstall`); since Windows can't delete a running program but
   can move it, it moves itself to %TEMP% before deleting the folder and is deleted after it exits; when %TEMP% is on another drive (a move isn't possible there) it removes everything but itself, and itself and the folder right after it exits (found by CI: its install folder is on D:). Shortcuts are
   written through PowerShell's WScript.Shell (a `.lnk` is a COM object; no cgo); the registry through

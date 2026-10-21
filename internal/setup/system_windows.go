@@ -181,31 +181,6 @@ func RunElevated(exe string, args []string) error {
 	return powershell(fmt.Sprintf(`$p=Start-Process -FilePath '%s'%s -Verb RunAs -Wait -PassThru; exit $p.ExitCode`, ps(exe), list))
 }
 
-// RunCommandLine runs a whole command line (an uninstall string) elevated and waits.
-func RunCommandLine(line string, elevated bool) error {
-	exe, args := splitCommand(line)
-	if elevated {
-		return RunElevated(exe, args)
-	}
-	cmd := exec.Command(exe, args...)
-	return cmd.Run()
-}
-
-// splitCommand splits `"C:\a b\x.exe" /S` into the program and its arguments.
-func splitCommand(line string) (string, []string) {
-	line = strings.TrimSpace(line)
-	if strings.HasPrefix(line, `"`) {
-		if i := strings.Index(line[1:], `"`); i >= 0 {
-			return line[1 : i+1], strings.Fields(line[i+2:])
-		}
-	}
-	f := strings.Fields(line)
-	if len(f) == 0 {
-		return "", nil
-	}
-	return f[0], f[1:]
-}
-
 // Running reports whether a process with this file name runs (for any user session we can see).
 func Running(exeName string) bool {
 	snap, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)

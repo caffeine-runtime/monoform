@@ -30,8 +30,6 @@ case "${1:-}" in
 esac
 
 mkdir -p "$BIN" "$APPS" "$ICONS"
-# Hold It All was Monoform's earlier name: its files go.
-rm -f "$BIN/hold-it-all" "$BIN/holdit" "$APPS/hold-it-all.desktop" "$APPS/hold-it-all-peek.desktop" "$ICONS/hold-it-all.png"
 # One program: the app, and the monoform command (monoform hash, verify, info, convert).
 install -m 755 monoform "$BIN/monoform"
 install -m 644 monoform.png "$ICONS/monoform.png"

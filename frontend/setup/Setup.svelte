@@ -107,9 +107,6 @@
           <button class="btn" disabled={closing} onclick={closeApp}>{closing ? 'Closing…' : 'Close it'}</button>
         </div>
       {/if}
-      {#if info.old}
-        <div class="note">Hold It All, the app's earlier name, is removed first{info.old.everyone ? ' (Windows asks for permission)' : ''}. Your settings and files stay.</div>
-      {/if}
 
       <button class="more" aria-expanded={more} onclick={() => (more = !more)}><Icon icon={ChevronDown} size={14} /> Options</button>
       {#if more}

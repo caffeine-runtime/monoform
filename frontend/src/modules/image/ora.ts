@@ -4,8 +4,7 @@
 // store their Konva description in a namespaced attribute so Monoform
 // can reopen them editable (other apps ignore it). A layer mask is applied
 // to the layer's PNG too; the unmasked pixels and the mask are stored beside
-// it (mf:raw, mf:mask) so the mask stays editable here. Files saved before the
-// rename to Monoform used the hia: prefix and namespace; both are read.
+// it (mf:raw, mf:mask) so the mask stays editable here.
 import { endpoint } from '../../core/backend';
 
 export interface OraLayer {
@@ -103,9 +102,7 @@ export interface OraStackLayer {
   raw?: string;
 }
 
-const OLD_NS = 'https://holditall.dev/ora'; // before the rename to Monoform
-const attr = (l: Element, name: string) =>
-  l.getAttribute(`mf:${name}`) ?? l.getAttributeNS('https://monoform.dev/ora', name) ?? l.getAttribute(`hia:${name}`) ?? l.getAttributeNS(OLD_NS, name) ?? undefined;
+const attr = (l: Element, name: string) => l.getAttribute(`mf:${name}`) ?? l.getAttributeNS('https://monoform.dev/ora', name) ?? undefined;
 
 /** Read an .ora file from disk through the zip endpoint. Layers bottom first. */
 export async function readOra(path: string): Promise<{ width: number; height: number; layers: (OraStackLayer & { bitmap: ImageBitmap })[] }> {

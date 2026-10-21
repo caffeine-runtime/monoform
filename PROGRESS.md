@@ -402,15 +402,13 @@
   look: one card with the app icon, *Install* (or *Update*, showing the version it replaces), and an *Options* fold
   with the folder, *For everyone on this computer*, desktop shortcut, the `monoform` command and the (unchecked) default
   app choice; then a progress bar and *Open Monoform*. It installs for the current user without asking for
-  administrator rights; *For everyone* asks. It notices a running Monoform (and can close it), and removes an
-  install made by the old installer first. The uninstaller (Settings › Apps) is the same program: *Remove Monoform?* with an option to delete settings, history and the search index too; file defaults go back to what they were.
+  administrator rights; *For everyone* asks. It notices a running Monoform (and can close it). The uninstaller (Settings › Apps) is the same program: *Remove Monoform?* with an option to delete settings, history and the search index too; file defaults go back to what they were.
   `--quiet` installs/uninstalls without a window (used by CI on a real Windows runner). Off Windows it runs as a demo
   that installs into a test folder (`scripts/setup-selftest.sh`).
 - **Rename: Monoform (2.0.0-beta.8).** Hold It All is now **Monoform** — free, open source (MIT, `LICENSE`) and
   AI-written — with a new logo (a single rounded M) on the app icon, the sidebar, the setup and every file icon. Each
-  file type's icon now has one shared form (page, tile, symbol, M) and differs only in colour and symbol. Updating
-  keeps everything: settings, file history, the search index and AI models move to the new folders on first start,
-  and the setup removes the old app. The command is `monoform` (`monoform hash`, `verify`, `info`, `convert`).
+  file type's icon now has one shared form (page, tile, symbol, M) and differs only in colour and symbol. The
+  command is `monoform` (`monoform hash`, `verify`, `info`, `convert`).
 - **A shorter app menu.** Families of options are one row each: the theme is a System / Light / Dark toggle,
   interface size and text size are sliders (double-click resets), split view is a row of layout buttons; on/off
   options (sidebar, side panels, path bar, hidden files, word wrap, minimap, spaces and tabs, preview mode) are

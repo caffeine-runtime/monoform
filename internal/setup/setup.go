@@ -28,10 +28,8 @@ const (
 	// UninstallExe is the setup program itself, copied next to the app.
 	UninstallExe = "uninstall.exe"
 	// keys below Software\ (in HKCU for one user, HKLM for everyone)
-	uninstKey = `Microsoft\Windows\CurrentVersion\Uninstall\Monoform`
-	stateKey  = `Monoform\Setup`
-	// OldExe is the app's executable under its earlier name, Hold It All.
-	OldExe      = "hold-it-all.exe"
+	uninstKey   = `Microsoft\Windows\CurrentVersion\Uninstall\Monoform`
+	stateKey    = `Monoform\Setup`
 	peekVerb    = `Classes\*\shell\Monoform.Peek`
 	openWithKey = `Classes\Applications\` + Exe
 )
@@ -325,39 +323,6 @@ func Find(sys System) (Installed, bool) {
 		return Installed{Dir: dir, Version: get("Version"), Everyone: root == Machine, Defaults: get("Defaults") == "1", Desktop: get("Desktop") == "1", Command: get("Command") == "1"}, true
 	}
 	return Installed{}, false
-}
-
-// OldInstall is an installation by the earlier NSIS installer.
-type OldInstall struct {
-	Uninstall string `json:"uninstall"` // its quiet uninstall command
-	Everyone  bool   `json:"everyone"`
-	Key       string `json:"-"`
-}
-
-// OldUninstKeys are earlier installs, under the app's earlier name (Hold It
-// All): its own setup's entry (2.0 betas), then the NSIS installer's
-// (company + product name). One found is removed before installing; the
-// user's settings and history are kept (the app moves them to its new
-// folder on first start).
-var OldUninstKeys = []string{
-	`Microsoft\Windows\CurrentVersion\Uninstall\HoldItAll`,
-	`Microsoft\Windows\CurrentVersion\Uninstall\Hold It AllHold It All`,
-}
-
-// FindOld looks for an earlier install.
-func FindOld(sys System) (OldInstall, bool) {
-	for _, key := range OldUninstKeys {
-		for _, root := range []Root{Machine, User} {
-			if q, ok := sys.GetString(root, key, "QuietUninstallString"); ok && q != "" {
-				return OldInstall{Uninstall: q, Everyone: root == Machine, Key: key}, true
-			}
-			// NSIS: /S is its silent switch.
-			if u, ok := sys.GetString(root, key, "UninstallString"); ok && u != "" {
-				return OldInstall{Uninstall: strings.TrimSpace(u) + " /S", Everyone: root == Machine, Key: key}, true
-			}
-		}
-	}
-	return OldInstall{}, false
 }
 
 // Uninstall removes what Install added (the user's own files and settings stay).
