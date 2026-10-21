@@ -314,10 +314,10 @@ async function samDecode(key: string, points: { x: number; y: number; positive: 
 // thread, where a 3 MB body costs a ~80 ms frame.
 const PIECE = 256 << 10;
 
-/** An /__hia/ai/… URL from the token-bearing base the page sent. */
+/** An /__mf/ai/… URL from the token-bearing base the page sent. */
 function aiUrl(base: string, path: string, params: Record<string, string | number> = {}): string {
   const u = new URL(base, self.location.href);
-  u.pathname = `/__hia/ai/${path}`;
+  u.pathname = `/__mf/ai/${path}`;
   for (const [k, v] of Object.entries(params)) u.searchParams.set(k, String(v));
   return u.toString();
 }

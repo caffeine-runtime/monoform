@@ -13,13 +13,13 @@ import (
 	xdraw "golang.org/x/image/draw"
 )
 
-// HIA_AI_STORE points at a store with the real packs installed (local runs;
+// MF_AI_STORE points at a store with the real packs installed (local runs;
 // CI doesn't download 1.4 GB of models).
 func engineForTest(t *testing.T) *Engine {
 	t.Helper()
-	dir := os.Getenv("HIA_AI_STORE")
+	dir := os.Getenv("MF_AI_STORE")
 	if dir == "" {
-		t.Skip("HIA_AI_STORE not set")
+		t.Skip("MF_AI_STORE not set")
 	}
 	return &Engine{Store: Store{Dir: dir}, IdleAfter: time.Minute}
 }
@@ -98,7 +98,7 @@ func TestEraseOnPhoto(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("erased in %v, progress %v", time.Since(start), steps)
-	if d := os.Getenv("HIA_AI_DUMP"); d != "" {
+	if d := os.Getenv("MF_AI_DUMP"); d != "" {
 		os.WriteFile(d, out, 0o644)
 	}
 	// The shuttle is white and dark brown; the backdrop around it is a soft

@@ -5,15 +5,15 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/settings"
+	"github.com/caffeine-runtime/monoform/internal/settings"
 )
 
 func TestChildEnv(t *testing.T) {
-	env := childEnv([]string{"PATH=/bin", "HIA_TEST=m39", "HIA_TEST_ARG=/fx", "HIA_SETTINGS=/s.json"})
-	if !slices.Contains(env, "HIA_TEST=windowchild") || slices.Contains(env, "HIA_TEST=m39") {
+	env := childEnv([]string{"PATH=/bin", "MF_TEST=m39", "MF_TEST_ARG=/fx", "MF_SETTINGS=/s.json"})
+	if !slices.Contains(env, "MF_TEST=windowchild") || slices.Contains(env, "MF_TEST=m39") {
 		t.Errorf("self-test: %v", env)
 	}
-	if !slices.Contains(env, "HIA_SETTINGS=/s.json") || !slices.Contains(env, "HIA_TEST_ARG=/fx") {
+	if !slices.Contains(env, "MF_SETTINGS=/s.json") || !slices.Contains(env, "MF_TEST_ARG=/fx") {
 		t.Errorf("settings and test argument are shared: %v", env)
 	}
 	if env := childEnv([]string{"PATH=/bin"}); len(env) != 1 {

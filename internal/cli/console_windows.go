@@ -8,7 +8,7 @@ import (
 )
 
 // AttachConsole connects a GUI-subsystem program to the console it was
-// started from, so `hold-it-all.exe hash …` prints there. (holdit.exe is a
+// started from, so `monoform.exe hash …` prints there. (monoform-cli.exe is a
 // console program and doesn't need this.)
 func AttachConsole() {
 	k := syscall.NewLazyDLL("kernel32.dll")

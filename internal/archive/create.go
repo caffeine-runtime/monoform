@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	hfs "github.com/caffeine-runtime/hold-it-all/internal/fs"
+	hfs "github.com/caffeine-runtime/monoform/internal/fs"
 )
 
 // CreateZip writes the given files and folders into a new zip at dest

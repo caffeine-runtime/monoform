@@ -1,17 +1,17 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "Hold It All Setup",
-  "outputfilename": "hold-it-all-setup",
+  "name": "Monoform Setup",
+  "outputfilename": "monoform-setup",
   "frontend:install": "",
   "frontend:build": "",
   "author": {
-    "name": "Hold It All contributors"
+    "name": "Monoform contributors"
   },
   "info": {
-    "companyName": "Hold It All",
-    "productName": "Hold It All Setup",
+    "companyName": "Monoform",
+    "productName": "Monoform Setup",
     "productVersion": "1.0.0",
-    "copyright": "Copyright © 2026 Hold It All contributors",
-    "comments": "Installs Hold It All."
+    "copyright": "Copyright © 2026 Monoform contributors",
+    "comments": "Installs Monoform."
   }
 }

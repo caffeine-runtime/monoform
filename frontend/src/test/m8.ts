@@ -48,7 +48,7 @@ export default async function m8(dir: string) {
   }, 'new-file tiles on the start page');
   assertEq([...tiles].map((t) => t.dataset.kind).join(','), 'markdown,docx,xlsx,csv,image,svg,html,json,text', 'a tile per kind');
   const welcome = document.querySelector('.welcome')!;
-  assert(!welcome.textContent?.includes('Hold It All'), 'no app name on the start page');
+  assert(!welcome.textContent?.includes('Monoform'), 'no app name on the start page');
   assert(welcome.querySelector('.drop') && /Open file/.test(welcome.querySelector('.drop')!.textContent ?? '') && /Open folder/.test(welcome.querySelector('.drop')!.textContent ?? ''), 'drop area with open buttons');
   for (const t of tiles) assert(t.scrollWidth <= t.clientWidth + 1, `tile "${t.textContent?.trim()}" fits its text`);
   let first = true;

@@ -30,44 +30,44 @@ async function extract(dir: string, name: string, entries: string[]) {
 
 export default async function m26(dir: string) {
   // ---- .deb ----
-  const deb = await openPkg(dir, 'hia-test.deb', 'deb');
-  assertEq(deb.info.meta.Package, 'hia-test', 'deb package name');
+  const deb = await openPkg(dir, 'mf-test.deb', 'deb');
+  assertEq(deb.info.meta.Package, 'mf-test', 'deb package name');
   assertEq(deb.info.meta.Version, '1.2.3', 'deb version');
   await waitFor(() => (metaShown('Package') && metaShown('Version') ? true : null), 'package fields shown');
   await waitFor(() => document.querySelector('.tabview.active .banner')?.textContent?.includes('read-only'), 'read-only banner');
   assertEq(deb.tab.status?.type, 'Debian package', 'status names the format');
-  const inner = await workspace.openArchiveEntry(join(dir, 'packages', 'hia-test.deb'), 'data/usr/share/hia/hello.txt');
+  const inner = await workspace.openArchiveEntry(join(dir, 'packages', 'mf-test.deb'), 'data/usr/share/mf/hello.txt');
   assert(inner.readOnly, 'inner file read-only');
   await waitFor(() => document.querySelector('.tabview.active .cm-content')?.textContent?.includes('hello from deb'), 'file inside the package opened');
   await workspace.close(inner, { force: true });
   await workspace.close(deb.tab, { force: true });
 
   // ---- .rpm ----
-  const rpm = await openPkg(dir, 'hia-test.rpm', 'rpm');
-  assertEq(`${rpm.info.meta.Package} ${rpm.info.meta.Version} ${rpm.info.meta.Architecture}`, 'hia-test 2.0.1 noarch', 'rpm header');
-  const link = rpm.info.entries.find((e: any) => e.name === 'usr/share/hia/link.txt');
+  const rpm = await openPkg(dir, 'mf-test.rpm', 'rpm');
+  assertEq(`${rpm.info.meta.Package} ${rpm.info.meta.Version} ${rpm.info.meta.Architecture}`, 'mf-test 2.0.1 noarch', 'rpm header');
+  const link = rpm.info.entries.find((e: any) => e.name === 'usr/share/mf/link.txt');
   assertEq(link?.link, 'hello.txt', 'symlink target');
   await workspace.close(rpm.tab, { force: true });
 
   // ---- .iso ----
-  const iso = await openPkg(dir, 'hia-test.iso', 'iso');
-  assertEq(iso.info.meta.Volume, 'HIA_TEST', 'volume label');
+  const iso = await openPkg(dir, 'mf-test.iso', 'iso');
+  assertEq(iso.info.meta.Volume, 'MF_TEST', 'volume label');
   const long = 'docs/a long folder name/Read Me (long name).txt';
   assert(iso.info.entries.some((e: any) => e.name === long), 'long file names');
   iso.h.go('docs/a long folder name');
   await waitFor(() => [...document.querySelectorAll('.tabview.active .list .nm')].some((e) => e.textContent === 'Read Me (long name).txt'), 'folder browsed');
-  const x = await extract(dir, 'hia-test.iso', []);
+  const x = await extract(dir, 'mf-test.iso', []);
   assert(x.result.files >= 2, `extracted ${x.result.files} files`);
   assertEq(new TextDecoder().decode(await readFile(join(x.dest, long))), 'hello from iso\n', 'extracted file');
   await workspace.close(iso.tab, { force: true });
 
   // ---- .msi ----
-  const msi = await openPkg(dir, 'hia-test.msi', 'msi');
-  assertEq(`${msi.info.meta.Package} ${msi.info.meta.Version} ${msi.info.meta.Manufacturer}`, 'Hia Test 1.2.3 Hold It All', 'MSI properties');
+  const msi = await openPkg(dir, 'mf-test.msi', 'msi');
+  assertEq(`${msi.info.meta.Package} ${msi.info.meta.Version} ${msi.info.meta.Manufacturer}`, 'Mf Test 1.2.3 Monoform', 'MSI properties');
   assertEq(msi.tab.status?.type, 'Windows Installer package', 'msi status');
-  msi.h.go('Program Files/HiaTest/docs');
+  msi.h.go('Program Files/MfTest/docs');
   await waitFor(() => [...document.querySelectorAll('.tabview.active .list .nm')].some((e) => e.textContent === 'LongReadmeFile.txt'), 'MSI folders from its Directory table');
-  const m = await extract(dir, 'hia-test.msi', ['Program Files/HiaTest/docs/LongReadmeFile.txt']);
+  const m = await extract(dir, 'mf-test.msi', ['Program Files/MfTest/docs/LongReadmeFile.txt']);
   assertEq(m.result.files, 1, 'one file extracted');
   assertEq((await api.Stat(join(m.dest, 'LongReadmeFile.txt'))).size, 114425, 'cabinet file decompressed in full');
   await workspace.close(msi.tab, { force: true });

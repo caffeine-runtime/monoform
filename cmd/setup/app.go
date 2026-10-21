@@ -14,7 +14,7 @@ import (
 
 	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/setup"
+	"github.com/caffeine-runtime/monoform/internal/setup"
 )
 
 // Setup is bound to the window (window.go.main.Setup).
@@ -33,9 +33,9 @@ func newSetup(demo, uninstall bool) *Setup {
 		s.mode = "uninstall"
 	}
 	if demo {
-		s.demoRoot = os.Getenv("HIA_SETUP_DEMO_DIR")
+		s.demoRoot = os.Getenv("MF_SETUP_DEMO_DIR")
 		if s.demoRoot == "" {
-			s.demoRoot = filepath.Join(os.TempDir(), "hold-it-all-setup-demo")
+			s.demoRoot = filepath.Join(os.TempDir(), "monoform-setup-demo")
 		}
 		s.rec = setup.NewRecord(s.demoRoot)
 		_ = s.rec.Load(filepath.Join(s.demoRoot, "registry.json"))
@@ -62,7 +62,7 @@ type Info struct {
 }
 
 func (s *Setup) Info() Info {
-	i := Info{Mode: s.mode, Version: version, UserDir: s.userDir(), EveryoneDir: s.everyoneDir(), Demo: s.demo, Test: os.Getenv("HIA_SETUP_TEST") != ""}
+	i := Info{Mode: s.mode, Version: version, UserDir: s.userDir(), EveryoneDir: s.everyoneDir(), Demo: s.demo, Test: os.Getenv("MF_SETUP_TEST") != ""}
 	if in, ok := setup.Find(s.sys); ok {
 		i.Installed = &in
 	}
@@ -100,7 +100,7 @@ func (s *Setup) defaultOptions() setup.Options {
 }
 
 func (s *Setup) Browse(dir string) (string, error) {
-	return wruntime.OpenDirectoryDialog(s.ctx, wruntime.OpenDialogOptions{Title: "Install Hold It All into", DefaultDirectory: filepath.Dir(dir)})
+	return wruntime.OpenDirectoryDialog(s.ctx, wruntime.OpenDialogOptions{Title: "Install Monoform into", DefaultDirectory: filepath.Dir(dir)})
 }
 
 func (s *Setup) Log(msg string) { log.Print(msg) }
@@ -152,13 +152,17 @@ func (s *Setup) Install(o setup.Options) error {
 		s.progress("Done", 1, 1)
 		return nil
 	}
-	if !s.demo && setup.Running(setup.Exe) {
-		return errors.New("Hold It All is open — close it, then try again")
+	if !s.demo && (setup.Running(setup.Exe) || setup.Running(setup.OldExe)) {
+		return errors.New("Monoform (or Hold It All) is open — close it, then try again")
 	}
 	if old, ok := setup.FindOld(s.sys); ok {
 		s.progress("Removing the earlier version", 0, 1)
 		if s.demo {
-			_ = s.sys.DeleteKey(setup.Machine, setup.OldUninstKey)
+			root := setup.User
+			if old.Everyone {
+				root = setup.Machine
+			}
+			_ = s.sys.DeleteKey(root, old.Key)
 		} else if err := setup.RunCommandLine(old.Uninstall, old.Everyone); err != nil {
 			return errors.New("the earlier version couldn't be removed: " + err.Error())
 		}
@@ -192,7 +196,7 @@ func (s *Setup) Uninstall(removeData bool) error {
 		return nil
 	}
 	if !s.demo && setup.Running(setup.Exe) {
-		return errors.New("Hold It All is open — close it, then try again")
+		return errors.New("Monoform is open — close it, then try again")
 	}
 	sys := s.sys
 	moved := ""
@@ -215,10 +219,12 @@ func (s *Setup) Uninstall(removeData bool) error {
 		if d, err := os.UserConfigDir(); err == nil {
 			os.RemoveAll(filepath.Join(d, setup.Exe))
 			if removeData {
-				os.RemoveAll(filepath.Join(d, "HoldItAll"))
+				os.RemoveAll(filepath.Join(d, "Monoform"))
+				os.RemoveAll(filepath.Join(d, "HoldItAll")) // left by the earlier name, if never moved
 			}
 		}
 		if d, err := os.UserCacheDir(); err == nil && removeData {
+			os.RemoveAll(filepath.Join(d, "Monoform"))
 			os.RemoveAll(filepath.Join(d, "HoldItAll"))
 		}
 		scheduleSelfDelete(moved, in.Dir)
@@ -233,7 +239,7 @@ func (s *Setup) saveDemo() {
 	}
 }
 
-// CloseApp asks a running Hold It All to close and waits up to 20 s (it may ask about unsaved work).
+// CloseApp asks a running Monoform to close and waits up to 20 s (it may ask about unsaved work).
 func (s *Setup) CloseApp() bool {
 	if s.demo {
 		return true
@@ -272,7 +278,7 @@ func moveSelfOut(dir string) string {
 	if !inside(dir, exe) {
 		return ""
 	}
-	tmp := filepath.Join(os.TempDir(), fmt.Sprintf("hold-it-all-uninstall-%d.exe", os.Getpid()))
+	tmp := filepath.Join(os.TempDir(), fmt.Sprintf("monoform-uninstall-%d.exe", os.Getpid()))
 	if err := os.Rename(exe, tmp); err != nil {
 		return ""
 	}

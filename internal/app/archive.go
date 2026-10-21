@@ -4,8 +4,8 @@ import (
 	"context"
 	"path/filepath"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/archive"
-	"github.com/caffeine-runtime/hold-it-all/internal/jobs"
+	"github.com/caffeine-runtime/monoform/internal/archive"
+	"github.com/caffeine-runtime/monoform/internal/jobs"
 )
 
 // ArchiveList returns the entries of an archive.

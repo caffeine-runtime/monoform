@@ -51,11 +51,11 @@ export default async function m25(dir: string) {
   assertEq(chainTab.moduleId, 'cert', 'PEM opens in the certificate view');
   const ch = await waitFor(() => cert(chainTab)?.result(), 'chain read');
   const [leaf, ca] = ch.items;
-  assertEq(leaf.subject.commonName, 'www.hia.test', 'leaf subject');
-  assertEq(leaf.issuer.commonName, 'Hia Test CA', 'leaf issuer');
+  assertEq(leaf.subject.commonName, 'www.mf.test', 'leaf subject');
+  assertEq(leaf.issuer.commonName, 'Mf Test CA', 'leaf issuer');
   assertEq(leaf.status, 'expiring', 'leaf expires within 30 days');
   assert(leaf.daysLeft >= 8 && leaf.daysLeft <= 10, `days left ${leaf.daysLeft}`);
-  assertEq(leaf.names.join(','), 'www.hia.test,hia.test', 'SANs');
+  assertEq(leaf.names.join(','), 'www.mf.test,mf.test', 'SANs');
   assertEq(leaf.extKeyUsage.join(','), 'TLS server', 'purpose');
   assert(leaf.issuedByNext && ca.selfSigned, 'chain links to the self-signed CA');
   assertEq(leaf.sha256.split(':').length, 32, 'SHA-256 fingerprint');
@@ -75,7 +75,7 @@ export default async function m25(dir: string) {
   await waitFor(() => (h.result()?.needsPassword ? true : null), 'asks for the password');
   await h.unlock('wrong');
   assert(h.result().needsPassword, 'wrong password refused');
-  await h.unlock('hia-pw');
+  await h.unlock('mf-pw');
   const r = h.result();
   assertEq(r.items.map((i: any) => i.kind).join(','), 'certificate,certificate,private-key', 'certificate, CA and key');
   assert(r.items[2].note.includes('matches'), 'key matches the certificate');

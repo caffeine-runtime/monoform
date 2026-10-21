@@ -141,7 +141,7 @@ func Take(ctx context.Context, mode Mode, dst string) (Result, error) {
 			if mode == Region {
 				return Result{}, ErrCancelled
 			}
-			return Result{}, errors.New("screencapture wrote no image (allow screen recording for Hold It All in System Settings → Privacy & Security)")
+			return Result{}, errors.New("screencapture wrote no image (allow screen recording for Monoform in System Settings → Privacy & Security)")
 		}
 		return Result{Path: dst, Interactive: mode == Region, Method: "screencapture"}, nil
 	case "windows":
@@ -151,7 +151,7 @@ func Take(ctx context.Context, mode Mode, dst string) (Result, error) {
 		return Result{Path: dst, Interactive: false, Method: "powershell"}, nil
 	}
 	// Linux and other Unix desktops: the portal first (works on Wayland), then tools.
-	if os.Getenv("HIA_NO_PORTAL") == "" {
+	if os.Getenv("MF_NO_PORTAL") == "" {
 		pctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		uri, err := portalScreenshot(pctx, mode == Region)
 		cancel()
@@ -201,9 +201,9 @@ $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
 $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
 $g = [System.Drawing.Graphics]::FromImage($bmp)
 $g.CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size)
-$bmp.Save($env:HIA_SHOT, [System.Drawing.Imaging.ImageFormat]::Png)`
+$bmp.Save($env:MF_SHOT, [System.Drawing.Imaging.ImageFormat]::Png)`
 	cmd := exec.CommandContext(ctx, "powershell", "-NoProfile", "-NonInteractive", "-Command", script)
-	cmd.Env = append(os.Environ(), "HIA_SHOT="+dst)
+	cmd.Env = append(os.Environ(), "MF_SHOT="+dst)
 	hideWindow(cmd)
 	out, err := cmd.CombinedOutput()
 	if st, serr := os.Stat(dst); serr == nil && st.Size() > 0 {

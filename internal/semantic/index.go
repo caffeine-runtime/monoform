@@ -20,8 +20,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/filetype"
-	"github.com/caffeine-runtime/hold-it-all/internal/fs"
+	"github.com/caffeine-runtime/monoform/internal/filetype"
+	"github.com/caffeine-runtime/monoform/internal/fs"
 )
 
 // MaxFileSize is the largest file that is indexed.
@@ -398,11 +398,11 @@ func quantize(v []float32) (float32, []int8) {
 
 // File format (a cache; deleting it only means re-indexing):
 //
-//	"HIAIDX1\n", uint32 LE header length, JSON header
+//	"MFIDX1\n\n", uint32 LE header length, JSON header
 //	{"model","dims","root","files":[{path,size,mod,lines,snippets}]},
 //	then for each file in header order, for each passage:
 //	float32 LE scale + dims int8 values.
-const magic = "HIAIDX1\n"
+const magic = "MFIDX1\n\n" // an index from before the rename (HIAIDX1) is rebuilt
 
 type header struct {
 	Model string       `json:"model"`

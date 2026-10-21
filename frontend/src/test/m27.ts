@@ -76,7 +76,7 @@ export default async function m27(dir: string) {
   r.collapse(true);
   window.getSelection()!.removeAllRanges();
   window.getSelection()!.addRange(r);
-  document.execCommand('insertText', false, ', edited in Hold It All');
+  document.execCommand('insertText', false, ', edited in Monoform');
   assert(selectText(last, 'edited'), 'select word');
   docH(t).exec('bold');
   // A new numbered item after "Step two".
@@ -101,7 +101,7 @@ export default async function m27(dir: string) {
 
   const again = await openOdt(odtPath);
   const p2 = again.page;
-  assert(p2.textContent!.includes('Last paragraph, edited in Hold It All.'), 'edit persisted');
+  assert(p2.textContent!.includes('Last paragraph, edited in Monoform.'), 'edit persisted');
   assert([...p2.querySelectorAll('b')].some((b) => b.textContent === 'edited'), 'bold persisted');
   const num = [...p2.querySelectorAll<HTMLElement>('.li.num')];
   assertEq(num.map((e) => `${e.dataset.n} ${e.textContent}`).join('|'), '1. Step one|2. Step two|3. Step three', 'new item in the numbered list');

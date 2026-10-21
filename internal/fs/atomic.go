@@ -66,7 +66,7 @@ func CreateAtomic(path string) (*AtomicFile, error) {
 		}
 		perm = st.Mode().Perm()
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(target), "."+filepath.Base(target)+".hia-*.tmp")
+	tmp, err := os.CreateTemp(filepath.Dir(target), "."+filepath.Base(target)+".mf-*.tmp")
 	if err != nil {
 		return nil, err
 	}

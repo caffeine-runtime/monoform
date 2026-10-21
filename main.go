@@ -17,8 +17,8 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/app"
-	"github.com/caffeine-runtime/hold-it-all/internal/cli"
+	"github.com/caffeine-runtime/monoform/internal/app"
+	"github.com/caffeine-runtime/monoform/internal/cli"
 )
 
 //go:embed all:frontend/dist
@@ -30,7 +30,7 @@ var icon []byte
 var processStart = time.Now()
 
 func main() {
-	// holdit hash / verify / info / convert … run without a window.
+	// monoform hash / verify / info / convert … run without a window.
 	if cli.IsCommand(os.Args[1:]) {
 		cli.AttachConsole()
 		code, _ := cli.Main(os.Args[1:], app.Version, os.Stdout, os.Stderr)
@@ -56,7 +56,7 @@ func main() {
 	}
 
 	err := wails.Run(&options.App{
-		Title:            "Hold It All",
+		Title:            "Monoform",
 		Width:            width,
 		Height:           height,
 		MinWidth:         640,
@@ -79,7 +79,7 @@ func main() {
 		DragAndDrop: &options.DragAndDrop{EnableFileDrop: true},
 		Mac: &mac.Options{
 			TitleBar: mac.TitleBarHiddenInset(),
-			About:    &mac.AboutInfo{Title: "Hold It All", Message: "One window for your everyday files.", Icon: icon},
+			About:    &mac.AboutInfo{Title: "Monoform", Message: "One window for your everyday files.", Icon: icon},
 			OnFileOpen: func(path string) {
 				a.OpenFiles([]string{path})
 			},
@@ -90,7 +90,7 @@ func main() {
 		},
 		Linux: &linux.Options{
 			Icon:             icon,
-			ProgramName:      "hold-it-all",
+			ProgramName:      "monoform",
 			WebviewGpuPolicy: linux.WebviewGpuPolicyOnDemand,
 		},
 	})
@@ -105,7 +105,7 @@ func singleInstance(mode string, onLaunch func(options.SecondInstanceData)) *opt
 	if mode == "window" || mode == "peek" {
 		return nil
 	}
-	return &options.SingleInstanceLock{UniqueId: "dev.holditall.app", OnSecondInstanceLaunch: onLaunch}
+	return &options.SingleInstanceLock{UniqueId: "dev.monoform.app", OnSecondInstanceLaunch: onLaunch}
 }
 
 // parseAt reads --at=X,Y: where (screen pixels) a window a tab was dragged

@@ -1,5 +1,5 @@
 // M43 (real models, local only — like m6b it needs the downloads): with the
-// subject and eraser packs installed (HIA_CACHE pointing at a cache that has
+// subject and eraser packs installed (MF_CACHE pointing at a cache that has
 // them), Select subject on the astronaut photo covers her (not the flag or
 // the backdrop), and Remove object on a lasso around the model shuttle fills
 // it with backdrop. Timings are logged; the result is written to

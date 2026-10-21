@@ -1,4 +1,4 @@
-// In-webview self tests, run when HIA_TEST is set (see scripts/selftest.sh
+// In-webview self tests, run when MF_TEST is set (see scripts/selftest.sh
 // and docs/TESTING.md). Each scenario lives in its own file and chunk.
 import { api } from '../core/backend';
 import { settings } from '../core/settings.svelte';
@@ -64,7 +64,7 @@ const scenarios: Record<string, () => Promise<{ default: (arg: string) => Promis
   prof: () => import('./prof'),
   'm1-roundtrip': () => import('./m1').then((m) => ({ default: m.roundtrip })),
   'm1-baseline': () => import('./m1').then((m) => ({ default: m.baseline })),
-  // "seq" runs several m1 steps: HIA_TEST_ARG="<dir>|step1,step2"
+  // "seq" runs several m1 steps: MF_TEST_ARG="<dir>|step1,step2"
   seq: () =>
     import('./m1').then((m) => ({
       default: async (arg: string) => {

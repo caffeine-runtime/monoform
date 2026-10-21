@@ -40,11 +40,11 @@
   const ext = $derived(extname(tab.name));
 
   async function folderBase(): Promise<string> {
-    if (!tab.filePath) return `${location.origin}/__hia/page/none/`;
+    if (!tab.filePath) return `${location.origin}/__mf/page/none/`;
     try {
-      return `${location.origin}/__hia/page/${await api.PageRoot(dirname(tab.filePath))}/`;
+      return `${location.origin}/__mf/page/${await api.PageRoot(dirname(tab.filePath))}/`;
     } catch {
-      return `${location.origin}/__hia/page/none/`;
+      return `${location.origin}/__mf/page/none/`;
     }
   }
 

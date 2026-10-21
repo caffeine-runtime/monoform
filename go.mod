@@ -1,4 +1,4 @@
-module github.com/caffeine-runtime/hold-it-all
+module github.com/caffeine-runtime/monoform
 
 go 1.26.0
 

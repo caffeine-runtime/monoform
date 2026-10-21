@@ -1,5 +1,5 @@
-// Package setup installs and removes Hold It All on Windows: the program
-// files, Start menu and desktop shortcuts, the holdit command, the "Open
+// Package setup installs and removes Monoform on Windows: the program
+// files, Start menu and desktop shortcuts, the monoform command, the "Open
 // with" entry, optionally the default-app registrations, the "Quick peek"
 // right-click verb and the entry in Settings › Apps. It does what the NSIS
 // script (build/windows/installer/project.nsi) did, for the app's own setup
@@ -20,18 +20,20 @@ import (
 )
 
 const (
-	Product   = "Hold It All"
-	Publisher = "Hold It All"
-	Exe       = "hold-it-all.exe"
+	Product   = "Monoform"
+	Publisher = "Monoform"
+	Exe       = "monoform.exe"
+	// CLIExe is the console program behind the monoform command.
+	CLIExe = "monoform-cli.exe"
 	// UninstallExe is the setup program itself, copied next to the app.
 	UninstallExe = "uninstall.exe"
 	// keys below Software\ (in HKCU for one user, HKLM for everyone)
-	uninstKey = `Microsoft\Windows\CurrentVersion\Uninstall\HoldItAll`
-	stateKey  = `Hold It All\Setup`
-	// The NSIS installer's entry (company + product name), removed when found.
-	OldUninstKey = `Microsoft\Windows\CurrentVersion\Uninstall\Hold It AllHold It All`
-	peekVerb     = `Classes\*\shell\HoldItAll.Peek`
-	openWithKey  = `Classes\Applications\` + Exe
+	uninstKey = `Microsoft\Windows\CurrentVersion\Uninstall\Monoform`
+	stateKey  = `Monoform\Setup`
+	// OldExe is the app's executable under its earlier name, Hold It All.
+	OldExe      = "hold-it-all.exe"
+	peekVerb    = `Classes\*\shell\Monoform.Peek`
+	openWithKey = `Classes\Applications\` + Exe
 )
 
 // Root is where registry keys live: the current user's or the machine's.
@@ -105,7 +107,7 @@ type Options struct {
 	Everyone bool   `json:"everyone"` // install for all users (Program Files, HKLM)
 	Desktop  bool   `json:"desktop"`
 	Defaults bool   `json:"defaults"` // make the app the default for its file types
-	Command  bool   `json:"command"`  // holdit on PATH
+	Command  bool   `json:"command"`  // monoform on PATH
 	Version  string `json:"version"`
 }
 
@@ -161,7 +163,7 @@ func Install(sys System, files []File, self File, o Options, assocs []Assoc, pro
 		}
 	}
 	if o.Command {
-		if err := sys.CommandShim("holdit.cmd", fmt.Sprintf("@\"%s\" %%*\r\n", join(o.Dir, "holdit.exe"))); err != nil {
+		if err := sys.CommandShim("monoform.cmd", fmt.Sprintf("@\"%s\" %%*\r\n", join(o.Dir, CLIExe))); err != nil {
 			return err
 		}
 	}
@@ -329,16 +331,30 @@ func Find(sys System) (Installed, bool) {
 type OldInstall struct {
 	Uninstall string `json:"uninstall"` // its quiet uninstall command
 	Everyone  bool   `json:"everyone"`
+	Key       string `json:"-"`
 }
 
-// FindOld looks for the NSIS installer's entry.
+// OldUninstKeys are earlier installs, under the app's earlier name (Hold It
+// All): its own setup's entry (2.0 betas), then the NSIS installer's
+// (company + product name). One found is removed before installing; the
+// user's settings and history are kept (the app moves them to its new
+// folder on first start).
+var OldUninstKeys = []string{
+	`Microsoft\Windows\CurrentVersion\Uninstall\HoldItAll`,
+	`Microsoft\Windows\CurrentVersion\Uninstall\Hold It AllHold It All`,
+}
+
+// FindOld looks for an earlier install.
 func FindOld(sys System) (OldInstall, bool) {
-	for _, root := range []Root{Machine, User} {
-		if q, ok := sys.GetString(root, OldUninstKey, "QuietUninstallString"); ok && q != "" {
-			return OldInstall{Uninstall: q, Everyone: root == Machine}, true
-		}
-		if u, ok := sys.GetString(root, OldUninstKey, "UninstallString"); ok && u != "" {
-			return OldInstall{Uninstall: strings.TrimSpace(u) + " /S", Everyone: root == Machine}, true
+	for _, key := range OldUninstKeys {
+		for _, root := range []Root{Machine, User} {
+			if q, ok := sys.GetString(root, key, "QuietUninstallString"); ok && q != "" {
+				return OldInstall{Uninstall: q, Everyone: root == Machine, Key: key}, true
+			}
+			// NSIS: /S is its silent switch.
+			if u, ok := sys.GetString(root, key, "UninstallString"); ok && u != "" {
+				return OldInstall{Uninstall: strings.TrimSpace(u) + " /S", Everyone: root == Machine, Key: key}, true
+			}
 		}
 	}
 	return OldInstall{}, false
@@ -357,7 +373,7 @@ func Uninstall(sys System, in Installed, assocs []Assoc, progress Progress) erro
 	_ = sys.RemoveShortcut(root, StartMenu, Product)
 	_ = sys.RemoveShortcut(root, Desktop, Product)
 	if in.Command {
-		_ = sys.CommandShim("holdit.cmd", "")
+		_ = sys.CommandShim("monoform.cmd", "")
 	}
 	progress("Removing file types", 1, 3)
 	for _, a := range assocs {
@@ -375,7 +391,7 @@ func Uninstall(sys System, in Installed, assocs []Assoc, progress Progress) erro
 		_ = sys.DeleteKey(root, `Classes\`+a.ProgID)
 	}
 	_ = sys.DeleteKey(root, openWithKey)
-	_ = sys.DeleteKey(root, `Classes\*\shell\HoldItAll.Peek`)
+	_ = sys.DeleteKey(root, `Classes\*\shell\Monoform.Peek`)
 	if in.Defaults {
 		sys.AssocChanged()
 	}

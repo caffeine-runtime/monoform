@@ -2,7 +2,7 @@
   // The ratio each kind of split (Markdown, HTML, …) was last left at.
   export function savedRatio(key: string): number {
     try {
-      const v = Number(localStorage.getItem(`hia.split.${key}`));
+      const v = Number(localStorage.getItem(`mf.split.${key}`));
       if (v >= MIN && v <= MAX) return v;
     } catch {
       /* no storage */
@@ -27,7 +27,7 @@
   }
   function save() {
     try {
-      localStorage.setItem(`hia.split.${key}`, String(ratio));
+      localStorage.setItem(`mf.split.${key}`, String(ratio));
     } catch {
       /* no storage */
     }

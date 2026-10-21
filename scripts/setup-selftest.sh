@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The setup program's demo on Linux (cmd/setup): it installs into a test
 # folder through its own window, which clicks through by itself
-# (HIA_SETUP_TEST), then uninstalls; the folder and the recorded registry,
+# (MF_SETUP_TEST), then uninstalls; the folder and the recorded registry,
 # shortcuts and command shim are checked. Needs X (selftest.sh-style Xvfb).
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -15,25 +15,25 @@ if [ -z "${DISPLAY:-}" ]; then
   export DISPLAY=:97
   sleep 1
 fi
-export HIA_SETUP_DEMO_DIR="$OUT/demo" HIA_SETUP_TEST=1
-DIR="$HIA_SETUP_DEMO_DIR/Users/you/AppData/Local/Programs/Hold It All"
+export MF_SETUP_DEMO_DIR="$OUT/demo" MF_SETUP_TEST=1
+DIR="$MF_SETUP_DEMO_DIR/Users/you/AppData/Local/Programs/Monoform"
 timeout 60 "$OUT/setup" 2>&1 | grep -E "SETUP (PASS|FAIL)" | tee "$OUT/log"
 grep -q "SETUP PASS install" "$OUT/log"
-for f in hold-it-all.exe holdit.exe file-text.ico file-image.ico uninstall.exe; do test -f "$DIR/$f" || { echo "FAIL setup: $f not installed"; exit 1; }; done
-python3 - "$HIA_SETUP_DEMO_DIR/registry.json" <<'PY'
+for f in monoform.exe monoform-cli.exe file-text.ico file-image.ico uninstall.exe; do test -f "$DIR/$f" || { echo "FAIL setup: $f not installed"; exit 1; }; done
+python3 - "$MF_SETUP_DEMO_DIR/registry.json" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1]))
 r = d["registry"]
-assert r[r"HKCU\microsoft\windows\currentversion\uninstall\holditall"]["DisplayName"] == "Hold It All", "uninstall entry"
-assert r[r"HKCU\classes\*\shell\holditall.peek\command"][""].endswith('--peek "%1"'), "quick peek verb"
-assert d["shortcuts"].get(r"HKCU Programs\Hold It All"), "start menu shortcut"
-assert d["shims"].get("holdit.cmd"), "holdit command"
+assert r[r"HKCU\microsoft\windows\currentversion\uninstall\monoform"]["DisplayName"] == "Monoform", "uninstall entry"
+assert r[r"HKCU\classes\*\shell\monoform.peek\command"][""].endswith('--peek "%1"'), "quick peek verb"
+assert d["shortcuts"].get(r"HKCU Programs\Monoform"), "start menu shortcut"
+assert d["shims"].get("monoform.cmd"), "monoform command"
 print("setup: installed files, uninstall entry, quick peek, shortcut and command")
 PY
 timeout 60 "$OUT/setup" --uninstall 2>&1 | grep -E "SETUP (PASS|FAIL)" | tee "$OUT/log"
 grep -q "SETUP PASS uninstall" "$OUT/log"
 test ! -e "$DIR" || { echo "FAIL setup: folder left after uninstall"; exit 1; }
-python3 - "$HIA_SETUP_DEMO_DIR/registry.json" <<'PY'
+python3 - "$MF_SETUP_DEMO_DIR/registry.json" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1]))
 left = [k for k, v in d["registry"].items() if v]

@@ -24,7 +24,7 @@ export default async function m37() {
   btn('Next')!.click();
   await waitFor(() => (title() === 'Edit it right here' ? true : null), 'second step');
   key('ArrowRight');
-  await waitFor(() => (title() === 'Yours, and offline' ? true : null), '→ next step');
+  await waitFor(() => (title() === 'Free, open and offline' ? true : null), '→ next step');
   key('ArrowLeft');
   await waitFor(() => (title() === 'Edit it right here' ? true : null), '← back');
   key('ArrowRight');

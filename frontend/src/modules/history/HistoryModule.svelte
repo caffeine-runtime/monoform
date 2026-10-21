@@ -160,7 +160,7 @@
     {:else if !versions.length}
       <div class="empty-state">
         <p>No versions kept yet.</p>
-        <p class="muted small">Every time {basename(path)} is saved in Hold It All, the content it had and the new one are kept here.</p>
+        <p class="muted small">Every time {basename(path)} is saved in Monoform, the content it had and the new one are kept here.</p>
       </div>
     {:else}
       {#each byDay(versions) as group (group.day)}
@@ -194,7 +194,7 @@
       <Icon icon={History} size={20} />
       <div class="ttl">
         <h1>File history</h1>
-        <div class="muted small">Earlier versions of files saved in Hold It All</div>
+        <div class="muted small">Earlier versions of files saved in Monoform</div>
       </div>
     </header>
     {#if files.length}

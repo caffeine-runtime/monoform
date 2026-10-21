@@ -1,11 +1,11 @@
 [Desktop Entry]
 Type=Application
-Name=Quick peek (Hold It All)
+Name=Quick peek (Monoform)
 GenericName=Quick file preview
 Comment=Show a file in a small window; Open in editor makes it the full app
-Exec=hold-it-all --peek %f
-Icon=hold-it-all
+Exec=monoform --peek %f
+Icon=monoform
 Terminal=false
 NoDisplay=true
-StartupWMClass=hold-it-all
+StartupWMClass=monoform
 MimeType=text/plain;text/markdown;text/x-markdown;application/json;application/yaml;application/x-yaml;text/csv;text/tab-separated-values;application/pdf;image/png;image/jpeg;image/gif;image/webp;image/bmp;image/svg+xml;application/vnd.openxmlformats-officedocument.wordprocessingml.document;application/msword;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;application/vnd.ms-excel;application/zip;application/x-7z-compressed;application/vnd.rar;application/x-rar;application/x-tar;application/gzip;application/x-compressed-tar;text/html;audio/mpeg;audio/x-wav;audio/wav;audio/flac;audio/x-flac;audio/ogg;audio/x-vorbis+ogg;audio/mp4;audio/x-m4a;audio/x-opus+ogg;video/mp4;video/quicktime;video/webm;video/x-matroska;model/gltf-binary;model/gltf+json;model/stl;model/obj;model/3mf;

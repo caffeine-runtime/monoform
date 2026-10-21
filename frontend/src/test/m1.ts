@@ -92,7 +92,7 @@ export async function roundtrip(dir: string) {
 export async function large(dir: string) {
   const p = join(dir, 'big.log');
   const prof: Record<string, { n: number; max: number; sum: number }> = {};
-  (globalThis as any).__hiaProf = (label: string, ms: number) => {
+  (globalThis as any).__mfProf = (label: string, ms: number) => {
     const e = (prof[label] ??= { n: 0, max: 0, sum: 0 });
     e.n++;
     e.max = Math.max(e.max, ms);
@@ -117,7 +117,7 @@ export async function large(dir: string) {
   const openMs = performance.now() - t0;
   const { ctl, tab } = result;
   on = false;
-  (globalThis as any).__hiaProf = undefined;
+  (globalThis as any).__mfProf = undefined;
   log(`load profile: ${Object.entries(prof).map(([k, v]) => `${k} n=${v.n} max=${v.max.toFixed(0)} sum=${v.sum.toFixed(0)}`).join('; ')}; long frames at ${gaps.join(', ')}`);
   const lines = ctl.view.state.doc.lines;
   log(`50 MB open: ${Math.round(openMs)} ms, ${lines} lines, longest frame gap ${Math.round(maxGap)} ms over ${frames} frames, size ${tab.size}`);

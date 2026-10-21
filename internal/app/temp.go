@@ -23,7 +23,7 @@ func appTempDir() string {
 		base := os.TempDir()
 		if des, err := os.ReadDir(base); err == nil {
 			for _, d := range des {
-				if !d.IsDir() || !strings.HasPrefix(d.Name(), "hold-it-all-") {
+				if !d.IsDir() || !strings.HasPrefix(d.Name(), "monoform-") {
 					continue
 				}
 				if info, err := d.Info(); err == nil && time.Since(info.ModTime()) > 24*time.Hour {
@@ -31,7 +31,7 @@ func appTempDir() string {
 				}
 			}
 		}
-		dir, err := os.MkdirTemp(base, "hold-it-all-")
+		dir, err := os.MkdirTemp(base, "monoform-")
 		if err != nil {
 			dir = base
 		}

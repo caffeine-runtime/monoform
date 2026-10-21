@@ -11,7 +11,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/fs"
+	"github.com/caffeine-runtime/monoform/internal/fs"
 )
 
 const documentPart = "word/document.xml"

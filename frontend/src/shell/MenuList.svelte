@@ -3,6 +3,7 @@
   // beside its item on hover (after a short pause, so passing over doesn't
   // flicker), on click, Enter or →; ← or Escape goes back a level.
   import Self from './MenuList.svelte';
+  import MenuControlRow from './MenuControlRow.svelte';
   import { menu, ui, type MenuItem } from '../core/ui.svelte';
 
   let {
@@ -47,7 +48,7 @@
     });
   });
 
-  const enabled = $derived(items.map((it, i) => (!it.separator && !it.disabled ? i : -1)).filter((i) => i >= 0));
+  const enabled = $derived(items.map((it, i) => (!it.separator && !it.disabled && !it.control ? i : -1)).filter((i) => i >= 0));
 
   function openChild(i: number, focus: boolean) {
     clearTimeout(timer);
@@ -100,6 +101,8 @@
   {#each items as it, i}
     {#if it.separator}
       {#if i > 0 && i < items.length - 1}<div class="msep"></div>{/if}
+    {:else if it.control}
+      <MenuControlRow control={it.control} />
     {:else}
       <button
         class="mi"
@@ -107,14 +110,16 @@
         class:open={child?.i === i}
         data-i={i}
         disabled={it.disabled}
-        role="menuitem"
+        role={it.checked !== undefined ? 'menuitemcheckbox' : 'menuitem'}
+        aria-checked={it.checked}
         aria-haspopup={it.items ? 'menu' : undefined}
         aria-expanded={it.items ? child?.i === i : undefined}
         onmousemove={() => sel !== i && hover(i)}
         onmouseenter={() => hover(i)}
         onclick={() => activate(i)}
       >
-        <span>{it.label}</span>
+        {#if it.checked !== undefined}<span class="check" aria-hidden="true">{it.checked ? '✓' : ''}</span>{/if}
+        <span class="lb">{it.label}</span>
         {#if it.items}<span class="arrow" aria-hidden="true">›</span>{:else if it.shortcut}<span class="sc">{it.shortcut}</span>{/if}
       </button>
     {/if}
@@ -157,6 +162,14 @@
     text-align: left;
     cursor: pointer;
     white-space: nowrap;
+  }
+  .lb {
+    flex: 1;
+  }
+  .check {
+    width: 1em;
+    margin-right: -16px;
+    color: var(--accent-text);
   }
   .mi.sel,
   .mi.open {

@@ -41,7 +41,7 @@ function key(el: HTMLElement, k: string) {
 export default async function m35(dir: string) {
   for (const t of [...workspace.tabs]) await workspace.close(t, { force: true });
   try {
-    localStorage.removeItem('hia.split.markdown');
+    localStorage.removeItem('mf.split.markdown');
   } catch {
     /* ignore */
   }

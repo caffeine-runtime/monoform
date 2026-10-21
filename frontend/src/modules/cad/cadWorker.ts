@@ -182,7 +182,7 @@ self.onmessage = async (ev: MessageEvent) => {
         return post({ id: m.id, ok: true, props: doc!.props(m.index) });
       case 'save': {
         const bytes = encodeDxf(doc!.text());
-        const urlFor = (p: string, q: Record<string, string>) => `/__hia/${p}?${new URLSearchParams({ t: m.token, ...q })}`;
+        const urlFor = (p: string, q: Record<string, string>) => `/__mf/${p}?${new URLSearchParams({ t: m.token, ...q })}`;
         const entry = await uploadParts(urlFor, m.path, [bytes], (done, total) => post({ type: 'progress', phase: 'Saving', done, total }));
         doc!.markSaved();
         return post({ id: m.id, ok: true, entry, info: info() });

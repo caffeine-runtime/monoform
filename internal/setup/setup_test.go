@@ -19,53 +19,53 @@ func payload(names ...string) []File {
 	return out
 }
 
-var testAssocs = []Assoc{{Ext: "md", ProgID: "HoldItAll.md", Description: "Markdown document", Icon: "file-markdown"}, {Ext: "png", ProgID: "HoldItAll.png", Description: "PNG image", Icon: "file-image"}}
+var testAssocs = []Assoc{{Ext: "md", ProgID: "Monoform.md", Description: "Markdown document", Icon: "file-markdown"}, {Ext: "png", ProgID: "Monoform.png", Description: "PNG image", Icon: "file-image"}}
 
 func TestInstallAndUninstall(t *testing.T) {
 	root := t.TempDir()
 	sys := NewRecord(root)
 	// Another app had .png before.
 	sys.SetString(User, `Classes\.png`, "", "Photos.png")
-	dir := `C:\Users\ana\AppData\Local\Programs\Hold It All`
-	files := payload(append([]string{Exe, "holdit.exe"}, Icons(testAssocs)...)...)
-	self := payload("hold-it-all-setup.exe")[0]
+	dir := `C:\Users\ana\AppData\Local\Programs\Monoform`
+	files := payload(append([]string{Exe, CLIExe}, Icons(testAssocs)...)...)
+	self := payload("monoform-setup.exe")[0]
 	var steps []string
 	o := Options{Dir: dir, Desktop: true, Defaults: true, Command: true, Version: "2.0.0"}
 	if err := Install(sys, files, self, o, testAssocs, func(s string, done, total int64) { steps = append(steps, s) }); err != nil {
 		t.Fatal(err)
 	}
-	for _, f := range []string{Exe, "holdit.exe", "file-markdown.ico", "file-image.ico", UninstallExe} {
-		if _, err := os.Stat(filepath.Join(root, "Users/ana/AppData/Local/Programs/Hold It All", f)); err != nil {
+	for _, f := range []string{Exe, CLIExe, "file-markdown.ico", "file-image.ico", UninstallExe} {
+		if _, err := os.Stat(filepath.Join(root, "Users/ana/AppData/Local/Programs/Monoform", f)); err != nil {
 			t.Errorf("%s not written: %v", f, err)
 		}
 	}
 	if steps[len(steps)-1] != "Done" || !strings.HasPrefix(steps[0], "Copying") {
 		t.Errorf("steps %v", steps)
 	}
-	if sys.Shortcuts[`HKCU Programs\Hold It All`] == "" || sys.Shortcuts[`HKCU Desktop\Hold It All`] == "" {
+	if sys.Shortcuts[`HKCU Programs\Monoform`] == "" || sys.Shortcuts[`HKCU Desktop\Monoform`] == "" {
 		t.Errorf("shortcuts %v", sys.Shortcuts)
 	}
-	if !strings.Contains(sys.Shims["holdit.cmd"], `Hold It All\holdit.exe" %*`) {
-		t.Errorf("shim %q", sys.Shims["holdit.cmd"])
+	if !strings.Contains(sys.Shims["monoform.cmd"], `Monoform\monoform-cli.exe" %*`) {
+		t.Errorf("shim %q", sys.Shims["monoform.cmd"])
 	}
 	get := func(key, name string) string { v, _ := sys.GetString(User, key, name); return v }
-	if get(`Classes\.png`, "") != "HoldItAll.png" || get(`Classes\.png`, "HoldItAll.png_backup") != "Photos.png" {
-		t.Errorf("png default %q backup %q", get(`Classes\.png`, ""), get(`Classes\.png`, "HoldItAll.png_backup"))
+	if get(`Classes\.png`, "") != "Monoform.png" || get(`Classes\.png`, "Monoform.png_backup") != "Photos.png" {
+		t.Errorf("png default %q backup %q", get(`Classes\.png`, ""), get(`Classes\.png`, "Monoform.png_backup"))
 	}
-	if get(`Classes\HoldItAll.md\shell\open\command`, "") != `"`+join(dir, Exe)+`" "%1"` {
-		t.Errorf("open command %q", get(`Classes\HoldItAll.md\shell\open\command`, ""))
+	if get(`Classes\Monoform.md\shell\open\command`, "") != `"`+join(dir, Exe)+`" "%1"` {
+		t.Errorf("open command %q", get(`Classes\Monoform.md\shell\open\command`, ""))
 	}
 	// Each type has its own icon; pictures open in a quick view, Edit opens the editor.
-	if get(`Classes\HoldItAll.md\DefaultIcon`, "") != join(dir, "file-markdown.ico") || get(`Classes\HoldItAll.png\DefaultIcon`, "") != join(dir, "file-image.ico") {
-		t.Errorf("icons %q %q", get(`Classes\HoldItAll.md\DefaultIcon`, ""), get(`Classes\HoldItAll.png\DefaultIcon`, ""))
+	if get(`Classes\Monoform.md\DefaultIcon`, "") != join(dir, "file-markdown.ico") || get(`Classes\Monoform.png\DefaultIcon`, "") != join(dir, "file-image.ico") {
+		t.Errorf("icons %q %q", get(`Classes\Monoform.md\DefaultIcon`, ""), get(`Classes\Monoform.png\DefaultIcon`, ""))
 	}
-	if get(`Classes\HoldItAll.png\shell\open\command`, "") != `"`+join(dir, Exe)+`" --peek "%1"` || get(`Classes\HoldItAll.png\shell\edit\command`, "") != `"`+join(dir, Exe)+`" "%1"` {
-		t.Errorf("png open %q edit %q", get(`Classes\HoldItAll.png\shell\open\command`, ""), get(`Classes\HoldItAll.png\shell\edit\command`, ""))
+	if get(`Classes\Monoform.png\shell\open\command`, "") != `"`+join(dir, Exe)+`" --peek "%1"` || get(`Classes\Monoform.png\shell\edit\command`, "") != `"`+join(dir, Exe)+`" "%1"` {
+		t.Errorf("png open %q edit %q", get(`Classes\Monoform.png\shell\open\command`, ""), get(`Classes\Monoform.png\shell\edit\command`, ""))
 	}
-	if get(`Classes\HoldItAll.md\shell\edit\command`, "") != "" {
+	if get(`Classes\Monoform.md\shell\edit\command`, "") != "" {
 		t.Error("edit verb on a type that opens in the editor anyway")
 	}
-	if get(`Classes\*\shell\HoldItAll.Peek\command`, "") == "" || get(`Classes\Applications\hold-it-all.exe\SupportedTypes`, ".md") != "" {
+	if get(`Classes\*\shell\Monoform.Peek\command`, "") == "" || get(`Classes\Applications\monoform.exe\SupportedTypes`, ".md") != "" {
 		t.Error("peek verb / open with")
 	}
 	if get(uninstKey, "DisplayVersion") != "2.0.0" || !strings.HasSuffix(get(uninstKey, "UninstallString"), `uninstall.exe" --uninstall`) || get(uninstKey, "EstimatedSize") == "" {
@@ -82,7 +82,7 @@ func TestInstallAndUninstall(t *testing.T) {
 	if err := Uninstall(sys, in, testAssocs, nil); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(root, "Users/ana/AppData/Local/Programs/Hold It All")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(root, "Users/ana/AppData/Local/Programs/Monoform")); !os.IsNotExist(err) {
 		t.Errorf("folder left: %v", err)
 	}
 	if get(`Classes\.png`, "") != "Photos.png" {
@@ -105,7 +105,7 @@ func TestInstallAndUninstall(t *testing.T) {
 
 func TestEveryoneAndNoDefaults(t *testing.T) {
 	sys := NewRecord(t.TempDir())
-	o := Options{Dir: `C:\Program Files\Hold It All`, Everyone: true, Version: "2.0.0"}
+	o := Options{Dir: `C:\Program Files\Monoform`, Everyone: true, Version: "2.0.0"}
 	if err := Install(sys, payload(Exe), payload("setup.exe")[0], o, testAssocs, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func TestEveryoneAndNoDefaults(t *testing.T) {
 	if _, ok := sys.GetString(Machine, `Classes\.md`, ""); ok {
 		t.Error("made the default without being asked")
 	}
-	if v, _ := sys.GetString(Machine, `Classes\.md\OpenWithProgids`, "HoldItAll.md"); v != "" {
+	if v, _ := sys.GetString(Machine, `Classes\.md\OpenWithProgids`, "Monoform.md"); v != "" {
 		t.Error("open-with progid")
 	}
 	if len(sys.Shims) != 0 || sys.Notified != 0 {
@@ -136,9 +136,16 @@ func TestFindOld(t *testing.T) {
 	if _, ok := FindOld(sys); ok {
 		t.Fatal("found nothing")
 	}
-	sys.SetString(Machine, OldUninstKey, "UninstallString", `"C:\Program Files\Hold It All\Hold It All\uninstall.exe"`)
+	// The NSIS installer (Hold It All 1.x).
+	sys.SetString(Machine, OldUninstKeys[1], "UninstallString", `"C:\Program Files\Hold It All\Hold It All\uninstall.exe"`)
 	old, ok := FindOld(sys)
-	if !ok || !old.Everyone || old.Uninstall != `"C:\Program Files\Hold It All\Hold It All\uninstall.exe" /S` {
+	if !ok || !old.Everyone || old.Uninstall != `"C:\Program Files\Hold It All\Hold It All\uninstall.exe" /S` || old.Key != OldUninstKeys[1] {
+		t.Errorf("%+v", old)
+	}
+	// Hold It All's own setup (2.0 betas) wins: it has a quiet uninstall.
+	sys.SetString(User, OldUninstKeys[0], "QuietUninstallString", `"C:\Users\ana\AppData\Local\Programs\Hold It All\uninstall.exe" --uninstall --quiet`)
+	old, ok = FindOld(sys)
+	if !ok || old.Everyone || !strings.HasSuffix(old.Uninstall, "--uninstall --quiet") || old.Key != OldUninstKeys[0] {
 		t.Errorf("%+v", old)
 	}
 }

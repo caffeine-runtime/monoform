@@ -26,7 +26,7 @@ func (a *App) ShowInFolder(p string) error {
 	if err != nil {
 		return errors.New("not found: " + p)
 	}
-	if os.Getenv("HIA_TEST") != "" {
+	if os.Getenv("MF_TEST") != "" {
 		revealed.Lock()
 		revealed.last = abs
 		revealed.Unlock()

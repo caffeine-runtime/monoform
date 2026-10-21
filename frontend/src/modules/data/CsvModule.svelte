@@ -199,7 +199,7 @@
       const r = await client.call<{ entry: { size: number } }>({ type: 'save', path, token: sessionToken() });
       tab.size = r.entry.size;
       // Re-read what was written so row spans are exact, then restore the view.
-      const re = await client.call<{ info: CsvInfo }>({ type: 'reload', url: new URL(`/__hia/file?${new URLSearchParams({ t: sessionToken(), path })}`, location.href).href, ext: extname(path), delimiter: view.delimiter });
+      const re = await client.call<{ info: CsvInfo }>({ type: 'reload', url: new URL(`/__mf/file?${new URLSearchParams({ t: sessionToken(), path })}`, location.href).href, ext: extname(path), delimiter: view.delimiter });
       apply(re.info);
       if (view.filter) await run({ type: 'filter', query: view.filter });
       if (view.sortCol >= 0) await run({ type: 'sort', col: view.sortCol, dir: view.sortDir });

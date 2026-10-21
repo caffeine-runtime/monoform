@@ -12,7 +12,7 @@ import * as selection from '../modules/image/selection';
 type Panel = { text: () => string; busy: () => boolean; error: () => string; confidence: () => number; rerun: () => Promise<void> };
 const panel = () => (globalThis as unknown as { __ocrPanel?: Panel }).__ocrPanel;
 
-export const LINES = ['Hold It All reads text', 'Invoice 2026-0417 total 1,234.50', 'The quick brown fox jumps'];
+export const LINES = ['Monoform reads text', 'Invoice 2026-0417 total 1,234.50', 'The quick brown fox jumps'];
 
 /** A white page with printed lines, as a PNG blob. */
 export async function textImage(lines: string[], w = 1400, lineH = 90): Promise<Blob> {

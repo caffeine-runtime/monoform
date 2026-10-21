@@ -26,15 +26,15 @@ func do(t *testing.T, s *Server, method, path string, q url.Values, body string)
 
 func TestTokenRequired(t *testing.T) {
 	s := New("secret")
-	rec := do(t, s, "GET", "/__hia/ping", url.Values{"t": {"wrong"}}, "")
+	rec := do(t, s, "GET", "/__mf/ping", url.Values{"t": {"wrong"}}, "")
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("code = %d", rec.Code)
 	}
-	rec = do(t, s, "GET", "/__hia/ping", url.Values{"t": {"secret"}}, "")
+	rec = do(t, s, "GET", "/__mf/ping", url.Values{"t": {"secret"}}, "")
 	if rec.Code != 200 {
 		t.Fatalf("code = %d", rec.Code)
 	}
-	// Non-/__hia paths fall through to the asset server.
+	// Non-/__mf paths fall through to the asset server.
 	rec = do(t, s, "GET", "/index.html", url.Values{}, "")
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("fallthrough code = %d", rec.Code)
@@ -46,22 +46,22 @@ func TestFileAndRange(t *testing.T) {
 	p := filepath.Join(dir, "a.txt")
 	os.WriteFile(p, []byte("0123456789"), 0o644)
 	s := New("k")
-	rec := do(t, s, "GET", "/__hia/file", url.Values{"t": {"k"}, "path": {p}}, "")
+	rec := do(t, s, "GET", "/__mf/file", url.Values{"t": {"k"}, "path": {p}}, "")
 	if rec.Code != 200 || rec.Body.String() != "0123456789" {
 		t.Fatalf("got %d %q", rec.Code, rec.Body.String())
 	}
-	req := httptest.NewRequest("GET", "/__hia/file?"+url.Values{"t": {"k"}, "path": {p}}.Encode(), nil)
+	req := httptest.NewRequest("GET", "/__mf/file?"+url.Values{"t": {"k"}, "path": {p}}.Encode(), nil)
 	req.Header.Set("Range", "bytes=2-4")
 	rr := httptest.NewRecorder()
 	s.ServeHTTP(rr, req)
 	if rr.Code != http.StatusPartialContent || rr.Body.String() != "234" {
 		t.Fatalf("range got %d %q", rr.Code, rr.Body.String())
 	}
-	rec = do(t, s, "GET", "/__hia/file", url.Values{"t": {"k"}, "path": {filepath.Join(dir, "missing")}}, "")
+	rec = do(t, s, "GET", "/__mf/file", url.Values{"t": {"k"}, "path": {filepath.Join(dir, "missing")}}, "")
 	if rec.Code != 404 {
 		t.Fatalf("missing code = %d", rec.Code)
 	}
-	rec = do(t, s, "GET", "/__hia/file", url.Values{"t": {"k"}, "path": {"relative.txt"}}, "")
+	rec = do(t, s, "GET", "/__mf/file", url.Values{"t": {"k"}, "path": {"relative.txt"}}, "")
 	if rec.Code != 400 {
 		t.Fatalf("relative code = %d", rec.Code)
 	}
@@ -73,7 +73,7 @@ func TestSave(t *testing.T) {
 	s := New("k")
 	var wrote string
 	s.OnWrite = func(path string) { wrote = path }
-	rec := do(t, s, "POST", "/__hia/save", url.Values{"t": {"k"}, "path": {p}}, "line1\r\nline2")
+	rec := do(t, s, "POST", "/__mf/save", url.Values{"t": {"k"}, "path": {p}}, "line1\r\nline2")
 	if rec.Code != 200 {
 		t.Fatalf("code = %d %s", rec.Code, rec.Body.String())
 	}
@@ -94,7 +94,7 @@ func TestAsset(t *testing.T) {
 	os.MkdirAll(filepath.Dir(note), 0o755)
 	s := New("k")
 	q := url.Values{"t": {"k"}, "note": {note}, "name": {"../../Screen Shot 1.png"}}
-	rec := do(t, s, "POST", "/__hia/asset", q, "PNGDATA")
+	rec := do(t, s, "POST", "/__mf/asset", q, "PNGDATA")
 	if rec.Code != 200 {
 		t.Fatalf("code = %d %s", rec.Code, rec.Body.String())
 	}
@@ -107,7 +107,7 @@ func TestAsset(t *testing.T) {
 		t.Fatal("asset not written")
 	}
 	// Same name again gets a suffix instead of overwriting.
-	rec = do(t, s, "POST", "/__hia/asset", q, "OTHER")
+	rec = do(t, s, "POST", "/__mf/asset", q, "OTHER")
 	json.Unmarshal(rec.Body.Bytes(), &res)
 	if res.Rel != "assets/Screen-Shot-1-2.png" {
 		t.Fatalf("rel = %q", res.Rel)
@@ -133,7 +133,7 @@ func TestChunkedUpload(t *testing.T) {
 	p := filepath.Join(dir, "big.txt")
 	os.WriteFile(p, []byte("old"), 0o644)
 	s := New("k")
-	rec := do(t, s, "POST", "/__hia/upload/begin", url.Values{"t": {"k"}, "path": {p}}, "")
+	rec := do(t, s, "POST", "/__mf/upload/begin", url.Values{"t": {"k"}, "path": {p}}, "")
 	var begin map[string]string
 	json.Unmarshal(rec.Body.Bytes(), &begin)
 	id := begin["id"]
@@ -141,7 +141,7 @@ func TestChunkedUpload(t *testing.T) {
 		t.Fatalf("begin: %s", rec.Body.String())
 	}
 	for _, part := range []string{"aaa", "bbb", "c"} {
-		rec = do(t, s, "POST", "/__hia/upload/chunk", url.Values{"t": {"k"}, "id": {id}}, part)
+		rec = do(t, s, "POST", "/__mf/upload/chunk", url.Values{"t": {"k"}, "id": {id}}, part)
 		if rec.Code != 200 {
 			t.Fatalf("chunk: %d %s", rec.Code, rec.Body.String())
 		}
@@ -149,22 +149,22 @@ func TestChunkedUpload(t *testing.T) {
 	if got, _ := os.ReadFile(p); string(got) != "old" {
 		t.Fatal("target replaced before commit")
 	}
-	rec = do(t, s, "POST", "/__hia/upload/commit", url.Values{"t": {"k"}, "id": {id}}, "")
+	rec = do(t, s, "POST", "/__mf/upload/commit", url.Values{"t": {"k"}, "id": {id}}, "")
 	if rec.Code != 200 {
 		t.Fatalf("commit: %d %s", rec.Code, rec.Body.String())
 	}
 	if got, _ := os.ReadFile(p); string(got) != "aaabbbc" {
 		t.Fatalf("got %q", got)
 	}
-	rec = do(t, s, "POST", "/__hia/upload/chunk", url.Values{"t": {"k"}, "id": {id}}, "x")
+	rec = do(t, s, "POST", "/__mf/upload/chunk", url.Values{"t": {"k"}, "id": {id}}, "x")
 	if rec.Code != 404 {
 		t.Fatal("chunk after commit accepted")
 	}
 	// Abort leaves the file alone and removes the temp file.
-	rec = do(t, s, "POST", "/__hia/upload/begin", url.Values{"t": {"k"}, "path": {p}}, "")
+	rec = do(t, s, "POST", "/__mf/upload/begin", url.Values{"t": {"k"}, "path": {p}}, "")
 	json.Unmarshal(rec.Body.Bytes(), &begin)
-	do(t, s, "POST", "/__hia/upload/chunk", url.Values{"t": {"k"}, "id": {begin["id"]}}, "zzz")
-	do(t, s, "POST", "/__hia/upload/abort", url.Values{"t": {"k"}, "id": {begin["id"]}}, "")
+	do(t, s, "POST", "/__mf/upload/chunk", url.Values{"t": {"k"}, "id": {begin["id"]}}, "zzz")
+	do(t, s, "POST", "/__mf/upload/abort", url.Values{"t": {"k"}, "id": {begin["id"]}}, "")
 	if got, _ := os.ReadFile(p); string(got) != "aaabbbc" {
 		t.Fatal("abort changed file")
 	}
@@ -179,7 +179,7 @@ func TestEmptyBodyHeader(t *testing.T) {
 	p := filepath.Join(dir, "e.txt")
 	os.WriteFile(p, []byte("x"), 0o644)
 	s := New("k")
-	req := httptest.NewRequest("POST", "/__hia/save?"+url.Values{"t": {"k"}, "path": {p}}.Encode(), strings.NewReader("ignored"))
+	req := httptest.NewRequest("POST", "/__mf/save?"+url.Values{"t": {"k"}, "path": {p}}.Encode(), strings.NewReader("ignored"))
 	req.Header.Set("X-Empty-Body", "1")
 	rr := httptest.NewRecorder()
 	s.ServeHTTP(rr, req)
@@ -200,20 +200,20 @@ func TestTransforms(t *testing.T) {
 		_, err = w.Write([]byte(strings.ToUpper(string(b)) + q.Get("suffix")))
 		return err
 	}
-	rec := do(t, s, "POST", "/__hia/save", url.Values{"t": {"k"}, "path": {p}, "transform": {"upper"}, "suffix": {"!"}}, "abc")
+	rec := do(t, s, "POST", "/__mf/save", url.Values{"t": {"k"}, "path": {p}, "transform": {"upper"}, "suffix": {"!"}}, "abc")
 	if got, _ := os.ReadFile(p); rec.Code != 200 || string(got) != "ABC!" {
 		t.Fatalf("single: %d %q", rec.Code, got)
 	}
-	rec = do(t, s, "POST", "/__hia/upload/begin", url.Values{"t": {"k"}, "path": {p}, "transform": {"upper"}}, "")
+	rec = do(t, s, "POST", "/__mf/upload/begin", url.Values{"t": {"k"}, "path": {p}, "transform": {"upper"}}, "")
 	var begin map[string]string
 	json.Unmarshal(rec.Body.Bytes(), &begin)
-	do(t, s, "POST", "/__hia/upload/chunk", url.Values{"t": {"k"}, "id": {begin["id"]}}, "hello ")
-	do(t, s, "POST", "/__hia/upload/chunk", url.Values{"t": {"k"}, "id": {begin["id"]}}, "world")
-	rec = do(t, s, "POST", "/__hia/upload/commit", url.Values{"t": {"k"}, "id": {begin["id"]}}, "")
+	do(t, s, "POST", "/__mf/upload/chunk", url.Values{"t": {"k"}, "id": {begin["id"]}}, "hello ")
+	do(t, s, "POST", "/__mf/upload/chunk", url.Values{"t": {"k"}, "id": {begin["id"]}}, "world")
+	rec = do(t, s, "POST", "/__mf/upload/commit", url.Values{"t": {"k"}, "id": {begin["id"]}}, "")
 	if got, _ := os.ReadFile(p); rec.Code != 200 || string(got) != "HELLO WORLD" {
 		t.Fatalf("chunked: %d %q %s", rec.Code, got, rec.Body.String())
 	}
-	rec = do(t, s, "POST", "/__hia/save", url.Values{"t": {"k"}, "path": {p}, "transform": {"nope"}}, "x")
+	rec = do(t, s, "POST", "/__mf/save", url.Values{"t": {"k"}, "path": {p}, "transform": {"nope"}}, "x")
 	if rec.Code != 400 {
 		t.Fatalf("unknown transform: %d", rec.Code)
 	}

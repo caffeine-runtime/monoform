@@ -1,8 +1,15 @@
-# Hold It All
+<p align="center"><img src="build/icon/logo.svg" width="96" alt="Monoform logo"></p>
 
-One fast desktop window for the everyday files that usually need five small apps: notes and Markdown, PDFs,
-images, SVG and web pages, 3D models, music and other audio, videos, JSON/YAML/CSV, Word, Excel and OpenDocument files, archives, and file hashes. It runs on Windows, macOS and Linux,
-works offline, collects no telemetry and needs no account, and saves everything as plain files.
+# Monoform
+
+**A free, open-source, AI-generated everyday tool — a real-world alternative to the pile of small apps you open
+files with.** One fast desktop window for notes and Markdown, PDFs, images, SVG and web pages, 3D models, music and
+other audio, videos, JSON/YAML/CSV, Word, Excel and OpenDocument files, archives, and file hashes. It runs on Windows,
+macOS and Linux, works offline, collects no telemetry and needs no account, and saves everything as plain files.
+
+Monoform is written by AI (Anthropic's Claude, directed and reviewed by its maintainer) and released under permissive
+licences only. It was called *Hold It All* until 2.0.0-beta.8: updating from it keeps your settings, file history
+and downloaded models.
 
 ![Markdown in split view](docs/screenshots/markdown.png)
 
@@ -51,38 +58,38 @@ Everything is keyboard-reachable: press **Ctrl+K** (**⌘K** on macOS) and type.
 
 Download the latest version from the repository's **Releases** page (each release lists SHA-256 checksums in `SHA256SUMS`). Builds of unreleased commits are under **Actions → Build → a run → Artifacts**.
 
-- **Windows:** `hold-it-all-amd64-installer.exe` — Hold It All's own setup, in the app's look. It installs for you
-  (no administrator needed; *For everyone* is an option), and has an **unchecked** option to make Hold It All the
+- **Windows:** `monoform-amd64-installer.exe` — Monoform's own setup, in the app's look. It installs for you
+  (no administrator needed; *For everyone* is an option), and has an **unchecked** option to make Monoform the
   default app for its file types. Without it, the app is still listed under *Open with*. Uninstalling (Settings ›
   Apps) restores the previous defaults. There is also a portable `.zip`. The app uses the WebView2 runtime, which
   the setup installs if it is missing.
-- **macOS:** `hold-it-all-macos-universal.zip` contains `Hold It All.app` for Apple Silicon and Intel. The build
+- **macOS:** `monoform-macos-universal.zip` contains `Monoform.app` for Apple Silicon and Intel. The build
   is not signed, so the first time, right-click the app and choose **Open**. The app declares its file types at the
   lowest rank, so it appears in *Open With* but never takes over a default. To make it the default, use
   *Get Info → Open with → Change All*.
-- **Linux:** `hold-it-all-linux-amd64.tar.gz`. Unpack it and run `./install.sh` to install into `~/.local`, with
+- **Linux:** `monoform-linux-amd64.tar.gz`. Unpack it and run `./install.sh` to install into `~/.local`, with
   no root needed. The app then appears in *Open With* menus. `./install.sh --set-default` also makes it the default
   for its file types, and `./install.sh --uninstall` removes it. It needs WebKitGTK 4.1 (`libwebkit2gtk-4.1-0`;
   Ubuntu 24.04+, Debian 13, Fedora 40+).
 
 ### Command line, quick peek and preview mode
 
-`holdit` ships with the app (the Windows installer puts it on the PATH, `install.sh` installs it on Linux; on macOS
-use **Settings → Install the holdit command**):
+`monoform` ships with the app (the Windows installer puts it on the PATH, `install.sh` installs it on Linux; on macOS
+use **Settings → Install the monoform command**):
 
 ```sh
-holdit report.pdf notes.md          # open in the app (a running window takes them)
-holdit --peek photo.heic            # a small read-only quick view; Edit opens it in the full editor
-holdit --preview *.csv              # open in preview mode (read-only until you click Edit)
-holdit hash *.iso                   # SHA-256 like sha256sum; -a md5,sha1,sha512,blake3 or -a all
-holdit verify SHA256SUMS            # exit code 1 if anything is missing or differs
-holdit info scan.pdf                # type, size, pages / image size
-holdit convert IMG_0042.HEIC photo.jpg
+monoform report.pdf notes.md          # open in the app (a running window takes them)
+monoform --peek photo.heic            # a small read-only quick view; Edit opens it in the full editor
+monoform --preview *.csv              # open in preview mode (read-only until you click Edit)
+monoform hash *.iso                   # SHA-256 like sha256sum; -a md5,sha1,sha512,blake3 or -a all
+monoform verify SHA256SUMS            # exit code 1 if anything is missing or differs
+monoform info scan.pdf                # type, size, pages / image size
+monoform convert IMG_0042.HEIC photo.jpg
 ```
 
-**Quick peek** is also in the file manager: *Open With → Quick peek* on Linux, *Quick peek with Hold It All* in the
-Windows Explorer context menu. On Windows, **pictures open in a quick view** when Hold It All is their default app (just
-the picture, ← / → for the rest of the folder); **Edit** — or *Edit with Hold It All* on right-click — opens the full
+**Quick peek** is also in the file manager: *Open With → Quick peek* on Linux, *Quick peek with Monoform* in the
+Windows Explorer context menu. On Windows, **pictures open in a quick view** when Monoform is their default app (just
+the picture, ← / → for the rest of the folder); **Edit** — or *Edit with Monoform* on right-click — opens the full
 editor. Pressing Space in Finder or Explorer can't open it — that needs a native Quick Look /
 preview-handler plug-in. **Preview mode** (status bar: *Preview · Edit*, `Ctrl+Alt+E`, or *Settings → Open files in
 preview mode*) shows any file read-only until you choose to edit it.
@@ -108,13 +115,13 @@ Prerequisites:
 cd frontend && npm ci && cd ..
 
 # Linux (WebKitGTK 4.1 needs the webkit2_41 tag; scripts/build.sh adds it automatically)
-./scripts/build.sh                                   # → build/bin/hold-it-all
+./scripts/build.sh                                   # → build/bin/monoform
 
 # Windows
-wails build -platform windows/amd64                 # → build/bin/hold-it-all.exe (setup: see docs/RELEASING.md)
+wails build -platform windows/amd64                 # → build/bin/monoform.exe (setup: see docs/RELEASING.md)
 
 # macOS
-wails build -platform darwin/universal               # → build/bin/Hold It All.app
+wails build -platform darwin/universal               # → build/bin/Monoform.app
 ```
 
 Development with hot reload: `wails dev` (on Linux: `wails dev -tags webkit2_41`).
@@ -134,12 +141,12 @@ builds all three platforms on every push to `main` and on pull requests.
 
 ## Privacy
 
-Hold It All makes no network connections. The exceptions happen only when you ask for an optional model: *search by
+Monoform makes no network connections. The exceptions happen only when you ask for an optional model: *search by
 meaning* (about 200 MB, Apache-2.0) and, for the image editor, *Better subject selection* (BiRefNet, MIT, about 210 MB)
 and *Object removal* (Moebius, Apache-2.0, about 1.2 GB) with the ONNX Runtime library they run on (MIT, 6–13 MB,
 from Microsoft's NuGet package). Each is downloaded once after you agree, checked against fixed SHA-256 sums, and runs
 on your computer only while you use it. Your files never leave your computer. Settings live in your OS config folder
-(`HoldItAll/settings.json`). The optional models and search indexes live in the OS cache folder and can be removed
+(`Monoform/settings.json`). The optional models and search indexes live in the OS cache folder and can be removed
 from the app (Settings › AI models).
 
 ## Documentation

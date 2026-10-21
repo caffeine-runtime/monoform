@@ -942,7 +942,7 @@
   }
 
   function onStageDrop(e: DragEvent) {
-    const internal = e.dataTransfer?.getData('application/x-hia-path');
+    const internal = e.dataTransfer?.getData('application/x-mf-path');
     const files = Array.from(e.dataTransfer?.files ?? []).filter((f) => f.type.startsWith('image/'));
     if (!internal && !files.length) return;
     e.preventDefault();

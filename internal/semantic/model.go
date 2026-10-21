@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/download"
+	"github.com/caffeine-runtime/monoform/internal/download"
 )
 
 // ModelFile is one file of the pinned model revision.

@@ -4,9 +4,9 @@ import (
 	"context"
 	"os"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/fs"
-	"github.com/caffeine-runtime/hold-it-all/internal/jobs"
-	"github.com/caffeine-runtime/hold-it-all/internal/pdf"
+	"github.com/caffeine-runtime/monoform/internal/fs"
+	"github.com/caffeine-runtime/monoform/internal/jobs"
+	"github.com/caffeine-runtime/monoform/internal/pdf"
 )
 
 // PdfOp applies a page operation to src and returns the path of the result.

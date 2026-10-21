@@ -32,19 +32,19 @@ building.
 ## Publish — option A: from the GitHub website (no tools needed)
 
 1. Open the repository on GitHub → **Actions** → **Build** (left list) → **Run workflow** (right side).
-2. **Use workflow from:** the branch to release (today: `claude/hold-it-all-v1-er4dqs`, the default branch).
+2. **Use workflow from:** the branch to release (today: `claude/monoform-v1-er4dqs`, the default branch).
 3. **Version:** e.g. `2.1.0`. Leave it empty and the run only builds and tests, without publishing.
    **Skip macOS** leaves the macOS package out (use it when GitHub has no macOS runner for the account — the
    job then waits and is cancelled, and nothing is published). The release notes then say there is no macOS
    package. Agents pass `"skip_macos": true` with the inputs.
 4. **Run workflow.** It takes about 10–15 minutes.
 5. When the run is green, the release is on the repository's **Releases** page with:
-   - `hold-it-all-amd64-installer.exe` — Windows setup (our own, `cmd/setup`)
-   - `hold-it-all-windows-amd64-portable.zip` — Windows, no install
-   - `hold-it-all-macos-universal.zip` — macOS app (Apple Silicon + Intel)
-   - `hold-it-all-linux-amd64.tar.gz` — Linux binary, the `holdit` command, `.desktop` files (app and Quick peek)
+   - `monoform-amd64-installer.exe` — Windows setup (our own, `cmd/setup`)
+   - `monoform-windows-amd64-portable.zip` — Windows, no install
+   - `monoform-macos-universal.zip` — macOS app (Apple Silicon + Intel)
+   - `monoform-linux-amd64.tar.gz` — Linux binary, the `monoform` command, `.desktop` files (app and Quick peek)
      and `install.sh`
-   - every package includes `holdit` (inside the macOS app bundle; next to the Windows exe)
+   - every package includes `monoform` (inside the macOS app bundle; next to the Windows exe)
    - `SHA256SUMS` — checksums of all of the above
 
 The tag (`v2.1.0`) is created by the release on the commit the run built.
@@ -52,9 +52,9 @@ The tag (`v2.1.0`) is created by the release on the commit the run built.
 ## Publish — option B: push a tag (command line)
 
 ```sh
-git checkout claude/hold-it-all-v1-er4dqs   # the branch to release
+git checkout claude/monoform-v1-er4dqs   # the branch to release
 git pull
-git tag -a v2.1.0 -m "Hold It All 2.1.0"
+git tag -a v2.1.0 -m "Monoform 2.1.0"
 git push origin v2.1.0
 ```
 
@@ -63,7 +63,7 @@ Pushing a tag that starts with `v` starts the same workflow; the version is the 
 ## Publish — option C: from an agent or the `gh` CLI
 
 ```sh
-gh workflow run build.yml --ref claude/hold-it-all-v1-er4dqs -f version=2.1.0
+gh workflow run build.yml --ref claude/monoform-v1-er4dqs -f version=2.1.0
 gh run watch            # follow it
 gh release view v2.1.0  # check the result
 ```
@@ -78,12 +78,12 @@ Agents with the GitHub MCP tools use `actions_run_trigger` with `method: run_wor
 2. **selftest** — builds the Linux app and runs every in-app self-test under Xvfb, plus the PDF, archive and image
    verifiers.
 3. **build** (Linux, Windows, macOS in parallel) — sets the version: it is compiled into the binary
-   (`-ldflags -X github.com/caffeine-runtime/hold-it-all/internal/app.Version=<version>`, shown in **Settings**) and
+   (`-ldflags -X github.com/caffeine-runtime/monoform/internal/app.Version=<version>`, shown in **Settings**) and
    written as `productVersion` (the `x.y.z` part) into `wails.json`, which the Windows setup and macOS
    `Info.plist` use. `wails.json` in the repository is not changed. On Windows the setup program is built next:
    `npm --prefix frontend run build:setup` (its UI), `go run ./cmd/setup/pack` (the app's files, gzipped, into
    `cmd/setup/payload`), then `wails build -webview2 embed` in `cmd/setup`. The job then installs it quietly into a
-   temporary folder, checks the files, uninstall entry, file class, Start menu shortcut and `holdit` command, and
+   temporary folder, checks the files, uninstall entry, file class, Start menu shortcut and `monoform` command, and
    uninstalls it again (checking that nothing is left).
 4. **release** — only when a version was given or a `v*` tag was pushed, and only if all jobs above passed:
    downloads the three packages, writes `SHA256SUMS`, and runs `gh release create` with the notes from

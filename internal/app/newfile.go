@@ -3,7 +3,7 @@ package app
 import (
 	"path/filepath"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/newfile"
+	"github.com/caffeine-runtime/monoform/internal/newfile"
 )
 
 // CreateFromTemplate creates a starter file of a kind ("markdown", "docx",

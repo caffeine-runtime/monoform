@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"sync"
 
-	hfs "github.com/caffeine-runtime/hold-it-all/internal/fs"
+	hfs "github.com/caffeine-runtime/monoform/internal/fs"
 )
 
 // PeakFrames is how many sample frames one waveform bucket covers.

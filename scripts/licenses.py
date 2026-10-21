@@ -6,7 +6,7 @@ package shipped in the frontend bundle; fail on copyleft licences.
 """
 import json, os, re, subprocess, sys
 
-BIN = sys.argv[1] if len(sys.argv) > 1 else "build/bin/hold-it-all"
+BIN = sys.argv[1] if len(sys.argv) > 1 else "build/bin/monoform"
 ALLOWED = {"MIT", "BSD-2-Clause", "BSD-3-Clause", "Apache-2.0", "ISC", "CC0-1.0", "OFL-1.1", "Unlicense", "0BSD", "BlueOak-1.0.0", "Python-2.0", "PSF-2.0"}
 
 def classify(text):

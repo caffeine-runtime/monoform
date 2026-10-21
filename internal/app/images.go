@@ -12,8 +12,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/fs"
-	"github.com/caffeine-runtime/hold-it-all/internal/imaging"
+	"github.com/caffeine-runtime/monoform/internal/fs"
+	"github.com/caffeine-runtime/monoform/internal/imaging"
 )
 
 // AnimFrame is one frame on disk (a temp PNG) and its delay in ms.

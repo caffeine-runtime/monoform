@@ -133,6 +133,6 @@ async function start() {
 }
 
 start().catch((e) => {
-  document.body.textContent = `Hold It All failed to start: ${errorMessage(e)}`;
+  document.body.textContent = `Monoform failed to start: ${errorMessage(e)}`;
   console.error(e);
 });

@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/fs"
+	"github.com/caffeine-runtime/monoform/internal/fs"
 )
 
 const MaxRecents = 30
@@ -121,13 +121,13 @@ type Store struct {
 	cur  Settings
 }
 
-// DefaultPath returns <UserConfigDir>/HoldItAll/settings.json.
+// DefaultPath returns <UserConfigDir>/Monoform/settings.json.
 func DefaultPath() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "HoldItAll", "settings.json"), nil
+	return filepath.Join(dir, "Monoform", "settings.json"), nil
 }
 
 // Open loads the settings file, falling back to defaults when it is missing
@@ -290,4 +290,27 @@ func clone(v Settings) Settings {
 		v.Session.Split = &sp
 	}
 	return v
+}
+
+// MoveOldData moves what the app kept under its earlier name (Hold It All)
+// to the new one, once: a "HoldItAll" folder in the user's config folder
+// (settings, file history) and cache folder (search index, AI models)
+// becomes "Monoform", unless that already exists.
+func MoveOldData() {
+	for _, base := range []func() (string, error){os.UserConfigDir, os.UserCacheDir} {
+		if d, err := base(); err == nil {
+			moveOld(d)
+		}
+	}
+}
+
+func moveOld(base string) bool {
+	old, cur := filepath.Join(base, "HoldItAll"), filepath.Join(base, "Monoform")
+	if _, err := os.Stat(cur); err == nil {
+		return false
+	}
+	if st, err := os.Stat(old); err != nil || !st.IsDir() {
+		return false
+	}
+	return os.Rename(old, cur) == nil
 }

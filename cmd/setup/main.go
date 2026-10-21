@@ -1,11 +1,11 @@
-// Command setup is Hold It All's installer and uninstaller for Windows: a
+// Command setup is Monoform's installer and uninstaller for Windows: a
 // small Wails window in the app's own look (frontend/setup) around
 // internal/setup. The app's files are embedded (payload/, filled by
 // scripts/build-setup.sh). On other systems it runs as a demo that installs
 // into a test folder, for screenshots and self-tests.
 //
-//	hold-it-all-setup.exe                 install (or update)
-//	hold-it-all-setup.exe --quiet [--dir D] [--everyone] [--desktop] [--defaults] [--no-command]
+//	monoform-setup.exe                 install (or update)
+//	monoform-setup.exe --quiet [--dir D] [--everyone] [--desktop] [--defaults] [--no-command]
 //	uninstall.exe --uninstall [--quiet] [--remove-data]
 package main
 
@@ -32,13 +32,13 @@ var assets embed.FS
 var version = "0.0.0-dev"
 
 func main() {
-	uninstall := flag.Bool("uninstall", false, "remove Hold It All")
+	uninstall := flag.Bool("uninstall", false, "remove Monoform")
 	quiet := flag.Bool("quiet", false, "no window")
 	dir := flag.String("dir", "", "folder to install into")
 	everyone := flag.Bool("everyone", false, "install for everyone on this computer")
 	desktop := flag.Bool("desktop", false, "add a desktop shortcut")
-	defaults := flag.Bool("defaults", false, "make Hold It All the default app for its file types")
-	noCommand := flag.Bool("no-command", false, "don't add the holdit command")
+	defaults := flag.Bool("defaults", false, "make Monoform the default app for its file types")
+	noCommand := flag.Bool("no-command", false, "don't add the monoform command")
 	removeData := flag.Bool("remove-data", false, "when uninstalling, delete settings and history too")
 	demo := flag.Bool("demo", runtime.GOOS != "windows", "install into a test folder, change nothing on this computer")
 	flag.Parse()
@@ -62,14 +62,14 @@ func main() {
 		if err != nil {
 			// A windowless program has no console to show this: also in %TEMP%.
 			fmt.Fprintln(os.Stderr, err)
-			_ = os.WriteFile(filepath.Join(os.TempDir(), "hold-it-all-setup.log"), []byte(err.Error()+"\n"), 0o644)
+			_ = os.WriteFile(filepath.Join(os.TempDir(), "monoform-setup.log"), []byte(err.Error()+"\n"), 0o644)
 			os.Exit(1)
 		}
 		return
 	}
 
 	err := wails.Run(&options.App{
-		Title:            "Hold It All Setup",
+		Title:            "Monoform Setup",
 		Width:            580,
 		Height:           440,
 		DisableResize:    true,
@@ -79,7 +79,7 @@ func main() {
 		OnStartup:        s.startup,
 		Bind:             []interface{}{s},
 		Windows:          &windows.Options{Theme: windows.SystemDefault},
-		Linux:            &linux.Options{ProgramName: "hold-it-all-setup"},
+		Linux:            &linux.Options{ProgramName: "monoform-setup"},
 	})
 	if err != nil {
 		log.Fatal(err)

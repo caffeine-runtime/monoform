@@ -1,4 +1,4 @@
-// M43: optional AI models (with HIA_AI_FAKE=1 the Go side swaps the models
+// M43: optional AI models (with MF_AI_FAKE=1 the Go side swaps the models
 // for stand-ins: an ellipse for the subject, the surrounding colour for a
 // removal — the downloads and pipelines are covered by Go tests). Settings ›
 // AI models lists both packs; Install asks first (size, sources) and shows

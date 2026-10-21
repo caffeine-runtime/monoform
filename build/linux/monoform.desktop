@@ -1,12 +1,12 @@
 [Desktop Entry]
 Type=Application
-Name=Hold It All
+Name=Monoform
 GenericName=File viewer and editor
 Comment=Text, Markdown, PDF, images, data, Office files, archives and hashes in one window
-Exec=hold-it-all %F
-Icon=hold-it-all
+Exec=monoform %F
+Icon=monoform
 Terminal=false
 Categories=Utility;TextEditor;
 Keywords=markdown;pdf;csv;json;yaml;image;zip;archive;hash;docx;xlsx;
-StartupWMClass=hold-it-all
+StartupWMClass=monoform
 MimeType=text/plain;text/markdown;text/x-markdown;application/json;application/yaml;application/x-yaml;text/csv;text/tab-separated-values;application/pdf;image/png;image/jpeg;image/gif;image/webp;image/bmp;image/svg+xml;application/vnd.openxmlformats-officedocument.wordprocessingml.document;application/msword;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;application/vnd.ms-excel;application/zip;application/x-7z-compressed;application/vnd.rar;application/x-rar;application/x-tar;application/gzip;application/x-compressed-tar;text/html;audio/mpeg;audio/x-wav;audio/wav;audio/flac;audio/x-flac;audio/ogg;audio/x-vorbis+ogg;audio/mp4;audio/x-m4a;audio/x-opus+ogg;video/mp4;video/quicktime;video/webm;video/x-matroska;model/gltf-binary;model/gltf+json;model/stl;model/obj;model/3mf;

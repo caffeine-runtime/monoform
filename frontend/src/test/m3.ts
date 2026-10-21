@@ -71,7 +71,7 @@ export default async function m3(dir: string) {
   l1.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: l1.getBoundingClientRect().left + 100, clientY: l1.getBoundingClientRect().top + 300 }));
   const box = await waitFor(() => document.querySelector<HTMLElement>('.tabview.active .freeTextEditor .internal'), 'free text editor');
   box.focus();
-  document.execCommand('insertText', false, 'Reviewed by Hold It All');
+  document.execCommand('insertText', false, 'Reviewed by Monoform');
   box.dispatchEvent(new Event('input', { bubbles: true }));
   box.blur();
   await sleep(150);

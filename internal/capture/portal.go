@@ -29,7 +29,7 @@ func portalScreenshot(ctx context.Context, interactive bool) (string, error) {
 		return "", err
 	}
 	defer conn.Close()
-	token := fmt.Sprintf("hia%d", time.Now().UnixNano())
+	token := fmt.Sprintf("mf%d", time.Now().UnixNano())
 	names := conn.Names()
 	if len(names) == 0 {
 		return "", errors.New("no D-Bus name")

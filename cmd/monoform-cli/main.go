@@ -1,6 +1,6 @@
-// holdit is Hold It All's command-line program: `holdit hash *.iso`,
-// `holdit verify SHA256SUMS`, `holdit info`, `holdit convert` run here (a
-// console program, so output and exit codes work in every shell); `holdit
+// monoform is Monoform's command-line program: `monoform hash *.iso`,
+// `monoform verify SHA256SUMS`, `monoform info`, `monoform convert` run here (a
+// console program, so output and exit codes work in every shell); `monoform
 // FILE…`, `--peek` and `--preview` hand the files to the app next to it.
 package main
 
@@ -10,7 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/cli"
+	"github.com/caffeine-runtime/monoform/internal/cli"
 )
 
 // version is set at build time (-ldflags "-X main.version=…").
@@ -23,7 +23,7 @@ func main() {
 	}
 	app := cli.AppPath()
 	if _, err := os.Stat(app); err != nil {
-		fmt.Fprintf(os.Stderr, "holdit: the Hold It All app wasn't found next to holdit (%s)\n", app)
+		fmt.Fprintf(os.Stderr, "monoform: the Monoform app wasn't found next to monoform (%s)\n", app)
 		os.Exit(2)
 	}
 	// Files become absolute: the app (or a window already open) may run elsewhere.
@@ -39,7 +39,7 @@ func main() {
 	cmd := exec.Command(app, pass...)
 	detach(cmd)
 	if err := cmd.Start(); err != nil {
-		fmt.Fprintf(os.Stderr, "holdit: %v\n", err)
+		fmt.Fprintf(os.Stderr, "monoform: %v\n", err)
 		os.Exit(2)
 	}
 	_ = cmd.Process.Release()

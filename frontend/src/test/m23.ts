@@ -35,7 +35,7 @@ export default async function m23(dir: string) {
 
   // ---- TOML ----
   const t = await openData(join(dir, 'data', 'config.toml'));
-  assertEq((await t.h.client.stringify(0)).text, '{"title":"Hold It All","server":{"port":8080,"hosts":["a","b"],"started":"2026-10-20T12:00:00.000Z"},"users":[{"name":"ann"},{"name":"bob"}]}', 'TOML as JSON');
+  assertEq((await t.h.client.stringify(0)).text, '{"title":"Monoform","server":{"port":8080,"hosts":["a","b"],"started":"2026-10-20T12:00:00.000Z"},"users":[{"name":"ann"},{"name":"bob"}]}', 'TOML as JSON');
   t.h.setView('json');
   await waitFor(() => (document.querySelector('.tabview.active .jsonhost .cm-content')?.textContent?.includes('"port": 8080') ? true : null), 'As JSON view');
   await workspace.close(t.tab, { force: true });

@@ -14,7 +14,7 @@ import (
 // says which ones produce an image.
 func fake(t *testing.T, have []string, write map[string]bool) *[]string {
 	t.Helper()
-	t.Setenv("HIA_NO_PORTAL", "1")
+	t.Setenv("MF_NO_PORTAL", "1")
 	calls := &[]string{}
 	oldLook, oldRun, oldOS := lookPath, run, goos
 	t.Cleanup(func() { lookPath, run, goos = oldLook, oldRun, oldOS })
@@ -102,7 +102,7 @@ func TestRealScreen(t *testing.T) {
 	if os.Getenv("DISPLAY") == "" {
 		t.Skip("no display")
 	}
-	t.Setenv("HIA_NO_PORTAL", "1")
+	t.Setenv("MF_NO_PORTAL", "1")
 	dst := filepath.Join(t.TempDir(), "real.png")
 	r, err := Take(context.Background(), Screen, dst)
 	if errors.Is(err, ErrUnavailable) {

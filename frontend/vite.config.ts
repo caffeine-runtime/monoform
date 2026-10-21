@@ -12,7 +12,7 @@ const SKIP = /quickjs/i;
 
 function pdfjsAssets(): Plugin {
   return {
-    name: 'hia-pdfjs-assets',
+    name: 'mf-pdfjs-assets',
     configureServer(server) {
       server.middlewares.use('/pdfjs/', (req, res, next) => {
         const rel = decodeURIComponent((req.url ?? '').split('?')[0]).replace(/^\/+/, '');
@@ -45,7 +45,7 @@ const THREE_FILES: [string, string][] = [
 
 function threeAssets(): Plugin {
   return {
-    name: 'hia-three-assets',
+    name: 'mf-three-assets',
     configureServer(server) {
       server.middlewares.use('/three/', (req, res, next) => {
         const rel = decodeURIComponent((req.url ?? '').split('?')[0]).replace(/^\/+/, '');
@@ -76,7 +76,7 @@ const TESS: [string, string][] = [
 function tesseractAssets(): Plugin {
   const nm = path.resolve(__dirname, 'node_modules');
   return {
-    name: 'hia-tesseract-assets',
+    name: 'mf-tesseract-assets',
     configureServer(server) {
       server.middlewares.use('/tesseract/', (req, res, next) => {
         const rel = decodeURIComponent((req.url ?? '').split('?')[0]).replace(/^\/+/, '');

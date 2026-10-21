@@ -8,53 +8,63 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/cli"
+	"github.com/caffeine-runtime/monoform/internal/cli"
 )
 
-// CommandLine says whether the holdit command is set up.
+// CommandLine says whether the monoform command is set up.
 type CommandLine struct {
-	Installed bool   `json:"installed"` // holdit is on the PATH
+	Installed bool   `json:"installed"` // monoform is on the PATH
 	Path      string `json:"path"`      // where it is (or where it would go)
-	Bundled   bool   `json:"bundled"`   // holdit ships next to the app
+	Bundled   bool   `json:"bundled"`   // monoform ships next to the app
 }
 
-func holditName() string {
+// cliProgram is what the monoform command runs: the console program next to
+// the app (Windows, macOS), or on Linux the app itself, which answers
+// `monoform hash …` and the other commands without opening a window.
+func cliProgram() string {
+	name := "monoform-cli"
 	if runtime.GOOS == "windows" {
-		return "holdit.exe"
+		name += ".exe"
 	}
-	return "holdit"
+	p := filepath.Join(cli.ExeDir(), name)
+	if _, err := os.Stat(p); err != nil && runtime.GOOS == "linux" {
+		if exe, err := os.Executable(); err == nil {
+			return exe
+		}
+	}
+	return p
 }
 
-// CommandLineStatus reports whether `holdit` can be run from a terminal.
+// CommandLineStatus reports whether `monoform` can be run from a terminal.
 func (a *App) CommandLineStatus() CommandLine {
-	bundled := filepath.Join(cli.ExeDir(), holditName())
+	bundled := cliProgram()
 	_, err := os.Stat(bundled)
 	st := CommandLine{Bundled: err == nil, Path: bundled}
-	if p, err := exec.LookPath("holdit"); err == nil {
+	if p, err := exec.LookPath("monoform"); err == nil {
 		st.Installed, st.Path = true, p
 	}
 	return st
 }
 
-// InstallCommandLine links holdit into a folder on the PATH: /usr/local/bin
+// InstallCommandLine links monoform into a folder on the PATH: /usr/local/bin
 // on macOS, ~/.local/bin on Linux. On Windows the installer adds it to PATH.
 func (a *App) InstallCommandLine() (string, error) {
-	src := filepath.Join(cli.ExeDir(), holditName())
+	src := cliProgram()
 	if _, err := os.Stat(src); err != nil {
-		return "", errors.New("this build doesn't include the holdit program")
+		return "", errors.New("this build doesn't include the monoform program")
 	}
 	var dir string
 	switch runtime.GOOS {
 	case "darwin":
 		dir = "/usr/local/bin"
 	case "windows":
-		return "", fmt.Errorf("the installer puts holdit on the PATH; for the portable version add %s to PATH", filepath.Dir(src))
+		return "", fmt.Errorf("the installer puts monoform on the PATH; for the portable version add %s to PATH", filepath.Dir(src))
 	default:
 		home, _ := os.UserHomeDir()
 		dir = filepath.Join(home, ".local", "bin")
 		os.MkdirAll(dir, 0o755)
 	}
-	dst := filepath.Join(dir, "holdit")
+	dst := filepath.Join(dir, "monoform")
 	if fi, err := os.Lstat(dst); err == nil && fi.Mode()&os.ModeSymlink != 0 {
 		os.Remove(dst)
 	}

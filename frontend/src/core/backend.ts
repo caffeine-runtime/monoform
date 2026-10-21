@@ -1,4 +1,4 @@
-// Bridge to the Go backend: Wails bindings for small calls, and the /__hia/
+// Bridge to the Go backend: Wails bindings for small calls, and the /__mf/
 // HTTP data channel for file contents (see internal/server).
 import * as Go from '../wailsjs/go/app/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
@@ -18,11 +18,11 @@ export function setToken(t: string) {
   token = t;
 }
 
-/** URL for any /__hia/ endpoint with the session token and query params. */
+/** URL for any /__mf/ endpoint with the session token and query params. */
 export function endpoint(path: string, params: Record<string, string | number | boolean | undefined> = {}): string {
   const q = new URLSearchParams({ t: token });
   for (const [k, v] of Object.entries(params)) if (v !== undefined) q.set(k, String(v));
-  return `/__hia/${path}?${q.toString()}`;
+  return `/__mf/${path}?${q.toString()}`;
 }
 
 /** URL that streams a file from disk (usable in <img>, fetch, pdf.js). */

@@ -91,7 +91,7 @@ export default async function m24(dir: string) {
     const t = (await workspace.openPath(join(dir, 'fonts', f)))!;
     assertEq(t.moduleId, 'font', `${f} opens in the font view`);
     const fh = await waitFor(() => ((t as any).fontTest?.loaded() ? (t as any).fontTest : null), `${f} loaded`);
-    assertEq(fh.info().family, 'Hia Test Sans', 'family name');
+    assertEq(fh.info().family, 'Mf Test Sans', 'family name');
     assert(document.fonts.check(`16px "${fh.family}"`), 'face available to the page');
     await sleep(30);
     assertEq(document.querySelectorAll('.tabview.active .grid .ch').length, 5, 'covered characters listed (space, A, B, ž, 😀)');

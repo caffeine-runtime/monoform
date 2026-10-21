@@ -137,7 +137,14 @@ export interface MenuItem {
   separator?: boolean;
   /** A submenu (opens on hover, click or →). */
   items?: MenuItem[];
+  /** An on/off option: shown with a check mark when on (the label names the thing). */
+  checked?: boolean;
+  /** A compact control on one row, in place of a list of items. */
+  control?: MenuControl;
 }
+
+/** Theme (System/Light/Dark), interface size and text size sliders, split layouts. */
+export type MenuControl = 'theme' | 'uiScale' | 'fontSize' | 'split';
 
 class MenuState {
   open = $state<{ x: number; y: number; items: MenuItem[] } | null>(null);

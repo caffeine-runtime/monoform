@@ -27,7 +27,7 @@ async function init(token: string, d: number) {
   const t0 = performance.now();
   dims = d;
   await initOrtWasm(ort);
-  const url = (f: string) => `/__hia/model/${f}?t=${encodeURIComponent(token)}`;
+  const url = (f: string) => `/__mf/model/${f}?t=${encodeURIComponent(token)}`;
   // Ranged fetches: one big response costs WebKitGTK main-thread time.
   const json = async (f: string) => JSON.parse(new TextDecoder().decode(await fetchBytes(url(f))));
   tokenizer = new Tokenizer(await json('tokenizer.json'), await json('tokenizer_config.json'));

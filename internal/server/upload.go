@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/fs"
+	"github.com/caffeine-runtime/monoform/internal/fs"
 )
 
 // Chunked uploads: large saves are sent as several small POSTs into a temp
@@ -39,7 +39,7 @@ type uploads struct {
 
 func (s *Server) registerUploads() {
 	u := &uploads{open: map[string]*upload{}}
-	s.mux.HandleFunc("POST /__hia/upload/begin", func(w http.ResponseWriter, r *http.Request) {
+	s.mux.HandleFunc("POST /__mf/upload/begin", func(w http.ResponseWriter, r *http.Request) {
 		p := r.URL.Query().Get("path")
 		if p == "" || !filepath.IsAbs(p) {
 			Error(w, http.StatusBadRequest, errors.New("absolute path required"))
@@ -52,7 +52,7 @@ func (s *Server) registerUploads() {
 				Error(w, http.StatusBadRequest, err)
 				return
 			}
-			raw, err := os.CreateTemp("", "hia-upload-*")
+			raw, err := os.CreateTemp("", "mf-upload-*")
 			if err != nil {
 				Error(w, StatusFor(err), err)
 				return
@@ -74,7 +74,7 @@ func (s *Server) registerUploads() {
 		u.mu.Unlock()
 		JSON(w, map[string]string{"id": id})
 	})
-	s.mux.HandleFunc("POST /__hia/upload/chunk", func(w http.ResponseWriter, r *http.Request) {
+	s.mux.HandleFunc("POST /__mf/upload/chunk", func(w http.ResponseWriter, r *http.Request) {
 		up := u.get(r.URL.Query().Get("id"))
 		if up == nil {
 			Error(w, http.StatusNotFound, errors.New("unknown upload"))
@@ -91,7 +91,7 @@ func (s *Server) registerUploads() {
 		}
 		JSON(w, map[string]int64{"written": up.written})
 	})
-	s.mux.HandleFunc("POST /__hia/upload/commit", func(w http.ResponseWriter, r *http.Request) {
+	s.mux.HandleFunc("POST /__mf/upload/commit", func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Query().Get("id")
 		up := u.take(id)
 		if up == nil {
@@ -112,7 +112,7 @@ func (s *Server) registerUploads() {
 		}
 		JSON(w, e)
 	})
-	s.mux.HandleFunc("POST /__hia/upload/abort", func(w http.ResponseWriter, r *http.Request) {
+	s.mux.HandleFunc("POST /__mf/upload/abort", func(w http.ResponseWriter, r *http.Request) {
 		if up := u.take(r.URL.Query().Get("id")); up != nil {
 			up.mu.Lock()
 			up.abort()

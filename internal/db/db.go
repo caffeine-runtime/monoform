@@ -243,7 +243,7 @@ func (c *Conn) Rows(ctx context.Context, q RowsQuery) (*Page, error) {
 	}
 	sel := "*"
 	if withRowID {
-		sel = "rowid AS \"__hia_rowid\", *"
+		sel = "rowid AS \"__mf_rowid\", *"
 	}
 	order := ""
 	if q.Order != "" {

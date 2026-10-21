@@ -56,7 +56,7 @@ func TestPages(t *testing.T) {
 		t.Fatalf("POST: %d", r.Code)
 	}
 	// A page token is not a session token.
-	if r := get("GET", "/__hia/file?t="+tok+"&path="+filepath.Join(base, "secret.txt")); r.Code != 403 {
-		t.Fatalf("page token opened /__hia/file: %d", r.Code)
+	if r := get("GET", "/__mf/file?t="+tok+"&path="+filepath.Join(base, "secret.txt")); r.Code != 403 {
+		t.Fatalf("page token opened /__mf/file: %d", r.Code)
 	}
 }

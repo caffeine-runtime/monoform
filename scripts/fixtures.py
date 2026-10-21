@@ -133,9 +133,9 @@ form_objs = [
 w("pdf/form.pdf", pdf(1, form_objs, "/AcroForm << /Fields [6 0 R 7 0 R] /DA (/Helv 0 Tf 0 g) /DR << /Font << /Helv 3 0 R >> >> >>", lambda i: "/Annots [6 0 R 7 0 R]"))
 
 # Data
-w("data/sample.json", b'{\n  "name": "Hold It All",\n  "version": 1,\n  "tags": ["fast", "calm"],\n  "nested": {"deep": {"list": [1, 2, {"x key": true}]}},\n  "nothing": null\n}\n')
+w("data/sample.json", b'{\n  "name": "Monoform",\n  "version": 1,\n  "tags": ["fast", "calm"],\n  "nested": {"deep": {"list": [1, 2, {"x key": true}]}},\n  "nothing": null\n}\n')
 w("data/invalid.json", b'{\n  "a": 1,\n  "b": [1, 2,\n  "c": "missing bracket"\n}\n')
-w("data/sample.yaml", b"# config\nname: Hold It All\nports:\n  - 80\n  - 443\nowner:\n  name: Ann\n  active: true\n")
+w("data/sample.yaml", b"# config\nname: Monoform\nports:\n  - 80\n  - 443\nowner:\n  name: Ann\n  active: true\n")
 w("data/invalid.yaml", b"name: ok\nlist:\n  - a\n - b\n")
 w("data/semi.csv", 'name;city;amount\r\n"Kowalski; Jan";Kraków;12,50\r\nAnn;"Paris\r\nFrance";7\r\nBob;Rome;100\r\n'.encode())
 # Spreadsheet-behaviour fixtures (selection, paste, fill, move, AutoComplete).
@@ -345,7 +345,7 @@ def _glb():
         {"bufferView": a_trb, "componentType": 5126, "count": 3, "type": "VEC3"},
     ]
     gltf = {
-        "asset": {"version": "2.0", "generator": "hold-it-all fixtures"},
+        "asset": {"version": "2.0", "generator": "monoform fixtures"},
         "scene": 0, "scenes": [{"nodes": [0]}],
         "nodes": [{"name": "Cube", "mesh": 0}],
         "meshes": [{"primitives": [{"attributes": {"POSITION": 0, "NORMAL": 1, "TEXCOORD_0": 2}, "indices": 3, "material": 0}]}],
@@ -386,7 +386,7 @@ def _spheres():
     buf = pb + nb + ib
     mats = [("Gold", [1.0, 0.77, 0.34, 1], 1.0, 0.25), ("Plastic", [0.75, 0.12, 0.1, 1], 0.0, 0.2), ("Clay", [0.55, 0.62, 0.7, 1], 0.0, 0.9)]
     gltf = {
-        "asset": {"version": "2.0", "generator": "hold-it-all fixtures"},
+        "asset": {"version": "2.0", "generator": "monoform fixtures"},
         "scene": 0, "scenes": [{"nodes": [0, 1, 2]}],
         "nodes": [{"name": m[0], "mesh": k, "translation": [(k - 1) * 1.2, 0.5, 0]} for k, m in enumerate(mats)],
         "meshes": [{"primitives": [{"attributes": {"POSITION": 0, "NORMAL": 1}, "indices": 2, "material": k}]} for k in range(3)],
@@ -594,7 +594,7 @@ w("data/catalog.xml", b"""<?xml version="1.0" encoding="UTF-8"?>
   <book id="2"><title><![CDATA[<b>Bold</b>]]></title><price>12</price></book>
 </catalog>
 """)
-w("data/config.toml", b"""title = "Hold It All"
+w("data/config.toml", b"""title = "Monoform"
 [server]
 port = 8080
 hosts = ["a", "b"]
@@ -630,11 +630,11 @@ def _openssl(*args, cwd):
     subprocess.run(["openssl", *args], cwd=cwd, check=True, capture_output=True)
 try:
     _cd = _tf.mkdtemp()
-    _openssl("req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", "ca.key", "-out", "ca.pem", "-days", "3650", "-subj", "/CN=Hia Test CA/O=Hold It All/C=PL", cwd=_cd)
-    _openssl("req", "-newkey", "rsa:2048", "-nodes", "-keyout", "site.key", "-out", "site.csr", "-subj", "/CN=www.hia.test", "-addext", "subjectAltName=DNS:www.hia.test,DNS:hia.test", cwd=_cd)
-    open(os.path.join(_cd, "ext.cnf"), "w").write("subjectAltName=DNS:www.hia.test,DNS:hia.test\nextendedKeyUsage=serverAuth\n")
+    _openssl("req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", "ca.key", "-out", "ca.pem", "-days", "3650", "-subj", "/CN=Mf Test CA/O=Monoform/C=PL", cwd=_cd)
+    _openssl("req", "-newkey", "rsa:2048", "-nodes", "-keyout", "site.key", "-out", "site.csr", "-subj", "/CN=www.mf.test", "-addext", "subjectAltName=DNS:www.mf.test,DNS:mf.test", cwd=_cd)
+    open(os.path.join(_cd, "ext.cnf"), "w").write("subjectAltName=DNS:www.mf.test,DNS:mf.test\nextendedKeyUsage=serverAuth\n")
     _openssl("x509", "-req", "-in", "site.csr", "-CA", "ca.pem", "-CAkey", "ca.key", "-CAcreateserial", "-out", "site.pem", "-days", "10", "-extfile", "ext.cnf", cwd=_cd)
-    _openssl("pkcs12", "-export", "-inkey", "site.key", "-in", "site.pem", "-certfile", "ca.pem", "-out", "site.p12", "-passout", "pass:hia-pw", cwd=_cd)
+    _openssl("pkcs12", "-export", "-inkey", "site.key", "-in", "site.pem", "-certfile", "ca.pem", "-out", "site.p12", "-passout", "pass:mf-pw", cwd=_cd)
     _openssl("x509", "-in", "site.pem", "-outform", "DER", "-out", "site.cer", cwd=_cd)
     rd = lambda f: open(os.path.join(_cd, f), "rb").read()
     w("certs/chain.pem", rd("site.pem") + rd("ca.pem"))
@@ -713,7 +713,7 @@ w("drawings/flow.drawio", ('<mxfile host="app.diagrams.net" version="24.0.0"><di
 # ---- packages and disk images (M26) ----
 # deb/rpm/iso/msi samples were made with dpkg-deb, rpmbuild, xorriso and wixl
 # (see internal/archive/testdata); jar/apk are zip files under another name.
-for _n in ("hia-test.deb", "hia-test.rpm", "hia-test.iso", "hia-test.msi"):
+for _n in ("mf-test.deb", "mf-test.rpm", "mf-test.iso", "mf-test.msi"):
     w("packages/" + _n, open(os.path.join(here, "..", "internal", "archive", "testdata", _n), "rb").read())
 with zipfile.ZipFile(os.path.join(d, "packages", "app.jar"), "w") as z:
     zadd(z, "META-INF/MANIFEST.MF", b"Manifest-Version: 1.0\nMain-Class: test.Main\n")
@@ -725,7 +725,7 @@ with zipfile.ZipFile(os.path.join(d, "packages", "app.apk"), "w") as z:
 _pos, _nor, _uv, _idx = _cube()
 def _stl():
     tris = [(_idx[i], _idx[i + 1], _idx[i + 2]) for i in range(0, len(_idx), 3)]
-    out = bytearray(b"hold-it-all fixture".ljust(80, b" ")) + struct.pack("<I", len(tris))
+    out = bytearray(b"monoform fixture".ljust(80, b" ")) + struct.pack("<I", len(tris))
     for a, b, c in tris:
         out += struct.pack("<3f", *_nor[a])
         for v in (a, b, c): out += struct.pack("<3f", *[x * 20 for x in _pos[v]])

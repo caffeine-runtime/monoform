@@ -347,7 +347,7 @@ export function sanitize(root: Element) {
   for (const el of all) {
     if (DROP.has(el.localName)) {
       el.textContent = '';
-      for (const a of Array.from(el.attributes)) if (a.name !== 'data-hia-i') el.removeAttribute(a.name);
+      for (const a of Array.from(el.attributes)) if (a.name !== 'data-mf-i') el.removeAttribute(a.name);
       continue;
     }
     for (const a of Array.from(el.attributes)) {

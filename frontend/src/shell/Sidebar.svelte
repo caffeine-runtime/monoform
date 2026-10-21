@@ -1,4 +1,5 @@
 <script lang="ts">
+  import logoMark from '../../../build/icon/logo-mark.svg?raw';
   import { appMenuItems } from '../core/appMenu';
   import Icon from './Icon.svelte';
   import FileTree from './FileTree.svelte';
@@ -58,7 +59,7 @@
 
 <aside class="sidebar" style:width="{settings.value.sidebarWidth}px">
   <header class="head" class:mac={boot.platform === 'darwin'}>
-    <h1 class="title">Hold It All</h1>
+    <h1 class="title"><span class="mark" aria-hidden="true">{@html logoMark}</span>Monoform</h1>
     <div class="actions">
       <button class="icon-btn" class:on={sidebar.mode === 'search'} title="Find in folder ({formatShortcut('Mod+Shift+F')})" onclick={() => commands.execute('search.inFolder')}>
         <Icon icon={Search} />
@@ -178,9 +179,21 @@
   }
   .title {
     margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: calc(17px * var(--ui-scale));
     color: var(--text);
     white-space: nowrap;
+  }
+  .mark {
+    display: inline-flex;
+    width: calc(22px * var(--ui-scale));
+    color: var(--text);
+  }
+  .mark :global(svg) {
+    width: 100%;
+    height: auto;
   }
   .sections {
     flex: 1;

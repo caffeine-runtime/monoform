@@ -1,16 +1,21 @@
 // M36: a grouped app menu — ☰ shows a short list (everyday actions, then
-// submenus); with an image open there is an "Image" submenu with its tools
-// grouped again. Submenus open on hover and click and with the keyboard
+// submenus); families of options are one row each (the theme as a three-way
+// toggle, interface size as a slider, split layouts as buttons) and on/off
+// options are checked items; with an image open there is an "Image" submenu
+// with its tools grouped again. Submenus open on hover and click and with the keyboard
 // (→ opens, ← goes back, Esc closes); near the right edge they open to the
 // left. Plain context menus (no submenus) still work.
 import { join } from '../core/paths';
 import { workspace } from '../core/tabs.svelte';
 import { menu } from '../core/ui.svelte';
+import { settings } from '../core/settings.svelte';
+import { theme } from '../core/theme.svelte';
+import { UI_SCALES } from '../core/appCommands';
 import { assert, assertEq, log, sleep, waitFor } from './harness';
 
 const menus = () => [...document.querySelectorAll<HTMLElement>('.menu')];
 const itemsOf = (m: HTMLElement) => [...m.querySelectorAll<HTMLButtonElement>('.mi')];
-const find = (m: HTMLElement, label: string) => itemsOf(m).find((b) => b.querySelector('span')?.textContent === label);
+const find = (m: HTMLElement, label: string) => itemsOf(m).find((b) => b.querySelector('.lb')?.textContent === label);
 
 function key(el: Element, k: string) {
   el.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
@@ -31,29 +36,49 @@ export default async function m36(dir: string) {
 
   // ---- short, grouped ----
   const root = await openAppMenu();
-  const top = itemsOf(root).map((b) => b.querySelector('span')!.textContent);
+  const top = itemsOf(root).map((b) => b.querySelector('.lb')!.textContent);
   log(`app menu: ${top.join(' · ')}`);
   assert(top.length <= 22, `${top.length} top-level items`);
-  for (const l of ['Go to file…', 'New', 'This file', 'Image', 'Tools', 'View', 'Split view', 'Appearance', 'Settings']) assert(top.includes(l), `has ${l}`);
+  for (const l of ['Go to file…', 'New', 'This file', 'Image', 'Tools', 'View', 'Settings']) assert(top.includes(l), `has ${l}`);
   assert(find(root, 'New')!.querySelector('.arrow'), 'submenus are marked');
   assert(top.indexOf('Image') < top.indexOf('Tools'), 'the open file’s menu comes before Tools');
 
-  // ---- hover opens a submenu; picking an item runs it and closes the menu ----
-  const split = find(root, 'Split view')!;
-  split.dispatchEvent(new MouseEvent('mouseenter'));
-  const sub = await waitFor(() => menus()[1], 'Split view submenu');
+  // ---- one row per family of options ----
+  const themeRow = root.querySelector<HTMLElement>('[data-control="theme"]');
+  assert(themeRow && themeRow.querySelectorAll('button').length === 3, 'the theme is one three-way toggle');
+  const themeBefore = settings.value.theme;
+  [...themeRow.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Dark')!.click();
+  await waitFor(() => (settings.value.theme === 'dark' ? true : null), 'theme set from the menu');
+  assert(menu.open, 'the menu stays open while adjusting');
+  const slider = root.querySelector<HTMLInputElement>('[data-control="uiScale"] input[type="range"]')!;
+  slider.value = String(UI_SCALES.indexOf(1.25));
+  slider.dispatchEvent(new Event('input', { bubbles: true }));
+  await waitFor(() => (settings.value.uiScale === 1.25 ? true : null), 'interface size from the slider');
+  slider.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+  await waitFor(() => (settings.value.uiScale === 1 ? true : null), 'double-click resets it');
+  theme.set(themeBefore as typeof settings.value.theme & ("system" | "dark" | "light"));
+  assert(root.querySelector('[data-control="fontSize"] input[type="range"]'), 'text size slider');
+
+  // ---- hover opens a submenu; on/off options are checked items; split layouts are buttons ----
+  const view = find(root, 'View')!;
+  view.dispatchEvent(new MouseEvent('mouseenter'));
+  const sub = await waitFor(() => menus()[1], 'View submenu');
   const r0 = root.getBoundingClientRect();
   assert(sub.getBoundingClientRect().left >= r0.right - 8, 'opens beside the menu');
-  find(sub, 'Two side by side')!.click();
-  await waitFor(() => (workspace.split?.panes.length === 2 ? true : null), 'split by the menu item');
-  assert(!menu.open && !menus().length, 'menu closed after choosing');
+  const sidebarItem = find(sub, 'Sidebar')!;
+  assertEq(sidebarItem.getAttribute('aria-checked'), String(settings.value.sidebarVisible), 'Sidebar shows its state');
+  assert(sidebarItem.querySelector('.check')?.textContent === '✓', 'with a check mark');
+  sub.querySelector<HTMLButtonElement>('[data-control="split"] button[title="Two side by side"]')!.click();
+  await waitFor(() => (workspace.split?.panes.length === 2 ? true : null), 'split from the menu');
+  await waitFor(() => (sub.querySelector('[data-control="split"] button[title="Two side by side"]')?.classList.contains('on') ? true : null), 'the layout is marked');
+  menu.close();
   workspace.setSplit(null);
   workspace.activate(img);
 
   // ---- keyboard: down to Image, → into it, → into Tools, Enter ----
   const r = await openAppMenu();
   await sleep(30);
-  const order = itemsOf(r).map((b) => b.querySelector('span')!.textContent);
+  const order = itemsOf(r).map((b) => b.querySelector('.lb')!.textContent);
   for (let i = 0; i <= order.indexOf('Image'); i++) key(r, 'ArrowDown');
   key(r, 'ArrowRight');
   const imgMenu = await waitFor(() => menus()[1], 'Image submenu by keyboard');

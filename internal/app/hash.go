@@ -4,8 +4,8 @@ import (
 	"context"
 	"path/filepath"
 
-	"github.com/caffeine-runtime/hold-it-all/internal/hash"
-	"github.com/caffeine-runtime/hold-it-all/internal/jobs"
+	"github.com/caffeine-runtime/monoform/internal/hash"
+	"github.com/caffeine-runtime/monoform/internal/jobs"
 )
 
 // HashFile computes checksums as a background job (result: algo -> hex).

@@ -8,5 +8,5 @@ if [ "$(uname -s)" = "Linux" ] && pkg-config --exists webkit2gtk-4.1 2>/dev/null
 (cd frontend && npm run build)
 WAILS=${WAILS:-$(command -v wails || echo "$HOME/go/bin/wails")}
 "$WAILS" build -s ${TAGS:+-tags "$TAGS"} "$@"
-# The holdit command-line program, next to the app.
-go build -trimpath -o build/bin/holdit ./cmd/holdit
+# The monoform command-line program, next to the app.
+go build -trimpath -o build/bin/monoform-cli ./cmd/monoform-cli

@@ -142,7 +142,7 @@ export function muxWebM(tracks: MuxTrack[], chunks: MuxChunk[], duration: number
     ...uint(ID.DocTypeVersion, 4),
     ...uint(ID.DocTypeReadVersion, 2),
   ]);
-  const info = el(ID.Info, [...uint(ID.TimestampScale, 1e6), ...float(ID.Duration, duration * 1000), ...str(ID.MuxingApp, 'Hold It All'), ...str(ID.WritingApp, 'Hold It All')]);
+  const info = el(ID.Info, [...uint(ID.TimestampScale, 1e6), ...float(ID.Duration, duration * 1000), ...str(ID.MuxingApp, 'Monoform'), ...str(ID.WritingApp, 'Monoform')]);
   const trackEls = el(
     ID.Tracks,
     tracks.flatMap((t, i) => {

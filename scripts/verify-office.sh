@@ -10,7 +10,7 @@ soffice --headless --convert-to txt:Text --outdir "$OUT" "$D/report.docx" "$D/le
 soffice --headless --convert-to csv --outdir "$OUT" "$D/budget.xlsx" >/dev/null 2>&1
 mv "$OUT/budget.csv" "$OUT/budget-sheet1.csv"
 soffice --headless --convert-to csv --outdir "$OUT" "$D/legacy.xlsx" >/dev/null 2>&1
-grep -q "Last paragraph, edited in Hold It All." "$OUT/report.txt" || fail "docx edit not readable by LibreOffice"
+grep -q "Last paragraph, edited in Monoform." "$OUT/report.txt" || fail "docx edit not readable by LibreOffice"
 grep -q "A brand new paragraph." "$OUT/report.txt" || fail "new paragraph missing"
 grep -q "Quarterly report" "$OUT/report.txt" || fail "heading lost"
 grep -q "Converted: Quarterly report" "$OUT/legacy.txt" || fail "converted .doc text"

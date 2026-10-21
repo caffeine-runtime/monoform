@@ -63,7 +63,7 @@ export default async function m10(dir: string) {
   sh.setText(SRC);
   sh.setView('design');
   const art = await waitFor(() => document.querySelector<SVGSVGElement>('.tabview.active .design svg.art'), 'design canvas');
-  await waitFor(() => (art.querySelector('[data-hia-i="2"]') ? true : null), 'inline copy');
+  await waitFor(() => (art.querySelector('[data-mf-i="2"]') ? true : null), 'inline copy');
   // Sanitized: no handlers, script emptied, no outside references.
   assert(!art.querySelector('[onclick]') && !art.querySelector('script')?.textContent && !art.querySelector('image')?.getAttribute('href'), 'inline copy is sanitized');
   assert(!(window as unknown as { pwned?: number }).pwned, 'no script ran');
@@ -71,7 +71,7 @@ export default async function m10(dir: string) {
   const fire = (type: string, target: Element, x: number, y: number, extra: PointerEventInit = {}) =>
     target.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, button: 0, buttons: type === 'pointerup' ? 0 : 1, pointerId: 7, bubbles: true, ...extra }));
   // Click the circle and drag it 30 px right.
-  const circle = art.querySelector('[data-hia-i="2"]')!;
+  const circle = art.querySelector('[data-mf-i="2"]')!;
   const cr = circle.getBoundingClientRect();
   const zoom = cr.width / 44;
   fire('pointerdown', circle, cr.left + cr.width / 2, cr.top + cr.height / 2);
@@ -125,12 +125,12 @@ export default async function m10(dir: string) {
   const hh = await waitFor(() => (htmlHooks(page)?.srcdoc() ? htmlHooks(page) : null), 'page built');
   const doc: string = hh.srcdoc();
   assert(doc.includes('Content-Security-Policy') && doc.includes("script-src 'none'"), 'CSP injected, scripts off');
-  assert(doc.includes(`<base href="${hh.base()}">`) && hh.base().includes('/__hia/page/'), 'base points at the folder route');
+  assert(doc.includes(`<base href="${hh.base()}">`) && hh.base().includes('/__mf/page/'), 'base points at the folder route');
   const info = hh.info();
   assertEq(info.title, 'Fixture page', 'title');
   assertEq(info.remoteRefs, 1, 'one remote reference detected');
   assertEq(info.externalLinks, 1, 'one external link disabled');
-  assert(!/\shref="https:\/\/example\.com\/"/.test(doc) && doc.includes('data-hia-href="https://example.com/"'), 'external link neutralised');
+  assert(!/\shref="https:\/\/example\.com\/"/.test(doc) && doc.includes('data-mf-href="https://example.com/"'), 'external link neutralised');
   assert(document.querySelector('.banner')?.textContent?.includes('internet'), 'remote-content banner');
   const iframe = await waitFor(() => document.querySelector<HTMLIFrameElement>('.page iframe'), 'iframe');
   assertEq(iframe.getAttribute('sandbox'), '', 'fully sandboxed');
