@@ -25,12 +25,8 @@ export interface Adjustments {
   blurY: number; // 0..1
   blurBand: number; // 0..1, tilt-shift: half-height of the sharp band (fraction of the image)
   vignette: number; // 0..1
-  grayscale: boolean;
-  sepia: boolean;
-  invert: boolean;
-  /** A look (one of LOOKS, '' = none) mixed in by lookAmount (0..1). */
-  look: Look | '';
-  lookAmount: number;
+  /** Effects that are on, each with its strength (0..1), applied in EFFECTS order. */
+  effects: Partial<Record<Effect, number>>;
   /** Clean up: pale pixels (a light watermark, scanner shading) turn white; 0 = off, 1 = everything lighter than mid-grey. */
   lightMarks: number;
   /** Clean up: pixels near this colour turn white ('' = off), within markTolerance (0..1). */
@@ -49,9 +45,12 @@ export const BLUR_TYPES: { id: BlurType; label: string; help: string }[] = [
   { id: 'surface', label: t('Surface', {}, 'blur'), help: t('Smooths surfaces and noise but keeps edges sharp') },
 ];
 
-export type Look = 'vintage' | 'fade' | 'warm' | 'cool' | 'noir' | 'tealorange' | 'crossprocess' | 'lomo' | 'posterize' | 'solarize' | 'threshold' | 'emboss' | 'sketch' | 'grain' | 'thermal';
-/** One-click looks, in the order the panel shows them (the shader numbers them from 1 in this order). */
-export const LOOKS: { id: Look; label: string; help: string }[] = [
+export type Effect = 'bw' | 'sepia' | 'invert' | 'vintage' | 'fade' | 'warm' | 'cool' | 'noir' | 'tealorange' | 'crossprocess' | 'lomo' | 'posterize' | 'solarize' | 'threshold' | 'emboss' | 'sketch' | 'grain' | 'thermal';
+/** One-click effects, in the order the panel shows and the shader applies them (numbered from 1 in this order). */
+export const EFFECTS: { id: Effect; label: string; help: string }[] = [
+  { id: 'bw', label: t('Black & white'), help: t('Shades of grey') },
+  { id: 'sepia', label: t('Sepia'), help: t('Brown tones, like an old photograph') },
+  { id: 'invert', label: t('Invert'), help: t('A negative: every colour reversed') },
   { id: 'vintage', label: t('Vintage'), help: t('Warm, faded colours with lifted blacks, like an old print') },
   { id: 'fade', label: t('Faded'), help: t('Matte blacks and softer colours') },
   { id: 'warm', label: t('Warm', {}, 'look'), help: t('Golden, late-afternoon light') },
@@ -88,21 +87,19 @@ export const NEUTRAL: Adjustments = {
   blurY: 0.5,
   blurBand: 0.15,
   vignette: 0,
-  grayscale: false,
-  sepia: false,
-  invert: false,
-  look: '',
-  lookAmount: 1,
+  effects: {},
   lightMarks: 0,
   markColor: '',
   markTolerance: 0.2,
 };
 
-const BLUR_SHAPE: (keyof Adjustments)[] = ['blurType', 'blurAngle', 'blurX', 'blurY', 'blurBand', 'markTolerance', 'lookAmount'];
+const BLUR_SHAPE: (keyof Adjustments)[] = ['blurType', 'blurAngle', 'blurX', 'blurY', 'blurBand', 'markTolerance'];
 
-/** True when nothing would change (blur shape settings alone don't count). */
+/** True when nothing would change (blur shape settings alone, or effects at strength 0, don't count). */
 export function isNeutral(a: Adjustments): boolean {
-  return (Object.keys(NEUTRAL) as (keyof Adjustments)[]).every((k) => BLUR_SHAPE.includes(k) || a[k] === NEUTRAL[k]);
+  return (Object.keys(NEUTRAL) as (keyof Adjustments)[]).every((k) =>
+    k === 'effects' ? Object.values(a.effects).every((v) => !v) : BLUR_SHAPE.includes(k) || a[k] === NEUTRAL[k],
+  );
 }
 
 const VERT = `#version 300 es
@@ -187,9 +184,8 @@ uniform bool useMask, useSharp, useBlur, tilt;
 uniform vec2 tiltC, tiltN, size;
 uniform float tiltW;
 uniform float exposure, brightness, contrast, highlights, shadows, saturation, vibrance, temperature, tint, hue, sharpen, vignette;
-uniform bool grayscale, sepia, invertc, useMark;
-uniform int look;
-uniform float lookAmt;
+uniform bool useMark;
+uniform float fxAmt[${EFFECTS.length}]; // strength of each effect (EFFECTS order), 0 = off
 uniform float lightMarks, markTol;
 uniform vec3 markColor;
 
@@ -208,32 +204,35 @@ float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 float lumaAt(vec2 p) { return luma(texture(src, p).rgb); }
 
-// The looks (LOOKS in adjust.ts, numbered from 1), on the adjusted colour c.
-vec3 applyLook(vec3 c) {
+// The effects (EFFECTS in adjust.ts, numbered from 1), on the adjusted colour c.
+vec3 applyLook(vec3 c, int look) {
   float l = luma(clamp(c, 0.0, 1.0));
   vec2 px = 1.0 / size;
-  if (look == 1) { // vintage
+  if (look == 1) return vec3(l); // black & white
+  if (look == 2) return vec3(dot(c, vec3(0.393, 0.769, 0.189)), dot(c, vec3(0.349, 0.686, 0.168)), dot(c, vec3(0.272, 0.534, 0.131))); // sepia
+  if (look == 3) return 1.0 - c; // invert
+  if (look == 4) { // vintage
     vec3 s = vec3(dot(c, vec3(0.393, 0.769, 0.189)), dot(c, vec3(0.349, 0.686, 0.168)), dot(c, vec3(0.272, 0.534, 0.131)));
     return mix(c, s, 0.45) * 0.84 + vec3(0.11, 0.08, 0.04);
   }
-  if (look == 2) return mix(vec3(l), c, 0.78) * 0.8 + 0.12; // faded
-  if (look == 3) return c * vec3(1.12, 1.03, 0.86) + vec3(0.02, 0.01, 0.0); // warm
-  if (look == 4) return c * vec3(0.88, 0.98, 1.14) + vec3(0.0, 0.0, 0.02); // cool
-  if (look == 5) return vec3(clamp((l - 0.5) * 1.7 + 0.5, 0.0, 1.0)); // noir
-  if (look == 6) { // teal & orange
+  if (look == 5) return mix(vec3(l), c, 0.78) * 0.8 + 0.12; // faded
+  if (look == 6) return c * vec3(1.12, 1.03, 0.86) + vec3(0.02, 0.01, 0.0); // warm
+  if (look == 7) return c * vec3(0.88, 0.98, 1.14) + vec3(0.0, 0.0, 0.02); // cool
+  if (look == 8) return vec3(clamp((l - 0.5) * 1.7 + 0.5, 0.0, 1.0)); // noir
+  if (look == 9) { // teal & orange
     vec3 tone = mix(vec3(0.0, 0.42, 0.48), vec3(1.0, 0.62, 0.32), smoothstep(0.15, 0.85, l));
     return mix(c, tone * (0.35 + l * 1.1), 0.45);
   }
-  if (look == 7) return vec3(smoothstep(0.05, 0.95, c.r), pow(max(c.g, 0.0), 0.85), c.b * 0.65 + 0.18); // cross-process
-  if (look == 8) { // lomo
+  if (look == 10) return vec3(smoothstep(0.05, 0.95, c.r), pow(max(c.g, 0.0), 0.85), c.b * 0.65 + 0.18); // cross-process
+  if (look == 11) { // lomo
     vec3 s = (mix(vec3(l), c, 1.5) - 0.5) * 1.3 + 0.5;
     return s * (1.0 - 0.65 * smoothstep(0.3, 0.85, length(uv - 0.5) * 1.3));
   }
-  if (look == 9) return floor(clamp(c, 0.0, 1.0) * 3.999) / 3.0; // posterize: 4 levels
-  if (look == 10) return mix(c, 1.0 - c, step(0.5, c)); // solarize
-  if (look == 11) return vec3(step(0.5, l)); // threshold
-  if (look == 12) return vec3(clamp(0.5 + (lumaAt(uv + px) - lumaAt(uv - px)) * 2.5, 0.0, 1.0)); // emboss
-  if (look == 13) { // pencil sketch: Sobel edges, dark on white
+  if (look == 12) return floor(clamp(c, 0.0, 1.0) * 3.999) / 3.0; // posterize: 4 levels
+  if (look == 13) return mix(c, 1.0 - c, step(0.5, c)); // solarize
+  if (look == 14) return vec3(step(0.5, l)); // threshold
+  if (look == 15) return vec3(clamp(0.5 + (lumaAt(uv + px) - lumaAt(uv - px)) * 2.5, 0.0, 1.0)); // emboss
+  if (look == 16) { // pencil sketch: Sobel edges, dark on white
     float tl = lumaAt(uv + px * vec2(-1.0, 1.0)), t = lumaAt(uv + px * vec2(0.0, 1.0)), tr = lumaAt(uv + px * vec2(1.0, 1.0));
     float ml = lumaAt(uv + px * vec2(-1.0, 0.0)), mr = lumaAt(uv + px * vec2(1.0, 0.0));
     float bl = lumaAt(uv + px * vec2(-1.0, -1.0)), b = lumaAt(uv + px * vec2(0.0, -1.0)), br = lumaAt(uv + px * vec2(1.0, -1.0));
@@ -241,8 +240,8 @@ vec3 applyLook(vec3 c) {
     float gy = tl + 2.0 * t + tr - bl - 2.0 * b - br;
     return vec3(1.0 - clamp(length(vec2(gx, gy)) * 1.5, 0.0, 1.0));
   }
-  if (look == 14) return c + (hash(floor(uv * size)) - 0.5) * 0.2; // film grain
-  if (look == 15) { // thermal
+  if (look == 17) return c + (hash(floor(uv * size)) - 0.5) * 0.2; // film grain
+  if (look == 18) { // thermal
     vec3 k0 = vec3(0.02, 0.0, 0.3), k1 = vec3(0.6, 0.0, 0.6), k2 = vec3(1.0, 0.35, 0.0), k3 = vec3(1.0, 1.0, 0.35);
     return l < 0.33 ? mix(k0, k1, l / 0.33) : l < 0.66 ? mix(k1, k2, (l - 0.33) / 0.33) : mix(k2, k3, (l - 0.66) / 0.34);
   }
@@ -285,12 +284,9 @@ void main() {
   float g = luma(c);
   float sat = max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b));
   c = mix(vec3(g), c, 1.0 + saturation + vibrance * (1.0 - sat));
-  if (grayscale) c = vec3(luma(c));
-  if (sepia) {
-    c = vec3(dot(c, vec3(0.393, 0.769, 0.189)), dot(c, vec3(0.349, 0.686, 0.168)), dot(c, vec3(0.272, 0.534, 0.131)));
+  for (int i = 0; i < ${EFFECTS.length}; i++) {
+    if (fxAmt[i] > 0.0) c = mix(c, applyLook(c, i + 1), fxAmt[i]);
   }
-  if (invertc) c = 1.0 - c;
-  if (look > 0) c = mix(c, applyLook(c), lookAmt);
   if (vignette > 0.0) {
     vec2 d = uv - 0.5;
     c *= 1.0 - vignette * smoothstep(0.25, 0.75, length(d) * 1.2);
@@ -482,11 +478,7 @@ export class Adjuster {
     for (const k of ['exposure', 'brightness', 'contrast', 'highlights', 'shadows', 'saturation', 'vibrance', 'temperature', 'tint', 'hue', 'sharpen', 'vignette'] as const) {
       gl.uniform1f(u(k), a[k]);
     }
-    gl.uniform1i(u('grayscale'), a.grayscale ? 1 : 0);
-    gl.uniform1i(u('sepia'), a.sepia ? 1 : 0);
-    gl.uniform1i(u('invertc'), a.invert ? 1 : 0);
-    gl.uniform1i(u('look'), a.look ? LOOKS.findIndex((x) => x.id === a.look) + 1 : 0);
-    gl.uniform1f(u('lookAmt'), a.lookAmount);
+    gl.uniform1fv(u('fxAmt'), EFFECTS.map((e) => a.effects[e.id] ?? 0));
     gl.uniform1f(u('lightMarks'), a.lightMarks);
     const mc = hexRgb(a.markColor);
     gl.uniform1i(u('useMark'), mc ? 1 : 0);

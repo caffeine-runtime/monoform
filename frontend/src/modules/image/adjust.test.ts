@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BLUR_TYPES, LOOKS, NEUTRAL, hexRgb, isNeutral } from './adjust';
+import { BLUR_TYPES, EFFECTS, NEUTRAL, hexRgb, isNeutral } from './adjust';
 
 describe('adjustments', () => {
   it('treats blur shape settings alone as no change', () => {
@@ -13,11 +13,13 @@ describe('adjustments', () => {
     expect(isNeutral({ ...NEUTRAL, markColor: '#d0d0d0' })).toBe(false);
   });
 
-  it('counts a look as a change, its amount alone not', () => {
-    expect(isNeutral({ ...NEUTRAL, lookAmount: 0.4 })).toBe(true);
-    expect(isNeutral({ ...NEUTRAL, look: 'vintage' })).toBe(false);
-    expect(new Set(LOOKS.map((l) => l.id)).size).toBe(LOOKS.length);
-    expect(LOOKS.length).toBeGreaterThanOrEqual(15);
+  it('counts an effect as a change, one at strength 0 not', () => {
+    expect(isNeutral({ ...NEUTRAL, effects: { vintage: 0 } })).toBe(true);
+    expect(isNeutral({ ...NEUTRAL, effects: { vintage: 0.3 } })).toBe(false);
+    expect(isNeutral({ ...NEUTRAL, effects: { bw: 0, invert: 1 } })).toBe(false);
+    expect(new Set(EFFECTS.map((l) => l.id)).size).toBe(EFFECTS.length);
+    expect(EFFECTS.length).toBe(18);
+    expect(EFFECTS.slice(0, 3).map((e) => e.id)).toEqual(['bw', 'sepia', 'invert']);
   });
 
   it('reads colours for the clean-up', () => {

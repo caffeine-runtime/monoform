@@ -1113,9 +1113,9 @@
       { id: 'move', icon: Move, label: t('Move layer'), help: t('Drag to move the active layer; drag the handles to scale or rotate it.'), key: 'V' },
     ],
     [
-      { id: 'select', icon: SquareDashed, label: t('Rectangle select'), help: t('Drag to select a rectangle. Hold Ctrl for a square, Shift to add, Alt to subtract.'), key: 'M' },
-      { id: 'ellipse', icon: CircleDashed, label: t('Ellipse select'), help: t('Drag to select an ellipse. Hold Ctrl for a circle, Shift to add, Alt to subtract.') },
-      { id: 'lasso', icon: Lasso, label: t('Lasso select'), help: t('Drag around an area to select it freehand. Shift adds, Alt subtracts.'), key: 'L' },
+      { id: 'select', icon: SquareDashed, label: t('Rectangle select'), help: t('Drag to select a rectangle. Hold Ctrl for a square, Shift to add, Alt to subtract. Drag inside a selection to move it; its handles resize and turn it.'), key: 'M' },
+      { id: 'ellipse', icon: CircleDashed, label: t('Ellipse select'), help: t('Drag to select an ellipse. Hold Ctrl for a circle, Shift to add, Alt to subtract. Drag inside a selection to move it; its handles resize and turn it.') },
+      { id: 'lasso', icon: Lasso, label: t('Lasso select'), help: t('Drag around an area to select it freehand. Shift adds, Alt subtracts. Drag inside a selection to move it; its handles resize and turn it.'), key: 'L' },
       { id: 'selbrush', icon: Highlighter, label: t('Selection brush'), help: t('Paint over what to select — e.g. a watermark on a photo, then Remove object (AI) fills it in. Each stroke adds; Alt-drag takes away. Set the size in the toolbar.') },
       { id: 'wand', icon: Wand, label: t('Magic wand'), help: t('Click to select pixels of a similar colour. Set Tolerance in the toolbar; Shift adds, Alt subtracts.'), key: 'W' },
       { id: 'object', icon: ScanEye, label: t('Select object'), help: t('Click an object to select it, with edges snapped to the pixels. Shift-click adds, Alt-click excludes a part.'), key: 'O' },
@@ -1351,7 +1351,7 @@
     <span class="grow"></span>
     <button class="btn ghost" title={t('Copy ({shortcut})', { shortcut: formatShortcut('Mod+C') })} onclick={() => copy()}><Icon icon={Copy} size={14} /> {t('Copy')}</button>
     <button class="btn ghost" title={t('Cut ({shortcut})', { shortcut: formatShortcut('Mod+X') })} onclick={() => copy(true)}><Icon icon={Scissors} size={14} /> {t('Cut')}</button>
-    <button class="btn ghost" title={t('Rotate, scale or move the selected pixels ({shortcut})', { shortcut: formatShortcut('Mod+Shift+R') })} onclick={() => editor?.transformSelection()}><Icon icon={Rotate3d} size={14} /> {t('Rotate / scale')}</button>
+    <button class="btn ghost" title={t('Rotate, scale or move the selected pixels ({shortcut})', { shortcut: formatShortcut('Mod+Shift+R') })} onclick={() => editor?.transformSelection()}><Icon icon={Rotate3d} size={14} /> {t('Transform pixels')}</button>
     <button class="btn ghost" title={t('New layer from selection ({shortcut})', { shortcut: formatShortcut('Mod+J') })} onclick={() => editor?.layerFromSelection()}><Icon icon={SquaresUnite} size={14} /> {t('To layer')}</button>
     <button class="btn ghost remove-object" title={t('Remove the selected object and fill the gap with what could be behind it')} onclick={() => void removeObject()}><Icon icon={Eraser2} size={14} /> {t('Remove')}</button>
     <button class="btn ghost" title={t('Delete pixels (Delete)')} onclick={() => editor?.clearSelectionPixels()}><Icon icon={Trash} size={14} /></button>

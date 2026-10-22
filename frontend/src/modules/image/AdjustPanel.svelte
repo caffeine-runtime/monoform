@@ -1,7 +1,7 @@
 <script lang="ts">
   // Adjustment sliders with live GPU preview. Nothing changes until Apply;
   // with a selection, only the selected pixels are adjusted.
-  import { BLUR_TYPES, LOOKS, NEUTRAL, isNeutral, type Adjustments, type BlurType, type Look } from './adjust';
+  import { BLUR_TYPES, EFFECTS, NEUTRAL, isNeutral, type Adjustments, type BlurType, type Effect } from './adjust';
   import type { EditorState, ImageEditor } from './editor';
   import { ui } from '../../core/ui.svelte';
   import { num, t } from '../../core/i18n';
@@ -78,6 +78,20 @@
     changed();
   }
 
+  /** An effect chip: on at full strength (its slider shows below the chips), or off again. */
+  function toggleEffect(id: Effect) {
+    const fx = { ...a.effects };
+    if (id in fx) delete fx[id];
+    else fx[id] = 1;
+    a.effects = fx;
+    changed();
+  }
+
+  function setEffect(id: Effect, v: number) {
+    a.effects = { ...a.effects, [id]: v };
+    changed();
+  }
+
   /** Clean up › A colour: click it in the image. */
   async function pickMark() {
     const c = await pick?.();
@@ -102,7 +116,7 @@
   // Leaving the panel (or the tab) discards an unapplied preview.
   $effect(() => () => editor.cancelAdjust());
   // Hooks for the self-test.
-  export const test = { set, setBlurType, apply, reset, get: () => $state.snapshot(a) as Adjustments };
+  export const test = { set, setBlurType, toggleEffect, setEffect, apply, reset, get: () => $state.snapshot(a) as Adjustments };
 </script>
 
 <div class="adjust">
@@ -156,23 +170,18 @@
       </label>
     {/each}
     <h4>{t('Effects')}</h4>
-    <div class="toggles looks" role="radiogroup" aria-label={t('Look')}>
-      {#each LOOKS as l (l.id)}
-        <button class="chip" role="radio" aria-checked={a.look === l.id} class:on={a.look === l.id} title={l.help} onclick={() => set('look', a.look === l.id ? '' : (l.id as Look))}>{l.label}</button>
+    <div class="toggles looks">
+      {#each EFFECTS as l (l.id)}
+        <button class="chip" aria-pressed={l.id in a.effects} class:on={l.id in a.effects} title={l.help} onclick={() => toggleEffect(l.id)}>{l.label}</button>
       {/each}
     </div>
-    {#if a.look}
-      <label class="row" ondblclick={() => set('lookAmount', 1)} title={t('Double-click to reset')}>
-        <span class="lbl">{t('Amount')}</span>
-        <input type="range" min="0" max="1" step="0.01" value={a.lookAmount} oninput={(e) => set('lookAmount', +(e.target as HTMLInputElement).value)} />
-        <span class="num">{Math.round(a.lookAmount * 100)}</span>
+    {#each EFFECTS.filter((l) => l.id in a.effects) as l (l.id)}
+      <label class="row effect" ondblclick={() => setEffect(l.id, 1)} title={t('Strength of {effect}. Double-click to reset.', { effect: l.label })}>
+        <span class="lbl">{l.label}</span>
+        <input type="range" min="0" max="1" step="0.01" value={a.effects[l.id]} oninput={(e) => setEffect(l.id, +(e.target as HTMLInputElement).value)} />
+        <span class="num">{Math.round((a.effects[l.id] ?? 0) * 100)}%</span>
       </label>
-    {/if}
-    <div class="toggles">
-      {#each [['grayscale', t('Black & white')], ['sepia', t('Sepia')], ['invert', t('Invert')]] as [k, label] (k)}
-        <label class="chip" class:on={a[k as keyof Adjustments]}><input type="checkbox" checked={a[k as keyof Adjustments] as boolean} onchange={(e) => set(k as keyof Adjustments, (e.target as HTMLInputElement).checked)} />{label}</label>
-      {/each}
-    </div>
+    {/each}
   </div>
   <div class="actions">
     <button class="btn ghost" disabled={!es.adjusting} onclick={reset}>{t('Reset')}</button>

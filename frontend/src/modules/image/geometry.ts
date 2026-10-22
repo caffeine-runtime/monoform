@@ -32,6 +32,27 @@ export function zoomAt(v: View, px: number, py: number, newZoom: number): View {
   return { zoom: z, x: px - (px - v.x) * k, y: py - (py - v.y) * k };
 }
 
+/** The view at zoom z, turned deg, with document point p at screen point at. */
+export function viewWith(z: number, deg: number, p: { x: number; y: number }, at: { x: number; y: number }): View {
+  const a = (deg * Math.PI) / 180;
+  const [c, s] = [Math.cos(a), Math.sin(a)];
+  return { x: at.x - z * (p.x * c - p.y * s), y: at.y - z * (p.x * s + p.y * c), zoom: z };
+}
+
+/**
+ * What a wheel event means. A mouse wheel (whole notches: wheelDelta in
+ * multiples of 120, or lines) zooms; a touchpad's two-finger scroll pans,
+ * and its pinch (sent with Ctrl) zooms. `panning`: the gesture already
+ * panned (a fast scroll can look like a notch now and then).
+ */
+export function wheelIntent(e: { deltaX: number; deltaY: number; deltaMode: number; ctrlKey: boolean; wheelDeltaY?: number }, panning = false): 'zoom' | 'pan' {
+  if (e.ctrlKey) return 'zoom';
+  if (panning) return 'pan';
+  if (e.deltaMode !== 0) return 'zoom';
+  if (e.deltaX === 0 && e.wheelDeltaY && e.wheelDeltaY % 120 === 0) return 'zoom';
+  return 'pan';
+}
+
 export function clampZoom(z: number): number {
   return Math.min(64, Math.max(0.02, z));
 }

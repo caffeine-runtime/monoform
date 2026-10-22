@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { centered, fitZoom, keepAspect, normRect, stepZoom, zoomAt } from './geometry';
+import { centered, fitZoom, keepAspect, normRect, stepZoom, viewWith, wheelIntent, zoomAt } from './geometry';
 
 describe('image geometry', () => {
   it('fits without upscaling', () => {
@@ -28,5 +28,24 @@ describe('image geometry', () => {
   it('keeps aspect ratio', () => {
     expect(keepAspect(1920, 1080, 'w', 960)).toEqual({ w: 960, h: 540 });
     expect(keepAspect(1920, 1080, 'h', 540)).toEqual({ w: 960, h: 540 });
+  });
+
+  it('tells a mouse wheel from a touchpad', () => {
+    const ev = (o: Partial<{ deltaX: number; deltaY: number; deltaMode: number; ctrlKey: boolean; wheelDeltaY: number }>) => ({ deltaX: 0, deltaY: 0, deltaMode: 0, ctrlKey: false, ...o });
+    expect(wheelIntent(ev({ deltaY: 100, wheelDeltaY: -120 }))).toBe('zoom'); // a notch
+    expect(wheelIntent(ev({ deltaY: 3, deltaMode: 1 }))).toBe('zoom'); // lines (Firefox)
+    expect(wheelIntent(ev({ deltaY: 4.5, wheelDeltaY: -13 }))).toBe('pan'); // two fingers
+    expect(wheelIntent(ev({ deltaX: 12, deltaY: 0 }))).toBe('pan'); // sideways
+    expect(wheelIntent(ev({ deltaY: 2, ctrlKey: true }))).toBe('zoom'); // pinch
+    expect(wheelIntent(ev({ deltaY: 40, wheelDeltaY: -120 }), true)).toBe('pan'); // mid-gesture
+  });
+
+  it('puts a document point at a screen point, turned', () => {
+    const v = viewWith(2, 90, { x: 10, y: 0 }, { x: 100, y: 100 });
+    // Turned 90° clockwise and doubled, (10, 0) lands 20 below the origin.
+    expect(v.zoom).toBe(2);
+    expect(v.x).toBeCloseTo(100);
+    expect(v.y).toBeCloseTo(80);
+    expect(viewWith(1, 0, { x: 5, y: 5 }, { x: 5, y: 5 })).toEqual({ x: 0, y: 0, zoom: 1 });
   });
 });
