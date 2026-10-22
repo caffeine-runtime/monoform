@@ -306,7 +306,7 @@
   "Remove": "Quitar",
   "Delete pixels (Delete)": "Eliminar píxeles (Supr)",
   "Fill with colour": "Rellenar con color",
-  "Blur the selection: opens Adjust → Blur (Gaussian, motion, zoom, spin, lens, tilt-shift, surface)": "Desenfocar la selección: abre Ajustar → Desenfoque (gaussiano, movimiento, zoom, giro, lente, tilt-shift, superficie)",
+  "Blur the selection: opens Adjust → Blur (Gaussian, motion, zoom, spin, lens, tilt-shift, surface, frosted glass)": "Desenfocar la selección: abre Ajustar → Desenfoque (gaussiano, movimiento, zoom, giro, lente, tilt-shift, superficie, cristal esmerilado)",
   "Crop to selection": "Recortar a la selección",
   "Copy the text in the selection (OCR)": "Copiar el texto de la selección (OCR)",
   "Invert selection ({shortcut})": "Invertir selección ({shortcut})",
@@ -536,7 +536,7 @@
   "Exposure, brightness, contrast, highlights, shadows": "Exposición, brillo, contraste, luces, sombras",
   "Saturation, vibrance, temperature, tint, hue": "Saturación, intensidad, temperatura, matiz, tono",
   "Sharpen, vignette": "Enfoque, viñeta",
-  "Gaussian, motion, zoom, spin, lens, tilt-shift, surface": "Gaussiano, movimiento, zoom, giro, lente, tilt-shift, superficie",
+  "Gaussian, motion, zoom, spin, lens, tilt-shift, surface, frosted glass": "Gaussiano, movimiento, zoom, giro, lente, tilt-shift, superficie, cristal esmerilado",
   "[adjust] Pixelate": "Pixelar",
   "Square blocks, to hide faces, plates or text": "Bloques cuadrados, para ocultar caras, matrículas o texto",
   "Black & white, sepia, vintage, noir… with a strength each": "Blanco y negro, sepia, vintage, noir… cada uno con su intensidad",
@@ -547,5 +547,7 @@
   "Double-click to turn off": "Doble clic para desactivar",
   "Pixelate the selection: opens Adjust → Pixelate, with the block size": "Pixelar la selección: abre Ajustar → Pixelar, con el tamaño del bloque",
   "How strongly the area is blurred (shown in it before you apply)": "Cuánto se desenfoca la zona (se ve en ella antes de aplicar)",
-  "Size of the squares (shown in the area before you apply)": "Tamaño de los cuadrados (se ve en la zona antes de aplicar)"
+  "Size of the squares (shown in the area before you apply)": "Tamaño de los cuadrados (se ve en la zona antes de aplicar)",
+  "Frosted glass": "Cristal esmerilado",
+  "Grainy, milky diffusion, as if seen through frosted glass": "Difusión granulada y lechosa, como a través de un cristal esmerilado"
 }

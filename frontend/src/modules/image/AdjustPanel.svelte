@@ -62,7 +62,7 @@
     { id: 'light', title: GROUPS[0].title, help: t('Exposure, brightness, contrast, highlights, shadows'), icon: Sun, on: () => differs(GROUPS[0].sliders.map((s) => s.key)) },
     { id: 'colour', title: GROUPS[1].title, help: t('Saturation, vibrance, temperature, tint, hue'), icon: Palette, on: () => differs(GROUPS[1].sliders.map((s) => s.key)) },
     { id: 'detail', title: GROUPS[2].title, help: t('Sharpen, vignette'), icon: Aperture, on: () => differs(GROUPS[2].sliders.map((s) => s.key)) },
-    { id: 'blur', title: t('Blur'), help: t('Gaussian, motion, zoom, spin, lens, tilt-shift, surface'), icon: Droplets, on: () => a.blur > 0 },
+    { id: 'blur', title: t('Blur'), help: t('Gaussian, motion, zoom, spin, lens, tilt-shift, surface, frosted glass'), icon: Droplets, on: () => a.blur > 0 },
     { id: 'pixelate', title: t('Pixelate', {}, 'adjust'), help: t('Square blocks, to hide faces, plates or text'), icon: Grid3x3, on: () => a.pixelate > 0 },
     { id: 'effects', title: t('Effects'), help: t('Black & white, sepia, vintage, noir… with a strength each'), icon: Sparkles, on: () => Object.values(a.effects).some((v) => v) },
     { id: 'cleanup', title: t('Clean up'), help: t('Turn pale marks or one colour white (watermarks, scans)'), icon: Eraser, on: () => a.lightMarks > 0 || !!a.markColor },

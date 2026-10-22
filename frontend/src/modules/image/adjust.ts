@@ -36,7 +36,7 @@ export interface Adjustments {
   markTolerance: number;
 }
 
-export type BlurType = 'gaussian' | 'motion' | 'zoom' | 'spin' | 'lens' | 'tiltshift' | 'surface';
+export type BlurType = 'gaussian' | 'motion' | 'zoom' | 'spin' | 'lens' | 'tiltshift' | 'surface' | 'frosted';
 export const BLUR_TYPES: { id: BlurType; label: string; help: string }[] = [
   { id: 'gaussian', label: t('Gaussian'), help: t('Soft, even blur') },
   { id: 'motion', label: t('Motion', {}, 'blur'), help: t('Streaks along a direction, like a moving camera') },
@@ -45,6 +45,7 @@ export const BLUR_TYPES: { id: BlurType; label: string; help: string }[] = [
   { id: 'lens', label: t('Lens', {}, 'blur'), help: t('Round out-of-focus blur with bright bokeh highlights') },
   { id: 'tiltshift', label: t('Tilt-shift'), help: t('Sharp band, increasingly blurred above and below (miniature look)') },
   { id: 'surface', label: t('Surface', {}, 'blur'), help: t('Smooths surfaces and noise but keeps edges sharp') },
+  { id: 'frosted', label: t('Frosted glass'), help: t('Grainy, milky diffusion, as if seen through frosted glass') },
 ];
 
 export type Effect = 'bw' | 'sepia' | 'invert' | 'vintage' | 'fade' | 'warm' | 'cool' | 'noir' | 'tealorange' | 'crossprocess' | 'lomo' | 'posterize' | 'solarize' | 'threshold' | 'emboss' | 'sketch' | 'grain' | 'thermal';
@@ -134,7 +135,7 @@ void main() {
 }`;
 
 // Shaped blurs, one pass over n taps (premultiplied). kind: 1 motion, 2 zoom,
-// 3 spin, 4 lens, 5 surface. Positions are in pixels; the texture is flipped
+// 3 spin, 4 lens, 5 surface, 6 frosted glass. Positions are in pixels; the texture is flipped
 // (FLIP_Y), so image y grows towards uv.y = 0.
 const FX = `#version 300 es
 precision highp float;
@@ -145,6 +146,7 @@ uniform int kind, n;
 uniform float amount;
 uniform vec2 size, dir, center;
 vec4 tap(vec2 p) { vec4 c = texture(src, p / size); return vec4(c.rgb * c.a, c.a); }
+float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 void main() {
   vec2 px = uv * size;
   vec4 c0 = texture(src, uv);
@@ -160,6 +162,10 @@ void main() {
       float a = (k - 0.5) * amount;
       vec2 v = px - center;
       p = center + vec2(v.x * cos(a) - v.y * sin(a), v.x * sin(a) + v.y * cos(a));
+    } else if (kind == 6) {
+      // A few taps scattered at random within the radius: grainy, not smooth.
+      vec2 h = vec2(hash(floor(px) + k * 17.31), hash(floor(px).yx + k * 41.7)) - 0.5;
+      p = px + h * 2.0 * amount;
     } else {
       float r = amount * sqrt(k);
       float t = float(i) * 2.39996323; // golden angle: even disc coverage
@@ -173,6 +179,7 @@ void main() {
   }
   acc /= ws;
   o = acc.a > 0.0 ? vec4(acc.rgb / acc.a, acc.a) : vec4(0.0);
+  if (kind == 6) o.rgb = mix(o.rgb, vec3(1.0), 0.1); // the glass's milky lift
 }`;
 
 const MAIN = `#version 300 es
@@ -424,14 +431,14 @@ export class Adjuster {
     const p = this.fx;
     gl.useProgram(p);
     const u = (k: string) => gl.getUniformLocation(p, k);
-    const kinds = { motion: 1, zoom: 2, spin: 3, lens: 4, surface: 5 } as Record<string, number>;
+    const kinds = { motion: 1, zoom: 2, spin: 3, lens: 4, surface: 5, frosted: 6 } as Record<string, number>;
     const kind = kinds[a.blurType];
     const rad = (a.blurAngle * Math.PI) / 180;
     // amount: px for motion/lens/surface, fraction for zoom (0..0.5), radians for spin (0..~60°)
     const amount = kind === 2 ? a.blur / 200 : kind === 3 ? (a.blur * Math.PI) / 300 : a.blur;
     // Enough taps that streaks don't break into dots (capped for slow GPUs).
     const reach = kind === 2 ? amount * Math.hypot(this.w, this.h) / 2 : kind === 3 ? amount * Math.hypot(this.w, this.h) / 2 : amount * 2;
-    const n = Math.max(8, Math.min(kind === 4 || kind === 5 ? 160 : 128, Math.ceil(kind === 4 || kind === 5 ? amount * amount * 0.8 : reach)));
+    const n = kind === 6 ? 6 : Math.max(8, Math.min(kind === 4 || kind === 5 ? 160 : 128, Math.ceil(kind === 4 || kind === 5 ? amount * amount * 0.8 : reach)));
     gl.uniform1i(u('kind'), kind);
     gl.uniform1i(u('n'), n);
     gl.uniform1f(u('amount'), amount);

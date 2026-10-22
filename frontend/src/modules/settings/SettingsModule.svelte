@@ -271,6 +271,9 @@
   .tiles {
     columns: 22rem auto;
     column-gap: 14px;
+    /* As tall as its tiles (the page scrolls): squeezed to the window's height, the
+       columns would spill sideways off the page, out of reach (WebView2). */
+    flex: none;
   }
   /* Inline boxes: a block's margin would carry over to the next column's top. */
   .tiles > .card {

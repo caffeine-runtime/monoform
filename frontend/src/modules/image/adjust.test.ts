@@ -28,8 +28,8 @@ describe('adjustments', () => {
     expect(hexRgb('red')).toBeNull();
   });
 
-  it('offers seven kinds of blur, each explained', () => {
-    expect(BLUR_TYPES.map((b) => b.id)).toEqual(['gaussian', 'motion', 'zoom', 'spin', 'lens', 'tiltshift', 'surface']);
+  it('offers eight kinds of blur, each explained', () => {
+    expect(BLUR_TYPES.map((b) => b.id)).toEqual(['gaussian', 'motion', 'zoom', 'spin', 'lens', 'tiltshift', 'surface', 'frosted']);
     for (const b of BLUR_TYPES) expect(b.help.length).toBeGreaterThan(10);
   });
 });
