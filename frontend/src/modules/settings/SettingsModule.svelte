@@ -312,6 +312,9 @@
      moves under it instead of squeezing the label into a column. */
   .row > .lbl {
     flex: 1 1 14em;
+    /* Long paths and commands wrap inside the tile instead of running out of it. */
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   .row.check > .lbl {
     flex-basis: 0;

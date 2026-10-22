@@ -1,7 +1,8 @@
 // M59: the command palette opened with a long list (twenty recent files)
 // keeps its search box whole — the list scrolls, the box doesn't shrink —
 // and the start page offers opening and creating files, without a row of
-// tool buttons (tools are in the ☰ menu and Ctrl+K).
+// tool buttons (tools are in the ☰ menu and Ctrl+K). A long path in a
+// settings tile wraps instead of running out of it.
 import { settings } from '../core/settings.svelte';
 import { ui } from '../core/ui.svelte';
 import { workspace } from '../core/tabs.svelte';
@@ -14,6 +15,19 @@ export default async function m59(dir: string) {
   const start = await waitFor(() => document.querySelector('.tabview.active .welcome'), 'the start page');
   assert(start.querySelector('.kinds') && start.querySelector('.drop'), 'open and create are there');
   assert(!start.querySelector('.tools') && !Array.from(start.querySelectorAll('h3')).some((h) => h.textContent === 'Tools'), 'no tool buttons');
+
+  // Settings tiles: nothing runs out of them (a long path wraps).
+  await workspace.openTool('settings');
+  const cards = await waitFor(() => {
+    const l = document.querySelectorAll<HTMLElement>('.tabview.active .tiles > .card');
+    return l.length ? l : null;
+  }, 'the settings tiles');
+  const lbl = cards[0].querySelector<HTMLElement>('.row > .lbl')!;
+  const was = lbl.textContent;
+  lbl.textContent = `installed: C:\\Users\\Someone\\AppData\\Local\\Microsoft\\WindowsApps\\${'VeryLongFolderName'.repeat(6)}monoform.cmd`;
+  await sleep(30);
+  for (const c of cards) assert(c.scrollWidth <= c.clientWidth + 1, `a settings tile overflows (${c.querySelector('h3')?.textContent}: ${c.scrollWidth} > ${c.clientWidth})`);
+  lbl.textContent = was;
 
   const saved = settings.value.recents;
   settings.update((s) => (s.recents = Array.from({ length: 20 }, (_, i) => join(dir, 'notes', `recent-${i}.md`))));

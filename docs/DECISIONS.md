@@ -477,6 +477,10 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   association or the installer with `C:\Windows\System32` as its working directory, and a dialog without a
   folder opens there. Save dialogs already chose one (`saveDir`); Open-file and Open-folder dialogs now start in
   the folder of the last dialog answer while it exists, else Documents (`openDir`).
+- **Looks are one more stage of the adjustment shader**: each is a few lines of GLSL on the adjusted colour (the
+  neighbourhood ones — emboss, pencil sketch — sample the source texture), mixed in by an amount, so they preview
+  in real time on large photos, combine with the sliders and stay inside the selection's mask. One look at a
+  time keeps the result predictable; B&W, sepia and invert remain separate switches.
 - **Transforming a selection floats it on a layer**: the selected pixels are cut onto a layer above the one they
   came from, so the move tool's transformer (move, scale, rotate, snapping) works on them unchanged; applying
   renders that layer into the source layer's pixels and drops it, and the history in between collapses to one

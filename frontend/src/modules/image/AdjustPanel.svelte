@@ -1,7 +1,7 @@
 <script lang="ts">
   // Adjustment sliders with live GPU preview. Nothing changes until Apply;
   // with a selection, only the selected pixels are adjusted.
-  import { BLUR_TYPES, NEUTRAL, isNeutral, type Adjustments, type BlurType } from './adjust';
+  import { BLUR_TYPES, LOOKS, NEUTRAL, isNeutral, type Adjustments, type BlurType, type Look } from './adjust';
   import type { EditorState, ImageEditor } from './editor';
   import { ui } from '../../core/ui.svelte';
   import { num, t } from '../../core/i18n';
@@ -156,6 +156,18 @@
       </label>
     {/each}
     <h4>{t('Effects')}</h4>
+    <div class="toggles looks" role="radiogroup" aria-label={t('Look')}>
+      {#each LOOKS as l (l.id)}
+        <button class="chip" role="radio" aria-checked={a.look === l.id} class:on={a.look === l.id} title={l.help} onclick={() => set('look', a.look === l.id ? '' : (l.id as Look))}>{l.label}</button>
+      {/each}
+    </div>
+    {#if a.look}
+      <label class="row" ondblclick={() => set('lookAmount', 1)} title={t('Double-click to reset')}>
+        <span class="lbl">{t('Amount')}</span>
+        <input type="range" min="0" max="1" step="0.01" value={a.lookAmount} oninput={(e) => set('lookAmount', +(e.target as HTMLInputElement).value)} />
+        <span class="num">{Math.round(a.lookAmount * 100)}</span>
+      </label>
+    {/if}
     <div class="toggles">
       {#each [['grayscale', t('Black & white')], ['sepia', t('Sepia')], ['invert', t('Invert')]] as [k, label] (k)}
         <label class="chip" class:on={a[k as keyof Adjustments]}><input type="checkbox" checked={a[k as keyof Adjustments] as boolean} onchange={(e) => set(k as keyof Adjustments, (e.target as HTMLInputElement).checked)} />{label}</label>
