@@ -593,7 +593,7 @@
     gap: 8px;
     align-items: center;
     padding: 6px 14px;
-    border-radius: 14px;
+    border-radius: 6px;
     background: var(--bg-elevated);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
     /* Only for drawings that take a moment: small ones never show it. */
@@ -611,6 +611,6 @@
     color: var(--danger);
     background: var(--bg-elevated);
     padding: 4px 10px;
-    border-radius: 6px;
+    border-radius: 4px;
   }
 </style>

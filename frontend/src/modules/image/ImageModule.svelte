@@ -1528,7 +1528,7 @@
     align-items: center;
     gap: 10px;
     padding: 8px 14px;
-    border-radius: 999px;
+    border-radius: 4px;
     background: var(--bg-elevated);
     box-shadow: var(--shadow);
     font-size: var(--fs-small);
@@ -1617,14 +1617,14 @@
   .seg {
     display: inline-flex;
     background: var(--bg-hover);
-    border-radius: 8px;
+    border-radius: 4px;
     padding: 2px;
   }
   .seg button {
     border: none;
     background: transparent;
     padding: 3px 10px;
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: pointer;
     color: var(--text-muted);
     font-size: var(--fs-small);

@@ -145,6 +145,6 @@
   .icon-btn.xs {
     width: calc(18px * var(--ui-scale));
     height: calc(18px * var(--ui-scale));
-    border-radius: 5px;
+    border-radius: 3px;
   }
 </style>

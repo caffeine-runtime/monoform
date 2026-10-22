@@ -379,7 +379,7 @@
     height: calc(20px * var(--ui-scale));
     border: none;
     padding: 0;
-    border-radius: 6px;
+    border-radius: 4px;
     background: transparent;
     color: var(--text-muted);
     display: inline-flex;

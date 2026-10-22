@@ -157,7 +157,7 @@
     height: calc(28px * var(--ui-scale));
     padding: 0 10px;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
     background: transparent;
     text-align: left;
     cursor: pointer;

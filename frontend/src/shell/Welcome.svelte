@@ -110,7 +110,7 @@
     gap: 12px 16px;
     padding: 18px 20px;
     border: 1.5px dashed var(--border);
-    border-radius: 18px;
+    border-radius: 8px;
     background: var(--bg-sidebar);
   }
   .dropicon {
@@ -145,7 +145,7 @@
   .dropbtns .btn {
     height: calc(34px * var(--ui-scale));
     padding: 0 14px;
-    border-radius: 10px;
+    border-radius: 5px;
   }
   h3 {
     font-size: calc(13px * var(--ui-scale));
@@ -168,7 +168,7 @@
     gap: 7px;
     padding: 12px 6px 10px;
     border: 1px solid var(--border-soft);
-    border-radius: 12px;
+    border-radius: 6px;
     background: transparent;
     cursor: pointer;
     color: var(--text);
@@ -192,7 +192,7 @@
     place-items: center;
     width: calc(34px * var(--ui-scale));
     height: calc(34px * var(--ui-scale));
-    border-radius: 10px;
+    border-radius: 5px;
     background: var(--bg-hover);
     color: var(--text-muted);
     transition: color 0.12s var(--ease);
@@ -260,7 +260,7 @@
     margin: 0 -10px;
     width: calc(100% + 20px);
     border: none;
-    border-radius: 10px;
+    border-radius: 5px;
     background: transparent;
     cursor: pointer;
     text-align: left;

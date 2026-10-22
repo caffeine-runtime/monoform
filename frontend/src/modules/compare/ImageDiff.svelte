@@ -244,7 +244,7 @@
     top: 8px;
     left: 8px;
     padding: 1px 7px;
-    border-radius: 10px;
+    border-radius: 5px;
     background: var(--bg-elevated);
     border: 1px solid var(--border);
     font-size: var(--fs-small);

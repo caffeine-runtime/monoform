@@ -315,7 +315,7 @@
   .seg {
     display: inline-flex;
     background: var(--bg-hover);
-    border-radius: 8px;
+    border-radius: 4px;
     padding: 2px;
   }
   .seg button {
@@ -323,7 +323,7 @@
     background: transparent;
     white-space: nowrap;
     padding: 4px 14px;
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: pointer;
     color: var(--text-muted);
   }

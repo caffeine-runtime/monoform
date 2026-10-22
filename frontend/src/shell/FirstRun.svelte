@@ -166,7 +166,7 @@
   }
   .card {
     width: min(460px, 100%);
-    border-radius: 20px;
+    border-radius: 8px;
     background: var(--bg-elevated);
     border: 1px solid var(--border-soft);
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
@@ -187,7 +187,7 @@
     place-items: center;
     width: 40px;
     height: 40px;
-    border-radius: 12px;
+    border-radius: 6px;
     background: var(--bg-hover);
     color: var(--text-muted);
     animation: rise 0.3s var(--ease) both;
@@ -223,7 +223,7 @@
     gap: 8px;
     padding: 14px 6px;
     border: 1px solid var(--border-soft);
-    border-radius: 12px;
+    border-radius: 6px;
     background: transparent;
     color: var(--text-muted);
     cursor: pointer;

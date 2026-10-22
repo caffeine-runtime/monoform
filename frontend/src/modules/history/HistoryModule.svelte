@@ -327,7 +327,7 @@
   .badge {
     font-size: calc(11px * var(--ui-scale));
     padding: 1px 7px;
-    border-radius: 9px;
+    border-radius: 5px;
     background: var(--accent);
     color: #fff;
     white-space: nowrap;

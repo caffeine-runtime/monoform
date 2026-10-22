@@ -365,7 +365,7 @@
   .bar {
     flex: 1;
     height: 6px;
-    border-radius: 6px;
+    border-radius: 4px;
     background: var(--bg-active);
     overflow: hidden;
   }

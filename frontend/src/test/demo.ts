@@ -190,7 +190,7 @@ async function keycap(label: string) {
     left: `${at.x + 26}px`,
     top: `${at.y + 18}px`,
     padding: '6px 12px',
-    borderRadius: '8px',
+    borderRadius: '4px',
     font: '600 15px Inter, sans-serif',
     color: '#fff',
     background: 'rgba(20, 20, 20, .82)',

@@ -209,7 +209,7 @@
   .count {
     font-size: calc(11px * var(--ui-scale));
     padding: 0 6px;
-    border-radius: 8px;
+    border-radius: 4px;
     background: var(--bg-hover);
     color: var(--text-muted);
   }

@@ -201,7 +201,7 @@
     border: none;
     background: none;
     padding: 2px 6px;
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: pointer;
     white-space: nowrap;
   }

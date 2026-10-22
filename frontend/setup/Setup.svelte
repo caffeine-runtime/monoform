@@ -237,7 +237,7 @@
     width: 32px;
     height: 28px;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
     background: transparent;
     color: var(--text-muted);
     cursor: pointer;
