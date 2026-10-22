@@ -379,6 +379,9 @@ export class ImageEditor {
   private updateDraggable() {
     for (const L of this.layers) {
       L.group.draggable(this.tool === 'move' && L.id === this.activeId);
+      // Moving: only the active layer takes the pointer — a layer above it
+      // (even a transparent one, hit as its whole rectangle) mustn't catch the drag.
+      L.group.listening(this.tool !== 'move' || L.id === this.activeId);
       L.objs.getChildren().forEach((n) => n.draggable(this.tool === 'hand'));
     }
   }
@@ -1619,6 +1622,7 @@ export class ImageEditor {
   private commit() {
     this.version++;
     for (const L of this.layers) this.refreshCache(L);
+    this.updateDraggable(); // (the active layer may have changed: duplicated, deleted, merged…)
     this.history = this.history.slice(0, this.index + 1);
     this.history.push(this.snapshot());
     this.index = this.history.length - 1;

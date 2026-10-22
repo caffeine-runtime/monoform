@@ -24,6 +24,23 @@ func TestSaveDir(t *testing.T) {
 	}
 }
 
+func TestOpenDir(t *testing.T) {
+	docs := t.TempDir()
+	last := t.TempDir()
+	gone := filepath.Join(last, "removed")
+	cases := []struct{ last, want string }{
+		{"", docs},         // the first dialog: Documents
+		{last, last},       // then where the user last picked from
+		{gone, docs},       // unless that folder is gone
+		{"relative", docs}, // never relative to the working directory
+	}
+	for _, c := range cases {
+		if got := openDir(c.last, docs); got != c.want {
+			t.Errorf("openDir(%q) = %q, want %q", c.last, got, c.want)
+		}
+	}
+}
+
 func TestXDGDocuments(t *testing.T) {
 	home := t.TempDir()
 	os.MkdirAll(filepath.Join(home, ".config"), 0o755)

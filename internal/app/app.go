@@ -55,7 +55,7 @@ type App struct {
 	launchFiles []string
 	launchMode  string  // "peek", "preview", "window" or ""
 	startAt     *[2]int // screen point to place the window at (see SetStartPosition)
-	lastSaveDir string  // folder of the last Save dialog answer (see saveDir)
+	lastDir     string  // folder of the last file dialog answer (see saveDir, openDir)
 }
 
 // New creates the app. start is the process start time used for the
@@ -316,17 +316,43 @@ func toFilters(fs []FileFilter) []wruntime.FileFilter {
 	return out
 }
 
+// dialogDir is where an Open dialog starts (see openDir), and remember
+// notes the folder of an answer for the next dialog.
+func (a *App) dialogDir() string {
+	a.mu.Lock()
+	last := a.lastDir
+	a.mu.Unlock()
+	return openDir(last, documentsDir())
+}
+
+func (a *App) remember(dir string) {
+	if dir == "" || dir == "." {
+		return
+	}
+	a.mu.Lock()
+	a.lastDir = dir
+	a.mu.Unlock()
+}
+
 func (a *App) OpenFilesDialog(title string, filters []FileFilter) ([]string, error) {
-	return wruntime.OpenMultipleFilesDialog(a.ctx, wruntime.OpenDialogOptions{Title: title, Filters: toFilters(filters)})
+	ps, err := wruntime.OpenMultipleFilesDialog(a.ctx, wruntime.OpenDialogOptions{Title: title, Filters: toFilters(filters), DefaultDirectory: a.dialogDir()})
+	if err == nil && len(ps) > 0 {
+		a.remember(filepath.Dir(ps[0]))
+	}
+	return ps, err
 }
 
 func (a *App) OpenFolderDialog(title string) (string, error) {
-	return wruntime.OpenDirectoryDialog(a.ctx, wruntime.OpenDialogOptions{Title: title, CanCreateDirectories: true})
+	p, err := wruntime.OpenDirectoryDialog(a.ctx, wruntime.OpenDialogOptions{Title: title, CanCreateDirectories: true, DefaultDirectory: a.dialogDir()})
+	if err == nil && p != "" {
+		a.remember(filepath.Dir(p)) // next time: the folder it is in, with its neighbours
+	}
+	return p, err
 }
 
 func (a *App) SaveFileDialog(title, defaultPath string, filters []FileFilter) (string, error) {
 	a.mu.Lock()
-	last := a.lastSaveDir
+	last := a.lastDir
 	a.mu.Unlock()
 	name := ""
 	if defaultPath != "" {
@@ -340,9 +366,7 @@ func (a *App) SaveFileDialog(title, defaultPath string, filters []FileFilter) (s
 		CanCreateDirectories: true,
 	})
 	if err == nil && p != "" {
-		a.mu.Lock()
-		a.lastSaveDir = filepath.Dir(p)
-		a.mu.Unlock()
+		a.remember(filepath.Dir(p))
 	}
 	return p, err
 }

@@ -21,6 +21,18 @@ func saveDir(suggested, last, docs string) string {
 	return docs
 }
 
+// openDir is the folder an Open dialog starts in: the folder of the last
+// dialog answer while it still exists, else Documents — never the working
+// directory (System32 when Windows starts the app; see saveDir).
+func openDir(last, docs string) string {
+	if last != "" && filepath.IsAbs(last) {
+		if st, err := os.Stat(last); err == nil && st.IsDir() {
+			return last
+		}
+	}
+	return docs
+}
+
 // documentsDir is the user's Documents folder, or their home folder when
 // there is none.
 func documentsDir() string {
