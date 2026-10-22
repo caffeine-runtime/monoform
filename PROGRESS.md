@@ -532,6 +532,15 @@
   drawing tool is on, so it can be set before drawing; **Sharp / Round corners** for rectangles, diamonds and
   connectors (draw.io's rounded style too); the text being edited is no longer drawn under its edit box. Self-test
   `m56`.
+- **STEP CAD models (.step / .stp)** in the 3D viewer: B-rep solids and surface models (planes, cylinders, cones,
+  spheres, tori, B-spline and swept surfaces), assemblies with their placements (parts shared between
+  instances, named after their products), colours on parts and faces, drawn edges, read in the load worker with
+  progress. Own reader and tessellator (no permissive STEP kernel exists). Checked on the as1 test assembly
+  (AP203 and AP214). Unit tests (parser, band and pole faces, the fixture assembly), self-test `m57`.
+- **Tighter corners** across the interface (cards, buttons, chips, menus, the installer) and **Settings as tiles**
+  side by side that reflow with the window.
+- **Fix: the board unit tests** expected the style without the new corner setting (broke the first 1.1.0
+  release run).
 - **Fix: a CI self-test (`m6`) failed on a fast runner**: the 3 GiB hash finished inside the 2.5 s it watched
   progress for. It now watches while the hash runs and tests Cancel on a fresh run.
 

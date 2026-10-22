@@ -268,6 +268,26 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   - **WebM/MKV** with our own ~600-line EBML reader/writer: block headers are indexed without reading payloads (unknown-size segments/clusters from browser recorders are handled), kept blocks are copied with only their 2-byte relative timestamp patched, clusters are rebuilt, and Cues + SeekHead are written so the result seeks well. Chapters are dropped (their times would be wrong); tags and attachments are kept.
   - Every output is checked in tests by our own prober and, when available, decoded by ffmpeg with no errors and exact frame counts.
 - **The video module plays through the same loopback media server as audio**, with `crossorigin` so frames can be drawn to a canvas (thumbnail strip from a second, hidden `<video>` seeking ~20 positions; PNG snapshots). Cut parts are skipped during playback by watching `currentTime` each frame.
+- **STEP files are read and tessellated by our own code** (`modules/model3d/step/`, in the 3D load worker): there
+  is no permissively licensed STEP kernel — OpenCASCADE (and opencascade.js, occt-import-js) is LGPL, and the
+  other readers wrap it. A viewer needs far less than a kernel: `p21.ts` parses ISO 10303-21 (simple and complex
+  instances, string escapes), `geom.ts` evaluates the B-rep curves and surfaces (lines, circles, ellipses,
+  B-splines incl. rational, pcurves; planes, cylinders, cones, spheres, tori, B-spline / revolved / extruded /
+  offset surfaces) and maps points back to (u, v) (exact for the analytic kinds, sampled guess + Newton for the
+  others), and `tess.ts` triangulates each face in its (u, v) parameters. Each edge is sampled once and shared by
+  the faces on both sides, so the mesh is watertight. Periodic faces are cut open along a seam sampled on the
+  surface (a single straight cut would chord through a sphere), loops round the surface become a band or are
+  closed at the pole on the face's side (from the loop's orientation). Curved faces get grid points inside, ear
+  clipping (three's earcut, the inner points as Steiner points) then Delaunay edge flips — ear clipping alone
+  joins three neighbouring boundary samples of a circle into a triangle across the cap — and edges whose
+  midpoints leave the surface or whose normals turn more than 20° are split. A tiny warp keeps boundary samples on
+  one (u, v) line from being dropped as collinear. The product structure is kept: representations linked without
+  a transformation are one group, `REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION` and `MAPPED_ITEM` place child
+  groups (the next-assembly-usage tells the assembly side), each part is built once and its geometry shared by
+  its instances; shape aspects and other property representations aren't drawn again. Colours come from styled
+  items (face over shell over solid). The STEP code is imported statically by `load.ts`: a chunk split off from
+  the worker imports the worker's own entry again, a second three.js whose `Color` the transfer code doesn't
+  recognise (colours came out white).
 
 ## Look & feel
 
@@ -453,6 +473,11 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   recorded folder and choices, including the elevated "for everyone" case, then starts it) so the registry,
   uninstaller and shortcuts stay right. Not code-signed yet, so updates carry the same first-launch warnings as
   downloads. Rejected: a third-party updater framework (licences, cgo) and a custom update server.
+- **Tighter corners**: radius tokens 3 / 4 / 6 px (were 6 / 8 / 12) and the fixed radii scaled to match; chips and
+  the start page's tools are rounded rectangles, not pills.
+- **Settings are tiles in CSS columns** (`columns: 22rem`): as many columns as fit, reflowing as the window is
+  resized, each card kept whole; the cards are inline boxes so a card's bottom margin doesn't push the next
+  column down.
 - **Side panels float in narrow panes** (< 600 px, `isNarrow`): over the content with a shadow, closed when the
   pane becomes narrow, opened from the toolbar — a 260 px panel beside a 400 px pane would leave the canvas or
   table unusable.

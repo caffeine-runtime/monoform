@@ -21,9 +21,12 @@ import { AMFLoader } from 'three/examples/jsm/loaders/AMFLoader.js';
 import { PCDLoader } from 'three/examples/jsm/loaders/PCDLoader.js';
 import { XYZLoader } from 'three/examples/jsm/loaders/XYZLoader.js';
 import { VTKLoader } from 'three/examples/jsm/loaders/VTKLoader.js';
+// Not a dynamic import: in the worker a split-off chunk would import the
+// worker's own entry again — a second three.js whose classes don't match.
+import { stepToScene } from './step/step';
 
 /** Extensions the viewer opens. */
-export const MODEL_EXTS = ['glb', 'gltf', 'fbx', 'obj', 'stl', 'ply', '3mf', 'dae', '3ds', 'usdz', 'usd', 'usda', 'usdc', 'wrl', 'vrml', 'amf', 'pcd', 'xyz', 'vtk', 'vtp'];
+export const MODEL_EXTS = ['glb', 'gltf', 'fbx', 'obj', 'stl', 'ply', '3mf', 'dae', '3ds', 'usdz', 'usd', 'usda', 'usdc', 'wrl', 'vrml', 'amf', 'pcd', 'xyz', 'vtk', 'vtp', 'step', 'stp'];
 /** Loaders that need DOMParser, which workers don't have. */
 export const MAIN_THREAD_EXTS = ['dae', '3mf', 'amf', 'vtp'];
 
@@ -96,7 +99,7 @@ function meshFor(geometry: THREE.BufferGeometry, points = false): THREE.Object3D
   return new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: hasColor ? 0xffffff : 0xb9b4ac, vertexColors: hasColor, metalness: 0.05, roughness: 0.7, side: THREE.DoubleSide }));
 }
 
-export async function loadModel(ext: string, data: ArrayBuffer, base: string, name: string): Promise<Loaded> {
+export async function loadModel(ext: string, data: ArrayBuffer, base: string, name: string, progress?: (f: number) => void): Promise<Loaded> {
   patchTextureLoader();
   const manager = new THREE.LoadingManager();
   // Resource URLs stay inside the file's folder route.
@@ -212,13 +215,17 @@ export async function loadModel(ext: string, data: ArrayBuffer, base: string, na
     case 'amf':
       scene = new AMFLoader(manager).parse(data);
       break;
+    case 'step':
+    case 'stp':
+      scene = stepToScene(text(), progress);
+      break;
     default:
       throw new Error(t('.{ext} files are not supported', { ext }));
   }
   await done;
-  // STL, 3MF and AMF come from CAD and 3D printing, where Z is up; three.js
-  // has Y up, so stand them upright (a printed boat would lie on its side).
-  if (ext === 'stl' || ext === '3mf' || ext === 'amf') {
+  // STL, 3MF, AMF and STEP come from CAD and 3D printing, where Z is up;
+  // three.js has Y up, so stand them upright (a printed boat would lie on its side).
+  if (ext === 'stl' || ext === '3mf' || ext === 'amf' || ext === 'step' || ext === 'stp') {
     const upright = new THREE.Group();
     upright.rotation.x = -Math.PI / 2;
     upright.add(scene);

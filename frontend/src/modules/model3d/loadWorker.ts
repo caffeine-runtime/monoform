@@ -11,7 +11,13 @@ self.onmessage = async (e: MessageEvent<LoadIn>) => {
   const t0 = performance.now();
   try {
     const bytes = await fetchBytes(url, (done, total) => (self as unknown as Worker).postMessage({ progress: done / total } satisfies LoadOut));
-    const { scene, animations } = await loadModel(ext, bytes.buffer as ArrayBuffer, base, name);
+    let last = 0;
+    const { scene, animations } = await loadModel(ext, bytes.buffer as ArrayBuffer, base, name, (f) => {
+      // Reading the model, after the download.
+      if (f - last < 0.02 && f < 1) return;
+      last = f;
+      (self as unknown as Worker).postMessage({ progress: f } satisfies LoadOut);
+    });
     const { packed, transfer } = pack(scene, animations);
     (self as unknown as Worker).postMessage({ ok: true, packed, millis: Math.round(performance.now() - t0), bytes: bytes.byteLength } satisfies LoadOut, transfer);
   } catch (err) {

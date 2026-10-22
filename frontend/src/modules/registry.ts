@@ -104,7 +104,7 @@ export function registerBuiltinModules() {
   modules.register({
     id: 'model3d',
     name: t('3D model'),
-    extensions: ['glb', 'gltf', 'fbx', 'obj', 'stl', 'ply', '3mf', 'dae', '3ds', 'usdz', 'usd', 'usda', 'usdc', 'wrl', 'vrml', 'amf', 'pcd', 'xyz', 'vtk', 'vtp'],
+    extensions: ['glb', 'gltf', 'fbx', 'obj', 'stl', 'ply', '3mf', 'dae', '3ds', 'usdz', 'usd', 'usda', 'usdc', 'wrl', 'vrml', 'amf', 'pcd', 'xyz', 'vtk', 'vtp', 'step', 'stp'],
     mimeTypes: ['model/gltf-binary', 'model/gltf+json', 'model/stl', 'model/obj'],
     priority: 10,
     load: () => import('./model3d'),

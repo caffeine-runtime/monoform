@@ -810,6 +810,11 @@ def _stl(scale=(20, 20, 20)):
 w("models/cube.stl", _stl())
 # Tall along Z, the "up" of STL files from CAD and 3D printing: it should stand.
 w("models/tower.stl", _stl((10, 10, 40)))
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import stepfixture
+w("models/assembly.step", stepfixture.build().encode())
+w("models/assembly.stp", stepfixture.build().encode())
 obj = ["mtllib textured.mtl", "o Box", "usemtl Checker"] + ["v %g %g %g" % tuple(p) for p in _pos] + ["vt %g %g" % (u, 1 - v) for u, v in _uv] + ["vn %g %g %g" % tuple(n) for n in _nor]
 obj += ["f %d/%d/%d %d/%d/%d %d/%d/%d" % tuple(x for v in _idx[i:i + 3] for x in (v + 1, v + 1, v + 1)) for i in range(0, len(_idx), 3)]
 w("models/textured.obj", ("\n".join(obj) + "\n").encode())
