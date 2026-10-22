@@ -6,6 +6,9 @@
   import Icon from '../../shell/Icon.svelte';
   import Hand from '@lucide/svelte/icons/hand';
   import Move from '@lucide/svelte/icons/move';
+  import RotateCw from '@lucide/svelte/icons/rotate-cw';
+  import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
+  import Rotate3d from '@lucide/svelte/icons/rotate-3d';
   import SquareDashed from '@lucide/svelte/icons/square-dashed';
   import CircleDashed from '@lucide/svelte/icons/circle-dashed';
   import Lasso from '@lucide/svelte/icons/lasso';
@@ -152,6 +155,8 @@
   let rh = $state(0);
   let lockAspect = $state(true);
   let rotateOpen = $state(false);
+  /** What "Rotate by angle" turns: the whole picture, or the active layer. */
+  let rotateLayer = $state(false);
   let angle = $state(0);
   let expand = $state(true);
   let siblings = $state<string[] | null>(null);
@@ -707,9 +712,10 @@
     flip: (h: boolean) => editor?.flip(h),
     undo: () => (anim ? animEd?.undo() : editor?.undo()),
     redo: () => (anim ? animEd?.redo() : editor?.redo()),
-    apply: () => editor?.applyRegion(),
+    apply: () => (es?.transforming ? editor?.finishTransform(true) : editor?.applyRegion()),
     escape: () => {
-      if (resizeOpen) resizeOpen = false;
+      if (es?.transforming) editor?.finishTransform(false);
+      else if (resizeOpen) resizeOpen = false;
       else if (rotateOpen) cancelRotate();
       else if (es?.hasRegion) editor?.cancelRegion();
       else if (es?.pixelSelection) editor?.deselect();
@@ -723,6 +729,10 @@
     navigate: (dir: 1 | -1) => (anim ? animEd?.step(dir) : void navigate(dir)),
     resize: () => openResize(),
     rotateAngle: () => openRotate(),
+    transformSelection: () => editor?.transformSelection(),
+    rotateLayer: (deg: number) => editor?.rotateLayer(deg),
+    rotateLayerAngle: () => openRotate(true),
+    rotateView: (deg: number, reset = false) => editor?.rotateView(deg, reset),
     copy: (merged: boolean) => copy(false, merged),
     cut: () => copy(true),
     paste: () => void paste(),
@@ -816,22 +826,26 @@
     resizeOpen = false;
   }
 
-  function openRotate() {
+  function openRotate(layer = false) {
     if (!editor) return;
     angle = 0;
+    rotateLayer = layer;
     rotateOpen = true;
   }
   function previewAngle() {
-    editor?.previewRotation(angle);
+    if (rotateLayer) editor?.previewLayerRotation(angle);
+    else editor?.previewRotation(angle);
   }
   function applyRotate() {
     if (!editor) return;
     rotateOpen = false;
-    editor.rotateBy(angle, expand);
+    if (rotateLayer) editor.endLayerRotation(true);
+    else editor.rotateBy(angle, expand);
   }
   function cancelRotate() {
     rotateOpen = false;
-    editor?.previewRotation(0);
+    if (rotateLayer) editor?.endLayerRotation(false);
+    else editor?.previewRotation(0);
   }
 
   // ---- folder navigation ----
@@ -899,6 +913,7 @@
 
   async function writeImage(path: string): Promise<boolean> {
     if (!editor) return false;
+    editor.finishTransform(true); // a lifted selection goes back into its layer first
     let format = extname(path);
     if (!SAVE_FORMATS.includes(format)) {
       ui.toast(t("Can't save .{ext}. Choose PNG, JPEG, WebP, GIF, BMP, ICO, ICNS or ORA.", { ext: format }), 'warning');
@@ -1198,6 +1213,12 @@
       <button class="btn ghost" class:on={opts.outline} title={t('Outline around the letters')} onclick={() => setOpt('outline', !opts!.outline)}>{t('Outline', {}, 'text effect')}</button>
       <button class="btn ghost" class:on={opts.shadow} title={t('Soft shadow behind the text')} onclick={() => setOpt('shadow', !opts!.shadow)}>{t('Shadow')}</button>
       <span class="sep"></span>
+    {:else if tool === 'move' && !es?.transforming}
+      <span class="hint">{t('Drag to move · handles scale · round handle rotates')}</span>
+      <button class="btn ghost" title={t('Rotate the layer 90° counter-clockwise')} onclick={() => editor?.rotateLayer(-90)}><Icon icon={RotateCcw} size={14} /> 90°</button>
+      <button class="btn ghost" title={t('Rotate the layer 90° clockwise')} onclick={() => editor?.rotateLayer(90)}><Icon icon={RotateCw} size={14} /> 90°</button>
+      <button class="btn ghost" title={t('Rotate the layer by an angle')} onclick={() => openRotate(true)}>{t('Angle…')}</button>
+      <span class="sep"></span>
     {:else if tool === 'selbrush'}
       <label class="opt">{t('Size')} <input type="range" min="2" max="300" value={opts.brushSize || 24} oninput={(e) => setOpt('brushSize', +(e.target as HTMLInputElement).value)} /><span class="v">{opts.brushSize || 24}</span></label>
       <span class="hint">{t('Paint to add · Alt-drag to take away')}</span>
@@ -1270,6 +1291,11 @@
   <button class="btn ghost" title={t('Zoom out')} onclick={() => ctl.zoom(-1)}>−</button>
   <button class="btn ghost zoomlabel" title={t('Fit (0) · Actual size (1)')} onclick={() => (zoom === 1 ? ctl.fit() : ctl.actual())}>{Math.round(zoom * 100)}%</button>
   <button class="btn ghost" title={t('Zoom in')} onclick={() => ctl.zoom(1)}>+</button>
+  {#if editor && !imgMode}
+    <button class="icon-btn" title={t('Turn the view left ({shortcut}) — the picture itself is not changed', { shortcut: formatShortcut('Alt+ArrowLeft') })} aria-label={t('Turn the view left')} onclick={() => editor?.rotateView(-15)}><Icon icon={RotateCcw} /></button>
+    {#if es?.viewRotation}<button class="btn ghost viewangle" title={t('Straighten the view ({shortcut})', { shortcut: formatShortcut('Alt+0') })} onclick={() => editor?.rotateView(0, true)}>{Math.round(es.viewRotation)}°</button>{/if}
+    <button class="icon-btn" title={t('Turn the view right ({shortcut}) — the picture itself is not changed', { shortcut: formatShortcut('Alt+ArrowRight') })} aria-label={t('Turn the view right')} onclick={() => editor?.rotateView(15)}><Icon icon={RotateCw} /></button>
+  {/if}
   {#if tab.filePath}
     <span class="sep"></span>
     <button class="icon-btn" title={t('Previous image (←)')} onclick={() => navigate(-1)}><Icon icon={ChevronLeft} /></button>
@@ -1300,14 +1326,20 @@
 {#if rotateOpen && editor}
   <div class="banner resize">
     <label class="angle">{t('Angle')} <input type="range" min="-180" max="180" step="0.5" bind:value={angle} oninput={previewAngle} /> <input class="input num sm" type="number" min="-360" max="360" step="0.5" bind:value={angle} oninput={previewAngle} />°</label>
-    <label class="chk"><input type="checkbox" bind:checked={expand} /> {t('Enlarge canvas to fit')}</label>
+    {#if rotateLayer}<span class="muted">{t('Turns the active layer about its middle')}</span>{:else}<label class="chk"><input type="checkbox" bind:checked={expand} /> {t('Enlarge canvas to fit')}</label>{/if}
     <span class="grow"></span>
     <button class="btn" onclick={cancelRotate}>{t('Cancel')}</button>
     <button class="btn primary" onclick={applyRotate}>{t('Rotate')}</button>
   </div>
 {/if}
 
-{#if es?.hasRegion}
+{#if es?.transforming}
+  <div class="banner transforming">
+    <span class="grow">{t('Drag to move the selection; drag the handles to scale it, the round one to rotate it (it snaps to 45°).')}</span>
+    <button class="btn ghost" title={t('Put it back as it was (Esc)')} onclick={() => editor?.finishTransform(false)}><Icon icon={XIcon} size={14} /> {t('Cancel')}</button>
+    <button class="btn primary" onclick={() => editor?.finishTransform(true)}><Icon icon={Check} size={14} /> {t('Apply (Enter)')}</button>
+  </div>
+{:else if es?.hasRegion}
   <div class="banner">
     <span class="grow">{tool === 'crop' ? t('Adjust the crop area, then apply.') : tool === 'blur' ? t('Adjust the area to blur, then apply.') : t('Adjust the area to pixelate, then apply.')}</span>
     <button class="btn ghost" title={t('Discard the area (Esc)')} onclick={() => editor?.cancelRegion()}><Icon icon={XIcon} size={14} /> {t('Cancel')}</button>
@@ -1319,6 +1351,7 @@
     <span class="grow"></span>
     <button class="btn ghost" title={t('Copy ({shortcut})', { shortcut: formatShortcut('Mod+C') })} onclick={() => copy()}><Icon icon={Copy} size={14} /> {t('Copy')}</button>
     <button class="btn ghost" title={t('Cut ({shortcut})', { shortcut: formatShortcut('Mod+X') })} onclick={() => copy(true)}><Icon icon={Scissors} size={14} /> {t('Cut')}</button>
+    <button class="btn ghost" title={t('Rotate, scale or move the selected pixels ({shortcut})', { shortcut: formatShortcut('Mod+Shift+R') })} onclick={() => editor?.transformSelection()}><Icon icon={Rotate3d} size={14} /> {t('Rotate / scale')}</button>
     <button class="btn ghost" title={t('New layer from selection ({shortcut})', { shortcut: formatShortcut('Mod+J') })} onclick={() => editor?.layerFromSelection()}><Icon icon={SquaresUnite} size={14} /> {t('To layer')}</button>
     <button class="btn ghost remove-object" title={t('Remove the selected object and fill the gap with what could be behind it')} onclick={() => void removeObject()}><Icon icon={Eraser2} size={14} /> {t('Remove')}</button>
     <button class="btn ghost" title={t('Delete pixels (Delete)')} onclick={() => editor?.clearSelectionPixels()}><Icon icon={Trash} size={14} /></button>
@@ -1402,7 +1435,7 @@
         <button class:on={panel === 'colours'} onclick={() => setPanel('colours')}>{t('Colours')}</button>
       </div>
       {#if panel === 'layers'}
-        <LayersPanel {editor} {es} />
+        <LayersPanel {editor} {es} onrotate={() => openRotate(true)} />
       {:else if panel === 'colours'}
         <ColoursPanel {editor} {picked} title={tab.filePath ?? tab.title} onuse={(c) => (pickColor(c), ui.toast(t('Using {colour}', { colour: c }), 'success'))} />
       {:else}

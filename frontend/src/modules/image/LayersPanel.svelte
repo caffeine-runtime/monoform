@@ -15,7 +15,25 @@
   import { t } from '../../core/i18n';
   import type { Blend, EditorState, ImageEditor } from './editor';
 
-  let { editor, es }: { editor: ImageEditor; es: EditorState } = $props();
+  let { editor, es, onrotate }: { editor: ImageEditor; es: EditorState; onrotate?: () => void } = $props();
+
+  /** Right-click a layer: it becomes the active one, with what can be done to it. */
+  function layerMenu(e: MouseEvent, id: string, name: string) {
+    e.preventDefault();
+    editor.setActive(id);
+    const i = es.layers.findIndex((l) => l.id === id);
+    menu.show(e, [
+      { label: t('Rotate 90° clockwise'), run: () => editor.rotateLayer(90, id) },
+      { label: t('Rotate 90° counter-clockwise'), run: () => editor.rotateLayer(-90, id) },
+      { label: t('Rotate 180°'), run: () => editor.rotateLayer(180, id) },
+      { label: t('Rotate by angle…'), disabled: !onrotate, run: () => onrotate?.() },
+      { separator: true },
+      { label: t('Rename…'), run: () => void rename(id, name) },
+      { label: t('Duplicate layer'), run: () => editor.duplicateLayer(id) },
+      { label: t('Merge layer down'), disabled: i <= 0, run: () => editor.mergeDown(id) },
+      { label: t('Delete layer'), disabled: es.layers.length < 2, run: () => editor.deleteLayer(id) },
+    ]);
+  }
 
   const BLENDS: { id: Blend; label: string }[] = [
     { id: 'source-over', label: t('Normal', {}, 'blend') },
@@ -182,7 +200,7 @@
         tabindex="-1"
         title={t('Drag to move it up or down')}
         onpointerdown={(e) => dragStart(e, l.id, i)}
-        onclick={() => !justDragged && editor.setActive(l.id)} ondblclick={() => rename(l.id, l.name)} onkeydown={() => {}}>
+        onclick={() => !justDragged && editor.setActive(l.id)} ondblclick={() => rename(l.id, l.name)} oncontextmenu={(e) => layerMenu(e, l.id, l.name)} onkeydown={() => {}}>
         <button class="icon-btn xs eye" title={l.visible ? t('Hide layer') : t('Show layer')} aria-label={l.visible ? t('Hide {name}', { name: l.name }) : t('Show {name}', { name: l.name })} onclick={(e) => (e.stopPropagation(), editor.setLayerProps(l.id, { visible: !l.visible }))}>
           <Icon icon={l.visible ? Eye : EyeOff} size={13} />
         </button>

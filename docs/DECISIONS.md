@@ -477,6 +477,14 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   association or the installer with `C:\Windows\System32` as its working directory, and a dialog without a
   folder opens there. Save dialogs already chose one (`saveDir`); Open-file and Open-folder dialogs now start in
   the folder of the last dialog answer while it exists, else Documents (`openDir`).
+- **Transforming a selection floats it on a layer**: the selected pixels are cut onto a layer above the one they
+  came from, so the move tool's transformer (move, scale, rotate, snapping) works on them unchanged; applying
+  renders that layer into the source layer's pixels and drops it, and the history in between collapses to one
+  step (cancel restores the snapshot from before the lift). Changing tool, layer or saving applies it first.
+- **Turning the view rotates the stage's world group, not the document**: Konva maps the pointer through the
+  rotation, so every tool keeps working; fitting uses the turned picture's bounding box, turning keeps the point
+  in the middle of the window where it was, and renders for saving/merging reset the rotation like zoom and pan.
+  Arrow keys alone already step through the folder's images, so turning is on Alt+← / Alt+→.
 - **Moving a layer: only the active layer listens** (image editor): Konva hits an image as its whole rectangle,
   so any layer above — even an empty, transparent one — caught the pointer and the active layer's drag never
   started. With the move tool on, the other layers stop listening (`updateDraggable`, also run on every commit);

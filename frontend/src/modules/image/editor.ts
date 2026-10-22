@@ -101,6 +101,10 @@ export interface EditorState {
   adjusting: boolean;
   /** Brush and eraser paint the active layer's mask instead of its pixels. */
   editMask: boolean;
+  /** A selection lifted to be moved, scaled or rotated (applied with Enter, cancelled with Esc). */
+  transforming: boolean;
+  /** Degrees the view is turned (the picture isn't). */
+  viewRotation: number;
   version: number; // increments on every committed change
 }
 
@@ -338,18 +342,49 @@ export class ImageEditor {
   private apply() {
     this.world.position({ x: this.view.x, y: this.view.y });
     this.world.scale({ x: this.view.zoom, y: this.view.zoom });
+    this.world.rotation(this.viewRotation);
     this.klayer.imageSmoothingEnabled(this.view.zoom < 2);
     this.klayer.batchDraw();
     this.emit();
   }
 
   fit() {
+    if (this.viewRotation) {
+      // The turned picture's bounding box fits the window.
+      const a = (this.viewRotation * Math.PI) / 180;
+      const [c, s] = [Math.abs(Math.cos(a)), Math.abs(Math.sin(a))];
+      const z = fitZoom(this.docW * c + this.docH * s, this.docW * s + this.docH * c, this.stage.width(), this.stage.height());
+      return this.setView(this.centredAt(z), true);
+    }
     const z = fitZoom(this.docW, this.docH, this.stage.width(), this.stage.height());
     this.setView(centered(this.docW, this.docH, this.stage.width(), this.stage.height(), z), true);
   }
 
   actualSize() {
-    this.setView(centered(this.docW, this.docH, this.stage.width(), this.stage.height(), 1));
+    this.setView(this.viewRotation ? this.centredAt(1) : centered(this.docW, this.docH, this.stage.width(), this.stage.height(), 1));
+  }
+
+  // ---- turning the view (not the picture) ----
+
+  /** Degrees the view is turned clockwise; the document itself is untouched. */
+  viewRotation = 0;
+
+  /** The view at zoom z with the document's centre (or a document point) in the middle of the window. */
+  private centredAt(z: number, d = { x: this.docW / 2, y: this.docH / 2 }): View {
+    const a = (this.viewRotation * Math.PI) / 180;
+    const [c, s] = [Math.cos(a), Math.sin(a)];
+    return { x: this.stage.width() / 2 - z * (d.x * c - d.y * s), y: this.stage.height() / 2 - z * (d.x * s + d.y * c), zoom: z };
+  }
+
+  /** Turn the view by deg (or to an angle), about the middle of the window. */
+  rotateView(deg: number, absolute = false) {
+    const mid = this.docGroup.getAbsoluteTransform().copy().invert().point({ x: this.stage.width() / 2, y: this.stage.height() / 2 });
+    let r = absolute ? deg : this.viewRotation + deg;
+    r = ((((r + 180) % 360) + 360) % 360) - 180; // -180…180
+    if (Math.abs(r) < 1e-9) r = 0;
+    this.viewRotation = r;
+    if (this.fitted) return this.fit();
+    this.setView(this.centredAt(this.view.zoom, mid));
   }
 
   zoomStep(dir: 1 | -1) {
@@ -359,6 +394,7 @@ export class ImageEditor {
   // ---- tools ----
 
   setTool(t: Tool) {
+    if (this.floating && t !== 'move') this.finishTransform(true);
     if (this.stroke) this.endStroke();
     this.cancelRegion();
     this.select(null);
@@ -832,6 +868,7 @@ export class ImageEditor {
 
   setActive(id: string) {
     if (!this.layers.some((l) => l.id === id)) return;
+    if (this.floating && id !== this.floating.id) this.finishTransform(true);
     if (id !== this.activeId) this.editMask = false;
     this.activeId = id;
     this.updateDraggable();
@@ -1055,11 +1092,13 @@ export class ImageEditor {
     this.selection = null;
     this.world.position({ x: 0, y: 0 });
     this.world.scale({ x: 1, y: 1 });
+    this.world.rotation(0);
     try {
       return fn();
     } finally {
       this.world.position({ x: saved.x, y: saved.y });
       this.world.scale({ x: saved.zoom, y: saved.zoom });
+      this.world.rotation(this.viewRotation);
       this.selection = sel0;
       this.tr.nodes(trNodes);
       if (regionVisible) {
@@ -1248,6 +1287,111 @@ export class ImageEditor {
     this.pixelOp((c) => raster.pixelateRegion(c, s.bounds));
   }
 
+  /** Turn a layer by deg (clockwise) about its middle; the pixels stay as they are until baked. */
+  rotateLayer(deg: number, id = this.activeId) {
+    const L = this.layers.find((l) => l.id === id);
+    if (!L || !deg) return;
+    this.turnAboutMiddle(L.group, deg);
+    if (this.tool === 'move' && L.id === this.activeId) this.tr.nodes([L.group]);
+    this.commit();
+    this.klayer.batchDraw();
+    this.emit();
+  }
+
+  /** Turn a layer's group about the middle of what it shows (it stays where it is). */
+  private turnAboutMiddle(g: Konva.Group, deg: number) {
+    const box = g.getClientRect({ relativeTo: this.docGroup, skipShadow: true, skipStroke: true });
+    const mid = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    const local = g.getTransform().copy().invert().point(mid);
+    g.rotation(g.rotation() + deg);
+    const now = g.getTransform().point(local);
+    g.position({ x: g.x() + mid.x - now.x, y: g.y() + mid.y - now.y });
+  }
+
+  private layerTurn: { id: string; rotation: number; x: number; y: number } | null = null;
+
+  /** Show the active layer turned by deg from where it was when the preview started (the "by angle" slider). */
+  previewLayerRotation(deg: number) {
+    const L = this.active;
+    const g = L.group;
+    if (!this.layerTurn || this.layerTurn.id !== L.id) this.layerTurn = { id: L.id, rotation: g.rotation(), x: g.x(), y: g.y() };
+    g.setAttrs({ rotation: this.layerTurn.rotation, x: this.layerTurn.x, y: this.layerTurn.y });
+    if (deg) this.turnAboutMiddle(g, deg);
+    this.klayer.batchDraw();
+  }
+
+  /** Keep the previewed turn (one undo step) or put the layer back. */
+  endLayerRotation(apply: boolean) {
+    const s = this.layerTurn;
+    if (!s) return;
+    this.layerTurn = null;
+    const L = this.layers.find((l) => l.id === s.id);
+    if (!L) return;
+    if (!apply) {
+      L.group.setAttrs({ rotation: s.rotation, x: s.x, y: s.y });
+      this.klayer.batchDraw();
+      return;
+    }
+    if (this.tool === 'move') this.tr.nodes([L.group]);
+    this.commit();
+    this.emit();
+  }
+
+  // ---- transforming a selection ----
+
+  /** The selected pixels lifted onto a layer of their own above the one they came from, until applied. */
+  private floating: { id: string; from: string; at: number } | null = null;
+
+  /**
+   * Move, scale or rotate the selection (Ctrl+T): its pixels are cut onto a
+   * floating layer with the move tool's handles; Enter puts them back into
+   * the layer they came from, Esc puts everything back as it was.
+   */
+  transformSelection() {
+    if (this.floating || !this.selection) return;
+    const from = this.activeId;
+    const at = this.index;
+    this.layerFromSelection(true);
+    const id = this.activeId;
+    this.deselect();
+    this.setTool('move');
+    this.floating = { id, from, at };
+    this.emit();
+  }
+
+  /** Put the lifted pixels back (apply) or undo the lift (cancel); one undo step either way. */
+  finishTransform(apply = true) {
+    const f = this.floating;
+    if (!f) return;
+    this.floating = null;
+    const F = this.layers.find((l) => l.id === f.id);
+    const into = this.layers.find((l) => l.id === f.from);
+    if (!F || !into || !apply) {
+      if (!apply) {
+        this.history = this.history.slice(0, f.at + 1);
+        this.index = f.at;
+        this.restore(this.history[f.at]);
+      } else this.emit();
+      return;
+    }
+    const pic = this.renderLayers([F], true);
+    this.tr.nodes([]);
+    this.layers.splice(this.layers.indexOf(F), 1);
+    F.group.destroy();
+    this.activeId = into.id;
+    this.bake(into);
+    const c = raster.clone(into.canvas);
+    c.getContext('2d')!.drawImage(pic, 0, 0);
+    this.setCanvas(into, c);
+    // The lift, the moves and this: one step to undo.
+    this.history = this.history.slice(0, f.at + 1);
+    this.index = f.at;
+    this.commit();
+    if (this.tool === 'move') this.tr.nodes([this.active.group]);
+    this.klayer.batchDraw();
+    this.emit();
+  }
+
   /** Copy the selection into a new layer above (Ctrl+J). */
   layerFromSelection(cut = false) {
     const { canvas, x, y } = this.copySelection();
@@ -1259,7 +1403,7 @@ export class ImageEditor {
   /** A window point in document pixels. */
   docPoint(clientX: number, clientY: number): { x: number; y: number } {
     const r = this.stage.container().getBoundingClientRect();
-    return { x: (clientX - r.left - this.view.x) / this.view.zoom, y: (clientY - r.top - this.view.y) / this.view.zoom };
+    return this.docGroup.getAbsoluteTransform().copy().invert().point({ x: clientX - r.left, y: clientY - r.top });
   }
 
   pasteImage(c: HTMLCanvasElement, at?: { x: number; y: number }, name = t('Pasted')) {
@@ -1672,6 +1816,7 @@ export class ImageEditor {
 
   undo() {
     if (this.adjuster) this.cancelAdjust();
+    if (this.floating) return this.finishTransform(false);
     if (this.index <= 0) return;
     this.index--;
     this.restore(this.history[this.index]);
@@ -1782,6 +1927,8 @@ export class ImageEditor {
       object: this.objectProps(),
       adjusting: !!this.adjuster,
       editMask: this.editMask,
+      transforming: !!this.floating,
+      viewRotation: this.viewRotation,
       version: this.version,
     };
   }
