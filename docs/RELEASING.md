@@ -10,11 +10,11 @@ Use [semantic versioning](https://semver.org) without a leading `v` in the versi
 
 | Kind | Example | Published as |
 |---|---|---|
-| Normal release | `2.1.0` | the repository's latest release, tag `v2.1.0` |
-| Bug-fix release | `2.1.1` | latest release, tag `v2.1.1` |
-| Test build for others | `2.2.0-beta.1`, `2.2.0-rc.1` | **pre-release** (anything with a `-suffix`), tag `v2.2.0-beta.1` |
+| Normal release | `1.1.0` | the repository's latest release, tag `v1.1.0` |
+| Bug-fix release | `1.1.1` | latest release, tag `v1.1.1` |
+| Test build for others | `1.2.0-beta.1`, `1.2.0-rc.1` | **pre-release** (anything with a `-suffix`), tag `v1.2.0-beta.1` |
 
-Rules of thumb: new features → bump the minor number (`2.1.0` → `2.2.0`); only fixes → bump the patch number;
+Rules of thumb: new features → bump the minor number (`1.1.0` → `1.2.0`); only fixes → bump the patch number;
 something users must relearn, or settings/file formats that change incompatibly → bump the major number.
 A version can be published only once: GitHub refuses a second release with the same tag.
 
@@ -33,7 +33,7 @@ building.
 
 1. Open the repository on GitHub → **Actions** → **Build** (left list) → **Run workflow** (right side).
 2. **Use workflow from:** the branch to release (today: `claude/monoform-v1-er4dqs`, the default branch).
-3. **Version:** e.g. `2.1.0`. Leave it empty and the run only builds and tests, without publishing.
+3. **Version:** e.g. `1.1.0`. Leave it empty and the run only builds and tests, without publishing.
    **Skip macOS** leaves the macOS package out (use it when GitHub has no macOS runner for the account — the
    job then waits and is cancelled, and nothing is published). The release notes then say there is no macOS
    package. Agents pass `"skip_macos": true` with the inputs.
@@ -47,15 +47,15 @@ building.
    - every package includes `monoform` (inside the macOS app bundle; next to the Windows exe)
    - `SHA256SUMS` — checksums of all of the above
 
-The tag (`v2.1.0`) is created by the release on the commit the run built.
+The tag (`v1.1.0`) is created by the release on the commit the run built.
 
 ## Publish — option B: push a tag (command line)
 
 ```sh
 git checkout claude/monoform-v1-er4dqs   # the branch to release
 git pull
-git tag -a v2.1.0 -m "Monoform 2.1.0"
-git push origin v2.1.0
+git tag -a v1.1.0 -m "Monoform 1.1.0"
+git push origin v1.1.0
 ```
 
 Pushing a tag that starts with `v` starts the same workflow; the version is the tag without the `v`.
@@ -63,13 +63,13 @@ Pushing a tag that starts with `v` starts the same workflow; the version is the 
 ## Publish — option C: from an agent or the `gh` CLI
 
 ```sh
-gh workflow run build.yml --ref claude/monoform-v1-er4dqs -f version=2.1.0
+gh workflow run build.yml --ref claude/determined-pasteur-coex2l -f version=1.1.0
 gh run watch            # follow it
-gh release view v2.1.0  # check the result
+gh release view v1.1.0  # check the result
 ```
 
 Agents with the GitHub MCP tools use `actions_run_trigger` with `method: run_workflow`, `workflow_id: build.yml`,
-`ref: <branch>` and `inputs: {"version": "2.1.0"}`, then watch the run with `actions_list` and read failures with
+`ref: <branch>` and `inputs: {"version": "1.1.0"}`, then watch the run with `actions_list` and read failures with
 `get_job_logs`.
 
 ## What the workflow does
@@ -96,11 +96,19 @@ To change what the release page says, edit `.github/release-notes.md`.
 - **A check or self-test failed:** nothing was published. Open the failed job's log, fix the problem, push, and run
   the workflow again with the same version.
 - **The release job failed after creating the release** (rare — e.g. an upload error): delete the half-made release
-  and its tag (Releases page → the release → **Delete**; then `git push origin :refs/tags/v2.1.0` or delete the tag
-  under **Tags**), then run again with the same version.
+  and its tag (**Actions → Delete releases**, see below), then run again with the same version.
 - **A published release is broken:** don't reuse its version. Fix it and publish the next patch version
-  (`2.1.1`). If it must disappear, mark it as a pre-release or delete it on the Releases page.
-- **"bad version"** in the build job: the version doesn't look like `2.1.0` / `2.1.0-beta.1`.
+  (`1.1.1`). If it must disappear, mark it as a pre-release or delete it (below).
+- **"bad version"** in the build job: the version doesn't look like `1.1.0` / `1.1.0-beta.1`.
+
+## Deleting releases
+
+**Actions → Delete releases → Run workflow** with the tags to remove, separated by spaces (e.g.
+`v1.1.0-beta.1 v1.1.0-beta.2`): each release is deleted together with its tag. Agents: `actions_run_trigger`,
+`workflow_id: delete-releases.yml`, `inputs: {"tags": "…"}`. A deleted version can be published again.
+
+Numbering started over at **1.0.0** on 2026-10-22: the earlier `2.0.0-beta.1`…`2.0.0-beta.9` pre-releases (there was
+never a 1.x before them) were deleted, so the first published release is 1.0.0.
 
 ## Not done yet (by design or missing accounts)
 

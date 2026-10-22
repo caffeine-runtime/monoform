@@ -1,0 +1,42 @@
+name: Delete releases
+
+# Removes published releases together with their tags (the Releases page can
+# only do one at a time and leaves the tag behind). Run it by hand:
+# Actions → Delete releases → Run workflow, with the tags to remove.
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: "Release tags to delete, separated by spaces (e.g. v1.0.0-beta.1 v1.0.0-beta.2)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete the releases and their tags
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAGS: ${{ inputs.tags }}
+        run: |
+          set -euo pipefail
+          for t in $TAGS; do
+            if [[ ! "$t" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
+              echo "::error::not a release tag: $t"; exit 1
+            fi
+          done
+          for t in $TAGS; do
+            if gh release view "$t" --repo "$REPO" >/dev/null 2>&1; then
+              gh release delete "$t" --repo "$REPO" --cleanup-tag --yes
+              echo "deleted release and tag $t"
+            elif gh api "repos/$REPO/git/ref/tags/$t" >/dev/null 2>&1; then
+              gh api -X DELETE "repos/$REPO/git/refs/tags/$t"
+              echo "deleted tag $t (it had no release)"
+            else
+              echo "::warning::$t not found"
+            fi
+          done

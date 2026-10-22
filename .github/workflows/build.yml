@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Publish a GitHub release with this version (e.g. 2.0.0 or 2.0.0-beta.1). Empty: build only."
+        description: "Publish a GitHub release with this version (e.g. 1.1.0 or 1.1.0-beta.1). Empty: build only."
         required: false
         default: ""
       skip_macos:
