@@ -1,6 +1,6 @@
 // Image analysis off the main thread: magic-wand flood fill, background
-// removal (U²-Netp) and click-to-select objects (SlimSAM). Model masks are
-// snapped to the image's real edges (refine.ts). Masks come back as
+// removal (U²-Netp) and click-to-select objects (EfficientSAM-Ti). Model
+// masks are snapped to the image's real edges (refine.ts). Masks come back as
 // ImageBitmaps (white, alpha = selection) plus an edge outline, so the main
 // thread only draws bitmaps. Models are bundled assets loaded on first use.
 // With the optional models installed, the subject comes from BiRefNet and
@@ -9,13 +9,13 @@
 import * as ort from 'onnxruntime-web/wasm';
 import { initOrtWasm } from '../../../core/ortwasm';
 import { fetchBytes } from '../../../core/fetchbytes';
-import { measure, pickMask } from './pick';
-import { refineMask, sample } from './refine';
+import { CONFIRM_IOU, CONFIRM_SCORE, innerPoint, iou, largerCandidate, measure, pickMask } from './pick';
+import { refineMask, sample, snapMask } from './refine';
 import { dilate, ERASE_SIZE, feather, type Rect } from './erase';
 import { plainBorder, removePlain } from './plainbg';
 import u2netpUrl from '../models/u2netp.onnx?url';
-import samEncUrl from '../models/slimsam-77-vision_encoder_quantized.onnx?url';
-import samDecUrl from '../models/slimsam-77-prompt_encoder_mask_decoder_quantized.onnx?url';
+import samEncUrl from '../models/efficientsam-ti-encoder-q8.onnx?url';
+import samDecUrl from '../models/efficientsam-ti-decoder-q8.onnx?url';
 
 export interface MaskResult {
   mask: ImageBitmap;
@@ -252,7 +252,11 @@ function workPixels(img: ImageBitmap): Work {
 
 /** Snap prior (working resolution) to the image's edges; alpha 0..255 at W×H. */
 function refined(work: Work, prior: Float32Array, band: number, W: number, H: number): Uint8ClampedArray {
-  const a = refineMask(work.px, work.w, work.h, prior, Math.max(2, band));
+  return fullSize(refineMask(work.px, work.w, work.h, prior, Math.max(2, band)), work, W, H);
+}
+
+/** Alpha 0..1 at working resolution → 0..255 at W×H. */
+function fullSize(a: Float32Array, work: Work, W: number, H: number): Uint8ClampedArray {
   const alpha = new Uint8ClampedArray(W * H);
   if (work.w === W && work.h === H) {
     for (let i = 0; i < alpha.length; i++) alpha[i] = Math.round(a[i] * 255);
@@ -264,15 +268,27 @@ function refined(work: Work, prior: Float32Array, band: number, W: number, H: nu
   return alpha;
 }
 
-const samCache = new Map<string, { emb: ort.Tensor; pos: ort.Tensor; scale: number; w: number; h: number; work: Work }>();
+/** EfficientSAM sees the picture at most this large (long side); it works at 1024² inside. */
+const SAM_IN = 1024;
+/** Its masks come from a 256² grid over that. */
+const SAM_GRID = 256;
+
+const samCache = new Map<string, { emb: ort.Tensor; fw: number; fh: number; w: number; h: number; work: Work }>();
 
 async function samEncode(img: ImageBitmap, key: string): Promise<{ millis: number }> {
   const t0 = performance.now();
   const enc = await session(samEncUrl);
-  const { tensor, scale } = tensorFor(img, 1024);
-  const out = await enc.run({ pixel_values: tensor });
+  // RGB 0..1, CHW; the model resizes and normalises itself.
+  const s = Math.min(1, SAM_IN / Math.max(img.width, img.height));
+  const fw = Math.max(1, Math.round(img.width * s));
+  const fh = Math.max(1, Math.round(img.height * s));
+  const px = pixels(img, fw, fh);
+  const plane = fw * fh;
+  const data = new Float32Array(3 * plane);
+  for (let i = 0; i < plane; i++) for (let c = 0; c < 3; c++) data[c * plane + i] = px[i * 4 + c] / 255;
+  const out = await enc.run({ batched_images: new ort.Tensor('float32', data, [1, 3, fh, fw]) });
   samCache.clear(); // one image at a time keeps memory bounded
-  samCache.set(key, { emb: out.image_embeddings, pos: out.image_positional_embeddings, scale, w: img.width, h: img.height, work: workPixels(img) });
+  samCache.set(key, { emb: out.image_embeddings, fw, fh, w: img.width, h: img.height, work: workPixels(img) });
   img.close();
   return { millis: Math.round(performance.now() - t0) };
 }
@@ -281,41 +297,54 @@ async function samDecode(key: string, points: { x: number; y: number; positive: 
   const t0 = performance.now();
   const c = samCache.get(key);
   if (!c) throw new Error('image not analysed'); // i18n-ignore: translated in vision.ts (no catalog in the worker)
-  const dec = await session(samDecUrl);
-  const pts = new Float32Array(points.length * 2);
-  const labels = new BigInt64Array(points.length);
-  points.forEach((p, i) => {
-    pts[i * 2] = p.x * c.scale;
-    pts[i * 2 + 1] = p.y * c.scale;
-    labels[i] = p.positive ? 1n : 0n;
-  });
-  const out = await dec.run({
-    image_embeddings: c.emb,
-    image_positional_embeddings: c.pos,
-    input_points: new ort.Tensor('float32', pts, [1, 1, points.length, 2]),
-    input_labels: new ort.Tensor('int64', labels, [1, 1, points.length]),
-  });
-  const iou = out.iou_scores.data as Float32Array;
-  const masks = out.pred_masks.data as Float32Array; // [1,1,3,256,256] logits over the padded 1024² input
-  const M = 256;
-  // The image covers the top-left of the padded square.
-  const vw = Math.max(1, Math.round((c.w * c.scale * M) / 1024));
-  const vh = Math.max(1, Math.round((c.h * c.scale * M) / 1024));
-  const cands = Array.from(iou, (score, i) => ({ score, ...measure(masks.subarray(i * M * M, (i + 1) * M * M), M, vw, vh) }));
+  const { fw, fh } = c;
+  const n = fw * fh;
+  // Points in the model's picture (fw×fh); three masks back, each with a score.
+  const ask = async (pts: { x: number; y: number; positive: boolean }[]) => {
+    const dec = await session(samDecUrl);
+    const xy = new Float32Array(pts.length * 2);
+    const labels = new Float32Array(pts.length);
+    pts.forEach((p, i) => {
+      xy[i * 2] = p.x;
+      xy[i * 2 + 1] = p.y;
+      labels[i] = p.positive ? 1 : 0;
+    });
+    const out = await dec.run({
+      image_embeddings: c.emb,
+      batched_point_coords: new ort.Tensor('float32', xy, [1, 1, pts.length, 2]),
+      batched_point_labels: new ort.Tensor('float32', labels, [1, 1, pts.length]),
+      orig_im_size: new ort.Tensor('int64', new BigInt64Array([BigInt(fh), BigInt(fw)]), [2]),
+    });
+    const masks = out.output_masks.data as Float32Array; // [1,1,3,fh,fw] logits
+    return { scores: out.iou_predictions.data as Float32Array, plane: (i: number) => masks.subarray(i * n, (i + 1) * n) };
+  };
+  const clicks = points.map((p) => ({ x: (p.x * fw) / c.w, y: (p.y * fh) / c.h, positive: p.positive }));
+  const first = await ask(clicks);
+  const cands = Array.from(first.scores, (score, i) => ({ score, ...measure(first.plane(i), fw, fw, fh) }));
   const best = pickMask(cands, points.some((p) => !p.positive));
-  const plane = masks.subarray(best * M * M, (best + 1) * M * M);
+  let plane = first.plane(best);
+  // One click: a larger whole the model scored low gets a second look (pick.ts).
+  const big = clicks.length === 1 && clicks[0].positive ? largerCandidate(cands, best) : -1;
+  const deep = big >= 0 ? innerPoint(first.plane(big), fw, fh) : null;
+  if (deep) {
+    const again = await ask([clicks[0], { ...deep, positive: true }]);
+    let j = 0;
+    const overlap = [0, 1, 2].map((i) => iou(again.plane(i), first.plane(big)));
+    for (let i = 1; i < 3; i++) if (overlap[i] > overlap[j]) j = i;
+    if (overlap[j] >= CONFIRM_IOU && again.scores[j] >= CONFIRM_SCORE) plane = again.plane(j);
+  }
   const { work } = c;
-  const k = (c.scale * M) / 1024 / work.s; // working px → mask px
+  const k = fw / work.w; // working px → mask px
   const prior = new Float32Array(work.w * work.h);
   for (let y = 0; y < work.h; y++) {
     for (let x = 0; x < work.w; x++) {
-      const v = sample(plane, M, M, (x + 0.5) * k - 0.5, (y + 0.5) * k - 0.5);
+      const v = sample(plane, fw, fh, (x + 0.5) * k - 0.5, (y + 0.5) * k - 0.5);
       prior[y * work.w + x] = 1 / (1 + Math.exp(-v));
     }
   }
-  // One mask pixel is 1/k working pixels; the true edge is within ~1.5 of them.
-  const alpha = refined(work, prior, 1.5 / k, c.w, c.h);
-  return finish(alpha, c.w, c.h, t0);
+  // The edge settles within about half a mask-grid cell of where the model put it.
+  const a = snapMask(work.px, work.w, work.h, prior, Math.max(2, (0.6 * Math.max(work.w, work.h)) / SAM_GRID));
+  return finish(fullSize(a, work, c.w, c.h), c.w, c.h, t0);
 }
 
 // ---- optional native models (Go side) ----

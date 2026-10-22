@@ -554,6 +554,13 @@
   The selection bar's Blur and Pixelate buttons open their page with a visible strength already set. The **Blur
   region** and **Pixelate region** tools have a strength / block size in the tool bar and show the result inside
   the area before Enter. Self-test `m65`.
+- **Better click-to-select (image editor)**: the bundled model is now **EfficientSAM-Ti** (was SlimSAM-77; same
+  14 MB): whole thin parts (a shuttle's tail boom and pods), just the thing clicked (the orbiter, not the stack
+  and its flame). Edges are snapped to the picture with a colour guided filter instead of re-deciding pixels by
+  colour, which pulled clouds into a white shuttle and bit holes in it. The analysis starts when the tool is
+  chosen (~15 s once per image in the app's WebAssembly runtime; ~21 s before), clicks take ~0.3–0.8 s. A face
+  click still selects the whole person (a second, confirming question to the model). Unit tests (snapMask,
+  pick, inner point), `m9` (disc pixel-exact, people), `scripts/efficientsam.py` rebuilds the model.
 - **After 1.1.3**: **Frosted glass**, an eighth kind of blur (a few taps scattered at random within the radius —
   grainy, with a slight milky lift). **Settings** could not be scrolled to its last tiles (About…) in some window
   sizes on Windows: WebView2 squeezed the tiles to the window's height and the extra columns spilled off to the

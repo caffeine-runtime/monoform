@@ -144,7 +144,7 @@
     "other": "{zoom}% · {n} capas"
   },
   "Magic wand failed": "La varita mágica falló",
-  "Analysing the image to find objects… (once per image, may take ~15 s)": "Analizando la imagen para encontrar objetos… (una vez por imagen, puede tardar unos 15 s)",
+  "Analysing the image to find objects… (once per image)": "Analizando la imagen para encontrar objetos… (una vez por imagen)",
   "Object selection failed": "No se pudo seleccionar el objeto",
   "Finding the object’s edges…": "Buscando los bordes del objeto…",
   "Finding the subject…": "Buscando el sujeto…",
