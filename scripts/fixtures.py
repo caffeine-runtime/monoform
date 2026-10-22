@@ -740,6 +740,15 @@ def _deflate(x):
     c = _zlib.compressobj(9, _zlib.DEFLATED, -15)
     return _b64.b64encode(c.compress(_up.quote(x, safe="~()*!.'").encode()) + c.flush()).decode()
 w("drawings/flow.drawio", ('<mxfile host="app.diagrams.net" version="24.0.0"><diagram id="p1" name="Flow">' + _deflate(_page1) + '</diagram><diagram id="p2" name="Notes">' + _deflate(_page2) + '</diagram></mxfile>').encode())
+# M45: a drawing with a photo (stays as it is on the dark canvas) and a draw.io file already on a dark background.
+_photo = "data:image/png;base64," + _b64.b64encode(png(4, 4, (230, 60, 40))).decode()
+w("drawings/photo.excalidraw", _json.dumps({"type": "excalidraw", "version": 2, "source": "https://excalidraw.com", "elements": [
+    dict(_eb, id="pic", type="image", x=40, y=40, width=160, height=120, fileId="f1", status="saved", scale=[1, 1], index="a0"),
+    dict(_eb, id="cap", type="text", x=40, y=180, width=160, height=25, text="Photo", originalText="Photo", fontSize=20, fontFamily=5, textAlign="left", verticalAlign="top", containerId=None, lineHeight=1.25, index="a1"),
+], "appState": {"viewBackgroundColor": "#ffffff"}, "files": {"f1": {"mimeType": "image/png", "id": "f1", "dataURL": _photo, "created": 1792400000000}}}, indent=2).encode())
+w("drawings/night.drawio", b"""<mxfile host="app.diagrams.net"><diagram id="n1" name="Night"><mxGraphModel background="#1e1e2e"><root><mxCell id="0"/><mxCell id="1" parent="0"/>
+<mxCell id="a" value="Already dark" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#313244;strokeColor=#cdd6f4;fontColor=#cdd6f4;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="160" height="60" as="geometry"/></mxCell>
+</root></mxGraphModel></diagram></mxfile>""")
 
 # ---- packages and disk images (M26) ----
 # deb/rpm/iso/msi samples were made with dpkg-deb, rpmbuild, xorriso and wixl

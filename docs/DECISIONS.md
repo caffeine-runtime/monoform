@@ -349,6 +349,14 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   steps go through a `System` interface, so tests (and a demo on Linux that installs into a test folder) use a
   recording implementation; CI also runs a quiet install/uninstall on a real Windows runner. Rejected: a custom
   NSIS skin (still NSIS pages and widgets), MSIX (signing required, no `monoform` on PATH, restricted registry).
+- **Dark canvases use Excalidraw's dark-mode filter** (`invert(93%) hue-rotate(180deg)`, `core/canvas.ts`) instead
+  of re-colouring the drawing: it's what Excalidraw itself does, works the same for Excalidraw, draw.io, Mermaid and
+  Graphviz (one CSS filter on the drawing layer, GPU-composited, bounded by the viewport), keeps every hue
+  recognisable, and leaves the file and exports untouched. Mermaid's own `dark` theme was rejected: it would need
+  a re-render on every theme switch and does nothing for Graphviz or drawings. On the board the drawing and the
+  selection overlay are separate `<svg>` layers so handles keep the accent colour; photos get the inverse filter
+  (as in Excalidraw); the paper and the label editor's text colour are computed with the same matrix. Drawings whose
+  background is already dark aren't filtered. Off with `lightCanvases` (Settings › Appearance or the toolbar).
 - **Side panels float in narrow panes** (< 600 px, `isNarrow`): over the content with a shadow, closed when the
   pane becomes narrow, opened from the toolbar — a 260 px panel beside a 400 px pane would leave the canvas or
   table unusable.

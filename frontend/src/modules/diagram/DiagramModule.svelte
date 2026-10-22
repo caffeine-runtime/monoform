@@ -15,6 +15,9 @@
   import ZoomIn from '@lucide/svelte/icons/zoom-in';
   import ZoomOut from '@lucide/svelte/icons/zoom-out';
   import Maximize from '@lucide/svelte/icons/maximize';
+  import Moon from '@lucide/svelte/icons/moon';
+  import Sun from '@lucide/svelte/icons/sun';
+  import { theme } from '../../core/theme.svelte';
   import AlertTriangle from '@lucide/svelte/icons/triangle-alert';
   import type { Tab } from '../../core/tabs.svelte';
   import { workspace } from '../../core/tabs.svelte';
@@ -270,6 +273,9 @@
   <span class="label zoom">{Math.round(zoom * 100)}%</span>
   <button class="icon-btn" title="Zoom in" onclick={() => zoomBy(1.25)} disabled={view === 'source'}><Icon icon={ZoomIn} /></button>
   <button class="icon-btn" title="Fit" onclick={fit} disabled={view === 'source'}><Icon icon={Maximize} /></button>
+  {#if theme.resolved === 'dark'}
+    <button class="icon-btn" class:on={theme.darkCanvas} title={theme.darkCanvas ? 'Show the diagram on white' : 'Darken the diagram to match the theme'} aria-pressed={theme.darkCanvas} onclick={() => theme.setDarkCanvas(!theme.darkCanvas)} disabled={view === 'source'}><Icon icon={theme.darkCanvas ? Moon : Sun} /></button>
+  {/if}
   <span class="spacer"></span>
   {#if stats}<span class="label">{stats}</span>{/if}
   <button class="btn ghost" onclick={exportSvg} disabled={!svg}><Icon icon={FileDown} size={14} /> Export SVG…</button>
@@ -354,6 +360,11 @@
     transform-origin: 0 0;
     background: #fff;
     box-shadow: 0 1px 6px rgba(0, 0, 0, 0.18);
+  }
+  /* Dark theme: Excalidraw's dark-mode filter (core/canvas.ts DARK_FILTER); exports stay on white. */
+  :global(:root[data-canvas='dark']) .paper {
+    filter: invert(93%) hue-rotate(180deg);
+    box-shadow: none;
   }
   .paper :global(svg) {
     display: block;

@@ -26,6 +26,10 @@
   import ZoomIn from '@lucide/svelte/icons/zoom-in';
   import ZoomOut from '@lucide/svelte/icons/zoom-out';
   import Maximize from '@lucide/svelte/icons/maximize';
+  import Moon from '@lucide/svelte/icons/moon';
+  import Sun from '@lucide/svelte/icons/sun';
+  import { theme } from '../../core/theme.svelte';
+  import { DARK_FILTER, IMAGE_UNDO, darkColor, isLight } from '../../core/canvas';
   import type { Tab } from '../../core/tabs.svelte';
   import { workspace } from '../../core/tabs.svelte';
   import { api, readFile, saveFile } from '../../core/backend';
@@ -60,6 +64,12 @@
   let canRedo = $state(false);
   let spaceDown = false;
   const ro = $derived(!!tab.readOnly);
+  // In the dark theme a light drawing is shown through Excalidraw's dark-mode
+  // filter (the file keeps its colours; images are flipped back).
+  const paper = $derived(board?.background() ?? '');
+  const lightPaper = $derived(!!board && isLight(paper));
+  const dark = $derived(theme.darkCanvas && lightPaper);
+  const unflip = `mf-unflip-${Math.random().toString(36).slice(2)}`;
 
   // ---------- text measurement ----------
 
@@ -657,6 +667,7 @@
     exportSvgText,
     setPage,
     canUndo: () => canUndo,
+    dark: () => dark,
     version: () => version,
   };
 
@@ -692,6 +703,9 @@
   <span class="label zoom">{Math.round(view.zoom * 100)}%</span>
   <button class="icon-btn" title="Zoom in" onclick={() => zoomBy(1.25)}><Icon icon={ZoomIn} /></button>
   <button class="icon-btn" title="Fit" onclick={fit}><Icon icon={Maximize} /></button>
+  {#if theme.resolved === 'dark' && lightPaper}
+    <button class="icon-btn" class:on={dark} title={dark ? 'Show the drawing light (as in the file)' : 'Darken the drawing to match the theme'} aria-pressed={dark} onclick={() => theme.setDarkCanvas(!dark)}><Icon icon={dark ? Moon : Sun} /></button>
+  {/if}
   <button class="btn ghost" onclick={exportSvg} disabled={!board}><Icon icon={FileDown} size={14} /> Export SVG…</button>
   <button class="btn ghost" onclick={exportPng} disabled={!board}><Icon icon={ImageDown} size={14} /> Export PNG…</button>
 </div>
@@ -740,14 +754,21 @@
   onwheel={wheel}
   onkeydown={keydown}
   onkeyup={keyup}
-  style="background:{board?.background() ?? 'var(--bg)'}"
+  style="background:{board ? (dark ? darkColor(paper) : paper) : 'var(--bg)'}"
 >
   {#if error}
     <div class="empty-state">{error}</div>
   {/if}
-  <svg class="canvas" width="100%" height="100%">
+  <svg class="canvas" class:dark width="100%" height="100%" style:filter={dark ? DARK_FILTER : null} style:--unflip="url(#{unflip})">
+    <defs>
+      <filter id={unflip} color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values={IMAGE_UNDO} /></filter>
+    </defs>
     <g transform="translate({view.x} {view.y}) scale({view.zoom})">
       <g bind:this={content}></g>
+    </g>
+  </svg>
+  <svg class="canvas overlay" width="100%" height="100%">
+    <g transform="translate({view.x} {view.y}) scale({view.zoom})">
       {#if selBox && !editing}
         {#each selBoxes as i (i.id)}
           <rect class="selitem" x={i.box.x - 3 / view.zoom} y={i.box.y - 3 / view.zoom} width={i.box.w + 6 / view.zoom} height={i.box.h + 6 / view.zoom} stroke-width={1 / view.zoom} />
@@ -782,7 +803,7 @@
       bind:this={textarea}
       bind:value={editing.value}
       class="textedit"
-      style="left:{s.x}px; top:{s.y}px; min-width:{Math.max(60, editing.edit.box.w * view.zoom)}px; min-height:{editing.edit.box.h * view.zoom}px; font: {editing.edit.fontSize * view.zoom}px {editing.edit.font}; color:{editing.edit.color}; text-align:{editing.edit.align}"
+      style="left:{s.x}px; top:{s.y}px; min-width:{Math.max(60, editing.edit.box.w * view.zoom)}px; min-height:{editing.edit.box.h * view.zoom}px; font: {editing.edit.fontSize * view.zoom}px {editing.edit.font}; color:{dark ? darkColor(editing.edit.color) : editing.edit.color}; text-align:{editing.edit.align}"
       onkeydown={textKey}
       onblur={commitText}
       spellcheck="true"
@@ -860,6 +881,12 @@
     inset: 0;
     display: block;
   }
+  .canvas.dark :global(image) {
+    filter: var(--unflip);
+  }
+  .overlay {
+    pointer-events: none;
+  }
   .selitem {
     fill: none;
     stroke: #4a90e2;
@@ -868,6 +895,7 @@
   .handle {
     fill: #fff;
     stroke: #4a90e2;
+    pointer-events: all;
   }
   .handle.nw,
   .handle.se {

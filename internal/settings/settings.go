@@ -94,6 +94,9 @@ type Settings struct {
 	PathBarOff bool `json:"pathBarOff"`
 	// PanelsHidden hides editors' side panels (layers, adjustments, …) for more room.
 	PanelsHidden bool `json:"panelsHidden"`
+	// LightCanvases keeps drawings and diagrams (Excalidraw, draw.io, Mermaid,
+	// Graphviz) on white in the dark theme instead of darkening them.
+	LightCanvases bool `json:"lightCanvases"`
 }
 
 func Defaults() Settings {

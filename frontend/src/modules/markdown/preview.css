@@ -111,6 +111,11 @@
   text-align: center;
   border: 1px solid var(--border-soft);
 }
+/* …and darkened in the dark theme with Excalidraw's dark-mode filter (core/canvas.ts). */
+:root[data-canvas='dark'] .md .diagram {
+  filter: invert(93%) hue-rotate(180deg);
+  border-color: transparent;
+}
 .md .diagram svg {
   max-width: 100%;
   height: auto;

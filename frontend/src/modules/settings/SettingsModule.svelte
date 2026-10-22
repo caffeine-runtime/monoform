@@ -73,6 +73,10 @@
         {/each}
       </div>
     </div>
+    <label class="row check">
+      <span class="lbl" title="Excalidraw and draw.io drawings, Mermaid and Graphviz diagrams. The files and exports keep their colours.">Darken drawings and diagrams in the dark theme</span>
+      <input type="checkbox" checked={!s.lightCanvases} onchange={(e) => theme.setDarkCanvas((e.target as HTMLInputElement).checked)} />
+    </label>
     <div class="row">
       <label class="lbl" for="uis" title="Makes text, buttons and icons everywhere larger or smaller (Ctrl+Alt+= / Ctrl+Alt+−)">Interface size</label>
       <span class="scale">
