@@ -17,5 +17,5 @@
     "types": ["vite/client"]
   },
   "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte", "setup/**/*.ts", "setup/**/*.svelte"],
-  "exclude": ["src/wailsjs/**/*.js"]
+  "exclude": ["src/wailsjs/**/*.js", "src/locales/*.ts"]
 }
