@@ -110,6 +110,12 @@ release** (pre-releases are never offered) and download the asset for their syst
 the checksum file in every release. A normal (non-pre-release) version reaches everyone on their next start; test a
 release as a pre-release first if unsure. The release notes' "What's new" part is shown in the update popup.
 
+## Cleaning up the Actions list
+
+**Actions → Clean up workflow runs → Run workflow** deletes old runs (logs and artifacts), keeping the newest few
+finished runs of each workflow (3 by default); runs still in progress and published releases are untouched.
+Agents: `actions_run_trigger`, `workflow_id: cleanup-runs.yml`, `inputs: {"keep": "3"}`.
+
 ## Deleting releases
 
 **Actions → Delete releases → Run workflow** with the tags to remove, separated by spaces (e.g.
