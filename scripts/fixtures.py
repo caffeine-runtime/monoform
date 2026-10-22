@@ -62,6 +62,16 @@ def _subject(x, y):
         return (40, 80, 200)
     return (235, 232, 226)
 w("img/subject.png", png_fn(400, 300, _subject))
+def _watermark(x, y):
+    """A drawing like a scanned schematic: black lines (one crossing a light
+    watermark band, a closed circle) on white, the band laid over at 60 %."""
+    v = 255
+    if (99 <= x < 101 and 20 <= y < 280) or (149 <= y < 151 and 20 <= x < 380) or abs(math.hypot(x - 300, y - 240) - 30) < 1.5:
+        v = 0
+    if 40 <= x < 360 and 120 <= y < 180:
+        v = round(v * 0.4 + 220 * 0.6)
+    return (v, v, v)
+w("img/watermark.png", png_fn(400, 300, _watermark))
 w("img/photo.png", png_fn(400, 300, lambda x, y: (0, 0, 0) if x < 200 and (x // 2) % 2 == 0 else ((255, 255, 255) if x < 200 else (40, 80, 200))))
 # A photo-like image (smooth gradients + texture): stored losslessly it compresses badly.
 w("img/big.png", png_fn(1200, 900, lambda x, y: (int(128 + 90 * math.sin(x / 41)) , int(128 + 80 * math.cos(y / 29)), (x * 7 + y * 3) % 256)))

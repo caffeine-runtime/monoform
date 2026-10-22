@@ -1,6 +1,6 @@
 // Main-thread side of the vision worker: started on first use, terminated
 // after a minute idle so the models' memory is returned.
-import type { ErasePatch, EraseStarted, MaskResult, VisionIn, VisionOut } from './visionWorker';
+import type { ErasePatch, EraseStarted, MaskResult, PlainOut, VisionIn, VisionOut } from './visionWorker';
 import type { Rect } from './erase';
 import { t } from '../../../core/i18n';
 
@@ -63,6 +63,12 @@ class Vision {
   async wand(src: CanvasImageSource, x: number, y: number, tolerance: number, contiguous: boolean): Promise<MaskResult> {
     const image = await createImageBitmap(src as ImageBitmapSource);
     return this.call({ type: 'wand', image, x, y, tolerance, contiguous }, [image]);
+  }
+
+  /** Make a plain (one-colour) background transparent; no image back when the border isn't plain (unless forced). */
+  async plainBackground(src: CanvasImageSource, everywhere: boolean | 'auto' = 'auto', force = false): Promise<PlainOut> {
+    const image = await createImageBitmap(src as ImageBitmapSource);
+    return this.call({ type: 'plainBg', image, everywhere, force }, [image]);
   }
 
   async removeBackground(src: CanvasImageSource): Promise<MaskResult> {

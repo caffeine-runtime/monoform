@@ -4,6 +4,11 @@ import { workspace } from './tabs.svelte';
 
 export async function openSettingsAt(selector: string): Promise<void> {
   workspace.openTool('settings');
+  await flashAt(selector);
+}
+
+/** Scroll the first visible match of selector into view and highlight it briefly (waits up to 3 s for it to appear). */
+export async function flashAt(selector: string): Promise<void> {
   for (let i = 0; i < 60; i++) {
     const el = [...document.querySelectorAll<HTMLElement>(selector)].find((e) => e.offsetParent);
     if (el) {

@@ -5,8 +5,11 @@
   import type { EditorState, ImageEditor } from './editor';
   import { ui } from '../../core/ui.svelte';
   import { num, t } from '../../core/i18n';
+  import Icon from '../../shell/Icon.svelte';
+  import Pipette from '@lucide/svelte/icons/pipette';
+  import X from '@lucide/svelte/icons/x';
 
-  let { editor, es }: { editor: ImageEditor; es: EditorState } = $props();
+  let { editor, es, pick }: { editor: ImageEditor; es: EditorState; pick?: () => Promise<string | null> } = $props();
 
   let a = $state<Adjustments>({ ...NEUTRAL });
   let raf = 0;
@@ -70,9 +73,15 @@
     if (a.blur) changed();
   }
 
-  function set(key: keyof Adjustments, v: number | boolean) {
-    (a as unknown as Record<string, number | boolean>)[key] = v;
+  function set(key: keyof Adjustments, v: number | boolean | string) {
+    (a as unknown as Record<string, number | boolean | string>)[key] = v;
     changed();
+  }
+
+  /** Clean up › A colour: click it in the image. */
+  async function pickMark() {
+    const c = await pick?.();
+    if (c) set('markColor', c);
   }
 
   function apply() {
@@ -93,12 +102,36 @@
   // Leaving the panel (or the tab) discards an unapplied preview.
   $effect(() => () => editor.cancelAdjust());
   // Hooks for the self-test.
-  export const test = { set, setBlurType, apply, reset };
+  export const test = { set, setBlurType, apply, reset, get: () => $state.snapshot(a) as Adjustments };
 </script>
 
 <div class="adjust">
   <div class="scroll">
     {#if es.pixelSelection}<p class="note">{t('Adjusting the selected area only.')}</p>{/if}
+    <section class="cleanup">
+      <h4>{t('Clean up')}</h4>
+      <label class="row" ondblclick={() => set('lightMarks', 0)} title={t('Turns pale marks white — a light watermark, scanner shading, a grey page. Dark lines and text stay.')}>
+        <span class="lbl">{t('Light marks')}</span>
+        <input type="range" min="0" max="1" step="0.01" value={a.lightMarks} oninput={(e) => set('lightMarks', +(e.target as HTMLInputElement).value)} />
+        <span class="num">{a.lightMarks ? `${num(Math.round(a.lightMarks * 100))}%` : t('off')}</span>
+      </label>
+      <div class="row" title={t('Turns one colour white — a coloured watermark or stamp. Pick it in the image.')}>
+        <span class="lbl">{t('A colour')}</span>
+        <span class="pickrow">
+          <input class="swatch" class:unset={!a.markColor} type="color" value={a.markColor || '#c8c8c8'} aria-label={t('Colour to remove')} oninput={(e) => set('markColor', (e.target as HTMLInputElement).value)} />
+          {#if pick}<button class="icon-btn" title={t('Pick in the image')} aria-label={t('Pick in the image')} onclick={pickMark}><Icon icon={Pipette} size={14} /></button>{/if}
+          {#if a.markColor}<button class="icon-btn" title={t('Keep this colour')} aria-label={t('Keep this colour')} onclick={() => set('markColor', '')}><Icon icon={X} size={14} /></button>{/if}
+        </span>
+        <span class="num">{a.markColor ? '' : t('off')}</span>
+      </div>
+      {#if a.markColor}
+        <label class="row" ondblclick={() => set('markTolerance', NEUTRAL.markTolerance)} title={t('How different a colour can be and still be removed')}>
+          <span class="lbl">{t('Tolerance')}</span>
+          <input type="range" min="0.02" max="0.6" step="0.01" value={a.markTolerance} oninput={(e) => set('markTolerance', +(e.target as HTMLInputElement).value)} />
+          <span class="num">{num(Math.round(a.markTolerance * 100))}%</span>
+        </label>
+      {/if}
+    </section>
     {#each GROUPS as g (g.title)}
       <h4>{g.title}</h4>
       {#each g.sliders as s (s.key)}
@@ -152,6 +185,25 @@
     font-size: var(--fs-small);
     color: var(--text-muted);
     font-weight: 600;
+  }
+  .pickrow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+  .row .swatch {
+    width: 28px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: none;
+    flex: none;
+    cursor: pointer;
+  }
+  .row .swatch.unset {
+    opacity: 0.45;
   }
   .note {
     margin: 8px 0 0;

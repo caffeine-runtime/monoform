@@ -32,11 +32,12 @@
   import Sparkles from '@lucide/svelte/icons/sparkles';
   import UserRoundSearch from '@lucide/svelte/icons/user-round-search';
   import Download from '@lucide/svelte/icons/download';
-  import { openSettingsAt } from '../../core/settingsLink';
+  import { flashAt, openSettingsAt } from '../../core/settingsLink';
   import Copy from '@lucide/svelte/icons/copy';
   import Scissors from '@lucide/svelte/icons/scissors';
   import Trash from '@lucide/svelte/icons/trash-2';
   import PaintBucket from '@lucide/svelte/icons/paint-bucket';
+  import Highlighter from '@lucide/svelte/icons/highlighter';
   import SquaresUnite from '@lucide/svelte/icons/squares-unite';
   import Save from '@lucide/svelte/icons/save';
   import Eraser2 from '@lucide/svelte/icons/brush-cleaning';
@@ -342,6 +343,14 @@
       updateStatus();
     };
     editor.onPick = (t, x, y, mode) => (t === 'picker' ? pickAt(x, y) : void (t === 'fill' ? fillAt(x, y) : t === 'wand' ? wandAt(x, y, mode) : objectAt(x, y, mode)));
+    editor.onPainted = (s) =>
+      void vision
+        .edges(s.mask)
+        .then((r) => {
+          r.mask.close();
+          editor?.setSelectionEdges(s, { canvas: r.edges, scale: r.edgeScale });
+        })
+        .catch(() => {});
     editor.setTool(tool);
     editor.selectMode = selMode;
     opts = { ...editor.opts };
@@ -359,9 +368,32 @@
   let initApplied = false;
   let picked = $state<[number, number, number] | null>(null);
 
+  // A colour asked for by a panel (Adjust › Clean up): the next picker click answers it.
+  let pickWanted: ((hex: string | null) => void) | null = null;
+  function pickForPanel(): Promise<string | null> {
+    pickWanted?.(null);
+    const prev = tool === 'picker' ? 'hand' : tool;
+    setTool('picker');
+    ui.toast(t('Click the colour to remove in the image.'), 'info');
+    return new Promise((resolve) => {
+      pickWanted = (hex) => {
+        pickWanted = null;
+        if (tool === 'picker') setTool(prev);
+        resolve(hex);
+      };
+    });
+  }
+
   /** The colour of the visible image at a document point. */
   function pickAt(x: number, y: number) {
     if (!editor) return;
+    if (pickWanted) {
+      // The layer's own pixels, not a clean-up preview of them.
+      const b = editor.base;
+      const d = b.getContext('2d')!.getImageData(Math.min(b.width - 1, Math.max(0, Math.floor(x))), Math.min(b.height - 1, Math.max(0, Math.floor(y))), 1, 1).data;
+      pickWanted('#' + [d[0], d[1], d[2]].map((v) => v.toString(16).padStart(2, '0')).join(''));
+      return;
+    }
     const c = editor.composite();
     const px = Math.min(c.width - 1, Math.max(0, Math.floor(x)));
     const py = Math.min(c.height - 1, Math.max(0, Math.floor(y)));
@@ -443,6 +475,13 @@
     }
   }
 
+  /** Image › Remove a watermark: the Adjust panel's Clean up, highlighted (on a photo, the AI removal is the better tool). */
+  async function openCleanup() {
+    setPanel('adjust');
+    await tick();
+    await flashAt(`.tabview[data-tab-id="${tab.id}"] .adjust .cleanup`);
+  }
+
   /** Make sure the object model has seen the current image. */
   async function analyse(): Promise<string | null> {
     if (!editor) return null;
@@ -502,7 +541,44 @@
     }
   }
 
-  async function removeBackground() {
+  /**
+   * Remove background. 'auto': a plain (one-colour) background is made
+   * transparent by colour, keeping thin lines and soft edges; anything else
+   * goes to the subject model. 'plain' and 'ai' force one way.
+   * `everywhere`: also closed areas of the colour (decided from the picture when not given).
+   */
+  async function removeBackground(how: 'auto' | 'plain' | 'ai' = 'auto', everywhere: boolean | 'auto' = 'auto') {
+    if (!editor || busy) return;
+    if (how !== 'ai') {
+      busy = t('Removing the background…');
+      let r;
+      try {
+        r = await vision.plainBackground(editor.base, everywhere, how === 'plain');
+      } catch (e) {
+        toastError(e, t('Background removal failed'));
+        return;
+      } finally {
+        busy = '';
+      }
+      if (r.image) {
+        editor.replacePixels(r.image);
+        r.image.close();
+        const v = editor.state().version;
+        const redo = (all: boolean) => () => {
+          if (editor?.state().version !== v) return;
+          editor.undo();
+          void removeBackground('plain', all);
+        };
+        ui.toast(
+          r.everywhere ? t('Plain background removed, also inside closed shapes. Save as PNG or WebP to keep the transparency.') : t('Plain background removed around the subject. Save as PNG or WebP to keep the transparency.'),
+          'success',
+          r.everywhere ? { label: t('Keep closed areas'), run: redo(false) } : { label: t('Also inside closed shapes'), run: redo(true) },
+          8000,
+        );
+        return;
+      }
+      if (how === 'plain') return;
+    }
     const r = await subjectMask();
     if (!r || !editor) return;
     r.edges.close();
@@ -671,6 +747,7 @@
       else editor.setMaskHide(!editor.opts.maskHide);
     },
     removeBackground: () => void removeBackground(),
+    openCleanup: () => void openCleanup(),
     selectSubject: () => void selectSubject(),
     removeObject: () => void removeObject(),
     saveCopy: () => void saveCopy(),
@@ -683,6 +760,7 @@
 
   function setTool(next: Tool) {
     if (!editable && next !== 'hand') return;
+    if (pickWanted && next !== 'picker') pickWanted(null);
     tool = next;
     editor?.setTool(next);
     if (next === 'text' && !fonts.length) fonts = availableFonts();
@@ -937,7 +1015,10 @@
       { label: t('Flip vertically'), shortcut: 'Shift+V', run: () => ed.flip(false) },
       { label: t('Resize…'), shortcut: formatShortcut('Mod+Alt+I'), run: () => openResize() },
       { separator: true },
+      { label: t('Remove a watermark…'), run: () => void openCleanup() },
       { label: t('Remove background'), run: () => void removeBackground() },
+      { label: t('Remove a plain background (one colour)'), run: () => void removeBackground('plain') },
+      { label: t('Remove background with AI'), run: () => void removeBackground('ai') },
       { label: t('Select subject'), run: () => void selectSubject(!!aiModels.pack('subject')?.installed) },
       { label: t('Remove object (fill the gap)'), disabled: !es?.pixelSelection, run: () => void removeObject() },
       { separator: true },
@@ -991,6 +1072,7 @@
     fillAt,
     objectAt,
     removeBackground,
+    openCleanup,
     selectSubject,
     removeObject,
     copy,
@@ -1019,6 +1101,7 @@
       { id: 'select', icon: SquareDashed, label: t('Rectangle select'), help: t('Drag to select a rectangle. Hold Ctrl for a square, Shift to add, Alt to subtract.'), key: 'M' },
       { id: 'ellipse', icon: CircleDashed, label: t('Ellipse select'), help: t('Drag to select an ellipse. Hold Ctrl for a circle, Shift to add, Alt to subtract.') },
       { id: 'lasso', icon: Lasso, label: t('Lasso select'), help: t('Drag around an area to select it freehand. Shift adds, Alt subtracts.'), key: 'L' },
+      { id: 'selbrush', icon: Highlighter, label: t('Selection brush'), help: t('Paint over what to select — e.g. a watermark on a photo, then Remove object (AI) fills it in. Each stroke adds; Alt-drag takes away. Set the size in the toolbar.') },
       { id: 'wand', icon: Wand, label: t('Magic wand'), help: t('Click to select pixels of a similar colour. Set Tolerance in the toolbar; Shift adds, Alt subtracts.'), key: 'W' },
       { id: 'object', icon: ScanEye, label: t('Select object'), help: t('Click an object to select it, with edges snapped to the pixels. Shift-click adds, Alt-click excludes a part.'), key: 'O' },
     ],
@@ -1114,6 +1197,11 @@
       <button class="btn ghost i" class:on={opts.italic} title={t('Italic')} onclick={() => setOpt('italic', !opts!.italic)}>I</button>
       <button class="btn ghost" class:on={opts.outline} title={t('Outline around the letters')} onclick={() => setOpt('outline', !opts!.outline)}>{t('Outline', {}, 'text effect')}</button>
       <button class="btn ghost" class:on={opts.shadow} title={t('Soft shadow behind the text')} onclick={() => setOpt('shadow', !opts!.shadow)}>{t('Shadow')}</button>
+      <span class="sep"></span>
+    {:else if tool === 'selbrush'}
+      <label class="opt">{t('Size')} <input type="range" min="2" max="300" value={opts.brushSize || 24} oninput={(e) => setOpt('brushSize', +(e.target as HTMLInputElement).value)} /><span class="v">{opts.brushSize || 24}</span></label>
+      <span class="hint">{t('Paint to add · Alt-drag to take away')}</span>
+      {#if es?.pixelSelection}<button class="btn ghost" title={t('Remove what is selected and fill the gap (optional AI model)')} onclick={() => void removeObject()}><Icon icon={Sparkles} size={14} /> {t('Remove object (AI)')}</button>{/if}
       <span class="sep"></span>
     {:else if SELECT_TOOLS.includes(tool)}
       <div class="seg" role="radiogroup" aria-label={t('Selection mode')}>
@@ -1318,7 +1406,7 @@
       {:else if panel === 'colours'}
         <ColoursPanel {editor} {picked} title={tab.filePath ?? tab.title} onuse={(c) => (pickColor(c), ui.toast(t('Using {colour}', { colour: c }), 'success'))} />
       {:else}
-        <AdjustPanel bind:this={adjustPanel} {editor} {es} />
+        <AdjustPanel bind:this={adjustPanel} {editor} {es} pick={pickForPanel} />
       {/if}
     </aside>
   {/if}

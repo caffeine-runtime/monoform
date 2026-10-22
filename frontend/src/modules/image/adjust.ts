@@ -28,6 +28,11 @@ export interface Adjustments {
   grayscale: boolean;
   sepia: boolean;
   invert: boolean;
+  /** Clean up: pale pixels (a light watermark, scanner shading) turn white; 0 = off, 1 = everything lighter than mid-grey. */
+  lightMarks: number;
+  /** Clean up: pixels near this colour turn white ('' = off), within markTolerance (0..1). */
+  markColor: string;
+  markTolerance: number;
 }
 
 export type BlurType = 'gaussian' | 'motion' | 'zoom' | 'spin' | 'lens' | 'tiltshift' | 'surface';
@@ -63,9 +68,12 @@ export const NEUTRAL: Adjustments = {
   grayscale: false,
   sepia: false,
   invert: false,
+  lightMarks: 0,
+  markColor: '',
+  markTolerance: 0.2,
 };
 
-const BLUR_SHAPE: (keyof Adjustments)[] = ['blurType', 'blurAngle', 'blurX', 'blurY', 'blurBand'];
+const BLUR_SHAPE: (keyof Adjustments)[] = ['blurType', 'blurAngle', 'blurX', 'blurY', 'blurBand', 'markTolerance'];
 
 /** True when nothing would change (blur shape settings alone don't count). */
 export function isNeutral(a: Adjustments): boolean {
@@ -154,7 +162,9 @@ uniform bool useMask, useSharp, useBlur, tilt;
 uniform vec2 tiltC, tiltN, size;
 uniform float tiltW;
 uniform float exposure, brightness, contrast, highlights, shadows, saturation, vibrance, temperature, tint, hue, sharpen, vignette;
-uniform bool grayscale, sepia, invertc;
+uniform bool grayscale, sepia, invertc, useMark;
+uniform float lightMarks, markTol;
+uniform vec3 markColor;
 
 vec3 rgb2hsv(vec3 c) {
   vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
@@ -178,6 +188,15 @@ void main() {
     base = mix(orig, base, smoothstep(tiltW, tiltW + 0.2, d));
   }
   vec3 c = base.rgb;
+  // Clean up first, so the other adjustments see a clean page.
+  if (lightMarks > 0.0) {
+    float th = 1.0 - lightMarks * 0.6;
+    c = mix(c, vec3(1.0), smoothstep(th - 0.06, th, luma(c)));
+  }
+  if (useMark) {
+    vec3 d = abs(c - markColor);
+    c = mix(c, vec3(1.0), 1.0 - smoothstep(markTol * 0.7, markTol + 0.002, max(d.r, max(d.g, d.b))));
+  }
   if (useSharp) c += (c - texture(sharpSrc, uv).rgb) * sharpen * 2.5;
   c *= exp2(exposure);
   // Temperature/tint as channel gains.
@@ -209,6 +228,12 @@ void main() {
   if (useMask) adj = mix(orig, adj, texture(mask, uv).a);
   o = adj;
 }`;
+
+/** '#rrggbb' → 0..1 channels (null when empty or malformed). */
+export function hexRgb(hex: string): [number, number, number] | null {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  return m ? [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255] : null;
+}
 
 function compile(gl: WebGL2RenderingContext, type: number, src: string): WebGLShader {
   const s = gl.createShader(type)!;
@@ -389,6 +414,11 @@ export class Adjuster {
     gl.uniform1i(u('grayscale'), a.grayscale ? 1 : 0);
     gl.uniform1i(u('sepia'), a.sepia ? 1 : 0);
     gl.uniform1i(u('invertc'), a.invert ? 1 : 0);
+    gl.uniform1f(u('lightMarks'), a.lightMarks);
+    const mc = hexRgb(a.markColor);
+    gl.uniform1i(u('useMark'), mc ? 1 : 0);
+    gl.uniform3f(u('markColor'), ...(mc ?? [0, 0, 0]));
+    gl.uniform1f(u('markTol'), a.markTolerance);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }

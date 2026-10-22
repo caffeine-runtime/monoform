@@ -500,6 +500,18 @@
 - **AI models download side by side**, and *Settings › AI models* offers *Download all* (one question, the shared
   runtime counted once) when more than one is missing; each row shows its percentage. Go test (two installs at once
   fetch the shared runtime once) and self-test `m43`.
+- **Watermark removal** in the image editor (*Image › Remove a watermark…* opens *Adjust › Clean up*): *Light
+  marks* turns pale marks white — a light watermark, scanner shading — and keeps dark lines and text, also where
+  they cross the mark; *A colour* (picked in the image with the eyedropper) turns one colour white, with a
+  tolerance. Both preview live on the GPU, work inside a selection and undo. For a watermark over a photo, the new
+  **selection brush** paints over it, then *Remove object (AI)* fills it in (the button is on the brush's toolbar).
+- **Plain background removal without AI**: *Remove background* first checks the picture's border; when it is one
+  colour (a drawing, a scan, a product on white) that colour turns transparent the way "colour to alpha" does —
+  soft edges fade instead of keeping a white fringe, solid parts stay solid in their own colour. In a drawing
+  (mostly background) closed areas go too (the inside of a circle); otherwise only background connected to the
+  border goes, so white parts of a subject stay — the toast offers the other choice. A busy border goes to the
+  model as before; *Image* also has *Remove a plain background (one colour)* and *Remove background with AI*.
+  Unit tests (`plainbg.test.ts`) and self-test `m52`.
 - **Fix: a CI self-test (`m6`) failed on a fast runner**: the 3 GiB hash finished inside the 2.5 s it watched
   progress for. It now watches while the hash runs and tests Cancel on a fresh run.
 

@@ -39,6 +39,7 @@ export type Tool =
   | 'select'
   | 'ellipse'
   | 'lasso'
+  | 'selbrush'
   | 'wand'
   | 'object'
   | 'crop'
@@ -53,7 +54,7 @@ export type Tool =
   | 'pixelate'
   | 'picker';
 export const REGION_TOOLS: Tool[] = ['crop', 'blur', 'pixelate'];
-export const SELECT_TOOLS: Tool[] = ['select', 'ellipse', 'lasso', 'wand', 'object'];
+export const SELECT_TOOLS: Tool[] = ['select', 'ellipse', 'lasso', 'selbrush', 'wand', 'object'];
 
 export type Blend = 'source-over' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten' | 'difference' | 'color-dodge' | 'color-burn' | 'soft-light' | 'hard-light';
 
@@ -199,6 +200,8 @@ export class ImageEditor {
   private draft: KNode | null = null;
   private start: { x: number; y: number } | null = null;
   private lasso: number[] | null = null;
+  private selPaint: number[] | null = null;
+  private selPaintLine: KLine;
   private stroke: {
     canvas: HTMLCanvasElement;
     g: CanvasRenderingContext2D;
@@ -248,6 +251,8 @@ export class ImageEditor {
   askText: (initial: string) => Promise<string | null> = async () => null;
   /** Called on a click with the wand or object tool (handled by the module, which talks to the vision worker). */
   onPick: (tool: 'wand' | 'object' | 'picker' | 'fill', x: number, y: number, mode: SelectMode) => void = () => {};
+  /** Called after the selection brush changed the selection (the module draws its outline off the main thread). */
+  onPainted: (s: Selection) => void = () => {};
 
   constructor(
     private container: HTMLDivElement,
@@ -268,6 +273,8 @@ export class ImageEditor {
     this.world.add(this.overlay);
     this.lassoLine = new KLine({ points: [], stroke: '#fff', strokeWidth: 1, strokeScaleEnabled: false, dash: [4, 4], listening: false, closed: false });
     this.world.add(this.lassoLine);
+    this.selPaintLine = new KLine({ points: [], stroke: 'rgba(255, 70, 70, 0.45)', lineCap: 'round', lineJoin: 'round', listening: false });
+    this.world.add(this.selPaintLine);
     this.region = new KRect({ visible: false, stroke: '#ffffff', dash: [6, 4], strokeScaleEnabled: false, strokeWidth: 1.5, fill: 'rgba(217,119,87,0.12)', draggable: true, name: 'region' });
     this.world.add(this.region);
     this.regionTr = new Transformer({ rotateEnabled: false, keepRatio: false, borderStroke: ACCENT, anchorStroke: ACCENT, anchorSize: 9, anchorCornerRadius: 3, ignoreStroke: true });
@@ -448,6 +455,11 @@ export class ImageEditor {
         this.region.setAttrs({ x: p.x, y: p.y, width: 0, height: 0, visible: true, cornerRadius: 0 });
         this.regionTr.nodes([]);
         return;
+      } else if (t === 'selbrush') {
+        this.selPaint = [p.x, p.y, p.x, p.y];
+        this.selPaintLine.setAttrs({ points: this.selPaint, strokeWidth: this.selBrushSize() });
+        this.klayer.batchDraw();
+        return;
       } else if (t === 'lasso') {
         this.lasso = [p.x, p.y];
         this.lassoLine.points(this.lasso);
@@ -464,6 +476,15 @@ export class ImageEditor {
       let p = this.pointer();
       if (this.stroke) {
         this.strokeTo(p);
+        return;
+      }
+      if (this.selPaint) {
+        const n = this.selPaint.length;
+        if (Math.hypot(p.x - this.selPaint[n - 2], p.y - this.selPaint[n - 1]) * this.view.zoom > 2) {
+          this.selPaint.push(p.x, p.y);
+          this.selPaintLine.points(this.selPaint);
+          this.klayer.batchDraw();
+        }
         return;
       }
       if (this.lasso) {
@@ -494,6 +515,14 @@ export class ImageEditor {
       if (this.stroke) {
         this.endStroke();
         this.start = null;
+        return;
+      }
+      if (this.selPaint) {
+        const pts = this.selPaint;
+        this.selPaint = null;
+        this.start = null;
+        this.selPaintLine.points([]);
+        this.paintSelection(pts, (e.evt as MouseEvent).altKey ? 'subtract' : 'add');
         return;
       }
       if (this.lasso) {
@@ -596,6 +625,48 @@ export class ImageEditor {
 
   deselect() {
     this.setPixelSelection(null);
+  }
+
+  private selBrushSize(): number {
+    return this.opts.brushSize || 24;
+  }
+
+  /** Selection brush: a stroke through points (document pixels) added to or taken from the selection. */
+  paintSelection(pts: number[], mode: SelectMode = 'add') {
+    const size = this.selBrushSize();
+    const mask = raster.makeCanvas(this.docW, this.docH);
+    const g = mask.getContext('2d')!;
+    g.strokeStyle = '#fff';
+    g.lineWidth = size;
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    g.beginPath();
+    g.moveTo(pts[0], pts[1]);
+    for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]);
+    g.stroke();
+    // A click (or a stroke that didn't move): a dot — zero-length lines draw nothing in WebKit.
+    g.fillStyle = '#fff';
+    g.beginPath();
+    g.arc(pts[0], pts[1], size / 2, 0, Math.PI * 2);
+    g.fill();
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let i = 0; i < pts.length; i += 2) {
+      x0 = Math.min(x0, pts[i]);
+      x1 = Math.max(x1, pts[i]);
+      y0 = Math.min(y0, pts[i + 1]);
+      y1 = Math.max(y1, pts[i + 1]);
+    }
+    const r = size / 2 + 1;
+    const b = sel.clampRect({ x: Math.floor(x0 - r), y: Math.floor(y0 - r), width: Math.ceil(x1 - x0 + 2 * r), height: Math.ceil(y1 - y0 + 2 * r) }, this.docW, this.docH);
+    this.setPixelSelection(sel.fromMask(mask, b, null), mode);
+    if (this.selection) this.onPainted(this.selection);
+  }
+
+  /** The outline for a selection, once worked out (ignored if the selection has changed since). */
+  setSelectionEdges(s: Selection, edges: NonNullable<Selection['edges']>) {
+    if (this.selection !== s) return;
+    s.edges = edges;
+    this.klayer.batchDraw();
   }
 
   selectAll() {
@@ -1205,6 +1276,15 @@ export class ImageEditor {
       },
       { ignoreSelection: true },
     );
+  }
+
+  /** Replace the active layer's pixels with a picture of the same size (inside the selection, if any), as one undo step. */
+  replacePixels(img: CanvasImageSource) {
+    this.pixelOp((c) => {
+      const out = raster.makeCanvas(c.width, c.height);
+      out.getContext('2d')!.drawImage(img, 0, 0);
+      return out;
+    });
   }
 
   /** Keep only the masked part of the active layer (background removal). */

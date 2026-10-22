@@ -15,7 +15,7 @@ interface Hooks {
   writeImage: (p: string) => Promise<boolean>;
   wandAt: (x: number, y: number, mode: string) => Promise<void>;
   objectAt: (x: number, y: number, mode: string) => Promise<void>;
-  removeBackground: () => Promise<void>;
+  removeBackground: (how?: 'auto' | 'plain' | 'ai') => Promise<void>;
   copy: (cut?: boolean, merged?: boolean) => void;
   paste: () => Promise<void>;
   saveCopy: () => Promise<boolean>;
@@ -181,7 +181,7 @@ export default async function m9(dir: string) {
 
   // ---- background removal ----
   let t0 = performance.now();
-  const bgJank = await measureJank(() => h.removeBackground());
+  const bgJank = await measureJank(() => h.removeBackground('ai'));
   const rb = ed.composite();
   const corner = px(rb, 395, 295)[3];
   const centre = px(rb, 200, 150)[3];
@@ -189,7 +189,7 @@ export default async function m9(dir: string) {
   assert(corner < 40 && centre > 200, 'background transparent, subject kept');
   ed.undo();
   t0 = performance.now();
-  const warm = await measureJank(() => h.removeBackground());
+  const warm = await measureJank(() => h.removeBackground('ai'));
   log(`remove background again (model loaded) ${Math.round(performance.now() - t0)} ms, longest UI frame ${Math.round(warm.maxGap)} ms`);
   ed.undo();
 

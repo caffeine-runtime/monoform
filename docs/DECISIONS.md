@@ -397,6 +397,23 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   window) on the active layer's pixels and fills through that mask with the same blend the selection tools use, so
   an active selection limits it like every other pixel edit. It samples the active layer only (like most editors'
   default); tolerance and contiguous are shared with the wand. The edge is hard (no anti-aliasing), as in a plain fill.
+- **Watermark clean-up is two adjustments, not a model.** Watermarks on drawings, scans and documents are pale or
+  one colour over dark content, so turning light pixels (by luminance, with a soft 0.06 ramp) or one colour (by the
+  largest channel difference) white removes them and keeps the lines — including where they cross the mark, which
+  inpainting tends to bend or break. They are part of the GPU adjustment shader (first, so the other sliders see a
+  clean page): live preview, selection-limited and undoable for free. On photos, where the mark's pixels must be
+  replaced by something plausible, the answer is the existing object removal (Moebius) on a selection painted with
+  the new selection brush (a stroked mask; its outline comes from the vision worker). "Un-blending" a
+  semi-transparent watermark of known colour and opacity was considered and left out: it needs both values exact,
+  which a user can't read off a picture.
+- **Plain backgrounds are removed by colour, not by a model** (`vision/plainbg.ts`, in the vision worker). The
+  border decides: the median colour of the border pixels, if ≥ 85 % of them are within 11 % of it. Then GIMP-style
+  colour-to-alpha (the least opacity that explains the pixel over that colour, and the colour that gives it), with a
+  noise floor (6 %) and an opaque ceiling (80 %): plain colour-to-alpha leaves a red subject on grey partly
+  see-through. The subject models are trained on photos and lose thin lines in drawings; colour is exact there and
+  instant. "Everywhere" vs "from the border" (a flood through mostly-background pixels plus the one-pixel rim):
+  drawings and documents need closed areas cleared, product shots need white parts kept; picked by how much of the
+  picture is background (≥ 60 % → everywhere), with the other choice one click away in the toast.
 - **Layer reordering by dragging the row** with pointer events (a 4 px threshold so a click still selects; the drop
   gap from row midpoints) rather than HTML drag and drop, which WebKitGTK draws with a ghost image and no control of
   the drop line; one `placeLayer` step, so a drag is one undo.
