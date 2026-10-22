@@ -25,19 +25,28 @@
   import Highlighter from '@lucide/svelte/icons/highlighter';
   import RemoveFormatting from '@lucide/svelte/icons/remove-formatting';
   import Moon from '@lucide/svelte/icons/moon';
+  import Plus from '@lucide/svelte/icons/plus';
+  import TableIcon from '@lucide/svelte/icons/table';
+  import Search from '@lucide/svelte/icons/search';
+  import ChevronUp from '@lucide/svelte/icons/chevron-up';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import XIcon from '@lucide/svelte/icons/x';
+  import { findRanges, replaceAll, replaceRange } from './docFind';
+  import { cleanPaste } from './docPaste';
+  import { menu, type MenuItem } from '../../core/ui.svelte';
   import Sun from '@lucide/svelte/icons/sun';
   import { theme } from '../../core/theme.svelte';
   import { availableFonts, fontLabel, GENERIC } from '../image/fonts';
   import OutlineTree from '../../shell/OutlineTree.svelte';
   import { isNarrow } from '../../core/fit';
   import { countText, formatCounts, type Counts, type OutlineItem } from '../../core/textStats';
-  import { api, endpoint } from '../../core/backend';
+  import { api, endpoint, fileUrl } from '../../core/backend';
   import { basename } from '../../core/paths';
   import type { Tab } from '../../core/tabs.svelte';
   import { toastError, ui } from '../../core/ui.svelte';
   import { formatShortcut } from '../../core/keys';
-  import { t } from '../../core/i18n';
-  import { DocModel, HIGHLIGHT } from './docxModel';
+  import { t, tn } from '../../core/i18n';
+  import { colgroup, DocModel, fitTable, HIGHLIGHT, type NewPart } from './docxModel';
   import { Numbering, type ListKind } from './docxNumbering';
   import { OdtModel } from './odtModel';
   import { officeControllers } from './controllers';
@@ -64,6 +73,17 @@
   let lastColor = $state('C00000');
   let lastHighlight = $state('yellow');
   let palette = $state<'color' | 'highlight' | null>(null);
+  let inTable = $state(false);
+  // Find and replace.
+  let findOpen = $state(false);
+  let replaceOpen = $state(false);
+  let findQ = $state('');
+  let replaceQ = $state('');
+  let matchCase = $state(false);
+  let matches = $state.raw<Range[]>([]);
+  let matchAt = $state(-1);
+  let findInput = $state<HTMLInputElement>();
+  let plainPaste = false;
   /** The selection in the page, kept while a toolbar menu has the focus. */
   let lastRange: Range | null = null;
   const fonts = $derived(['', ...availableFonts().filter((f) => !GENERIC.includes(f))]);
@@ -203,6 +223,7 @@
   function input() {
     tab.dirty = true;
     renumber();
+    if (findOpen) queueFind();
     clearTimeout(countTimer);
     countTimer = setTimeout(count, 400);
   }
@@ -316,6 +337,475 @@
     { id: 'justify', icon: AlignJustify, label: t('Justify ({shortcut})', { shortcut: formatShortcut('Mod+J') }) },
   ] as const;
 
+  // ---------- inserting ----------
+
+  /** Put a node at the cursor (replacing a selection) and the cursor after it. */
+  function insertAtCaret(node: Node) {
+    restoreSelection();
+    const sel = window.getSelection();
+    if (!sel?.rangeCount || !page) return;
+    const r = sel.getRangeAt(0);
+    if (!page.contains(r.commonAncestorContainer)) return;
+    r.deleteContents();
+    r.insertNode(node);
+    r.setStartAfter(node);
+    r.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(r);
+    input();
+  }
+
+  /**
+   * Pasted HTML: one plain paragraph goes in at the cursor; several blocks
+   * (lists, headings, tables) go in as whole paragraphs, splitting the one
+   * with the cursor (the browser would merge the last into it).
+   */
+  function insertBlocks(html: string) {
+    if (!page) return;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const blocks = Array.from(tmp.children) as HTMLElement[];
+    if (blocks.length === 1 && blocks[0].tagName === 'P' && !blocks[0].dataset.list) {
+      exec('insertHTML', blocks[0].innerHTML);
+      return;
+    }
+    restoreSelection();
+    let b = selectedBlocks()[0];
+    if (!b) page.append(...blocks);
+    else if (!(b.textContent ?? '').trim() && !b.querySelector('img, .atom')) b.replaceWith(...blocks);
+    else {
+      const sel = window.getSelection()!;
+      const rest = document.createRange();
+      rest.selectNodeContents(b);
+      rest.setStart(sel.getRangeAt(0).endContainer, sel.getRangeAt(0).endOffset);
+      if (rest.toString().trim()) {
+        document.execCommand('insertParagraph');
+        b = selectedBlocks()[0] ?? b;
+        b.before(...blocks);
+      } else b.after(...blocks);
+    }
+    const last = blocks[blocks.length - 1];
+    const r = document.createRange();
+    r.selectNodeContents(last);
+    r.collapse(false);
+    window.getSelection()?.removeAllRanges();
+    window.getSelection()?.addRange(r);
+  }
+
+  /** A link's address as typed: a bare domain gets https://, an e-mail address mailto:. */
+  function linkTarget(v: string): string {
+    const s = v.trim();
+    if (/^(https?:|mailto:|#)/i.test(s)) return s;
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) return `mailto:${s}`;
+    return `https://${s}`;
+  }
+
+  /** Insert or edit a link (Ctrl+K); an empty address removes it. */
+  async function editLink() {
+    if (tab.readOnly || odt || !page) return;
+    restoreSelection();
+    const sel = window.getSelection();
+    const range = sel?.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+    if (!range || !page.contains(range.commonAncestorContainer)) return;
+    let n: Node | null = range.startContainer;
+    let a: HTMLAnchorElement | null = null;
+    for (; n && n !== page; n = n.parentNode) if ((n as HTMLElement).tagName === 'A') a = n as HTMLAnchorElement;
+    const cur = a ? (a.dataset.newHref ?? a.dataset.href ?? '') : '';
+    const v = await ui.prompt(a ? t('Edit link') : t('Insert link'), cur, a ? t('Update') : t('Insert'));
+    if (v === null) return;
+    page.focus({ preventScroll: true });
+    sel!.removeAllRanges();
+    sel!.addRange(range);
+    if (a) {
+      if (!v.trim()) a.replaceWith(...Array.from(a.childNodes));
+      else {
+        a.dataset.newHref = linkTarget(v);
+        a.title = a.dataset.newHref;
+      }
+      input();
+      return;
+    }
+    if (!v.trim()) return;
+    const url = linkTarget(v);
+    if (range.collapsed) {
+      const el = document.createElement('a');
+      el.dataset.newHref = url;
+      el.title = url;
+      el.textContent = v.trim();
+      insertAtCaret(el);
+    } else {
+      exec('createLink', url);
+      for (const el of Array.from(page.querySelectorAll<HTMLAnchorElement>('a[href]:not([data-hl]):not([data-new-href])'))) {
+        el.dataset.newHref = el.getAttribute('href') ?? url;
+        el.title = el.dataset.newHref;
+        el.removeAttribute('href');
+      }
+      input();
+    }
+  }
+
+  /** Ctrl+click on a link opens it in the browser. */
+  function click(e: MouseEvent) {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    const a = (e.target as HTMLElement).closest('a');
+    const href = a?.dataset.newHref ?? a?.dataset.href;
+    if (href && /^(https?:|mailto:)/i.test(href)) {
+      e.preventDefault();
+      void api.OpenExternal(href);
+    }
+  }
+
+  function blobBase64(b: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result).split(',')[1] ?? '');
+      fr.onerror = () => reject(fr.error);
+      fr.readAsDataURL(b);
+    });
+  }
+
+  /** A picture (from a file or the clipboard) at the cursor. */
+  async function addPicture(blob: Blob, ext: string) {
+    if (!(model instanceof DocModel)) return;
+    try {
+      const bmp = await createImageBitmap(blob);
+      const { width, height } = bmp;
+      bmp.close();
+      const span = model.newImage(document, await blobBase64(blob), ext === 'jpeg' ? 'jpg' : ext, width, height, URL.createObjectURL(blob));
+      insertAtCaret(span);
+    } catch (e) {
+      toastError(e, t('Couldn’t insert the picture'));
+    }
+  }
+
+  async function insertPicture() {
+    const paths = await api.OpenFilesDialog(t('Insert picture'), [{ name: t('Pictures'), patterns: '*.png;*.jpg;*.jpeg;*.gif;*.bmp' }]);
+    for (const p of paths ?? []) {
+      const ext = (p.split('.').pop() ?? 'png').toLowerCase();
+      await addPicture(await (await fetch(fileUrl(p))).blob(), ext);
+    }
+  }
+
+  function insertPageBreak() {
+    if (model instanceof DocModel) insertAtCaret(model.newPageBreak(document));
+  }
+
+  /** An empty cell (a paragraph to type in); from: the cell whose look it copies. */
+  function newCell(from?: HTMLTableCellElement): HTMLTableCellElement {
+    const td = document.createElement('td');
+    const ref = from?.dataset.tc ?? from?.dataset.tcFrom;
+    if (ref) td.dataset.tcFrom = ref;
+    const p = document.createElement('p');
+    p.append(document.createElement('br'));
+    td.append(p);
+    return td;
+  }
+
+  /** A table of rows × cols after the paragraph with the cursor; the cursor goes to its first cell. */
+  function insertTable(rows: number, cols: number) {
+    if (tab.readOnly || !page) return;
+    restoreSelection();
+    const table = document.createElement('table');
+    table.append(colgroup(document, Array.from({ length: cols }, () => Math.floor(9026 / cols))));
+    fitTable(table);
+    for (let r = 0; r < rows; r++) {
+      const tr = document.createElement('tr');
+      for (let c = 0; c < cols; c++) tr.append(newCell());
+      table.append(tr);
+    }
+    let at: Element | null = selectedBlocks()[0] ?? null;
+    while (at && at.parentElement !== page) at = at.parentElement;
+    if (at) at.after(table);
+    else page.append(table);
+    // Somewhere to type after it.
+    if (!table.nextElementSibling) {
+      const p = document.createElement('p');
+      p.append(document.createElement('br'));
+      table.after(p);
+    }
+    const first = table.querySelector('p')!;
+    const r = document.createRange();
+    r.selectNodeContents(first);
+    r.collapse(true);
+    window.getSelection()?.removeAllRanges();
+    window.getSelection()?.addRange(r);
+    input();
+    syncBlock();
+  }
+
+  async function customTable() {
+    const v = await ui.prompt(t('Table size (columns × rows)'), '3 × 3', t('Insert'));
+    const m = /(\d+)\D+(\d+)/.exec(v ?? '');
+    if (m) insertTable(Math.min(50, Math.max(1, Number(m[2]))), Math.min(20, Math.max(1, Number(m[1]))));
+  }
+
+  /** The table cell with the cursor. */
+  function cellAt(): HTMLTableCellElement | null {
+    restoreSelection();
+    const b = selectedBlocks()[0];
+    return (b?.closest('td') as HTMLTableCellElement | null) ?? null;
+  }
+
+  function tableOp(op: 'rowAbove' | 'rowBelow' | 'colLeft' | 'colRight' | 'delRow' | 'delCol' | 'delTable') {
+    const td = cellAt();
+    if (!td || tab.readOnly) return;
+    const tr = td.parentElement as HTMLTableRowElement;
+    const table = td.closest('table') as HTMLTableElement;
+    const col = td.cellIndex;
+    if (op === 'rowAbove' || op === 'rowBelow') {
+      const row = document.createElement('tr');
+      if (tr.dataset.tr ?? tr.dataset.trFrom) row.dataset.trFrom = tr.dataset.tr ?? tr.dataset.trFrom;
+      for (const c of Array.from(tr.cells)) {
+        const n = newCell(c);
+        n.colSpan = c.colSpan;
+        row.append(n);
+      }
+      if (op === 'rowAbove') tr.before(row);
+      else tr.after(row);
+    } else if (op === 'colLeft' || op === 'colRight') {
+      const colEls = Array.from(table.querySelectorAll<HTMLElement>(':scope > colgroup > col'));
+      const ref = colEls[Math.min(col, colEls.length - 1)];
+      if (ref) {
+        const c = document.createElement('col');
+        c.style.width = ref.style.width;
+        if (op === 'colLeft') ref.before(c);
+        else ref.after(c);
+        fitTable(table);
+      }
+      for (const r of Array.from(table.rows)) {
+        const ref = r.cells[Math.min(col, r.cells.length - 1)];
+        if (!ref) continue;
+        if (op === 'colLeft') ref.before(newCell(ref));
+        else ref.after(newCell(ref));
+      }
+    } else if (op === 'delRow') {
+      const ri = tr.rowIndex;
+      tr.remove();
+      if (!table.rows.length) table.remove();
+      else caretIn(table.rows[Math.min(ri, table.rows.length - 1)].cells[Math.min(col, table.rows[Math.min(ri, table.rows.length - 1)].cells.length - 1)]);
+    } else if (op === 'delCol') {
+      const ri = tr.rowIndex;
+      for (const r of Array.from(table.rows)) r.cells[Math.min(col, r.cells.length - 1)]?.remove();
+      for (const r of Array.from(table.rows)) if (!r.cells.length) r.remove();
+      const colEls = Array.from(table.querySelectorAll<HTMLElement>(':scope > colgroup > col'));
+      colEls[Math.min(col, colEls.length - 1)]?.remove();
+      fitTable(table);
+      if (!table.rows.length) table.remove();
+      else caretIn(table.rows[Math.min(ri, table.rows.length - 1)].cells[Math.max(0, col - 1)]);
+    } else table.remove();
+    input();
+    syncBlock();
+  }
+
+  // ---------- resizing tables ----------
+
+  type Edge = { kind: 'col'; table: HTMLTableElement; col: number } | { kind: 'row'; row: HTMLTableRowElement };
+  let edge: Edge | null = null;
+  let resizing = false;
+
+  /** The column a cell starts in (counting spans). */
+  function columnOf(td: HTMLTableCellElement): number {
+    let n = 0;
+    for (let c = td.previousElementSibling as HTMLTableCellElement | null; c; c = c.previousElementSibling as HTMLTableCellElement | null) n += c.colSpan || 1;
+    return n;
+  }
+
+  /** The table's <col>s; a table without them gets them from its drawn widths. */
+  function colsOf(table: HTMLTableElement): HTMLElement[] {
+    let cols = Array.from(table.querySelectorAll<HTMLElement>(':scope > colgroup > col'));
+    if (!cols.length) {
+      const first = table.rows[0];
+      if (!first) return [];
+      const widths: number[] = [];
+      for (const c of Array.from(first.cells)) for (let k = 0; k < (c.colSpan || 1); k++) widths.push(Math.round((c.getBoundingClientRect().width / (c.colSpan || 1)) * 15));
+      table.prepend(colgroup(document, widths));
+      for (const c of Array.from(table.querySelectorAll<HTMLElement>(':scope > colgroup > col'))) c.dataset.px = ''; // drawn, not from the file: always written
+      fitTable(table);
+      cols = Array.from(table.querySelectorAll<HTMLElement>(':scope > colgroup > col'));
+    }
+    return cols;
+  }
+
+  /** Over a column's right border or a row's bottom border: the resize cursor. */
+  function hoverEdge(e: PointerEvent) {
+    if (resizing || tab.readOnly || odt || !page) return;
+    const td = (e.target as HTMLElement).closest?.('td') as HTMLTableCellElement | null;
+    let next: Edge | null = null;
+    if (td && page.contains(td)) {
+      const r = td.getBoundingClientRect();
+      if (Math.abs(e.clientX - r.right) <= 4) next = { kind: 'col', table: td.closest('table')!, col: columnOf(td) + (td.colSpan || 1) - 1 };
+      else if (Math.abs(e.clientX - r.left) <= 4 && td.previousElementSibling) next = { kind: 'col', table: td.closest('table')!, col: columnOf(td) - 1 };
+      else if (Math.abs(e.clientY - r.bottom) <= 4) next = { kind: 'row', row: td.parentElement as HTMLTableRowElement };
+    }
+    edge = next;
+    page.style.cursor = next ? (next.kind === 'col' ? 'col-resize' : 'row-resize') : '';
+  }
+
+  /** Drag a border: a column trades width with the next one (the last one widens the table); a row gets taller. */
+  function startResize(e: PointerEvent) {
+    if (!edge || e.button !== 0 || !page) return;
+    e.preventDefault();
+    const target = edge;
+    resizing = true;
+    const x0 = e.clientX;
+    const y0 = e.clientY;
+    page.setPointerCapture?.(e.pointerId);
+    let move: (m: PointerEvent) => void;
+    if (target.kind === 'col') {
+      const cols = colsOf(target.table);
+      const a = cols[target.col];
+      const b = cols[target.col + 1];
+      if (!a) return void (resizing = false);
+      const wa = parseFloat(a.style.width) || a.getBoundingClientRect().width;
+      const wb = b ? parseFloat(b.style.width) || 0 : 0;
+      move = (m) => {
+        let d = m.clientX - x0;
+        d = Math.max(24 - wa, b ? Math.min(d, wb - 24) : Math.min(d, 1200));
+        a.style.width = `${Math.round(wa + d)}px`;
+        if (b) b.style.width = `${Math.round(wb - d)}px`;
+        fitTable(target.table);
+      };
+    } else {
+      const h0 = target.row.getBoundingClientRect().height;
+      move = (m) => {
+        target.row.style.height = `${Math.max(16, Math.round(h0 + m.clientY - y0))}px`;
+      };
+    }
+    const up = () => {
+      page!.removeEventListener('pointermove', move);
+      page!.removeEventListener('pointerup', up);
+      resizing = false;
+      input();
+    };
+    page.addEventListener('pointermove', move);
+    page.addEventListener('pointerup', up);
+  }
+
+  /** The cursor at the start of a cell (after its row or column went). */
+  function caretIn(cell: HTMLTableCellElement | undefined) {
+    const target = cell?.querySelector('p, h1, h2, h3, h4, h5, h6') ?? cell;
+    if (!target) return;
+    const r = document.createRange();
+    r.selectNodeContents(target);
+    r.collapse(true);
+    window.getSelection()?.removeAllRanges();
+    window.getSelection()?.addRange(r);
+    lastRange = r.cloneRange();
+  }
+
+  function insertMenu(e: MouseEvent) {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const sizes: [number, number][] = [[2, 2], [3, 2], [3, 3], [4, 3], [4, 4], [5, 5]];
+    const items: MenuItem[] = [
+      { label: t('Link…'), shortcut: formatShortcut('Mod+K'), run: () => void editLink() },
+      { label: t('Picture…'), run: () => void insertPicture() },
+      {
+        label: t('Table'),
+        items: [...sizes.map(([c, rw]): MenuItem => ({ label: t('{cols} × {rows}', { cols: c, rows: rw }), run: () => insertTable(rw, c) })), { separator: true }, { label: t('Other size…'), run: () => void customTable() }],
+      },
+      { label: t('Page break'), shortcut: formatShortcut('Mod+Enter'), run: insertPageBreak },
+    ];
+    menu.show({ clientX: r.left, clientY: r.bottom + 4 }, items);
+  }
+
+  function tableMenu(e: MouseEvent) {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    menu.show({ clientX: r.left, clientY: r.bottom + 4 }, [
+      { label: t('Insert row above'), run: () => tableOp('rowAbove') },
+      { label: t('Insert row below'), run: () => tableOp('rowBelow') },
+      { label: t('Insert column left'), run: () => tableOp('colLeft') },
+      { label: t('Insert column right'), run: () => tableOp('colRight') },
+      { separator: true },
+      { label: t('Delete row'), run: () => tableOp('delRow') },
+      { label: t('Delete column'), run: () => tableOp('delCol') },
+      { label: t('Delete table'), run: () => tableOp('delTable') },
+    ]);
+  }
+
+  // ---------- find and replace ----------
+
+  function openFind(withReplace = false) {
+    const sel = window.getSelection()?.toString() ?? '';
+    if (sel && !sel.includes('\n') && sel.length < 200) findQ = sel;
+    findOpen = true;
+    replaceOpen = replaceOpen || withReplace;
+    void tick().then(() => {
+      findInput?.focus();
+      findInput?.select();
+      runFind();
+    });
+  }
+
+  function closeFind() {
+    findOpen = false;
+    matches = [];
+    matchAt = -1;
+    paintMatches();
+    page?.focus({ preventScroll: true });
+  }
+
+  let findTimer: ReturnType<typeof setTimeout> | undefined;
+  function queueFind() {
+    clearTimeout(findTimer);
+    findTimer = setTimeout(runFind, 150);
+  }
+
+  function runFind() {
+    if (!page) return;
+    matches = findRanges(page, findQ, matchCase);
+    matchAt = matches.length ? Math.max(0, Math.min(matchAt, matches.length - 1)) : -1;
+    paintMatches();
+  }
+
+  /** Every match marked (where the CSS highlight API exists), the current one selected. */
+  function paintMatches() {
+    const hl = (globalThis as unknown as { CSS?: { highlights?: Map<string, unknown> } }).CSS?.highlights;
+    const H = (globalThis as unknown as { Highlight?: new (...r: Range[]) => unknown }).Highlight;
+    if (hl && H) {
+      if (matches.length) hl.set('mf-doc-find', new H(...matches));
+      else hl.delete('mf-doc-find');
+    }
+  }
+
+  function showMatch(i: number) {
+    if (!matches.length || !desk) return;
+    matchAt = (i + matches.length) % matches.length;
+    const r = matches[matchAt];
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(r);
+    lastRange = r.cloneRange();
+    const box = r.getBoundingClientRect();
+    const view = desk.getBoundingClientRect();
+    if (box.top < view.top + 40 || box.bottom > view.bottom - 40) desk.scrollTop += box.top - view.top - view.height / 3;
+  }
+
+  function replaceOne() {
+    if (tab.readOnly || matchAt < 0 || !matches[matchAt]) return;
+    replaceRange(matches[matchAt], replaceQ);
+    input();
+    runFind();
+    if (matches.length) showMatch(matchAt);
+  }
+
+  function replaceEvery() {
+    if (tab.readOnly || !page || !findQ) return;
+    const n = replaceAll(page, findQ, replaceQ, matchCase);
+    input();
+    runFind();
+    ui.toast(n ? tn('Replaced {n} time', 'Replaced {n} times', n) : t('Nothing found'), n ? 'success' : 'info');
+  }
+
+  function findKey(e: KeyboardEvent) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      showMatch(matchAt + (e.shiftKey ? -1 : matches.length && window.getSelection()?.toString() ? 1 : 0));
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      closeFind();
+    }
+  }
+
   /** Dark paper in the dark theme (shared with drawings and diagrams). */
   const darkPage = $derived(theme.darkCanvas);
 
@@ -325,6 +815,7 @@
     const t = b.tagName.toLowerCase();
     blockStyle = t === 'div' ? 'p' : t === 'h1' && b.classList.contains('title') ? 'title' : t;
     listAt = model instanceof DocModel ? model.listKind(b) : null;
+    inTable = !!b.closest('td');
     alignAt = b.style.textAlign || 'left';
     spacingAt = b.style.lineHeight && !b.style.lineHeight.endsWith('pt') ? String(Number(b.style.lineHeight)) : '';
     // The run at the cursor: its own font and size (empty: the document's default).
@@ -456,12 +947,13 @@
   async function writeTo(path: string, retarget: boolean): Promise<boolean> {
     try {
       const xml = model!.serialize(page!);
-      const parts = [];
+      const parts: NewPart[] = [];
       if (model instanceof DocModel && model.numbering.changed) {
-        parts.push({ name: numberingPart.name, data: utf8Base64(model.numbering.serialize()), relId: numberingPart.related ? '' : 'rIdMfNumbering', relType: 'numbering' });
+        parts.push({ name: numberingPart.name, data: utf8Base64(model.numbering.serialize()), relId: numberingPart.related ? '' : 'rIdMfNumbering', relType: 'numbering', external: false, target: '' });
       }
+      if (model instanceof DocModel) parts.push(...model.newParts(xml));
       if (model instanceof DocModel && model.stylesChanged) {
-        parts.push({ name: stylesPart.name, data: utf8Base64(model.serializeStyles()), relId: stylesPart.related ? '' : 'rIdMfStyles', relType: 'styles' });
+        parts.push({ name: stylesPart.name, data: utf8Base64(model.serializeStyles()), relId: stylesPart.related ? '' : 'rIdMfStyles', relType: 'styles', external: false, target: '' });
       }
       await api.DocSave(path, sourcePath, xml, parts);
       tab.dirty = false;
@@ -489,6 +981,25 @@
     const mod = e.ctrlKey || e.metaKey;
     if (!mod || e.altKey) return;
     const k = e.key.toLowerCase();
+    if (k === 'v' && e.shiftKey) {
+      plainPaste = true; // the paste event follows
+      return;
+    }
+    if (k === 'h' && !e.shiftKey) {
+      e.preventDefault();
+      openFind(true);
+      return;
+    }
+    if (!odt && k === 'k' && !e.shiftKey) {
+      e.preventDefault();
+      void editLink();
+      return;
+    }
+    if (!odt && e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      insertPageBreak();
+      return;
+    }
     // Lists: Ctrl+Shift+8 / 7 (bulleted / numbered), Ctrl+Shift+L (Word's List Bullet).
     if (e.shiftKey && (e.code === 'Digit8' || e.code === 'Digit7' || k === 'l')) {
       e.preventDefault();
@@ -515,10 +1026,40 @@
     }
   }
 
+  /**
+   * Paste: pictures as pictures, formatted text with what a Word document
+   * can keep (cleanPaste), else plain text. Ctrl+Shift+V always pastes plain
+   * text; .odt documents get plain text.
+   */
   function paste(e: ClipboardEvent) {
-    // Paste as plain text: foreign HTML can't be mapped onto Word formatting.
-    const text = e.clipboardData?.getData('text/plain');
-    if (text === undefined) return;
+    const cd = e.clipboardData;
+    if (!cd) return;
+    const plain = plainPaste || odt;
+    plainPaste = false;
+    const img = !plain ? Array.from(cd.files).find((f) => /^image\/(png|jpeg|gif|bmp)$/.test(f.type)) : undefined;
+    if (img && model instanceof DocModel) {
+      e.preventDefault();
+      void addPicture(img, img.type.split('/')[1]);
+      return;
+    }
+    const html = !plain ? cd.getData('text/html') : '';
+    const clean = html ? cleanPaste(html) : null;
+    if (clean && model instanceof DocModel) {
+      e.preventDefault();
+      insertBlocks(clean);
+      // Pasted list items join or start lists, at their levels.
+      for (const p of Array.from(page?.querySelectorAll<HTMLElement>('[data-list]') ?? [])) {
+        model.toggleList([p], p.dataset.list === 'number' ? 'number' : 'bullet');
+        p.dataset.ilvl = String(Math.min(8, Number(p.dataset.level) || 0));
+        model.decorateList(p);
+        delete p.dataset.list;
+        delete p.dataset.level;
+      }
+      input();
+      return;
+    }
+    const text = cd.getData('text/plain');
+    if (!text) return;
     e.preventDefault();
     document.execCommand('insertText', false, text);
   }
@@ -536,7 +1077,7 @@
     for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode(...b.subarray(i, i + 0x8000));
     return btoa(bin);
   }
-  (tab as unknown as { docTest: unknown }).docTest = { page: () => page, model: () => model, save, writeTo, exec, toggleList, listLevel, listAt: () => listAt, setStyle, setFont, setSize, setColor, setHighlight, align, indent, setSpacing, darkPage: () => darkPage, headings: () => headings, active: () => active, counts: () => counts, selCounts: () => selCounts, goHeading, outlineOpen: () => outlineOpen, toggleOutline, desk: () => desk };
+  (tab as unknown as { docTest: unknown }).docTest = { page: () => page, model: () => model, save, writeTo, exec, insertTable, hoverEdge, startResize, tableOp, insertPageBreak, addPicture, editLink, openFind, closeFind, findState: () => ({ findQ, replaceQ, matches: matches.length, matchAt }), setFind: (q: string, r = '') => ((findQ = q), (replaceQ = r), runFind()), showMatch, replaceOne, replaceEvery, paste, toggleList, listLevel, listAt: () => listAt, setStyle, setFont, setSize, setColor, setHighlight, align, indent, setSpacing, darkPage: () => darkPage, headings: () => headings, active: () => active, counts: () => counts, selCounts: () => selCounts, goHeading, outlineOpen: () => outlineOpen, toggleOutline, desk: () => desk };
 
   onMount(() => {
     tab.handlers = {
@@ -545,11 +1086,7 @@
       saveAs: doSaveAs,
       reload: load,
       onShow: count,
-      find: () => {
-        void ui.prompt(t('Find in document'), '', t('Find')).then((q) => {
-          if (q) (window as unknown as { find: (s: string) => boolean }).find(q);
-        });
-      },
+      find: () => openFind(false),
     };
     void load();
     const sel = () => {
@@ -647,11 +1184,17 @@
       <button class="icon-btn" title={listAt ? t('Decrease list level (Shift+Tab)') : t('Decrease indent')} onmousedown={(e) => e.preventDefault()} onclick={() => indent(-1)}><Icon icon={IndentDecrease} /></button>
       <button class="icon-btn" title={listAt ? t('Increase list level (Tab)') : t('Increase indent')} onmousedown={(e) => e.preventDefault()} onclick={() => indent(1)}><Icon icon={IndentIncrease} /></button>
       <span class="sep"></span>
+      <button class="btn ghost" title={t('Insert a link, picture, table or page break')} onmousedown={(e) => e.preventDefault()} onclick={insertMenu}><Icon icon={Plus} size={14} /> {t('Insert')}</button>
+      {#if inTable}
+        <button class="btn ghost" title={t('Rows and columns')} onmousedown={(e) => e.preventDefault()} onclick={tableMenu}><Icon icon={TableIcon} size={14} /> {t('Table')}</button>
+      {/if}
+      <span class="sep"></span>
     {/if}
     <button class="icon-btn" title={t('Undo')} onmousedown={(e) => e.preventDefault()} onclick={() => exec('undo')}><Icon icon={Undo2} /></button>
     <button class="icon-btn" title={t('Redo')} onmousedown={(e) => e.preventDefault()} onclick={() => exec('redo')}><Icon icon={Redo2} /></button>
   {/if}
   <span class="spacer"></span>
+  <button class="icon-btn" class:on={findOpen} title={t('Find and replace ({shortcut})', { shortcut: formatShortcut('Mod+F') })} onclick={() => (findOpen ? closeFind() : openFind(false))}><Icon icon={Search} /></button>
   {#if theme.resolved === 'dark'}
     <button class="icon-btn" title={darkPage ? t('Light page') : t('Dark page')} aria-label={darkPage ? t('Light page') : t('Dark page')} onclick={() => theme.setDarkCanvas(!darkPage)}><Icon icon={darkPage ? Sun : Moon} /></button>
   {/if}
@@ -659,6 +1202,26 @@
 </div>
 {#if note}
   <div class="banner"><Icon icon={InfoIcon} /><span class="grow">{note}</span></div>
+{/if}
+{#if findOpen}
+  <div class="findbar" role="search">
+    <input class="input" bind:this={findInput} bind:value={findQ} oninput={runFind} onkeydown={findKey} placeholder={t('Find')} aria-label={t('Find')} />
+    <span class="count">{findQ ? (matches.length ? t('{n} of {total}', { n: matchAt + 1, total: matches.length }) : t('No results')) : ''}</span>
+    <button class="icon-btn" disabled={!matches.length} title={t('Previous (Shift+Enter)')} onclick={() => showMatch(matchAt - 1)}><Icon icon={ChevronUp} /></button>
+    <button class="icon-btn" disabled={!matches.length} title={t('Next (Enter)')} onclick={() => showMatch(matchAt + 1)}><Icon icon={ChevronDown} /></button>
+    <label class="opt"><input type="checkbox" bind:checked={matchCase} onchange={runFind} /> {t('Match case')}</label>
+    {#if !tab.readOnly}
+      {#if replaceOpen}
+        <input class="input" bind:value={replaceQ} onkeydown={(e) => (e.key === 'Enter' ? (e.preventDefault(), replaceOne()) : e.key === 'Escape' ? closeFind() : null)} placeholder={t('Replace with')} aria-label={t('Replace with')} />
+        <button class="btn" disabled={matchAt < 0} onclick={replaceOne}>{t('Replace')}</button>
+        <button class="btn" disabled={!matches.length} onclick={replaceEvery}>{t('Replace all')}</button>
+      {:else}
+        <button class="btn ghost" onclick={() => (replaceOpen = true)}>{t('Replace…')}</button>
+      {/if}
+    {/if}
+    <span class="spacer"></span>
+    <button class="icon-btn" title={t('Close (Esc)')} onclick={closeFind}><Icon icon={XIcon} /></button>
+  </div>
 {/if}
 <div class="body" bind:clientWidth={bodyW}>
 <div class="desk" bind:this={desk} onscroll={scrolled}>
@@ -680,6 +1243,9 @@
     oninput={input}
     onkeydown={keydown}
     onpaste={paste}
+    onclick={click}
+    onpointermove={hoverEdge}
+    onpointerdown={startResize}
   ></div>
   {#if loading}<div class="empty-state overlay"><span class="spinner"></span></div>{/if}
 </div>
@@ -852,6 +1418,41 @@
   }
   .page.hidden {
     display: none;
+  }
+  .findbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--bg);
+  }
+  .findbar .input {
+    height: 28px;
+    width: 220px;
+  }
+  .findbar .count {
+    min-width: 70px;
+    font-size: var(--fs-small);
+    color: var(--text-muted);
+  }
+  .findbar .opt {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--fs-small);
+  }
+  .findbar .spacer {
+    flex: 1;
+  }
+  :global(::highlight(mf-doc-find)) {
+    background: #ffd54f;
+    color: #1d1c1a;
+  }
+  .page :global(a[data-href]),
+  .page :global(a[data-new-href]) {
+    cursor: pointer;
   }
   /* Dark paper: the page inverted (lightness only, hues kept), pictures put back. */
   .page.dark {

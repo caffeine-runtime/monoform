@@ -417,6 +417,29 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 - **Layer reordering by dragging the row** with pointer events (a 4 px threshold so a click still selects; the drop
   gap from row midpoints) rather than HTML drag and drop, which WebKitGTK draws with a ghost image and no control of
   the drop line; one `placeLayer` step, so a drag is one undo.
+- **Word editing stays a mapping onto the original XML, not a new document model.** The page is HTML (contenteditable)
+  whose blocks and runs point back at their w:p / w:r elements; saving rebuilds document.xml from the page and writes
+  a property only where the page differs from what that element showed (fmtOfRPr / applyParagraphStyle are run on the
+  original to know). So theme colours, character styles, fields, revisions' surroundings and anything the editor
+  doesn't model stay byte-identical, and a file opened and saved unchanged keeps its formatting. Considered: a
+  ProseMirror/Tiptap model (MIT) — a full schema would have to model or round-trip every WordprocessingML feature,
+  which is far more code than the mapping and loses what it doesn't know.
+- **Lists are paragraphs with a numbering instance and level, as in Word** (data-num-id / data-ilvl), not HTML
+  ul/ol: Word's numbering continues across tables and headings and restarts by definition, which nested HTML lists
+  can't express. Markers are computed for the whole page after each edit (docxNumbering.renumber, a single pass) and
+  drawn with CSS (::before content: attr(data-marker)). New lists get one abstract definition per kind (bullet,
+  number) added to numbering.xml; counting follows Word (lists sharing an abstract definition continue each other,
+  start overrides apply at their first paragraph).
+- **New package parts go through one Go path** (office.Part: numbering.xml, styles.xml, pictures, external hyperlink
+  relationships): content type and relationship are added only when missing, ids are prefixed rIdMf…, part names are
+  checked against `word/…` and link targets against http(s)/mailto/#.
+- **Pasted HTML is rebuilt, not sanitised in place** (docPaste.cleanPaste): only paragraphs, headings, lists, tables,
+  links and run formatting are re-emitted from the clipboard's DOM, so nothing executable or unsaveable can enter
+  the page. Several blocks are inserted as whole paragraphs because WebKit's insertHTML merges the last one into the
+  paragraph at the cursor.
+- **Dark documents invert the page** (filter: invert(0.9) hue-rotate(180deg), pictures put back) instead of
+  restyling text: explicit black text, highlights and table borders all stay readable without touching the saved
+  colours.
 - **Updates from GitHub releases, no update server.** The check is one unauthenticated request to the public
   releases API (`/releases/latest`, so pre-releases are never offered); the package for the system is a release asset
   and is verified against the release's `SHA256SUMS`. Installing replaces the running copy by renaming (a running

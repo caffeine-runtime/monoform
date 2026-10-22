@@ -144,6 +144,24 @@ func TestDocxAddsParts(t *testing.T) {
 			}
 		}
 	}
+	// A new hyperlink: an external relationship, no part.
+	linked := filepath.Join(t.TempDir(), "link.docx")
+	if err := WriteDocx(linked, "testdata/doc.docx", ParagraphsToDocument([]string{"x"}), Part{RelID: "rIdMfLink1", RelType: "hyperlink", External: true, Target: "https://example.com/a?b=1&c=2"}); err != nil {
+		t.Fatal(err)
+	}
+	pkg, _ := ReadDocx(linked)
+	found := false
+	for _, r := range pkg.Rels {
+		found = found || (r.ID == "rIdMfLink1" && r.External && r.Target == "https://example.com/a?b=1&c=2" && r.Type == "hyperlink")
+	}
+	if !found {
+		t.Fatalf("hyperlink relationship: %+v", pkg.Rels)
+	}
+	for _, bad := range []string{"javascript:alert(1)", "file:///etc/passwd", ""} {
+		if err := WriteDocx(filepath.Join(t.TempDir(), "y.docx"), "", ParagraphsToDocument(nil), Part{RelID: "rIdX", RelType: "hyperlink", External: true, Target: bad}); err == nil {
+			t.Fatalf("link to %q accepted", bad)
+		}
+	}
 	if err := WriteDocx(filepath.Join(t.TempDir(), "x.docx"), "", ParagraphsToDocument(nil), Part{Name: "../evil.xml", Data: ""}); err == nil {
 		t.Fatal("a part outside word/ accepted")
 	}

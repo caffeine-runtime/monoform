@@ -1420,6 +1420,8 @@ export namespace office {
 	    data: string;
 	    relId: string;
 	    relType: string;
+	    external: boolean;
+	    target: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Part(source);
@@ -1431,6 +1433,8 @@ export namespace office {
 	        this.data = source["data"];
 	        this.relId = source["relId"];
 	        this.relType = source["relType"];
+	        this.external = source["external"];
+	        this.target = source["target"];
 	    }
 	}
 	export class Relationship {

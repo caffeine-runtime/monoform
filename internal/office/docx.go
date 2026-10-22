@@ -12,6 +12,7 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/caffeine-runtime/monoform/internal/fs"
 )
@@ -45,6 +46,9 @@ type Part struct {
 	Data    string `json:"data"`    // the bytes, base64
 	RelID   string `json:"relId"`   // relationship id document.xml refers to it by ("" for none)
 	RelType string `json:"relType"` // last element of the relationship type, e.g. "numbering", "image"
+	// External: only a relationship to Target (a new hyperlink's URL), no part.
+	External bool   `json:"external"`
+	Target   string `json:"target"`
 }
 
 // ReadDocx extracts the main document part, style names and relationships.
@@ -159,6 +163,9 @@ var extContentTypes = map[string]string{
 
 var safePart = regexp.MustCompile(`^word/[A-Za-z0-9._/-]+$`)
 
+// Links the editor may add: web, mail and in-document (#bookmark) targets.
+var externalTarget = regexp.MustCompile(`(?i)^(https?://|mailto:|#)\S+$`)
+
 // WriteDocx writes a .docx to dst: every part of src is copied unchanged
 // except word/document.xml and the given parts, which are replaced or added
 // (with their content types and relationships). With src empty a new package
@@ -172,6 +179,12 @@ func WriteDocx(dst, src, document string, parts ...Part) error {
 	}
 	extra := map[string][]byte{}
 	for _, p := range parts {
+		if p.External {
+			if p.RelID == "" || !externalTarget.MatchString(p.Target) {
+				return fmt.Errorf("can't link to %q", p.Target)
+			}
+			continue
+		}
 		if !safePart.MatchString(p.Name) || strings.Contains(p.Name, "..") || p.Name == documentPart {
 			return fmt.Errorf("can't write the part %q", p.Name)
 		}
@@ -236,11 +249,15 @@ func WriteDocx(dst, src, document string, parts ...Part) error {
 			relsXML = []byte(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` + "\n" + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`)
 		}
 		for _, p := range parts {
+			if p.External {
+				relsXML = addRelationship(relsXML, p.RelID, p.RelType, p.Target, true)
+				continue
+			}
 			if types != nil {
 				types = addContentType(types, p.Name)
 			}
 			if p.RelID != "" {
-				relsXML = addRelationship(relsXML, p.RelID, p.RelType, strings.TrimPrefix(p.Name, "word/"))
+				relsXML = addRelationship(relsXML, p.RelID, p.RelType, strings.TrimPrefix(p.Name, "word/"), false)
 			}
 		}
 		wrote := map[string]bool{}
@@ -276,7 +293,7 @@ func WriteDocx(dst, src, document string, parts ...Part) error {
 			}
 		}
 		for _, p := range parts {
-			if !have[p.Name] {
+			if !p.External && !have[p.Name] {
 				if err := writePart(zw, p.Name, extra[p.Name]); err != nil {
 					return err
 				}
@@ -305,7 +322,7 @@ func addContentType(types []byte, name string) []byte {
 }
 
 // addRelationship adds a relationship from document.xml unless its id is taken.
-func addRelationship(rels []byte, id, typ, target string) []byte {
+func addRelationship(rels []byte, id, typ, target string, external bool) []byte {
 	s := string(rels)
 	if strings.Contains(s, `Id="`+id+`"`) {
 		return rels
@@ -317,6 +334,9 @@ func addRelationship(rels []byte, id, typ, target string) []byte {
 	xml.EscapeText(&b, []byte(typ))
 	b.WriteString(`" Target="`)
 	xml.EscapeText(&b, []byte(target))
+	if external {
+		b.WriteString(`" TargetMode="External`)
+	}
 	b.WriteString(`"/>`)
 	if i := strings.LastIndex(s, "</Relationships>"); i >= 0 {
 		return []byte(s[:i] + b.String() + s[i:])
@@ -325,7 +345,7 @@ func addRelationship(rels []byte, id, typ, target string) []byte {
 }
 
 func writePart(zw *zip.Writer, name string, body []byte) error {
-	w, err := zw.CreateHeader(&zip.FileHeader{Name: name, Method: zip.Deflate})
+	w, err := zw.CreateHeader(&zip.FileHeader{Name: name, Method: zip.Deflate, Modified: time.Now()})
 	if err != nil {
 		return err
 	}

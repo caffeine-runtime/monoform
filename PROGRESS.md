@@ -512,6 +512,21 @@
   border goes, so white parts of a subject stay — the toast offers the other choice. A busy border goes to the
   model as before; *Image* also has *Remove a plain background (one colour)* and *Remove background with AI*.
   Unit tests (`plainbg.test.ts`) and self-test `m52`.
+- **Word documents: a real document editor.**
+  - **Lists**: read from numbering.xml and from paragraph styles (bullets, numbers, letters, roman numerals, Word's
+    counting, levels, hanging indents); bulleted / numbered list buttons (Ctrl+Shift+8 / 7), Tab / Shift+Tab and the
+    level buttons, Enter on an empty item and Backspace at its start end it.
+  - **Formatting**: font, size, text colour, highlight, superscript / subscript, clear formatting; alignment
+    (Ctrl+L/E/R/J), indent, line spacing; Title and Heading 1–6.
+  - **Insert**: links (Ctrl+K; Ctrl+click opens), pictures (also pasted ones), tables (with rows and columns added or
+    removed, and column widths and row heights resized by dragging their borders), page breaks (Ctrl+Enter).
+  - **Find and replace** (Ctrl+F / Ctrl+H, match case, replace one or all); **paste** keeps bold/italic, colours,
+    links, headings, lists and tables (Ctrl+Shift+V pastes plain text).
+  - **Dark page** in the dark theme (with drawings and diagrams), switchable in the toolbar.
+  - Saving writes only what changed; new list definitions, styles, pictures and links are added to the package with
+    their content types and relationships. The files open in LibreOffice and python-docx as edited. .odt documents
+    keep the earlier, simpler toolbar (bold, italic, underline, strikethrough, headings 1–3).
+  - Unit tests (docxNumbering, docxFormat, docFindPaste), Go test for added parts, self-tests `m53`–`m55`.
 - **Fix: a CI self-test (`m6`) failed on a fast runner**: the 3 GiB hash finished inside the 2.5 s it watched
   progress for. It now watches while the hash runs and tests Cancel on a fresh run.
 
