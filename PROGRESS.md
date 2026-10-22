@@ -104,7 +104,7 @@
   any length, no quality loss. Editing works even where the system can't play the codec (e.g. H.264 on a bare
   Linux).
 
-## After v2.0.0-beta.1
+## After the first test builds
 - **M14 — Spreadsheet-style grid (CSV and Excel).** The CSV/TSV and .xlsx grids now behave like Excel: select
   ranges by dragging, Shift+click, Shift+arrows/Page/Home/End, row numbers, column headers (sorting moved to the
   ▾ button in the header), Ctrl+Space / Shift+Space and Ctrl/Cmd+A; the status bar shows Average · Count · Sum of
@@ -405,7 +405,7 @@
   administrator rights; *For everyone* asks. It notices a running Monoform (and can close it). The uninstaller (Settings › Apps) is the same program: *Remove Monoform?* with an option to delete settings, history and the search index too; file defaults go back to what they were.
   `--quiet` installs/uninstalls without a window (used by CI on a real Windows runner). Off Windows it runs as a demo
   that installs into a test folder (`scripts/setup-selftest.sh`).
-- **Rename: Monoform (2.0.0-beta.8).** Hold It All is now **Monoform** — free, open source (MIT, `LICENSE`) and
+- **Rename: Monoform.** Hold It All is now **Monoform** — free, open source (MIT, `LICENSE`) and
   AI-written — with a new logo (a single rounded M) on the app icon, the sidebar, the setup and every file icon. Each
   file type's icon now has one shared form (page, tile, symbol, M) and differs only in colour and symbol. The
   command is `monoform` (`monoform hash`, `verify`, `info`, `convert`).
