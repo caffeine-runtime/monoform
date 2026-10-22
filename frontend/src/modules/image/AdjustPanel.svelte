@@ -4,6 +4,7 @@
   import { BLUR_TYPES, NEUTRAL, isNeutral, type Adjustments, type BlurType } from './adjust';
   import type { EditorState, ImageEditor } from './editor';
   import { ui } from '../../core/ui.svelte';
+  import { num, t } from '../../core/i18n';
 
   let { editor, es }: { editor: ImageEditor; es: EditorState } = $props();
 
@@ -13,37 +14,37 @@
   type Slider = { key: keyof Adjustments; label: string; min: number; max: number; step: number; scale?: number; unit?: string };
   const GROUPS: { title: string; sliders: Slider[] }[] = [
     {
-      title: 'Light',
+      title: t('Light', {}, 'adjust'),
       sliders: [
-        { key: 'exposure', label: 'Exposure', min: -2, max: 2, step: 0.05, unit: ' EV' },
-        { key: 'brightness', label: 'Brightness', min: -1, max: 1, step: 0.01, scale: 100 },
-        { key: 'contrast', label: 'Contrast', min: -1, max: 1, step: 0.01, scale: 100 },
-        { key: 'highlights', label: 'Highlights', min: -1, max: 1, step: 0.01, scale: 100 },
-        { key: 'shadows', label: 'Shadows', min: -1, max: 1, step: 0.01, scale: 100 },
+        { key: 'exposure', label: t('Exposure'), min: -2, max: 2, step: 0.05, unit: ' EV' },
+        { key: 'brightness', label: t('Brightness'), min: -1, max: 1, step: 0.01, scale: 100 },
+        { key: 'contrast', label: t('Contrast'), min: -1, max: 1, step: 0.01, scale: 100 },
+        { key: 'highlights', label: t('Highlights'), min: -1, max: 1, step: 0.01, scale: 100 },
+        { key: 'shadows', label: t('Shadows'), min: -1, max: 1, step: 0.01, scale: 100 },
       ],
     },
     {
-      title: 'Colour',
+      title: t('Colour'),
       sliders: [
-        { key: 'saturation', label: 'Saturation', min: -1, max: 1, step: 0.01, scale: 100 },
-        { key: 'vibrance', label: 'Vibrance', min: -1, max: 1, step: 0.01, scale: 100 },
-        { key: 'temperature', label: 'Temperature', min: -1, max: 1, step: 0.01, scale: 100 },
-        { key: 'tint', label: 'Tint', min: -1, max: 1, step: 0.01, scale: 100 },
-        { key: 'hue', label: 'Hue', min: -180, max: 180, step: 1, unit: '°' },
+        { key: 'saturation', label: t('Saturation'), min: -1, max: 1, step: 0.01, scale: 100 },
+        { key: 'vibrance', label: t('Vibrance'), min: -1, max: 1, step: 0.01, scale: 100 },
+        { key: 'temperature', label: t('Temperature'), min: -1, max: 1, step: 0.01, scale: 100 },
+        { key: 'tint', label: t('Tint'), min: -1, max: 1, step: 0.01, scale: 100 },
+        { key: 'hue', label: t('Hue'), min: -180, max: 180, step: 1, unit: '°' },
       ],
     },
     {
-      title: 'Detail',
+      title: t('Detail'),
       sliders: [
-        { key: 'sharpen', label: 'Sharpen', min: 0, max: 1, step: 0.01, scale: 100 },
-        { key: 'vignette', label: 'Vignette', min: 0, max: 1, step: 0.01, scale: 100 },
+        { key: 'sharpen', label: t('Sharpen'), min: 0, max: 1, step: 0.01, scale: 100 },
+        { key: 'vignette', label: t('Vignette'), min: 0, max: 1, step: 0.01, scale: 100 },
       ],
     },
   ];
 
   function changed() {
     if (!es.adjusting && !editor.startAdjust()) {
-      ui.toast('Adjustments need WebGL, which is not available here.', 'error');
+      ui.toast(t('Adjustments need WebGL, which is not available here.'), 'error');
       return;
     }
     cancelAnimationFrame(raf);
@@ -52,20 +53,20 @@
 
   // Blur controls that apply to the chosen kind of blur.
   const blurSliders = $derived.by((): Slider[] => {
-    const t = a.blurType;
-    const amount: Slider = { key: 'blur', label: t === 'zoom' || t === 'spin' ? 'Strength' : t === 'motion' ? 'Distance' : 'Radius', min: 0, max: 100, step: 0.5, unit: t === 'zoom' || t === 'spin' ? '' : ' px' };
+    const k = a.blurType;
+    const amount: Slider = { key: 'blur', label: k === 'zoom' || k === 'spin' ? t('Strength') : k === 'motion' ? t('Distance') : t('Radius'), min: 0, max: 100, step: 0.5, unit: k === 'zoom' || k === 'spin' ? '' : ' px' };
     const out = [amount];
-    if (t === 'motion' || t === 'tiltshift') out.push({ key: 'blurAngle', label: 'Angle', min: -180, max: 180, step: 1, unit: '°' });
-    if (t === 'zoom' || t === 'spin' || t === 'tiltshift') {
-      out.push({ key: 'blurX', label: 'Centre X', min: 0, max: 1, step: 0.01, scale: 100, unit: '%' });
-      out.push({ key: 'blurY', label: 'Centre Y', min: 0, max: 1, step: 0.01, scale: 100, unit: '%' });
+    if (k === 'motion' || k === 'tiltshift') out.push({ key: 'blurAngle', label: t('Angle'), min: -180, max: 180, step: 1, unit: '°' });
+    if (k === 'zoom' || k === 'spin' || k === 'tiltshift') {
+      out.push({ key: 'blurX', label: t('Centre X'), min: 0, max: 1, step: 0.01, scale: 100, unit: '%' });
+      out.push({ key: 'blurY', label: t('Centre Y'), min: 0, max: 1, step: 0.01, scale: 100, unit: '%' });
     }
-    if (t === 'tiltshift') out.push({ key: 'blurBand', label: 'Sharp band', min: 0, max: 0.5, step: 0.01, scale: 100, unit: '%' });
+    if (k === 'tiltshift') out.push({ key: 'blurBand', label: t('Sharp band'), min: 0, max: 0.5, step: 0.01, scale: 100, unit: '%' });
     return out;
   });
 
-  function setBlurType(t: BlurType | string) {
-    a.blurType = t as BlurType;
+  function setBlurType(b: BlurType | string) {
+    a.blurType = b as BlurType;
     if (a.blur) changed();
   }
 
@@ -87,7 +88,7 @@
     a = { ...NEUTRAL };
   }
 
-  const fmt = (s: Slider, v: number) => (s.scale ? Math.round(v * s.scale) : Math.round(v * 100) / 100) + (s.unit ?? '');
+  const fmt = (s: Slider, v: number) => num(s.scale ? Math.round(v * s.scale) : Math.round(v * 100) / 100) + (s.unit ?? '');
 
   // Leaving the panel (or the tab) discards an unapplied preview.
   $effect(() => () => editor.cancelAdjust());
@@ -97,40 +98,40 @@
 
 <div class="adjust">
   <div class="scroll">
-    {#if es.pixelSelection}<p class="note">Adjusting the selected area only.</p>{/if}
+    {#if es.pixelSelection}<p class="note">{t('Adjusting the selected area only.')}</p>{/if}
     {#each GROUPS as g (g.title)}
       <h4>{g.title}</h4>
       {#each g.sliders as s (s.key)}
-        <label class="row" ondblclick={() => set(s.key, NEUTRAL[s.key] as number)} title="Double-click to reset">
+        <label class="row" ondblclick={() => set(s.key, NEUTRAL[s.key] as number)} title={t('Double-click to reset')}>
           <span class="lbl">{s.label}</span>
           <input type="range" min={s.min} max={s.max} step={s.step} value={a[s.key] as number} oninput={(e) => set(s.key, +(e.target as HTMLInputElement).value)} />
           <span class="num">{fmt(s, a[s.key] as number)}</span>
         </label>
       {/each}
     {/each}
-    <h4>Blur</h4>
-    <div class="toggles" role="radiogroup" aria-label="Kind of blur">
+    <h4>{t('Blur')}</h4>
+    <div class="toggles" role="radiogroup" aria-label={t('Kind of blur')}>
       {#each BLUR_TYPES as b (b.id)}
         <button class="chip" role="radio" aria-checked={a.blurType === b.id} class:on={a.blurType === b.id} title={b.help} onclick={() => setBlurType(b.id)}>{b.label}</button>
       {/each}
     </div>
     {#each blurSliders as s (s.key)}
-      <label class="row" ondblclick={() => set(s.key, NEUTRAL[s.key] as number)} title="Double-click to reset">
+      <label class="row" ondblclick={() => set(s.key, NEUTRAL[s.key] as number)} title={t('Double-click to reset')}>
         <span class="lbl">{s.label}</span>
         <input type="range" min={s.min} max={s.max} step={s.step} value={a[s.key] as number} oninput={(e) => set(s.key, +(e.target as HTMLInputElement).value)} />
         <span class="num">{fmt(s, a[s.key] as number)}</span>
       </label>
     {/each}
-    <h4>Effects</h4>
+    <h4>{t('Effects')}</h4>
     <div class="toggles">
-      {#each [['grayscale', 'Black & white'], ['sepia', 'Sepia'], ['invert', 'Invert']] as [k, label] (k)}
+      {#each [['grayscale', t('Black & white')], ['sepia', t('Sepia')], ['invert', t('Invert')]] as [k, label] (k)}
         <label class="chip" class:on={a[k as keyof Adjustments]}><input type="checkbox" checked={a[k as keyof Adjustments] as boolean} onchange={(e) => set(k as keyof Adjustments, (e.target as HTMLInputElement).checked)} />{label}</label>
       {/each}
     </div>
   </div>
   <div class="actions">
-    <button class="btn ghost" disabled={!es.adjusting} onclick={reset}>Reset</button>
-    <button class="btn primary" disabled={!es.adjusting} onclick={apply}>Apply</button>
+    <button class="btn ghost" disabled={!es.adjusting} onclick={reset}>{t('Reset')}</button>
+    <button class="btn primary" disabled={!es.adjusting} onclick={apply}>{t('Apply')}</button>
   </div>
 </div>
 

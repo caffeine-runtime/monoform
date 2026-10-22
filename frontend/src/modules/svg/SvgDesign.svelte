@@ -15,6 +15,7 @@
   import Hand from '@lucide/svelte/icons/hand';
   import { clampZoom, fitZoom, centered, zoomAt, type View } from '../image/geometry';
   import { ui } from '../../core/ui.svelte';
+  import { t } from '../../core/i18n';
   import { untrack } from 'svelte';
   import type { Transfer } from '../../core/transfer.svelte';
 
@@ -74,7 +75,7 @@
     const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
     const rootEl = doc.documentElement;
     if (doc.querySelector('parsererror') || rootEl.localName !== 'svg') {
-      parseError = 'Fix the SVG source to edit visually.';
+      parseError = t('Fix the SVG source to edit visually.');
       return;
     }
     parseError = '';
@@ -390,9 +391,9 @@
   }
 
   async function addText(p: [number, number]) {
-    const t = await ui.prompt('Text', 'Text', 'Add');
-    if (!t) return;
-    const esc = t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    const s = await ui.prompt(t('Text'), t('Text'), t('Add'));
+    if (!s) return;
+    const esc = s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
     onchange([appendChild(text, els[0], `<text x="${r2(p[0])}" y="${r2(p[1])}" font-family="sans-serif" font-size="${Math.max(8, Math.round(size.h / 12))}" fill="${style.fill === 'none' ? '#000000' : style.fill}">${esc}</text>`, els)], els.length);
     tool = 'select';
   }
@@ -444,20 +445,20 @@
   async function editText(i: number) {
     const el = els[i];
     const cur = text.slice(el.tagEnd, el.closeStart).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-    const t = await ui.prompt('Edit text', cur, 'Update');
-    if (t === null || t === undefined) return;
-    const c = setContent(text, el, t);
+    const s = await ui.prompt(t('Edit text'), cur, t('Update'));
+    if (s === null || s === undefined) return;
+    const c = setContent(text, el, s);
     if (c) onchange([c], i);
   }
 
   const TOOLS: { id: Tool; icon: any; label: string }[] = [
-    { id: 'select', icon: MousePointer, label: 'Select and move (V) — click a shape; click again inside a group to go deeper (or Ctrl+click); drag handles to scale/rotate (Shift snaps)' },
-    { id: 'hand', icon: Hand, label: 'Pan (H) — or drag empty space / middle mouse; scroll to zoom' },
-    { id: 'rect', icon: SquareIcon, label: 'Rectangle (R) — drag; Shift for a square' },
-    { id: 'ellipse', icon: CircleIcon, label: 'Ellipse (E) — drag; Shift for a circle' },
-    { id: 'line', icon: Slash, label: 'Line (L) — drag' },
-    { id: 'pen', icon: PenLine, label: 'Pencil (P) — draw freehand' },
-    { id: 'text', icon: TypeIcon, label: 'Text (T) — click where the text goes' },
+    { id: 'select', icon: MousePointer, label: t('Select and move (V) — click a shape; click again inside a group to go deeper (or Ctrl+click); drag handles to scale/rotate (Shift snaps)') },
+    { id: 'hand', icon: Hand, label: t('Pan (H) — or drag empty space / middle mouse; scroll to zoom') },
+    { id: 'rect', icon: SquareIcon, label: t('Rectangle (R) — drag; Shift for a square') },
+    { id: 'ellipse', icon: CircleIcon, label: t('Ellipse (E) — drag; Shift for a circle') },
+    { id: 'line', icon: Slash, label: t('Line (L) — drag') },
+    { id: 'pen', icon: PenLine, label: t('Pencil (P) — draw freehand') },
+    { id: 'text', icon: TypeIcon, label: t('Text (T) — click where the text goes') },
   ];
 
   export function setTool(t: Tool) {
@@ -476,7 +477,7 @@
 </script>
 
 <div class="design">
-  <div class="tools" role="toolbar" aria-orientation="vertical" aria-label="Drawing tools">
+  <div class="tools" role="toolbar" aria-orientation="vertical" aria-label={t('Drawing tools')}>
     {#each TOOLS as t (t.id)}
       <button class="icon-btn" class:on={tool === t.id} title={t.label} aria-label={t.label} onclick={() => (tool = t.id)}><Icon icon={t.icon} size={16} /></button>
     {/each}
@@ -496,12 +497,12 @@
     <div class="stage" bind:this={stage}></div>
     {#if box && tool === 'select'}
       <div class="sel" style:left="{box.x}px" style:top="{box.y}px" style:width="{box.w}px" style:height="{box.h}px">
-        <span class="h scale" role="presentation" title="Drag to scale" onpointerdown={(e) => handleDown(e, 'scale')}></span>
-        <span class="h rot" role="presentation" title="Drag to rotate (Shift snaps to 15°)" onpointerdown={(e) => handleDown(e, 'rotate')}></span>
+        <span class="h scale" role="presentation" title={t('Drag to scale')} onpointerdown={(e) => handleDown(e, 'scale')}></span>
+        <span class="h rot" role="presentation" title={t('Drag to rotate (Shift snaps to 15°)')} onpointerdown={(e) => handleDown(e, 'rotate')}></span>
       </div>
     {/if}
     {#if parseError}<div class="err">{parseError}</div>{/if}
-    {#if loading && !parseError}<div class="loading"><span class="spinner"></span> Opening the drawing…</div>{/if}
+    {#if loading && !parseError}<div class="loading"><span class="spinner"></span> {t('Opening the drawing…')}</div>{/if}
   </div>
 </div>
 

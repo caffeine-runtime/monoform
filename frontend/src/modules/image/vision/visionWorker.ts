@@ -270,7 +270,7 @@ async function samEncode(img: ImageBitmap, key: string): Promise<{ millis: numbe
 async function samDecode(key: string, points: { x: number; y: number; positive: boolean }[]): Promise<MaskResult> {
   const t0 = performance.now();
   const c = samCache.get(key);
-  if (!c) throw new Error('image not analysed');
+  if (!c) throw new Error('image not analysed'); // i18n-ignore: translated in vision.ts (no catalog in the worker)
   const dec = await session(samDecUrl);
   const pts = new Float32Array(points.length * 2);
   const labels = new BigInt64Array(points.length);
@@ -356,7 +356,7 @@ async function aiSubject(img: ImageBitmap, base: string): Promise<MaskResult> {
   if (!res.ok) throw await failure(res);
   const { result } = await res.json();
   const out = await fetchBytes(aiUrl(base, 'result', { id: result }), undefined, PIECE);
-  if (out.length !== S * S) throw new Error('unexpected answer from the subject model');
+  if (out.length !== S * S) throw new Error('unexpected answer from the subject model'); // i18n-ignore: translated in vision.ts (no catalog in the worker)
   const pred = new Float32Array(S * S);
   for (let i = 0; i < pred.length; i++) pred[i] = out[i] / 255;
   const W = img.width;
@@ -410,7 +410,7 @@ async function eraseBegin(img: ImageBitmap, maskImg: ImageBitmap, rect: Rect, ba
 async function eraseFinish(st: EraseStarted, base: string): Promise<ErasePatch> {
   const rgb = await fetchBytes(aiUrl(base, 'result', { id: st.job }), undefined, PIECE);
   const E = ERASE_SIZE;
-  if (rgb.length !== E * E * 3) throw new Error('unexpected answer from the removal model');
+  if (rgb.length !== E * E * 3) throw new Error('unexpected answer from the removal model'); // i18n-ignore: translated in vision.ts (no catalog in the worker)
   const out = new Uint8ClampedArray(E * E * 4);
   for (let i = 0, j = 0; i < E * E; i++, j += 3) {
     out[i * 4] = rgb[j];

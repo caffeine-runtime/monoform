@@ -5,6 +5,7 @@
   import { formatBytes } from '../core/paths';
   import Icon from './Icon.svelte';
   import { X } from '../core/icons';
+  import { t } from '../core/i18n';
 
   const tab = $derived(workspace.active);
   const typeLabel = $derived(tab ? (tab.status.type ?? modules.get(tab.moduleId)?.name ?? '') : '');
@@ -17,10 +18,10 @@
       <span>{typeLabel}</span>
       {#if tab.size != null}<span>{formatBytes(tab.size)}</span>{/if}
       {#if tab.preview}
-        <button class="mode" title="Preview mode: the file can't be changed. Click to edit it." onclick={() => void workspace.setPreview(tab, false)}>Preview · <b>Edit</b></button>
-      {:else if tab.readOnly}<span>Read-only</span>
+        <button class="mode" title={t("Preview mode: the file can't be changed. Click to edit it.")} onclick={() => void workspace.setPreview(tab, false)}>{t('Preview')} · <b>{t('Edit')}</b></button>
+      {:else if tab.readOnly}<span>{t('Read-only')}</span>
       {:else if tab.source.kind === 'file'}
-        <button class="mode quiet" title="Editing. Click for preview mode (read-only)." onclick={() => void workspace.setPreview(tab, true)}>Editing</button>
+        <button class="mode quiet" title={t('Editing. Click for preview mode (read-only).')} onclick={() => void workspace.setPreview(tab, true)}>{t('Editing')}</button>
       {/if}
       {#if tab.status.info}<span class="info">{tab.status.info}</span>{/if}
     {/if}
@@ -36,7 +37,7 @@
         {:else if j.done > 0}
           <span class="pct">{j.message || j.done}</span>
         {/if}
-        <button class="icon-btn xs" title="Cancel" onclick={() => jobs.cancel(j.id)}><Icon icon={X} size={12} /></button>
+        <button class="icon-btn xs" title={t('Cancel')} onclick={() => jobs.cancel(j.id)}><Icon icon={X} size={12} /></button>
       </span>
     {/each}
   </div>

@@ -2,6 +2,7 @@
 import { api, errorMessage } from './backend';
 import { jobs } from './jobs.svelte';
 import { settings } from './settings.svelte';
+import { t } from './i18n';
 
 export interface Match {
   path: string;
@@ -44,7 +45,7 @@ class SearchState {
     let myId = '';
     try {
       const done = await jobs.run<{ files: number; matches: number; scanned: number; truncated: boolean }>(
-        'Searching',
+        t('Searching'),
         async () => {
           myId = await api.SearchFolder(root, {
             query: q,

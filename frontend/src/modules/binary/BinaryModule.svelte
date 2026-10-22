@@ -8,13 +8,14 @@
   import { workspace } from '../../core/tabs.svelte';
   import { commands } from '../../core/commands';
   import { formatBytes } from '../../core/paths';
+  import { t } from '../../core/i18n';
 
   let { tab }: { tab: Tab } = $props();
   let rows = $state<string[]>([]);
   let error = $state('');
 
   $effect(() => {
-    tab.status = { type: 'Binary' };
+    tab.status = { type: t('Binary') };
     fetch(tab.url(), { headers: { Range: 'bytes=0-4095' } })
       .then((r) => r.arrayBuffer())
       .then((buf) => {
@@ -38,10 +39,10 @@
 </script>
 
 <div class="toolbar" use:fitBar>
-  <span class="label">Binary file{tab.size != null ? ` · ${formatBytes(tab.size)}` : ''} — showing the first 4 KB</span>
+  <span class="label">{tab.size != null ? t('Binary file · {size} — showing the first 4 KB', { size: formatBytes(tab.size) }) : t('Binary file — showing the first 4 KB')}</span>
   <span class="spacer"></span>
-  <button class="btn ghost" onclick={openAsText}><Icon icon={FileText} size={14} /> Open as text</button>
-  {#if tab.filePath}<button class="btn ghost" onclick={() => commands.execute('tools.hash', tab.filePath)}><Icon icon={Hash} size={14} /> Compute hash</button>{/if}
+  <button class="btn ghost" onclick={openAsText}><Icon icon={FileText} size={14} /> {t('Open as text')}</button>
+  {#if tab.filePath}<button class="btn ghost" onclick={() => commands.execute('tools.hash', tab.filePath)}><Icon icon={Hash} size={14} /> {t('Compute hash')}</button>{/if}
 </div>
 <div class="hex selectable mono">
   {#if error}<p>{error}</p>{/if}

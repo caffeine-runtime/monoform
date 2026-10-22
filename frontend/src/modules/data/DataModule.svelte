@@ -34,6 +34,7 @@
   import { dataControllers } from './dataControllers';
   import { XML_EXT } from './formatExt';
   import Grid, { type GridColumn } from './Grid.svelte';
+  import { t, tn } from '../../core/i18n';
 
   let { tab }: { tab: Tab } = $props();
 
@@ -80,7 +81,7 @@
       if (r.table && (tableCols.length !== r.table.length || tableCols.some((c, i) => c.name !== r.table![i]))) tableCols = r.table.map((name) => ({ name, width: Math.min(280, Math.max(90, name.length * 9 + 40)) }));
       if (!r.table && view === 'table') view = 'tree';
     }
-    tab.status = { ...tab.status, info: error ? `Invalid ${label}: line ${error.line}, column ${error.col}` : `Valid ${label}` };
+    tab.status = { ...tab.status, info: error ? t('Invalid {format}: line {line}, column {column}', { format: label, line: String(error.line), column: String(error.col) }) : t('Valid {format}', { format: label }) };
     if (view === 'json') void showJson();
   }
 
@@ -130,7 +131,7 @@
     if (isYaml) return;
     if (error) {
       gotoError();
-      return ui.toast('Fix the error first.', 'warning');
+      return ui.toast(t('Fix the error first.'), 'warning');
     }
     const r = await client.stringify(indent);
     if (r.text === undefined || !ctl) return;
@@ -140,24 +141,24 @@
 
   function copyPath() {
     const p = formatPath(selectedPath);
-    void navigator.clipboard.writeText(p).then(() => ui.toast(`Copied ${p}`, 'success'));
+    void navigator.clipboard.writeText(p).then(() => ui.toast(t('Copied {path}', { path: p }), 'success'));
   }
 
   async function copyValue() {
     const r = await client.stringify(2, selectedPath);
     if (r.text !== undefined) await navigator.clipboard.writeText(r.text);
-    ui.toast('Value copied', 'success');
+    ui.toast(t('Value copied'), 'success');
   }
 
   async function saveAsJson() {
     const r = await client.stringify(2);
     if (r.text === undefined) return;
     const def = join(dirname(tab.path ?? ''), `${stem(tab.name)}.json`);
-    const p = await api.SaveFileDialog('Save as JSON', def, [{ name: 'JSON', patterns: '*.json' }]);
+    const p = await api.SaveFileDialog(t('Save as JSON'), def, [{ name: 'JSON', patterns: '*.json' }]);
     if (!p) return;
     try {
       await saveFile(p, r.text + '\n');
-      ui.toast('Saved JSON', 'success', { label: 'Open', run: () => void workspace.openPath(p) });
+      ui.toast(t('Saved JSON'), 'success', { label: t('Open'), run: () => void workspace.openPath(p) });
     } catch (e) {
       toastError(e);
     }
@@ -200,34 +201,34 @@
 
 <div class="toolbar" use:fitBar>
   <div class="seg">
-    <button class="btn ghost" class:on={view === 'tree'} onclick={() => setView('tree')}><Icon icon={ListTree} size={14} /> Tree</button>
-    {#if table}<button class="btn ghost" class:on={view === 'table'} title="The list of records as a table" onclick={() => setView('table')}><Icon icon={Table} size={14} /> Table</button>{/if}
-    <button class="btn ghost" class:on={view === 'raw'} onclick={() => setView('raw')}><Icon icon={Code} size={14} /> {isYaml ? label : 'Raw'}</button>
-    {#if isYaml}<button class="btn ghost" class:on={view === 'json'} onclick={() => setView('json')}><Icon icon={Braces} size={14} /> As JSON</button>{/if}
+    <button class="btn ghost" class:on={view === 'tree'} onclick={() => setView('tree')}><Icon icon={ListTree} size={14} /> {t('Tree')}</button>
+    {#if table}<button class="btn ghost" class:on={view === 'table'} title={t('The list of records as a table')} onclick={() => setView('table')}><Icon icon={Table} size={14} /> {t('Table')}</button>{/if}
+    <button class="btn ghost" class:on={view === 'raw'} onclick={() => setView('raw')}><Icon icon={Code} size={14} /> {isYaml ? label : t('Raw')}</button>
+    {#if isYaml}<button class="btn ghost" class:on={view === 'json'} onclick={() => setView('json')}><Icon icon={Braces} size={14} /> {t('As JSON')}</button>{/if}
   </div>
   <span class="sep"></span>
   {#if error}
-    <button class="status bad" onclick={gotoError} title="Go to error">
-      <Icon icon={CircleX} size={15} /> Line {error.line}, column {error.col}: {error.message}
+    <button class="status bad" onclick={gotoError} title={t('Go to error')}>
+      <Icon icon={CircleX} size={15} /> {t('Line {line}, column {column}: {message}', { line: String(error.line), column: String(error.col), message: error.message })}
     </button>
   {:else if root}
-    <span class="status good"><Icon icon={CircleCheck} size={15} /> Valid {label}{format === 'yaml' && docs > 1 ? ` (${docs} documents)` : format === 'jsonl' ? ` (${docs.toLocaleString()} records)` : ''}</span>
+    <span class="status good"><Icon icon={CircleCheck} size={15} /> {t('Valid {format}', { format: label })}{format === 'yaml' && docs > 1 ? ` (${tn('{n} document', '{n} documents', docs)})` : format === 'jsonl' ? ` (${tn('{n} record', '{n} records', docs)})` : ''}</span>
   {:else if parsing}
-    <span class="label">Checking…</span>
+    <span class="label">{t('Checking…')}</span>
   {/if}
   <span class="spacer"></span>
   {#if view === 'tree' && root}
-    <button class="btn ghost" onclick={() => tree?.expandAll()}><Icon icon={ChevronsUpDown} size={14} /> Expand all</button>
-    <button class="btn ghost" onclick={() => tree?.collapseAll()}><Icon icon={ChevronsDownUp} size={14} /> Collapse</button>
-    <button class="btn ghost" title="Copy the path of the selected node" onclick={copyPath}><Icon icon={Copy} size={14} /> {formatPath(selectedPath)}</button>
-    <button class="btn ghost" onclick={copyValue}><Icon icon={ClipboardCopy} size={14} /> Copy value</button>
+    <button class="btn ghost" onclick={() => tree?.expandAll()}><Icon icon={ChevronsUpDown} size={14} /> {t('Expand all')}</button>
+    <button class="btn ghost" onclick={() => tree?.collapseAll()}><Icon icon={ChevronsDownUp} size={14} /> {t('Collapse')}</button>
+    <button class="btn ghost" title={t('Copy the path of the selected node')} onclick={copyPath}><Icon icon={Copy} size={14} /> {formatPath(selectedPath)}</button>
+    <button class="btn ghost" onclick={copyValue}><Icon icon={ClipboardCopy} size={14} /> {t('Copy value')}</button>
   {/if}
   {#if !isYaml && !tab.readOnly}
-    <button class="btn ghost" onclick={() => reformat(2)}><Icon icon={IndentIncrease} size={14} /> Format</button>
-    <button class="btn ghost" onclick={() => reformat(0)}><Icon icon={Minimize2} size={14} /> Minify</button>
+    <button class="btn ghost" onclick={() => reformat(2)}><Icon icon={IndentIncrease} size={14} /> {t('Format')}</button>
+    <button class="btn ghost" onclick={() => reformat(0)}><Icon icon={Minimize2} size={14} /> {t('Minify')}</button>
   {/if}
   {#if isYaml && view === 'json'}
-    <button class="btn ghost" onclick={saveAsJson}><Icon icon={Save} size={14} /> Save as JSON…</button>
+    <button class="btn ghost" onclick={saveAsJson}><Icon icon={Save} size={14} /> {t('Save as JSON…')}</button>
   {/if}
 </div>
 
@@ -239,8 +240,8 @@
         <JsonTree bind:this={tree} {client} {root} {version} onselect={(n) => (selectedPath = n.path)} />
       {:else if error}
         <div class="empty-state">
-          <p>The document has an error, so the tree can't be shown.</p>
-          <button class="btn" onclick={gotoError}>Show line {error.line}</button>
+          <p>{t("The document has an error, so the tree can't be shown.")}</p>
+          <button class="btn" onclick={gotoError}>{t('Show line {line}', { line: String(error.line) })}</button>
         </div>
       {/if}
     </div>

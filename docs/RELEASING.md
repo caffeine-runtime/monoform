@@ -101,6 +101,15 @@ To change what the release page says, edit `.github/release-notes.md`.
   (`1.1.1`). If it must disappear, mark it as a pre-release or delete it (below).
 - **"bad version"** in the build job: the version doesn't look like `1.1.0` / `1.1.0-beta.1`.
 
+## Updates
+
+Installed copies look for a new version at startup (`internal/update`): they read the repository's **latest
+release** (pre-releases are never offered) and download the asset for their system by its file name —
+`monoform-amd64-installer.exe` (Windows, installed with the setup program), `monoform-windows-amd64-portable.zip`,
+`monoform-macos-universal.zip`, `monoform-linux-amd64.tar.gz` — checked against `SHA256SUMS`. Keep those names and
+the checksum file in every release. A normal (non-pre-release) version reaches everyone on their next start; test a
+release as a pre-release first if unsure. The release notes' "What's new" part is shown in the update popup.
+
 ## Deleting releases
 
 **Actions → Delete releases → Run workflow** with the tags to remove, separated by spaces (e.g.

@@ -19,6 +19,7 @@ import (
 
 	"github.com/caffeine-runtime/monoform/internal/app"
 	"github.com/caffeine-runtime/monoform/internal/cli"
+	"github.com/caffeine-runtime/monoform/internal/update"
 )
 
 //go:embed all:frontend/dist
@@ -35,6 +36,11 @@ func main() {
 		cli.AttachConsole()
 		code, _ := cli.Main(os.Args[1:], app.Version, os.Stdout, os.Stderr)
 		os.Exit(code)
+	}
+	// Started by an update: wait for the old version to close, remove its leftovers.
+	if exe, err := os.Executable(); err == nil {
+		update.AfterUpdate(os.Args[1:], exe)
+		update.CleanOld(exe)
 	}
 	wd, _ := os.Getwd()
 	files, mode := parseLaunch(os.Args[1:], wd)

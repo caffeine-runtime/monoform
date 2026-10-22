@@ -4,6 +4,7 @@
   import { onMount } from 'svelte';
   import type { PDFDocumentProxy } from 'pdfjs-dist';
   import { clickSelect, moveOrder, isIdentity } from './pages';
+  import { t } from '../../core/i18n';
 
   let {
     doc,
@@ -118,7 +119,7 @@
   }
 </script>
 
-<div class="thumbs" bind:this={list} role="listbox" aria-label="Pages" aria-multiselectable="true" ondragover={(e) => e.preventDefault()} ondrop={drop}>
+<div class="thumbs" bind:this={list} role="listbox" aria-label={t('Pages')} aria-multiselectable="true" ondragover={(e) => e.preventDefault()} ondrop={drop}>
   {#each pages as p, i (p)}
     <div
       class="thumb"

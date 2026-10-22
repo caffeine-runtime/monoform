@@ -20,6 +20,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  document.body.textContent = `Monoform failed to start: ${errorMessage(e)}`;
+  document.body.textContent = `Monoform failed to start: ${errorMessage(e)}`; // i18n-ignore: no language loaded yet
   console.error(e);
 });

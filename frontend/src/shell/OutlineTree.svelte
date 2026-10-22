@@ -5,9 +5,10 @@
   import { untrack } from 'svelte';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import Icon from './Icon.svelte';
+  import { t } from '../core/i18n';
   import { outlineTree, type OutlineItem, type OutlineNode } from '../core/textStats';
 
-  let { items, active = -1, onpick, empty = 'No headings' }: { items: OutlineItem[]; active?: number; onpick: (i: number) => void; empty?: string } = $props();
+  let { items, active = -1, onpick, empty = t('No headings') }: { items: OutlineItem[]; active?: number; onpick: (i: number) => void; empty?: string } = $props();
 
   type Node = OutlineNode & { i: number; children: Node[] };
   const tree = $derived.by(() => {
@@ -50,11 +51,11 @@
     <li role="treeitem" aria-selected={n.i === active} aria-expanded={n.children.length ? !folded.has(key(n)) : undefined}>
       <div class="row" class:on={n.i === active} style:padding-left="{4 + depth * 14}px">
         {#if n.children.length}
-          <button class="fold" class:open={!folded.has(key(n))} tabindex="-1" aria-label={folded.has(key(n)) ? 'Expand' : 'Collapse'} onclick={() => toggle(n)}><Icon icon={ChevronRight} size={12} /></button>
+          <button class="fold" class:open={!folded.has(key(n))} tabindex="-1" aria-label={folded.has(key(n)) ? t('Expand') : t('Collapse')} onclick={() => toggle(n)}><Icon icon={ChevronRight} size={12} /></button>
         {:else}
           <span class="fold"></span>
         {/if}
-        <button class="item h{n.level}" title={n.text} onclick={() => onpick(n.i)}>{n.text || '(untitled)'}</button>
+        <button class="item h{n.level}" title={n.text} onclick={() => onpick(n.i)}>{n.text || t('(untitled)')}</button>
       </div>
       {#if n.children.length && !folded.has(key(n))}
         <ul role="group">{@render branch(n.children, depth + 1)}</ul>
@@ -64,7 +65,7 @@
 {/snippet}
 
 {#if items.length}
-  <ul class="outline" role="tree" aria-label="Outline">{@render branch(tree, 0)}</ul>
+  <ul class="outline" role="tree" aria-label={t('Outline')}>{@render branch(tree, 0)}</ul>
 {:else}
   <p class="none">{empty}</p>
 {/if}

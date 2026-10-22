@@ -47,7 +47,9 @@ export default async function m45(dir: string) {
     assert(filtered(canvas), 'the drawing layer has the dark-mode filter');
     assert(!filtered(stage.querySelector('.overlay')), 'selection handles are not filtered');
     // Picking a shape goes through the overlay to the drawing.
-    const c = h.toScreen({ x: 130, y: 120 });
+    // Inside the box (an earlier test may have moved it), on its fill.
+    const box = h.board().items().find((i: { id: string }) => i.id === 'box').box;
+    const c = h.toScreen({ x: box.x + 30, y: box.y + 20 });
     const hit = document.elementFromPoint(c.x, c.y);
     assertEq(hit?.closest('[data-id]')?.getAttribute('data-id'), 'box', 'a click lands on the shape under the overlay');
     h.setSel(['box']);

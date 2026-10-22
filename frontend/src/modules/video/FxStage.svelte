@@ -5,6 +5,7 @@
   // with draggable points; in drawing mode a drag over the picture draws a
   // new outline.
   import { maskOf, stateAt, visibleAt, withMask, type Layer, type Pt, type State } from './project';
+  import { t } from '../../core/i18n';
 
   let {
     W,
@@ -196,7 +197,7 @@
       style:transform="translate(-50%, -50%) rotate({s.rotation}deg)"
       role="button"
       tabindex="-1"
-      title="{l.name}: drag to move · corner to scale · knob to rotate (Shift snaps)"
+      title={t('{name}: drag to move · corner to scale · knob to rotate (Shift snaps)', { name: l.name })}
       onpointerdown={(e) => start(e, l, 'move')}
       onpointermove={(e) => move(e)}
       onpointerup={(e) => move(e, true)}
@@ -229,7 +230,7 @@
     </div>
   {/each}
   {#if drawing && sel}
-    <div class="draw" role="presentation" title="Drag around what {sel.name} should cover" onpointerdown={drawStart} onpointermove={drawMove} onpointerup={drawEnd} onclick={(e) => e.stopPropagation()} ondblclick={(e) => e.stopPropagation()}>
+    <div class="draw" role="presentation" title={t('Drag around what {name} should cover', { name: sel.name })} onpointerdown={drawStart} onpointermove={drawMove} onpointerup={drawEnd} onclick={(e) => e.stopPropagation()} ondblclick={(e) => e.stopPropagation()}>
       {#if outline}<svg width={W * k} height={H * k}><polyline points={outline.map(([x, y]) => `${x * k},${y * k}`).join(' ')} /></svg>{/if}
     </div>
   {/if}

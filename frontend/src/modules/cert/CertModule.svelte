@@ -15,6 +15,7 @@
   import { workspace, type Tab } from '../../core/tabs.svelte';
   import { toastError, ui } from '../../core/ui.svelte';
   import type { certs } from '../../wailsjs/go/models';
+  import { locale, t, tn } from '../../core/i18n';
 
   let { tab }: { tab: Tab } = $props();
 
@@ -29,13 +30,13 @@
     loading = true;
     error = '';
     try {
-      if (!tab.filePath) throw new Error('Save the file first.');
+      if (!tab.filePath) throw new Error(t('Save the file first.'));
       const r = await api.CertInspect(tab.filePath, password);
       pwWrong = r.needsPassword && password !== '';
       res = r;
       const certsN = r.items.filter((i) => i.kind === 'certificate').length;
       const soon = r.items.find((i) => i.kind === 'certificate' && i.status !== 'valid');
-      tab.status = { ...tab.status, type: `${r.format} ${certsN ? 'certificate' : 'file'}`, info: r.needsPassword ? 'Password needed' : `${r.items.length} item${r.items.length === 1 ? '' : 's'}${soon ? ` · ${label(soon)}` : ''}` };
+      tab.status = { ...tab.status, type: certsN ? t('{format} certificate', { format: r.format }) : t('{format} file', { format: r.format }), info: r.needsPassword ? t('Password needed') : `${tn('{n} item', '{n} items', r.items.length)}${soon ? ` · ${label(soon)}` : ''}` };
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     } finally {
@@ -43,28 +44,28 @@
     }
   }
 
-  const fmtDate = (s: string | Date) => new Date(s).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  const fmtDate = (s: string | Date) => new Date(s).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' });
   function label(i: certs.Item): string {
-    if (i.status === 'expired') return `Expired ${-i.daysLeft} day${i.daysLeft === -1 ? '' : 's'} ago`;
-    if (i.status === 'not-yet-valid') return `Not valid until ${fmtDate(i.notBefore)}`;
-    if (i.status === 'expiring') return i.daysLeft <= 0 ? 'Expires today' : `Expires in ${i.daysLeft} day${i.daysLeft === 1 ? '' : 's'}`;
-    return `Valid for ${i.daysLeft.toLocaleString()} more days`;
+    if (i.status === 'expired') return tn('Expired {n} day ago', 'Expired {n} days ago', -i.daysLeft);
+    if (i.status === 'not-yet-valid') return t('Not valid until {date}', { date: fmtDate(i.notBefore) });
+    if (i.status === 'expiring') return i.daysLeft <= 0 ? t('Expires today') : tn('Expires in {n} day', 'Expires in {n} days', i.daysLeft);
+    return tn('Valid for {n} more day', 'Valid for {n} more days', i.daysLeft);
   }
-  const title = (i: certs.Item) => i.subject?.commonName || i.subject?.organization || (i.kind === 'private-key' ? 'Private key' : i.kind === 'public-key' ? 'Public key' : i.kind === 'request' ? 'Certificate request' : i.kind === 'crl' ? 'Revocation list' : 'Certificate');
-  const role = (i: certs.Item, idx: number) => (i.kind !== 'certificate' ? '' : i.selfSigned ? (i.isCA ? 'Root CA' : 'Self-signed') : i.isCA ? 'Intermediate CA' : idx === 0 ? 'End-entity' : '');
+  const title = (i: certs.Item) => i.subject?.commonName || i.subject?.organization || (i.kind === 'private-key' ? t('Private key') : i.kind === 'public-key' ? t('Public key') : i.kind === 'request' ? t('Certificate request') : i.kind === 'crl' ? t('Revocation list') : t('Certificate'));
+  const role = (i: certs.Item, idx: number) => (i.kind !== 'certificate' ? '' : i.selfSigned ? (i.isCA ? t('Root CA') : t('Self-signed')) : i.isCA ? t('Intermediate CA') : idx === 0 ? t('End-entity') : '');
 
-  async function copy(text: string, what: string) {
+  async function copy(text: string, done: string) {
     await navigator.clipboard.writeText(text).catch(() => {});
-    ui.toast(`Copied ${what}`, 'success');
+    ui.toast(done, 'success'); // i18n-ignore: the message is translated by the caller
   }
 
   async function exportPem(i: certs.Item, n: number) {
     const def = join(dirname(tab.filePath ?? ''), `${stem(tab.title)}${(res?.items.length ?? 1) > 1 ? `-${n + 1}` : ''}.pem`);
-    const p = await api.SaveFileDialog('Save as PEM', def, [{ name: 'PEM', patterns: '*.pem;*.crt' }]);
+    const p = await api.SaveFileDialog(t('Save as PEM'), def, [{ name: 'PEM', patterns: '*.pem;*.crt' }]);
     if (!p) return;
     try {
       await saveFile(p, i.pem);
-      ui.toast('Saved', 'success', { label: 'Open', run: () => void workspace.openPath(p) });
+      ui.toast(t('Saved'), 'success', { label: t('Open'), run: () => void workspace.openPath(p) });
     } catch (e) {
       toastError(e);
     }
@@ -84,14 +85,14 @@
   {:else if res?.needsPassword}
     <form class="pw" onsubmit={(e) => (e.preventDefault(), load())}>
       <Icon icon={KeyRound} size={28} />
-      <p>This {res.format} file is protected by a password.</p>
-      <input class="input" type="password" placeholder="Password" bind:value={password} autocomplete="off" aria-label="Password" />
-      {#if pwWrong}<p class="bad">That password doesn't open it.</p>{/if}
-      <button class="btn primary" type="submit">Open</button>
+      <p>{t('This {format} file is protected by a password.', { format: res.format })}</p>
+      <input class="input" type="password" placeholder={t('Password')} bind:value={password} autocomplete="off" aria-label={t('Password')} />
+      {#if pwWrong}<p class="bad">{t("That password doesn't open it.")}</p>{/if}
+      <button class="btn primary" type="submit">{t('Open')}</button>
     </form>
   {:else if res}
     <div class="head">
-      <span class="label">{res.format} · {res.items.length} item{res.items.length === 1 ? '' : 's'}</span>
+      <span class="label">{res.format} · {tn('{n} item', '{n} items', res.items.length)}</span>
     </div>
     {#each res.items as i, n (n)}
       <article class="card {i.kind} {i.status}">
@@ -100,34 +101,34 @@
           <h2>{title(i)}</h2>
           {#if role(i, n)}<span class="tag">{role(i, n)}</span>{/if}
           {#if i.status}<span class="pill {i.status}">{label(i)}</span>{/if}
-          {#if i.issuedByNext}<span class="chain" title="Signed by the next certificate in this file"><Icon icon={Link} size={14} /> issued by the next one</span>{/if}
+          {#if i.issuedByNext}<span class="chain" title={t('Signed by the next certificate in this file')}><Icon icon={Link} size={14} /> {t('issued by the next one')}</span>{/if}
         </header>
         <dl>
-          {#if i.subject?.full}<dt>Subject</dt><dd>{i.subject.full}</dd>{/if}
-          {#if i.issuer?.full}<dt>Issuer</dt><dd>{i.issuer.full}</dd>{/if}
+          {#if i.subject?.full}<dt>{t('Subject')}</dt><dd>{i.subject.full}</dd>{/if}
+          {#if i.issuer?.full}<dt>{t('Issuer')}</dt><dd>{i.issuer.full}</dd>{/if}
           {#if i.kind === 'certificate' || i.kind === 'crl'}
-            <dt>Valid</dt><dd>{fmtDate(i.notBefore)} → <b>{fmtDate(i.notAfter)}</b></dd>
+            <dt>{t('Valid', {}, 'certificate')}</dt><dd>{fmtDate(i.notBefore)} → <b>{fmtDate(i.notAfter)}</b></dd>
           {/if}
-          {#if i.names?.length}<dt>Names</dt><dd class="names">{#each i.names as nm (nm)}<span>{nm}</span>{/each}</dd>{/if}
-          {#if i.key}<dt>Key</dt><dd>{i.key}{i.encrypted ? ' (encrypted)' : ''}</dd>{/if}
-          {#if i.signature}<dt>Signature</dt><dd>{i.signature}</dd>{/if}
-          {#if i.serial}<dt>Serial</dt><dd class="mono">{i.serial}</dd>{/if}
-          {#if i.keyUsage?.length}<dt>Key usage</dt><dd>{i.keyUsage.join(', ')}</dd>{/if}
-          {#if i.extKeyUsage?.length}<dt>Purposes</dt><dd>{i.extKeyUsage.join(', ')}</dd>{/if}
-          {#if i.isCA && i.pathLen >= 0}<dt>Path length</dt><dd>{i.pathLen}</dd>{/if}
-          {#if i.sha256}<dt>SHA-256</dt><dd><button class="fp" title="Copy" onclick={() => copy(i.sha256, 'SHA-256 fingerprint')}>{i.sha256}</button></dd>{/if}
-          {#if i.sha1}<dt>SHA-1</dt><dd><button class="fp" title="Copy" onclick={() => copy(i.sha1, 'SHA-1 fingerprint')}>{i.sha1}</button></dd>{/if}
-          {#if i.spkiPin}<dt>Key pin</dt><dd><button class="fp" title="SHA-256 of the public key (base64), for pinning — copy" onclick={() => copy(i.spkiPin, 'key pin')}>{i.spkiPin}</button></dd>{/if}
-          {#if i.ocsp?.length}<dt>OCSP</dt><dd>{i.ocsp.join(', ')}</dd>{/if}
-          {#if i.caIssuers?.length}<dt>CA issuers</dt><dd>{i.caIssuers.join(', ')}</dd>{/if}
-          {#if i.crls?.length}<dt>CRL</dt><dd>{i.crls.join(', ')}</dd>{/if}
-          {#if i.note}<dt>Note</dt><dd>{i.note}</dd>{/if}
+          {#if i.names?.length}<dt>{t('Names')}</dt><dd class="names">{#each i.names as nm (nm)}<span>{nm}</span>{/each}</dd>{/if}
+          {#if i.key}<dt>{t('Key')}</dt><dd>{i.key}{i.encrypted ? ` (${t('encrypted')})` : ''}</dd>{/if}
+          {#if i.signature}<dt>{t('Signature')}</dt><dd>{i.signature}</dd>{/if}
+          {#if i.serial}<dt>{t('Serial')}</dt><dd class="mono">{i.serial}</dd>{/if}
+          {#if i.keyUsage?.length}<dt>{t('Key usage')}</dt><dd>{i.keyUsage.join(', ')}</dd>{/if}
+          {#if i.extKeyUsage?.length}<dt>{t('Purposes')}</dt><dd>{i.extKeyUsage.join(', ')}</dd>{/if}
+          {#if i.isCA && i.pathLen >= 0}<dt>{t('Path length')}</dt><dd>{i.pathLen}</dd>{/if}
+          {#if i.sha256}<dt>SHA-256</dt><dd><button class="fp" title={t('Copy')} onclick={() => copy(i.sha256, t('Copied SHA-256 fingerprint'))}>{i.sha256}</button></dd>{/if}
+          {#if i.sha1}<dt>SHA-1</dt><dd><button class="fp" title={t('Copy')} onclick={() => copy(i.sha1, t('Copied SHA-1 fingerprint'))}>{i.sha1}</button></dd>{/if}
+          {#if i.spkiPin}<dt>{t('Key pin')}</dt><dd><button class="fp" title={t('SHA-256 of the public key (base64), for pinning — copy')} onclick={() => copy(i.spkiPin, t('Copied key pin'))}>{i.spkiPin}</button></dd>{/if}
+          {#if i.ocsp?.length}<dt>OCSP</dt><dd>{i.ocsp.join(', ')}</dd>{/if} <!-- i18n-ignore -->
+          {#if i.caIssuers?.length}<dt>{t('CA issuers')}</dt><dd>{i.caIssuers.join(', ')}</dd>{/if}
+          {#if i.crls?.length}<dt>CRL</dt><dd>{i.crls.join(', ')}</dd>{/if} <!-- i18n-ignore -->
+          {#if i.note}<dt>{t('Note')}</dt><dd>{i.note}</dd>{/if}
         </dl>
         {#if i.pem}
           <div class="actions">
-            <button class="btn ghost" onclick={() => (showPem = new Set(showPem.has(n) ? [...showPem].filter((x) => x !== n) : [...showPem, n]))}>{showPem.has(n) ? 'Hide PEM' : 'Show PEM'}</button>
-            <button class="btn ghost" onclick={() => copy(i.pem, 'PEM')}>Copy PEM</button>
-            <button class="btn ghost" onclick={() => exportPem(i, n)}>Save as PEM…</button>
+            <button class="btn ghost" onclick={() => (showPem = new Set(showPem.has(n) ? [...showPem].filter((x) => x !== n) : [...showPem, n]))}>{showPem.has(n) ? t('Hide PEM') : t('Show PEM')}</button>
+            <button class="btn ghost" onclick={() => copy(i.pem, t('Copied PEM'))}>{t('Copy PEM')}</button>
+            <button class="btn ghost" onclick={() => exportPem(i, n)}>{t('Save as PEM…')}</button>
           </div>
           {#if showPem.has(n)}<pre>{i.pem}</pre>{/if}
         {/if}

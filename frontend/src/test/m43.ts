@@ -2,7 +2,9 @@
 // for stand-ins: an ellipse for the subject, the surrounding colour for a
 // removal — the downloads and pipelines are covered by Go tests). Settings ›
 // AI models lists both packs; Install asks first (size, sources) and shows
-// progress; Select subject then uses the installed model; Remove object
+// progress. In the image editor the AI tools below Select object are greyed
+// out until their model is installed and lead to its row in Settings; once
+// installed, Select subject (AI) uses the model; Remove object
 // without its model offers the download ("Not now" changes nothing), and
 // with it removes the selected blue square through a background job, undoably;
 // Remove in Settings uninstalls.
@@ -35,10 +37,26 @@ async function answer(button: string, what: string) {
 
 export default async function m43(dir: string) {
   for (const id of ['subject', 'eraser']) await api.AIRemove(id);
+  const { aiModels } = await import('../core/aimodels.svelte');
+  await aiModels.refresh();
+
+  // The image editor shows the AI tools greyed out; one leads to its download in Settings.
+  const t = (await workspace.openPath(join(dir, 'img', 'subject.png')))!;
+  const h = await waitFor(() => (hooks(t)?.editor() ? hooks(t) : null), 'image editor');
+  const ed = h.editor()!;
+  const aiTool = (id: string) => document.querySelector<HTMLButtonElement>(`.tabview[data-tab-id="${t.id}"] .tools .ai[data-pack="${id}"]`);
+  await waitFor(() => aiTool('subject') && aiTool('eraser'), 'AI tools below Select object');
+  const order = [...document.querySelectorAll(`.tabview[data-tab-id="${t.id}"] .tools button`)].map((b) => b.getAttribute('aria-label'));
+  assertEq(order.slice(order.indexOf('Select object'), order.indexOf('Select object') + 3).join(' | '), 'Select object | Select subject (AI) | Remove object (AI)', 'right below Select object');
+  assert(aiTool('subject')!.classList.contains('locked') && aiTool('eraser')!.classList.contains('locked'), 'greyed out while not downloaded');
+  assert(aiTool('subject')!.title.includes('Settings'), `says where to get it (${aiTool('subject')!.title})`);
+  aiTool('subject')!.click();
+  const settingsTab = await waitFor(() => (workspace.active?.source.kind === 'tool' && workspace.active.source.tool === 'settings' ? workspace.active : null), 'Settings opened');
+  const row = (id: string) => document.querySelector<HTMLElement>(`.tabview[data-tab-id="${settingsTab.id}"] .pack[data-pack="${id}"]`);
+  await waitFor(() => (row('subject')?.classList.contains('flash-target') ? true : null), 'at the model, highlighted');
+  assert(!ui.dialog, 'no download without asking');
 
   // Settings lists the packs; Install asks, then downloads with progress.
-  const settingsTab = workspace.openTool('settings');
-  const row = (id: string) => document.querySelector<HTMLElement>(`.tabview[data-tab-id="${settingsTab.id}"] .pack[data-pack="${id}"]`);
   await waitFor(() => row('subject') && row('eraser'), 'both packs listed');
   assert(row('eraser')!.textContent!.includes('Object removal') && row('eraser')!.textContent!.includes('download'), 'eraser described with its size');
   row('subject')!.querySelector<HTMLButtonElement>('button')!.click();
@@ -47,12 +65,15 @@ export default async function m43(dir: string) {
   d.resolve({ button: 'ok' });
   await waitFor(() => (row('subject')?.textContent?.includes('Installed') ? true : null), 'subject installed', 10000);
 
-  // Select subject uses it (the stand-in finds a centred ellipse, not the red circle).
-  const t = (await workspace.openPath(join(dir, 'img', 'subject.png')))!;
-  const h = await waitFor(() => (hooks(t)?.editor() ? hooks(t) : null), 'image editor');
-  const ed = h.editor()!;
+  // Back in the image: Select subject (AI) is live and uses it (the stand-in finds a centred ellipse, not the red circle).
+  workspace.activate(t);
+  await waitFor(() => (aiTool('subject')?.classList.contains('locked') === false ? true : null), 'the AI tool is live once installed');
+  assert(aiTool('eraser')!.classList.contains('locked'), 'the other one still needs its download');
   await sleep(500); // the editor's first paint
-  const sj = await measureJank(() => h.selectSubject());
+  const sj = await measureJank(async () => {
+    aiTool('subject')!.click();
+    await waitFor(() => (ed.selection && !h.busy() ? true : null), 'subject selected', 20000);
+  });
   log(`select subject, longest UI frame ${Math.round(sj.maxGap)} ms`);
   const b = ed.selection?.bounds;
   assert(b, 'a selection');

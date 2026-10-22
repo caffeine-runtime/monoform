@@ -6,6 +6,7 @@
 import rough from 'roughjs';
 import type { Drawable } from 'roughjs/bin/core';
 import { getStroke } from 'perfect-freehand';
+import { t } from '../../core/i18n';
 import { esc, randomId, union, type BoardAdapter, type BoardItem, type BoardStyle, type Box, type CreateOptions, type Measure, type Pt, type TextEdit, type Tool } from './types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -71,10 +72,10 @@ export function parseExcalidraw(text: string): ExcalidrawFile {
   try {
     doc = JSON.parse(text);
   } catch (e) {
-    throw new Error(`This isn't valid JSON: ${(e as Error).message}`);
+    throw new Error(t("This isn't valid JSON: {error}", { error: (e as Error).message }));
   }
-  if (!doc || typeof doc !== 'object' || !Array.isArray(doc.elements)) throw new Error('This file has no Excalidraw elements.');
-  if (doc.type && doc.type !== 'excalidraw' && doc.type !== 'excalidraw/clipboard') throw new Error(`Unknown drawing type “${doc.type}”.`);
+  if (!doc || typeof doc !== 'object' || !Array.isArray(doc.elements)) throw new Error(t('This file has no Excalidraw elements.'));
+  if (doc.type && doc.type !== 'excalidraw' && doc.type !== 'excalidraw/clipboard') throw new Error(t('Unknown drawing type “{type}”.', { type: String(doc.type) }));
   return doc;
 }
 
@@ -298,7 +299,7 @@ export class ExcalidrawBoard implements BoardAdapter {
       }
       case 'frame':
       case 'magicframe':
-        body = `<rect width="${w}" height="${h}" rx="8" fill="transparent" stroke="#bbb" stroke-width="1"/><text x="0" y="-6" font-family="sans-serif" font-size="14" fill="#888">${esc(String(el.name ?? 'Frame'))}</text>`;
+        body = `<rect width="${w}" height="${h}" rx="8" fill="transparent" stroke="#bbb" stroke-width="1"/><text x="0" y="-6" font-family="sans-serif" font-size="14" fill="#888">${esc(String(el.name ?? t('Frame')))}</text>`;
         break;
       default:
         body = `<rect width="${b.w}" height="${b.h}" fill="none" stroke="#bbb" stroke-dasharray="4 4"/>`;

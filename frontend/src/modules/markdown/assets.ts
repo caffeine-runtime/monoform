@@ -7,6 +7,7 @@ import type { Tab } from '../../core/tabs.svelte';
 import type { Accepts } from '../../core/transfer.svelte';
 import { workspace } from '../../core/tabs.svelte';
 import { toastError, ui } from '../../core/ui.svelte';
+import { t } from '../../core/i18n';
 import { controllers } from '../text/controllers';
 
 const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'];
@@ -33,7 +34,7 @@ function stamp(): string {
 
 async function noteOrWarn(tab: Tab): Promise<string | null> {
   if (tab.filePath && !tab.readOnly) return tab.filePath;
-  ui.toast('Save the note first — images are stored in an assets/ folder next to it.', 'warning');
+  ui.toast(t('Save the note first — images are stored in an assets/ folder next to it.'), 'warning');
   return null;
 }
 
@@ -49,7 +50,7 @@ async function insertBlobs(tab: Tab, view: EditorView, pos: number, files: File[
       const res = await postBytes<{ rel: string; path: string }>(endpoint('asset', { note, name }), f);
       links.push(linkFor(res.rel, basename(name).replace(/\.[^.]+$/, ''), true));
     } catch (e) {
-      toastError(e, 'Could not save image');
+      toastError(e, t('Could not save image'));
     }
   }
   if (links.length) insertAt(view, pos, links.join('\n'));
@@ -67,7 +68,7 @@ async function insertPaths(tab: Tab, view: EditorView, pos: number, paths: strin
       const rel = image && copyImages ? (await api.CopyAsset(note, p)).rel : await api.RelPath(note, p);
       links.push(linkFor(rel, name, image));
     } catch (e) {
-      toastError(e, `Could not link ${basename(p)}`);
+      toastError(e, t('Could not link {name}', { name: basename(p) }));
     }
   }
   if (links.length) insertAt(view, pos, links.join('\n'));

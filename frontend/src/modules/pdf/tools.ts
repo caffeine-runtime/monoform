@@ -6,6 +6,7 @@ import { api, fileUrl, saveFile } from '../../core/backend';
 import { dirname, extname, join, stem } from '../../core/paths';
 import { workspace } from '../../core/tabs.svelte';
 import { toastError, ui } from '../../core/ui.svelte';
+import { t, tn } from '../../core/i18n';
 
 const DIRECT = ['png', 'jpg', 'jpeg', 'tif', 'tiff', 'webp'];
 export const IMAGE_PATTERNS = '*.png;*.jpg;*.jpeg;*.webp;*.tif;*.tiff;*.gif;*.bmp;*.avif;*.svg';
@@ -26,7 +27,7 @@ export async function importable(paths: string[]): Promise<{ files: string[]; te
     c.width = img.naturalWidth || 1000;
     c.height = img.naturalHeight || 1000;
     c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
-    const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('encoding failed'))), 'image/png'));
+    const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error(t('encoding failed')))), 'image/png'));
     const tmp = await api.TempPath(`${stem(p)}.png`);
     await saveFile(tmp, blob);
     files.push(tmp);
@@ -36,10 +37,10 @@ export async function importable(paths: string[]): Promise<{ files: string[]; te
 }
 
 export async function pickPageSize(): Promise<string | null> {
-  return ui.pick('Page size', [
-    { id: 'image', label: 'Same as each image' },
-    { id: 'A4', label: 'A4 (images fitted)' },
-    { id: 'Letter', label: 'US Letter (images fitted)' },
+  return ui.pick(t('Page size'), [
+    { id: 'image', label: t('Same as each image') },
+    { id: 'A4', label: t('A4 (images fitted)') },
+    { id: 'Letter', label: t('US Letter (images fitted)') },
   ]);
 }
 
@@ -55,21 +56,21 @@ export async function buildFromImages(paths: string[], dst: string, size: string
 
 /** "Create PDF from images…": pick images (in the order chosen, else by name), a page size and where to save. */
 export async function imagesToPdf(preset?: string[]) {
-  const picked = preset ?? (await api.OpenFilesDialog('Images to put in a PDF (one per page)', [{ name: 'Images', patterns: IMAGE_PATTERNS }]));
+  const picked = preset ?? (await api.OpenFilesDialog(t('Images to put in a PDF (one per page)'), [{ name: t('Images'), patterns: IMAGE_PATTERNS }]));
   if (!picked?.length) return;
   const paths = preset ? picked : [...picked].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   const size = await pickPageSize();
   if (!size) return;
-  const def = join(dirname(paths[0]), `${paths.length === 1 ? stem(paths[0]) : 'Images'}.pdf`);
-  let dst = await api.SaveFileDialog('Save PDF as', def, [{ name: 'PDF', patterns: '*.pdf' }]);
+  const def = join(dirname(paths[0]), `${paths.length === 1 ? stem(paths[0]) : t('Images')}.pdf`);
+  let dst = await api.SaveFileDialog(t('Save PDF as'), def, [{ name: 'PDF', patterns: '*.pdf' }]);
   if (!dst) return;
   if (extname(dst) !== 'pdf') dst += '.pdf';
   try {
     const out = await buildFromImages(paths, dst, size);
-    ui.toast(`Created a ${paths.length}-page PDF`, 'success', { label: 'Open', run: () => void workspace.openPath(out) });
+    ui.toast(tn('Created a {n}-page PDF', 'Created a {n}-page PDF', paths.length), 'success', { label: t('Open'), run: () => void workspace.openPath(out) });
     return out;
   } catch (e) {
-    toastError(e, 'Couldn’t create the PDF');
+    toastError(e, t('Couldn’t create the PDF'));
   }
 }
 
@@ -97,4 +98,4 @@ export function scaleFor(dpi: number, wPt: number, hPt: number): number {
 }
 
 export const toBlob = (c: HTMLCanvasElement, type: string, q?: number) =>
-  new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('encoding failed'))), type, q));
+  new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error(t('encoding failed')))), type, q));

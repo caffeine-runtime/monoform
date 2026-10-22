@@ -8,6 +8,7 @@ import { settings } from '../core/settings.svelte';
 import { workspace } from '../core/tabs.svelte';
 import { tree, type TreeItem } from '../core/tree.svelte';
 import { menu, toastError, ui, type MenuItem } from '../core/ui.svelte';
+import { t } from '../core/i18n';
 
 export async function openTreeItem(item: TreeItem) {
   if (item.archive && item.entry !== undefined) {
@@ -26,7 +27,7 @@ export async function openTreeItem(item: TreeItem) {
 export const treeMenuContributions: ((item: TreeItem) => MenuItem[])[] = [];
 
 export async function newFileIn(dir: string) {
-  const name = await ui.prompt('New file name', 'untitled.md', 'Create', true);
+  const name = await ui.prompt(t('New file name'), `${t('untitled')}.md`, t('Create'), true);
   if (!name) return;
   const p = join(dir, name);
   try {
@@ -34,23 +35,23 @@ export async function newFileIn(dir: string) {
     await tree.refreshDir(dir);
     await workspace.openPath(p);
   } catch (e) {
-    toastError(e, 'Could not create file');
+    toastError(e, t('Could not create file'));
   }
 }
 
 export async function newFolderIn(dir: string) {
-  const name = await ui.prompt('New folder name', 'New folder', 'Create');
+  const name = await ui.prompt(t('New folder name'), t('New folder'), t('Create'));
   if (!name) return;
   try {
     await api.CreateFolder(join(dir, name));
     await tree.refreshDir(dir);
   } catch (e) {
-    toastError(e, 'Could not create folder');
+    toastError(e, t('Could not create folder'));
   }
 }
 
 export async function renameItem(item: TreeItem) {
-  const name = await ui.prompt('Rename', item.name, 'Rename', true);
+  const name = await ui.prompt(t('Rename'), item.name, t('Rename'), true);
   if (!name || name === item.name) return;
   const to = join(dirname(item.path), name);
   try {
@@ -59,13 +60,14 @@ export async function renameItem(item: TreeItem) {
     if (open) open.retarget(to);
     await tree.refreshDir(dirname(item.path));
   } catch (e) {
-    toastError(e, 'Rename failed');
+    toastError(e, t('Rename failed'));
   }
 }
 
-export function copyText(text: string, what = 'Path') {
+/** Copy text to the clipboard and say so with `done` ("Path copied"). */
+export function copyText(text: string, done = t('Path copied')) {
   navigator.clipboard.writeText(text).then(
-    () => ui.toast(`${what} copied`, 'success'),
+    () => ui.toast(done, 'success'), // i18n-ignore: message translated by callers
     (e) => toastError(e),
   );
 }
@@ -73,19 +75,19 @@ export function copyText(text: string, what = 'Path') {
 export function treeContextMenu(e: MouseEvent, item: TreeItem) {
   const items: MenuItem[] = [];
   if (item.archive) {
-    if (!item.isDir) items.push({ label: 'Open', run: () => openTreeItem(item) });
+    if (!item.isDir) items.push({ label: t('Open'), run: () => openTreeItem(item) });
   } else if (item.isDir) {
     items.push(
-      { label: 'New document, spreadsheet, image…', run: () => newFileOfKind(item.path) },
-      { label: 'New empty file…', run: () => newFileIn(item.path) },
-      { label: 'New folder…', run: () => newFolderIn(item.path) },
+      { label: t('New document, spreadsheet, image…'), run: () => newFileOfKind(item.path) },
+      { label: t('New empty file…'), run: () => newFileIn(item.path) },
+      { label: t('New folder…'), run: () => newFolderIn(item.path) },
       { separator: true },
-      { label: 'Find in this folder…', run: () => commands.execute('search.inFolder', item.path) },
+      { label: t('Find in this folder…'), run: () => commands.execute('search.inFolder', item.path) },
     );
   } else {
     items.push(
-      { label: 'Open', run: () => openTreeItem(item) },
-      { label: settings.isPinned(item.path) ? 'Unpin' : 'Pin', run: () => settings.togglePin(item.path) },
+      { label: t('Open'), run: () => openTreeItem(item) },
+      { label: settings.isPinned(item.path) ? t('Unpin') : t('Pin'), run: () => settings.togglePin(item.path) },
     );
   }
   for (const c of treeMenuContributions) {
@@ -95,13 +97,13 @@ export function treeContextMenu(e: MouseEvent, item: TreeItem) {
   if (!item.archive) {
     items.push(
       { separator: true },
-      { label: 'Rename…', run: () => renameItem(item) },
-      ...(item.isDir ? [] : [{ label: 'Show history', run: () => workspace.openTool('history', item.path) }]),
-      { label: 'Copy path', run: () => copyText(item.path) },
-      { label: 'Copy name', run: () => copyText(basename(item.path), 'Name') },
+      { label: t('Rename…'), run: () => renameItem(item) },
+      ...(item.isDir ? [] : [{ label: t('Show history'), run: () => workspace.openTool('history', item.path) }]),
+      { label: t('Copy path'), run: () => copyText(item.path) },
+      { label: t('Copy name'), run: () => copyText(basename(item.path), t('Name copied')) },
     );
   } else if (item.entry) {
-    items.push({ separator: true }, { label: 'Copy entry name', run: () => copyText(item.entry!, 'Name') });
+    items.push({ separator: true }, { label: t('Copy entry name'), run: () => copyText(item.entry!, t('Name copied')) });
   }
   menu.show(e, items);
 }

@@ -41,6 +41,7 @@
   import { workspace, type Tab } from '../../core/tabs.svelte';
   import { theme } from '../../core/theme.svelte';
   import { menu, toastError, ui } from '../../core/ui.svelte';
+  import { num, t, tn } from '../../core/i18n';
   import { CadClient } from './cadClient';
   import type { CadInfo } from './cadWorker';
   import type { NewEntity, Prop } from './doc';
@@ -120,40 +121,40 @@
   const UNITS: Record<number, string> = { 1: 'in', 2: 'ft', 3: 'mi', 4: 'mm', 5: 'cm', 6: 'm', 7: 'km', 8: 'µin', 9: 'mil', 10: 'yd' };
   const VERSIONS: Record<string, string> = { AC1009: 'R12', AC1012: 'R13', AC1014: 'R14', AC1015: '2000', AC1018: '2004', AC1021: '2007', AC1024: '2010', AC1027: '2013', AC1032: '2018' };
   const ACI = [
-    [256, 'By layer'],
-    [1, 'Red'],
-    [2, 'Yellow'],
-    [3, 'Green'],
-    [4, 'Cyan'],
-    [5, 'Blue'],
-    [6, 'Magenta'],
-    [7, 'White / black'],
-    [8, 'Dark grey'],
-    [9, 'Light grey'],
-    [0, 'By block'],
+    [256, t('By layer')],
+    [1, t('Red')],
+    [2, t('Yellow')],
+    [3, t('Green')],
+    [4, t('Cyan')],
+    [5, t('Blue')],
+    [6, t('Magenta')],
+    [7, t('White / black')],
+    [8, t('Dark grey')],
+    [9, t('Light grey')],
+    [0, t('By block')],
   ] as const;
   const ACI_RGB: Record<number, string> = { 1: '#ff0000', 2: '#ffff00', 3: '#00ff00', 4: '#00ffff', 5: '#0000ff', 6: '#ff00ff', 7: '', 8: '#808080', 9: '#c0c0c0' };
 
   type ToolDef = { id: CadTool; icon: any; label: string; key: string; help: string; edit?: boolean };
   const toolGroups: ToolDef[][] = [
     [
-      { id: 'select', icon: MousePointer, label: 'Select', key: 'V', help: 'Click an object to select it (Shift adds/removes). Drag left→right to select objects fully inside, right→left to select everything touched. Drag a selected object to move it.' },
-      { id: 'pan', icon: Hand, label: 'Pan', key: 'H', help: 'Drag to pan. In any tool: middle-drag or Space+drag pans, the wheel zooms at the cursor.' },
-      { id: 'measure', icon: Ruler, label: 'Measure', key: 'D', help: 'Click two points to measure the distance, ΔX, ΔY and angle. Snaps to ends, midpoints and centres.' },
+      { id: 'select', icon: MousePointer, label: t('Select'), key: 'V', help: t('Click an object to select it (Shift adds/removes). Drag left→right to select objects fully inside, right→left to select everything touched. Drag a selected object to move it.') },
+      { id: 'pan', icon: Hand, label: t('Pan'), key: 'H', help: t('Drag to pan. In any tool: middle-drag or Space+drag pans, the wheel zooms at the cursor.') },
+      { id: 'measure', icon: Ruler, label: t('Measure'), key: 'D', help: t('Click two points to measure the distance, ΔX, ΔY and angle. Snaps to ends, midpoints and centres.') },
     ],
     [
-      { id: 'line', icon: Slash, label: 'Line', key: 'L', edit: true, help: 'Click points to draw connected lines; Esc or right-click ends. Type a length, "x,y", "@dx,dy" or "length<angle" and press Enter for exact points.' },
-      { id: 'polyline', icon: Spline, label: 'Polyline', key: 'P', edit: true, help: 'Click points; click the first point to close, double-click, Enter or right-click to finish. Backspace removes the last point.' },
-      { id: 'rect', icon: Square, label: 'Rectangle', key: 'B', edit: true, help: 'Click two opposite corners (Ctrl or Shift for a square). Type "@width,height" for an exact size.' },
-      { id: 'circle', icon: CircleIcon, label: 'Circle', key: 'C', edit: true, help: 'Click the centre, then a point on the circle — or type the radius and press Enter.' },
-      { id: 'arc', icon: ArcIcon, label: 'Arc', key: 'A', edit: true, help: 'Click the start, a point on the arc, then the end.' },
-      { id: 'text', icon: Type, label: 'Text', key: 'T', edit: true, help: 'Click where the text starts, then type it. Set the height in the toolbar.' },
+      { id: 'line', icon: Slash, label: t('Line'), key: 'L', edit: true, help: t('Click points to draw connected lines; Esc or right-click ends. Type a length, "x,y", "@dx,dy" or "length<angle" and press Enter for exact points.') },
+      { id: 'polyline', icon: Spline, label: t('Polyline'), key: 'P', edit: true, help: t('Click points; click the first point to close, double-click, Enter or right-click to finish. Backspace removes the last point.') },
+      { id: 'rect', icon: Square, label: t('Rectangle'), key: 'B', edit: true, help: t('Click two opposite corners (Ctrl or Shift for a square). Type "@width,height" for an exact size.') },
+      { id: 'circle', icon: CircleIcon, label: t('Circle'), key: 'C', edit: true, help: t('Click the centre, then a point on the circle — or type the radius and press Enter.') },
+      { id: 'arc', icon: ArcIcon, label: t('Arc'), key: 'A', edit: true, help: t('Click the start, a point on the arc, then the end.') },
+      { id: 'text', icon: Type, label: t('Text'), key: 'T', edit: true, help: t('Click where the text starts, then type it. Set the height in the toolbar.') },
     ],
     [
-      { id: 'move', icon: Move, label: 'Move', key: 'M', edit: true, help: 'With objects selected: click a base point, then where it goes (or type "@dx,dy").' },
-      { id: 'copy', icon: Copy, label: 'Copy', key: 'O', edit: true, help: 'With objects selected: click a base point, then each place to put a copy. Esc ends.' },
-      { id: 'rotate', icon: RotateCw, label: 'Rotate', key: 'R', edit: true, help: 'With objects selected: click the centre, then the direction (Shift snaps to 15°) — or type the angle in degrees.' },
-      { id: 'scale', icon: Scale, label: 'Scale', key: 'S', edit: true, help: 'With objects selected: click the base point, then drag out the size — or type the factor (2 = double).' },
+      { id: 'move', icon: Move, label: t('Move', {}, 'cad'), key: 'M', edit: true, help: t('With objects selected: click a base point, then where it goes (or type "@dx,dy").') },
+      { id: 'copy', icon: Copy, label: t('Copy'), key: 'O', edit: true, help: t('With objects selected: click a base point, then each place to put a copy. Esc ends.') },
+      { id: 'rotate', icon: RotateCw, label: t('Rotate'), key: 'R', edit: true, help: t('With objects selected: click the centre, then the direction (Shift snaps to 15°) — or type the angle in degrees.') },
+      { id: 'scale', icon: Scale, label: t('Scale', {}, 'cad'), key: 'S', edit: true, help: t('With objects selected: click the base point, then drag out the size — or type the factor (2 = double).') },
     ],
   ];
   const TRANSFORM_TOOLS: CadTool[] = ['move', 'copy', 'rotate', 'scale'];
@@ -180,6 +181,45 @@
     canRender?: boolean;
   }
 
+  /** Labels of the object properties the worker lists (it has no translations). */
+  const PROP_LABELS: Record<string, string> = {
+    'Start X': t('Start X'),
+    'Start Y': t('Start Y'),
+    'End X': t('End X'),
+    'End Y': t('End Y'),
+    'Position X': t('Position X'),
+    'Position Y': t('Position Y'),
+    'Centre X': t('Centre X'),
+    'Centre Y': t('Centre Y'),
+    Radius: t('Radius'),
+    'Start angle': t('Start angle'),
+    'End angle': t('End angle'),
+    'Minor/major ratio': t('Minor/major ratio'),
+    Text: t('Text'),
+    Height: t('Height'),
+    Rotation: t('Rotation'),
+    Block: t('Block'),
+    'Scale X': t('Scale X'),
+    'Scale Y': t('Scale Y'),
+    Vertices: t('Vertices'),
+    Closed: t('Closed'),
+    Width: t('Width'),
+    Degree: t('Degree'),
+    'Control points': t('Control points'),
+    Measurement: t('Measurement'),
+  };
+  /** Progress phases the worker reports. */
+  const PHASES: Record<string, string> = { Reading: t('Reading'), 'Reading drawing': t('Reading drawing'), Saving: t('Saving') };
+
+  /** A message from the worker, translated when it is one we know. */
+  function workerError(m: string): string {
+    if (m === 'Binary DXF isn’t supported; save it as ASCII DXF.') return t('Binary DXF isn’t supported; save it as ASCII DXF.');
+    if (m === 'This DXF has no ENTITIES section.') return t('This DXF has no ENTITIES section.');
+    const bad = /^Not a DXF file \(line (\d+): "([\s\S]*)"\)$/.exec(m);
+    if (bad) return t('Not a DXF file (line {line}: "{text}")', { line: bad[1], text: bad[2] });
+    return m;
+  }
+
   function accept(r: Reply) {
     info = r.info;
     tab.dirty = r.info.dirty;
@@ -187,7 +227,7 @@
     if (r.scene) setScene(r.scene);
     if (r.select) setSel(r.select);
     else setSel(sel.filter((i) => i < (r.info.entities ?? 0)));
-    if (r.skipped) ui.toast(`${r.skipped} object${r.skipped === 1 ? '' : 's'} (dimensions or unknown types) can't be changed this way and were left as they are.`, 'warning');
+    if (r.skipped) ui.toast(tn("{n} object (dimensions or unknown types) can't be changed this way and were left as they are.", "{n} objects (dimensions or unknown types) can't be changed this way and were left as they are.", r.skipped), 'warning');
     status();
   }
 
@@ -217,7 +257,7 @@
       accept(r);
       return r;
     } catch (e) {
-      toastError(e, 'Edit failed');
+      toastError(e, t('Edit failed'));
       return null;
     } finally {
       busy = '';
@@ -227,7 +267,7 @@
   async function load() {
     loading = true;
     error = '';
-    client.onProgress = (phase, done, total) => (busy = total ? `${phase}… ${Math.round((done / total) * 100)}%` : `${phase}…`);
+    client.onProgress = (phase, done, total) => (busy = total ? `${PHASES[phase] ?? phase}… ${Math.round((done / total) * 100)}%` : `${PHASES[phase] ?? phase}…`);
     try {
       const r = await client.call<Reply>({ type: 'load', url: new URL(tab.url(), location.href).href });
       scene = null;
@@ -235,7 +275,7 @@
       accept(r);
       if (!layerNames.includes(curLayer)) curLayer = '0';
     } catch (e) {
-      error = e instanceof Error ? e.message : String(e);
+      error = workerError(e instanceof Error ? e.message : String(e));
     } finally {
       loading = false;
       busy = '';
@@ -265,9 +305,9 @@
     const v = VERSIONS[info.version] ?? info.version ?? '';
     tab.status = {
       ...tab.status,
-      type: `DXF${v ? ` ${v}` : ''} drawing`,
+      type: v ? t('DXF {version} drawing', { version: v }) : t('DXF drawing'),
       position: `${fmtN(cursor[0])}, ${fmtN(cursor[1])}${unit() ? ` ${unit()}` : ''}`,
-      info: `${info.entities.toLocaleString()} objects${sel.length ? ` · ${sel.length} selected` : ''}`,
+      info: tn('{n} object', '{n} objects', info.entities) + (sel.length ? ` · ${tn('{n} selected', '{n} selected', sel.length)}` : ''),
       encoding: info.encoding.toUpperCase(),
     };
   }
@@ -694,12 +734,12 @@
     }
     if (!sel.length || !editable) return;
     menu.show(e, [
-      { label: 'Move', shortcut: 'M', run: () => setTool('move') },
-      { label: 'Copy', shortcut: 'O', run: () => setTool('copy') },
-      { label: 'Rotate', shortcut: 'R', run: () => setTool('rotate') },
-      { label: 'Scale', shortcut: 'S', run: () => setTool('scale') },
-      { label: 'Duplicate', shortcut: formatShortcut('Mod+D'), run: () => doOp('duplicate') },
-      { label: 'Delete', shortcut: 'Del', run: () => doOp('delete') },
+      { label: t('Move', {}, 'cad'), shortcut: 'M', run: () => setTool('move') },
+      { label: t('Copy'), shortcut: 'O', run: () => setTool('copy') },
+      { label: t('Rotate'), shortcut: 'R', run: () => setTool('rotate') },
+      { label: t('Scale', {}, 'cad'), shortcut: 'S', run: () => setTool('scale') },
+      { label: t('Duplicate'), shortcut: formatShortcut('Mod+D'), run: () => doOp('duplicate') },
+      { label: t('Delete'), shortcut: 'Del', run: () => doOp('delete') },
     ]);
   }
 
@@ -712,7 +752,7 @@
     const ang = ((Math.atan2(dy, dx) * 180) / Math.PI + 360) % 360;
     const u = unit();
     const n = (v: number) => fmtN(v, Math.max(decimals(), 2));
-    return `Distance ${n(d)}${u ? ` ${u}` : ''} · ΔX ${n(dx)} · ΔY ${n(dy)} · Angle ${ang.toFixed(2)}°`;
+    return t('Distance {d} · ΔX {dx} · ΔY {dy} · Angle {angle}°', { d: `${n(d)}${u ? ` ${u}` : ''}`, dx: n(dx), dy: n(dy), angle: ang.toFixed(2) });
   }
 
   function newEntity(n: Omit<NewEntity, 'layer'>): NewEntity {
@@ -772,8 +812,8 @@
         }
         break;
       case 'text': {
-        const t = await ui.prompt('Text', '', 'Add');
-        if (t) await add([{ type: 'TEXT', pts: [p], text: t, h: textHeight || autoTextHeight() }]);
+        const s = await ui.prompt(t('Text'), '', t('Add'));
+        if (s) await add([{ type: 'TEXT', pts: [p], text: s, h: textHeight || autoTextHeight() }]);
         break;
       }
       case 'measure':
@@ -850,33 +890,33 @@
   }
 
   async function submitCmd() {
-    const t = cmd.trim();
+    const s = cmd.trim();
     cmd = '';
     area?.focus();
-    if (!t) return finish();
-    const n = Number(t);
+    if (!s) return finish();
+    const n = Number(s);
     const last = pts[pts.length - 1];
     if (last && Number.isFinite(n)) {
       if (tool === 'rotate') return applyTransform(rotateAbout((n * Math.PI) / 180, last[0], last[1]));
       if (tool === 'scale') return n > 0 ? applyTransform(scaleAbout(n, last[0], last[1])) : undefined;
       if (tool === 'circle') return clickPoint([last[0] + n, last[1]]);
     }
-    const p = parsePoint(t, last ?? null, cursor);
+    const p = parsePoint(s, last ?? null, cursor);
     if (!p) {
-      ui.toast('Type a point as x,y · @dx,dy · length<angle, or a length.', 'warning');
+      ui.toast(t('Type a point as x,y · @dx,dy · length<angle, or a length.'), 'warning');
       return;
     }
     cursor = p;
     await clickPoint(p);
   }
 
-  function setTool(t: CadTool) {
-    if (TRANSFORM_TOOLS.includes(t) && !sel.length) {
-      ui.toast('Select the objects first, then choose this tool.', 'info');
-      t = 'select';
+  function setTool(next: CadTool) {
+    if (TRANSFORM_TOOLS.includes(next) && !sel.length) {
+      ui.toast(t('Select the objects first, then choose this tool.'), 'info');
+      next = 'select';
     }
-    if ((DRAW_TOOLS.includes(t) || TRANSFORM_TOOLS.includes(t)) && !editable) return;
-    tool = t;
+    if ((DRAW_TOOLS.includes(next) || TRANSFORM_TOOLS.includes(next)) && !editable) return;
+    tool = next;
     pts = [];
     measureText = '';
     cmd = '';
@@ -955,11 +995,11 @@
   }
 
   async function newLayer() {
-    const name = (await ui.prompt('New layer name', '', 'Create'))?.trim();
+    const name = (await ui.prompt(t('New layer name'), '', t('Create')))?.trim();
     if (!name) return;
     if (!layerNames.includes(name)) extraLayers = [...extraLayers, name];
     curLayer = name;
-    if (sel.length && editable && (await ui.confirm('Move the selection?', `Put the ${sel.length} selected object${sel.length === 1 ? '' : 's'} on “${name}”?`, 'Move'))) await run({ type: 'setLayer', ids: sel, layer: name });
+    if (sel.length && editable && (await ui.confirm(t('Move the selection?'), tn('Put the {n} selected object on “{name}”?', 'Put the {n} selected objects on “{name}”?', sel.length, { name }), t('Move', {}, 'layer')))) await run({ type: 'setLayer', ids: sel, layer: name });
   }
 
   function selectLayer(name: string) {
@@ -976,16 +1016,16 @@
   async function exportSvg() {
     if (!scene) return;
     const base = join(dirname(tab.filePath ?? tab.path ?? ''), `${stem(tab.title)}.svg`);
-    let path = await api.SaveFileDialog('Export SVG', base, [{ name: 'SVG', patterns: '*.svg' }]);
+    let path = await api.SaveFileDialog(t('Export SVG'), base, [{ name: 'SVG', patterns: '*.svg' }]);
     if (!path) return;
     if (extname(path) !== 'svg') path += '.svg';
     try {
       const u = info?.units === 4 ? 'mm' : info?.units === 5 ? 'cm' : info?.units === 1 ? 'in' : '';
       await saveFile(path, toSvg(scene, u));
       const p = path;
-      ui.toast('Exported SVG', 'success', { label: 'Open', run: () => void workspace.openPath(p) });
+      ui.toast(t('Exported SVG'), 'success', { label: t('Open'), run: () => void workspace.openPath(p) });
     } catch (e) {
-      toastError(e, 'Export failed');
+      toastError(e, t('Export failed'));
     }
   }
 
@@ -999,28 +1039,28 @@
     c.width = w;
     c.height = H;
     renderFitted(c.getContext('2d')!, scene!, w, H);
-    return new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('encoding failed'))), 'image/png'));
+    return new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error(t('encoding failed')))), 'image/png'));
   }
 
   async function exportPng() {
     if (!scene?.bounds) return;
-    const choice = await ui.pick('Export PNG', [
-      { id: '1920', label: '1920 px wide' },
-      { id: '3840', label: '3840 px wide' },
-      { id: '7680', label: '7680 px wide' },
+    const choice = await ui.pick(t('Export PNG'), [
+      { id: '1920', label: t('{w} px wide', { w: '1920' }) },
+      { id: '3840', label: t('{w} px wide', { w: '3840' }) },
+      { id: '7680', label: t('{w} px wide', { w: '7680' }) },
     ]);
     if (!choice) return;
     const base = join(dirname(tab.filePath ?? tab.path ?? ''), `${stem(tab.title)}.png`);
-    let path = await api.SaveFileDialog('Export PNG', base, [{ name: 'PNG', patterns: '*.png' }]);
+    let path = await api.SaveFileDialog(t('Export PNG'), base, [{ name: 'PNG', patterns: '*.png' }]);
     if (!path) return;
     if (extname(path) !== 'png') path += '.png';
-    busy = 'Exporting…';
+    busy = t('Exporting…');
     try {
       await saveFile(path, await renderPng(+choice));
       const p = path;
-      ui.toast('Exported PNG', 'success', { label: 'Open', run: () => void workspace.openPath(p) });
+      ui.toast(t('Exported PNG'), 'success', { label: t('Open'), run: () => void workspace.openPath(p) });
     } catch (e) {
-      toastError(e, 'Export failed');
+      toastError(e, t('Export failed'));
     } finally {
       busy = '';
     }
@@ -1034,7 +1074,7 @@
   }
 
   async function saveAs(): Promise<boolean> {
-    const p = await api.SaveFileDialog('Save as', tab.filePath ?? tab.title, [{ name: 'DXF drawing', patterns: '*.dxf' }]);
+    const p = await api.SaveFileDialog(t('Save as'), tab.filePath ?? tab.title, [{ name: t('DXF drawing'), patterns: '*.dxf' }]);
     if (!p) return false;
     const ok = await writeTo(p);
     if (ok) tab.retarget(p);
@@ -1042,7 +1082,7 @@
   }
 
   async function writeTo(path: string): Promise<boolean> {
-    busy = 'Saving…';
+    busy = t('Saving…');
     try {
       const r = await client.call<{ entry: { size: number }; info: CadInfo }>({ type: 'save', path, token: sessionToken() });
       tab.size = r.entry.size;
@@ -1050,7 +1090,7 @@
       tab.dirty = false;
       return true;
     } catch (e) {
-      toastError(e, 'Save failed');
+      toastError(e, t('Save failed'));
       return false;
     } finally {
       busy = '';
@@ -1131,46 +1171,46 @@
 </script>
 
 <div class="toolbar" use:fitBar>
-  {#if narrow && info}<button class="icon-btn" class:on={panelOpen} title="Properties and layers" onclick={() => (panelOpen = !panelOpen)}><Icon icon={PanelRight} /></button>{/if}
+  {#if narrow && info}<button class="icon-btn" class:on={panelOpen} title={t('Properties and layers')} onclick={() => (panelOpen = !panelOpen)}><Icon icon={PanelRight} /></button>{/if}
   {#if editable}
-    <button class="icon-btn" title="Undo ({formatShortcut('Mod+Z')})" disabled={!info?.canUndo} onclick={() => doOp('undo')}><Icon icon={Undo2} /></button>
-    <button class="icon-btn" title="Redo ({formatShortcut('Mod+Shift+Z')})" disabled={!info?.canRedo} onclick={() => doOp('redo')}><Icon icon={Redo2} /></button>
-    <button class="icon-btn" title="Delete selected objects (Del)" disabled={!sel.length} onclick={() => doOp('delete')}><Icon icon={Trash} /></button>
+    <button class="icon-btn" title={t('Undo ({key})', { key: formatShortcut('Mod+Z') })} disabled={!info?.canUndo} onclick={() => doOp('undo')}><Icon icon={Undo2} /></button>
+    <button class="icon-btn" title={t('Redo ({key})', { key: formatShortcut('Mod+Shift+Z') })} disabled={!info?.canRedo} onclick={() => doOp('redo')}><Icon icon={Redo2} /></button>
+    <button class="icon-btn" title={t('Delete selected objects ({key})', { key: 'Del' })} disabled={!sel.length} onclick={() => doOp('delete')}><Icon icon={Trash} /></button>
     <span class="sep"></span>
-    <label class="opt" title="Layer for new objects">
-      Layer
+    <label class="opt" title={t('Layer for new objects')}>
+      {t('Layer')}
       <select class="input sel" bind:value={curLayer}>
         {#each layerNames as l (l)}<option value={l}>{l}</option>{/each}
       </select>
     </label>
-    <button class="icon-btn" title="New layer…" onclick={newLayer}><Icon icon={Plus} /></button>
-    <label class="opt" title="Colour for new objects">
-      Colour
+    <button class="icon-btn" title={t('New layer…')} onclick={newLayer}><Icon icon={Plus} /></button>
+    <label class="opt" title={t('Colour for new objects')}>
+      {t('Colour')}
       <select class="input sel" bind:value={curColor}>
         {#each ACI as [n, l] (n)}<option value={n}>{l}</option>{/each}
       </select>
     </label>
     {#if tool === 'text'}
-      <label class="opt" title="Text height in drawing units (empty: about 18 px at the current zoom)">Height <input class="input num" type="number" min="0" step="any" value={textHeight || ''} placeholder="auto" onchange={(e) => (textHeight = +(e.currentTarget as HTMLInputElement).value || 0)} /></label>
+      <label class="opt" title={t('Text height in drawing units (empty: about {px} px at the current zoom)', { px: 18 })}>{t('Height')} <input class="input num" type="number" min="0" step="any" value={textHeight || ''} placeholder={t('auto')} onchange={(e) => (textHeight = +(e.currentTarget as HTMLInputElement).value || 0)} /></label>
     {/if}
     <span class="sep"></span>
   {/if}
-  <button class="icon-btn" class:on={snapOn} title="Object snap: ends, midpoints, centres, quadrants ({formatShortcut('F3')})" aria-pressed={snapOn} onclick={() => doOp('snap')}><Icon icon={Magnet} /></button>
-  <button class="icon-btn" class:on={gridOn} title="Grid: show it and snap to it ({formatShortcut('F7')})" aria-pressed={gridOn} onclick={() => doOp('grid')}><Icon icon={Grid} /></button>
-  <button class="icon-btn" class:on={orthoOn} title="Ortho: horizontal and vertical only ({formatShortcut('F8')}; hold Shift to flip it)" aria-pressed={orthoOn} onclick={() => doOp('ortho')}><Icon icon={Crosshair} /></button>
-  <button class="icon-btn" title="Zoom to drawing ({formatShortcut('Mod+0')})" onclick={() => doOp('fit')}><Icon icon={Maximize} /></button>
+  <button class="icon-btn" class:on={snapOn} title={t('Object snap: ends, midpoints, centres, quadrants ({key})', { key: formatShortcut('F3') })} aria-pressed={snapOn} onclick={() => doOp('snap')}><Icon icon={Magnet} /></button>
+  <button class="icon-btn" class:on={gridOn} title={t('Grid: show it and snap to it ({key})', { key: formatShortcut('F7') })} aria-pressed={gridOn} onclick={() => doOp('grid')}><Icon icon={Grid} /></button>
+  <button class="icon-btn" class:on={orthoOn} title={t('Ortho: horizontal and vertical only ({key}; hold Shift to flip it)', { key: formatShortcut('F8') })} aria-pressed={orthoOn} onclick={() => doOp('ortho')}><Icon icon={Crosshair} /></button>
+  <button class="icon-btn" title={t('Zoom to drawing ({key})', { key: formatShortcut('Mod+0') })} onclick={() => doOp('fit')}><Icon icon={Maximize} /></button>
   <span class="spacer"></span>
   {#if busy}<span class="label"><span class="spinner inline"></span> {busy}</span>{/if}
-  {#if info}<span class="label">{info.entities.toLocaleString()} objects · {info.layers.length} layers{unit() ? ` · ${unit()}` : ''}</span>{/if}
-  <button class="icon-btn" title="Export…" onclick={(e) => menu.show(e, [
-      { label: 'Export as SVG…', run: () => doOp('exportSvg') },
-      { label: 'Export as PNG…', run: () => doOp('exportPng') },
+  {#if info}<span class="label">{tn('{n} object', '{n} objects', info.entities)} · {tn('{n} layer', '{n} layers', info.layers.length)}{unit() ? ` · ${unit()}` : ''}</span>{/if}
+  <button class="icon-btn" title={t('Export…')} onclick={(e) => menu.show(e, [
+      { label: t('Export as SVG…'), run: () => doOp('exportSvg') },
+      { label: t('Export as PNG…'), run: () => doOp('exportPng') },
     ])}><Icon icon={Download} /></button>
-  <button class="icon-btn" title="Open as text" onclick={() => ((tab.moduleId = 'text'), workspace.touch())}><Icon icon={FileText} /></button>
+  <button class="icon-btn" title={t('Open as text')} onclick={() => ((tab.moduleId = 'text'), workspace.touch())}><Icon icon={FileText} /></button>
 </div>
 
 <div class="body" bind:clientWidth={bodyW}>
-  <div class="tools" role="toolbar" aria-orientation="vertical" aria-label="CAD tools">
+  <div class="tools" role="toolbar" aria-orientation="vertical" aria-label={t('CAD tools')}>
     {#each toolGroups as group, gi (gi)}
       {#if gi}<span class="hsep"></span>{/if}
       {#each group.filter((t) => editable || !t.edit) as t (t.id)}
@@ -1187,7 +1227,7 @@
     bind:this={area}
     tabindex="0"
     role="application"
-    aria-label="Drawing"
+    aria-label={t('Drawing')}
     onpointerdown={onPointerDown}
     onpointermove={onPointerMove}
     onpointerup={onPointerUp}
@@ -1203,22 +1243,22 @@
     {#if tool !== 'select' && tool !== 'pan'}
       <div class="cmdline">
         <span class="prompt">
-          {#if tool === 'measure'}{measureText || (pts.length ? 'Click the second point' : 'Click the first point')}
-          {:else if tool === 'line'}{pts.length ? 'Next point — or type a length, x,y, @dx,dy, len<angle · Esc ends' : 'First point'}
-          {:else if tool === 'polyline'}{pts.length ? 'Next point · click the first point to close · Enter finishes' : 'First point'}
-          {:else if tool === 'rect'}{pts.length ? 'Opposite corner — or @width,height' : 'First corner'}
-          {:else if tool === 'circle'}{pts.length ? 'Point on the circle — or type the radius' : 'Centre'}
-          {:else if tool === 'arc'}{['Start point', 'A point on the arc', 'End point'][pts.length]}
-          {:else if tool === 'text'}Click where the text starts
-          {:else if tool === 'rotate'}{pts.length ? 'Direction — or type the angle in degrees' : 'Centre of rotation'}
-          {:else if tool === 'scale'}{pts.length ? 'Drag out the size — or type the factor' : 'Base point'}
-          {:else}{pts.length ? 'Where it goes — or @dx,dy' : 'Base point'}{/if}
+          {#if tool === 'measure'}{measureText || (pts.length ? t('Click the second point') : t('Click the first point'))}
+          {:else if tool === 'line'}{pts.length ? t('Next point — or type a length, x,y, @dx,dy, len<angle · Esc ends') : t('First point')}
+          {:else if tool === 'polyline'}{pts.length ? t('Next point · click the first point to close · Enter finishes') : t('First point')}
+          {:else if tool === 'rect'}{pts.length ? t('Opposite corner — or @width,height') : t('First corner')}
+          {:else if tool === 'circle'}{pts.length ? t('Point on the circle — or type the radius') : t('Centre')}
+          {:else if tool === 'arc'}{[t('Start point'), t('A point on the arc'), t('End point')][pts.length]}
+          {:else if tool === 'text'}{t('Click where the text starts')}
+          {:else if tool === 'rotate'}{pts.length ? t('Direction — or type the angle in degrees') : t('Centre of rotation')}
+          {:else if tool === 'scale'}{pts.length ? t('Drag out the size — or type the factor') : t('Base point')}
+          {:else}{pts.length ? t('Where it goes — or @dx,dy') : t('Base point')}{/if}
         </span>
         <input
           class="input"
           bind:this={cmdInput}
           bind:value={cmd}
-          placeholder="type…"
+          placeholder={t('type…')}
           spellcheck="false"
           onkeydown={(e) => {
             if (e.key === 'Enter') {
@@ -1237,52 +1277,52 @@
     {/if}
     {#if error}<div class="empty-state overlay">{error}</div>{/if}
     {#if loading && !error}<div class="empty-state overlay"><span class="spinner"></span></div>{/if}
-    {#if info && !info.entities && !loading}<div class="empty-state overlay hint">This drawing is empty. Pick a drawing tool on the left to start.</div>{/if}
+    {#if info && !info.entities && !loading}<div class="empty-state overlay hint">{t('This drawing is empty. Pick a drawing tool on the left to start.')}</div>{/if}
   </div>
   {#if info && (!narrow || panelOpen)}
     <aside data-sidepanel class="panel" class:floating={narrow} class:right={narrow}>
       <div class="ptabs">
-        <button class:on={panel === 'props'} onclick={() => (panel = 'props')}>Properties</button>
-        <button class:on={panel === 'layers'} onclick={() => (panel = 'layers')}>Layers</button>
+        <button class:on={panel === 'props'} onclick={() => (panel = 'props')}>{t('Properties')}</button>
+        <button class:on={panel === 'layers'} onclick={() => (panel = 'layers')}>{t('Layers')}</button>
       </div>
       {#key sceneVersion}
         {#if panel === 'props'}
           <div class="pbody">
             {#if !sel.length}
-              <p class="muted">Nothing selected. Click an object, or drag a window around several.</p>
+              <p class="muted">{t('Nothing selected. Click an object, or drag a window around several.')}</p>
               <dl>
-                {#each Object.entries(info.counts).sort((a, b) => b[1] - a[1]) as [t, n] (t)}<dt>{t}</dt><dd>{n.toLocaleString()}</dd>{/each}
+                {#each Object.entries(info.counts).sort((a, b) => b[1] - a[1]) as [type, n] (type)}<dt>{type}</dt><dd>{num(n)}</dd>{/each}
               </dl>
             {:else}
-              <div class="head">{sel.length === 1 && objProps ? objProps.type : `${sel.length} objects`}{objProps?.handle ? ` · #${objProps.handle}` : ''}</div>
+              <div class="head">{sel.length === 1 && objProps ? objProps.type : tn('{n} object', '{n} objects', sel.length)}{objProps?.handle ? ` · #${objProps.handle}` : ''}</div>
               {#if editable}
-                <label class="row">Layer
+                <label class="row">{t('Layer')}
                   <select class="input" value={sel.length === 1 && objProps ? objProps.layer : ''} onchange={(e) => run({ type: 'setLayer', ids: sel, layer: (e.currentTarget as HTMLSelectElement).value })}>
                     {#if !(sel.length === 1 && objProps)}<option value="" disabled>—</option>{/if}
                     {#each layerNames as l (l)}<option value={l}>{l}</option>{/each}
                   </select>
                 </label>
-                <label class="row">Colour
+                <label class="row">{t('Colour')}
                   <select class="input" value={sel.length === 1 && objProps && !objProps.trueColor ? objProps.color : -1} onchange={(e) => run({ type: 'setColor', ids: sel, color: +(e.currentTarget as HTMLSelectElement).value })}>
-                    <option value={-1} disabled>{objProps?.trueColor ? 'True colour' : '—'}</option>
+                    <option value={-1} disabled>{objProps?.trueColor ? t('True colour') : '—'}</option>
                     {#each ACI as [n, l] (n)}<option value={n}>{l}</option>{/each}
-                    {#if objProps && !ACI.some(([n]) => n === objProps!.color) && !objProps.trueColor}<option value={objProps.color}>ACI {objProps.color}</option>{/if}
+                    {#if objProps && !ACI.some(([n]) => n === objProps!.color) && !objProps.trueColor}<option value={objProps.color}>ACI {objProps.color}</option>{/if}<!-- i18n-ignore: AutoCAD Color Index -->
                   </select>
                   {#if objProps && swatch(objProps.color)}<span class="sw" style:background={swatch(objProps.color)}></span>{/if}
                 </label>
               {/if}
               {#if sel.length === 1 && objProps}
                 {#each objProps.props as p (p.label)}
-                  <label class="row">{p.label}
+                  <label class="row">{PROP_LABELS[p.label] ?? p.label}
                     {#if p.kind === 'ro' || !editable}<span class="ro">{fmtProp(p) || '—'}</span>
                     {:else if p.kind === 'flag'}<input type="checkbox" checked={p.value === '1'} onchange={(e) => run({ type: 'setProp', index: sel[0], code: p.code, occ: p.occ, value: (e.currentTarget as HTMLInputElement).checked ? '1' : '0' })} />
                     {:else if p.kind === 'text'}<textarea class="input" rows="2" value={p.value.replace(/\\P/g, '\n')} onchange={(e) => run({ type: 'setProp', index: sel[0], code: p.code, occ: p.occ, value: (e.currentTarget as HTMLTextAreaElement).value })}></textarea>
-                    {:else}<input class="input" type="number" step="any" value={fmtProp(p)} placeholder="default" onchange={(e) => run({ type: 'setProp', index: sel[0], code: p.code, occ: p.occ, value: (e.currentTarget as HTMLInputElement).value })} />{/if}
+                    {:else}<input class="input" type="number" step="any" value={fmtProp(p)} placeholder={t('default')} onchange={(e) => run({ type: 'setProp', index: sel[0], code: p.code, occ: p.occ, value: (e.currentTarget as HTMLInputElement).value })} />{/if}
                   </label>
                 {/each}
-                {#if objProps.length !== undefined}<div class="row">Length <span class="ro">{fmtN(objProps.length, 4)}{unit() ? ` ${unit()}` : ''}</span></div>{/if}
-                {#if objProps.area !== undefined}<div class="row">Area <span class="ro">{fmtN(objProps.area, 4)}{unit() ? ` ${unit()}²` : ''}</span></div>{/if}
-                {#if !objProps.editable}<p class="muted">This object can be recoloured, moved to another layer or deleted, but not moved or reshaped here.</p>{/if}
+                {#if objProps.length !== undefined}<div class="row">{t('Length')} <span class="ro">{fmtN(objProps.length, 4)}{unit() ? ` ${unit()}` : ''}</span></div>{/if}
+                {#if objProps.area !== undefined}<div class="row">{t('Area', {}, 'cad')} <span class="ro">{fmtN(objProps.area, 4)}{unit() ? ` ${unit()}²` : ''}</span></div>{/if}
+                {#if !objProps.editable}<p class="muted">{t('This object can be recoloured, moved to another layer or deleted, but not moved or reshaped here.')}</p>{/if}
               {/if}
             {/if}
           </div>
@@ -1290,14 +1330,14 @@
           <div class="pbody layers">
             {#each info.layers as l (l.name)}
               <div class="layer" class:cur={l.name === curLayer} class:off={l.off || l.hidden}>
-                <button class="icon-btn sm" title={l.off ? 'Off or frozen in the file' : l.hidden ? 'Show this layer' : 'Hide this layer (view only, not saved)'} disabled={l.off} onclick={() => toggleHidden(l.name)}><Icon icon={l.off || l.hidden ? EyeOff : Eye} size={14} /></button>
+                <button class="icon-btn sm" title={l.off ? t('Off or frozen in the file') : l.hidden ? t('Show this layer') : t('Hide this layer (view only, not saved)')} disabled={l.off} onclick={() => toggleHidden(l.name)}><Icon icon={l.off || l.hidden ? EyeOff : Eye} size={14} /></button>
                 <span class="sw" style:background={css(l.color, dark)}></span>
-                <button class="name" title="Make this the layer for new objects" onclick={() => (curLayer = l.name)}>{l.name}</button>
-                {#if l.locked}<span title="Locked: can't be selected"><Icon icon={Lock} size={12} /></span>{/if}
-                <button class="count" title="Select everything on this layer" onclick={() => selectLayer(l.name)}>{l.count.toLocaleString()}</button>
+                <button class="name" title={t('Make this the layer for new objects')} onclick={() => (curLayer = l.name)}>{l.name}</button>
+                {#if l.locked}<span title={t("Locked: can't be selected")}><Icon icon={Lock} size={12} /></span>{/if}
+                <button class="count" title={t('Select everything on this layer')} onclick={() => selectLayer(l.name)}>{num(l.count)}</button>
               </div>
             {/each}
-            {#if editable}<button class="btn ghost add" onclick={newLayer}><Icon icon={Plus} size={14} /> New layer</button>{/if}
+            {#if editable}<button class="btn ghost add" onclick={newLayer}><Icon icon={Plus} size={14} /> {t('New layer')}</button>{/if}
           </div>
         {/if}
       {/key}

@@ -9,10 +9,11 @@
   import { api } from '../../core/backend';
   import { settings } from '../../core/settings.svelte';
   import { toastError, ui } from '../../core/ui.svelte';
+  import { t } from '../../core/i18n';
   import type { app } from '../../wailsjs/go/models';
 
   let {
-    title = 'Recognised text',
+    title = t('Recognised text'),
     run,
     onclose,
     actions,
@@ -43,7 +44,7 @@
   async function go() {
     busy = true;
     error = '';
-    status = 'Starting…';
+    status = t('Starting…');
     progress = 0;
     try {
       const r = await run([...chosen], (s, p) => {
@@ -66,13 +67,13 @@
   }
 
   async function addLanguage() {
-    const files = await api.OpenFilesDialog('Add Tesseract language files', [{ name: 'Tesseract language data', patterns: '*.traineddata;*.traineddata.gz' }]);
+    const files = await api.OpenFilesDialog(t('Add Tesseract language files'), [{ name: t('Tesseract language data'), patterns: '*.traineddata;*.traineddata.gz' }]);
     for (const p of files ?? []) {
       try {
         const code = await api.OcrAddLanguage(p);
         await loadLangs();
         if (!chosen.includes(code)) toggle(code);
-        ui.toast(`Added ${langs.find((l) => l.code === code)?.name ?? code}`, 'success');
+        ui.toast(t('Added {name}', { name: langs.find((l) => l.code === code)?.name ?? code }), 'success');
       } catch (e) {
         toastError(e);
       }
@@ -81,7 +82,7 @@
 
   async function copy() {
     await navigator.clipboard.writeText(text).catch(() => {});
-    ui.toast('Copied', 'success');
+    ui.toast(t('Copied'), 'success');
   }
 
   (globalThis as unknown as { __ocrPanel?: unknown }).__ocrPanel = { text: () => text, busy: () => busy, status: () => `${status} ${Math.round(progress * 100)}%`, error: () => error, confidence: () => confidence, rerun: go };
@@ -95,32 +96,32 @@
   <header>
     <h3>{title}</h3>
     <span class="spacer"></span>
-    <button class="icon-btn" title="Close" onclick={onclose}><Icon icon={X} /></button>
+    <button class="icon-btn" title={t('Close')} onclick={onclose}><Icon icon={X} /></button>
   </header>
   <div class="langs">
-    <button class="btn ghost small" onclick={() => (showLangs = !showLangs)}>Languages: {chosen.map((c) => langs.find((l) => l.code === c)?.name ?? c).join(', ')}</button>
+    <button class="btn ghost small" onclick={() => (showLangs = !showLangs)}>{t('Languages: {list}', { list: chosen.map((c) => langs.find((l) => l.code === c)?.name ?? c).join(', ') })}</button>
     {#if showLangs}
       <div class="langlist">
         {#each langs as l (l.code)}
-          <label><input type="checkbox" checked={chosen.includes(l.code)} onchange={() => toggle(l.code)} /> {l.name}{l.bundled ? '' : ' (added)'}</label>
+          <label><input type="checkbox" checked={chosen.includes(l.code)} onchange={() => toggle(l.code)} /> {l.name}{l.bundled ? '' : ' ' + t('(added)')}</label>
         {/each}
-        <button class="btn ghost small" onclick={addLanguage}>Add language file…</button>
-        <p class="hint">Tesseract language files (<code>.traineddata</code>, e.g. from the tessdata_best or tessdata_fast collections) add more languages. Nothing is downloaded.</p>
+        <button class="btn ghost small" onclick={addLanguage}>{t('Add language file…')}</button>
+        <p class="hint">{t('Tesseract language files ({ext}, e.g. from the tessdata_best or tessdata_fast collections) add more languages. Nothing is downloaded.', { ext: '.traineddata' })}</p>
       </div>
     {/if}
-    <button class="btn small" disabled={busy} onclick={go}>{text ? 'Recognise again' : 'Recognise'}</button>
+    <button class="btn small" disabled={busy} onclick={go}>{text ? t('Recognise again') : t('Recognise')}</button>
   </div>
   {#if busy}
     <div class="progress"><div class="bar" style="width:{Math.round(progress * 100)}%"></div></div>
     <p class="status">{status}</p>
   {/if}
   {#if error}<p class="bad">{error}</p>{/if}
-  <textarea class="input text" bind:value={text} placeholder={busy ? '' : 'No text found.'} spellcheck="false" aria-label="Recognised text"></textarea>
+  <textarea class="input text" bind:value={text} placeholder={busy ? '' : t('No text found.')} spellcheck="false" aria-label={t('Recognised text')}></textarea>
   <footer>
-    {#if text && !busy}<span class="label">Confidence {Math.round(confidence)}%</span>{/if}
+    {#if text && !busy}<span class="label">{t('Confidence {n}%', { n: Math.round(confidence) })}</span>{/if}
     <span class="spacer"></span>
     {@render actions?.({ text, langs: chosen })}
-    <button class="btn primary" disabled={!text || busy} onclick={copy}><Icon icon={CopyIcon} size={14} /> Copy text</button>
+    <button class="btn primary" disabled={!text || busy} onclick={copy}><Icon icon={CopyIcon} size={14} /> {t('Copy text')}</button>
   </footer>
 </aside>
 

@@ -15,7 +15,7 @@ let cached: Promise<{ width: number; height: number; data: Uint16Array }> | null
 export async function roomEnvironment(): Promise<THREE.DataTexture> {
   cached ??= fetchBytes(envUrl).then((b) => {
     const head = new Uint32Array(b.buffer, b.byteOffset, 4);
-    if (head[0] !== 0x564e4548) throw new Error('bad environment file');
+    if (head[0] !== 0x564e4548) throw new Error('bad environment file'); // i18n-ignore: internal check of a bundled asset
     return { width: head[1], height: head[2], data: new Uint16Array(b.buffer, b.byteOffset + 16, head[1] * head[2] * 4) };
   });
   const { width, height, data } = await cached;

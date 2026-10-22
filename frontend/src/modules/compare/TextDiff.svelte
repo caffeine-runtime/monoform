@@ -5,6 +5,7 @@
   import { onMount, untrack } from 'svelte';
   import { ADDED, CHANGE, REMOVED, SAME, wordDiff, type Seg } from './diff';
   import type { DiffClient } from './diffClient';
+  import { t, tn } from '../../core/i18n';
 
   let {
     client,
@@ -168,7 +169,7 @@
       <div class="rows" style:transform="translateY({first * ROW - top}px)" style:min-width="calc({widths[side] + 8}ch + 56px)">
         {#each visible as v (v.d)}
           {#if v.gap >= 0}
-            <button class="row gap" style:height="{ROW}px" onclick={() => onexpand(v.gap)}>⋯ {gaps[v.gap][1].toLocaleString()} unchanged line{gaps[v.gap][1] === 1 ? '' : 's'} — click to show</button>
+            <button class="row gap" style:height="{ROW}px" onclick={() => onexpand(v.gap)}>⋯ {tn('{n} unchanged line — click to show', '{n} unchanged lines — click to show', gaps[v.gap][1])}</button>
           {:else}
             {@const k = rows[v.row * 3]}
             {@const ln = rows[v.row * 3 + 1 + side]}
@@ -182,7 +183,7 @@
       </div>
     </div>
   {/each}
-  <canvas class="strip" bind:this={strip} onclick={stripClick} title="Overview of the changes — click to jump"></canvas>
+  <canvas class="strip" bind:this={strip} onclick={stripClick} title={t('Overview of the changes — click to jump')}></canvas>
   <div class="vs" bind:this={vs} onscroll={() => (top = vs!.scrollTop)}>
     <div style:height="{disp.length * ROW}px"></div>
   </div>

@@ -11,6 +11,7 @@
 // read-only blocks. Changing bold/italic/underline/strike adds automatic text
 // styles derived from the run's own.
 import { collect, hasOwnText, sameFmt, type Fmt } from './docxModel';
+import { t } from '../../core/i18n';
 
 export const OFFICE = 'urn:oasis:names:tc:opendocument:xmlns:office:1.0';
 export const TEXT = 'urn:oasis:names:tc:opendocument:xmlns:text:1.0';
@@ -59,9 +60,9 @@ export class OdtModel {
     private ctx: OdtContext,
   ) {
     this.xml = new DOMParser().parseFromString(contentXml, 'application/xml');
-    if (this.xml.getElementsByTagName('parsererror')[0]) throw new Error('content.xml could not be parsed');
+    if (this.xml.getElementsByTagName('parsererror')[0]) throw new Error(t('{part} could not be parsed', { part: 'content.xml' }));
     const body = this.xml.getElementsByTagNameNS(OFFICE, 'text')[0];
-    if (!body) throw new Error('This file has no text body.');
+    if (!body) throw new Error(t('This file has no text body.'));
     this.body = body;
     let auto = this.xml.getElementsByTagNameNS(OFFICE, 'automatic-styles')[0];
     if (!auto) {
@@ -163,7 +164,7 @@ export class OdtModel {
     d.contentEditable = 'false';
     d.dataset.opaque = this.ref(el);
     d.textContent = el.textContent?.trim() || `[${el.localName}]`;
-    d.title = 'This part is kept as it is';
+    d.title = t('This part is kept as it is');
     return d;
   }
 

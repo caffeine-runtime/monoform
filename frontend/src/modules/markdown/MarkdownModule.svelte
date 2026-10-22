@@ -18,6 +18,7 @@
   import { boot } from '../../core/boot';
   import { basename, dirname, relative, resolveRelative } from '../../core/paths';
   import { toastError, ui } from '../../core/ui.svelte';
+  import { t } from '../../core/i18n';
   import { countMarkdown, formatCounts, headingAt, type Counts, type OutlineItem } from '../../core/textStats';
   import TextEditor from '../text/TextEditor.svelte';
   import type { TextController } from '../text/controller';
@@ -196,6 +197,12 @@
     wasDirty = d;
   });
 
+  // Remote images aren't fetched; their tooltip says so (the worker has no translations).
+  $effect(() => {
+    if (!html.includes('data-remote') || !previewEl) return;
+    for (const img of previewEl.querySelectorAll<HTMLImageElement>('img[data-remote]')) img.title = t('Remote image not loaded: {url}', { url: img.dataset.remote ?? '' });
+  });
+
   // Draw Mermaid / Graphviz blocks after each preview update (renderers load on first use).
   $effect(() => {
     if (!html.includes('class="diagram"') || !previewEl) return;
@@ -309,7 +316,7 @@
     const [exists] = await api.Exists([p]);
     if (exists) await workspace.openPath(p);
     else if (isNotePath(p)) await create({ ...link, target: p });
-    else ui.toast(`${basename(p)} wasn't found`, 'error');
+    else ui.toast(t("{name} wasn't found", { name: basename(p) }), 'error');
   }
 
   async function create(link: Pick<NoteLink, 'target'>) {
@@ -320,7 +327,7 @@
       await noteIndex.refresh(vault);
       await workspace.openPath(p, { reveal: { line: 3 } });
     } catch (e) {
-      toastError(e, "Couldn't create the note");
+      toastError(e, t("Couldn't create the note"));
     }
   }
 
@@ -364,13 +371,13 @@
 </script>
 
 <div class="toolbar" use:fitBar>
-  <div class="seg" role="group" aria-label="View">
-    <button class="btn ghost" class:on={view === 'source'} onclick={() => markdownViews.get(tab.id)?.set('source')}><Icon icon={Code} size={14} /> Source</button>
-    <button class="btn ghost" class:on={view === 'split'} onclick={() => markdownViews.get(tab.id)?.set('split')}><Icon icon={Columns2} size={14} /> Split</button>
-    <button class="btn ghost" class:on={view === 'preview'} onclick={() => markdownViews.get(tab.id)?.set('preview')}><Icon icon={Eye} size={14} /> Preview</button>
+  <div class="seg" role="group" aria-label={t('View')}>
+    <button class="btn ghost" class:on={view === 'source'} onclick={() => markdownViews.get(tab.id)?.set('source')}><Icon icon={Code} size={14} /> {t('Source')}</button>
+    <button class="btn ghost" class:on={view === 'split'} onclick={() => markdownViews.get(tab.id)?.set('split')}><Icon icon={Columns2} size={14} /> {t('Split', {}, 'view')}</button>
+    <button class="btn ghost" class:on={view === 'preview'} onclick={() => markdownViews.get(tab.id)?.set('preview')}><Icon icon={Eye} size={14} /> {t('Preview')}</button>
   </div>
   <span class="spacer"></span>
-  <button class="btn ghost" class:on={panelOpen} aria-pressed={panelOpen} title="Outline, backlinks and links" onclick={() => setPanel(!panelOpen)}><Icon icon={ListTree} size={14} /> Outline</button>
+  <button class="btn ghost" class:on={panelOpen} aria-pressed={panelOpen} title={t('Outline, backlinks and links')} onclick={() => setPanel(!panelOpen)}><Icon icon={ListTree} size={14} /> {t('Outline')}</button>
 </div>
 <div class="body" bind:clientWidth={bodyW}>
   <div class="panes" data-view={view}>

@@ -41,9 +41,18 @@ func main() {
 	noCommand := flag.Bool("no-command", false, "don't add the monoform command")
 	removeData := flag.Bool("remove-data", false, "when uninstalling, delete settings and history too")
 	demo := flag.Bool("demo", runtime.GOOS != "windows", "install into a test folder, change nothing on this computer")
+	update := flag.Bool("update", false, "update the installed app (same folder and choices), then start it")
 	flag.Parse()
 
 	s := newSetup(*demo, *uninstall)
+	if *update {
+		// Started by the app's updater, which then closes: no window.
+		if err := s.Update(); err != nil {
+			_ = os.WriteFile(filepath.Join(os.TempDir(), "monoform-setup.log"), []byte(err.Error()+"\n"), 0o644)
+			os.Exit(1)
+		}
+		return
+	}
 	if *quiet {
 		var err error
 		if *uninstall {

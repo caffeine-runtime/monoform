@@ -15,9 +15,9 @@ export async function fetchBytes(url: string, onProgress?: (done: number, total:
     for (let off = head.byteLength; off < total; ) {
       const end = Math.min(total, off + piece) - 1;
       const res = await fetch(url, { headers: { Range: `bytes=${off}-${end}` } });
-      if (res.status !== 206) throw new Error(`range request failed (${res.status})`);
+      if (res.status !== 206) throw new Error(`range request failed (${res.status})`); // i18n-ignore: runs in workers (no catalog); technical
       const part = new Uint8Array(await res.arrayBuffer());
-      if (!part.byteLength) throw new Error('short read');
+      if (!part.byteLength) throw new Error('short read'); // i18n-ignore: runs in workers (no catalog); technical
       out.set(part, off);
       off += part.byteLength;
       onProgress?.(off, total);

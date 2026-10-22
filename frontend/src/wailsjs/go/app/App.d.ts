@@ -257,6 +257,14 @@ export function UnwatchDir(arg1:string):Promise<void>;
 
 export function UnwatchFile(arg1:string):Promise<void>;
 
+export function UpdateCheck():Promise<app.UpdateInfo>;
+
+export function UpdateDownload():Promise<string>;
+
+export function UpdateInstall(arg1:string):Promise<void>;
+
+export function UpdateOpenRelease():Promise<void>;
+
 export function VideoDemux(arg1:string):Promise<video.Demux>;
 
 export function VideoExport(arg1:string,arg2:video.Plan,arg3:string):Promise<string>;

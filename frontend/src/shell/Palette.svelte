@@ -15,6 +15,7 @@
   import { api } from '../core/backend';
   import { boot } from '../core/boot';
   import { iconFor } from '../core/fileicons';
+  import { t } from '../core/i18n';
 
   type Item =
     | { type: 'command'; cmd: Command; label: string; positions: number[] }
@@ -73,7 +74,7 @@
     if (!root || text.length < 2) return;
     const t1 = setTimeout(() => {
       const found: Match[] = [];
-      void jobs.run('Searching', async () => (contentJob = await api.SearchFolder(root, { query: text, caseSensitive: false, wholeWord: false, regex: false, showHidden: settings.value.showHidden, maxResults: 200, maxFileSize: 4 << 20 })), {
+      void jobs.run(t('Searching'), async () => (contentJob = await api.SearchFolder(root, { query: text, caseSensitive: false, wholeWord: false, regex: false, showHidden: settings.value.showHidden, maxResults: 200, maxFileSize: 4 << 20 })), {
         silent: true,
         onData: (items: Match[]) => {
           if (my !== seq) return;
@@ -91,9 +92,9 @@
     }, 120);
     let t2: ReturnType<typeof setTimeout> | undefined;
     if (semantic.usable && text.length >= 3) {
-      meaningState = semantic.model === 'ready' ? '' : 'Loading the search model…';
+      meaningState = semantic.model === 'ready' ? '' : t('Loading the search model…');
       t2 = setTimeout(() => {
-        if (semantic.model === 'ready') meaningState = 'Searching by meaning…';
+        if (semantic.model === 'ready') meaningState = t('Searching by meaning…');
         semantic
           .search(text, 5)
           .then((h) => {
@@ -102,7 +103,7 @@
             meaningState = '';
           })
           .catch((e) => {
-            if (my === seq) meaningState = `Search by meaning failed: ${e instanceof Error ? e.message : e}`;
+            if (my === seq) meaningState = t('Search by meaning failed: {error}', { error: e instanceof Error ? e.message : String(e) });
           });
       }, 350);
     }
@@ -123,7 +124,7 @@
       label: cmdLabel(r.item),
       positions: r.match.positions,
     }));
-    if (commandMode) return [{ heading: 'Commands', items: cmdItems }];
+    if (commandMode) return [{ heading: t('Commands'), items: cmdItems }];
 
     const recents = settings.value.recents;
     const recentSet = new Set(recents);
@@ -140,14 +141,14 @@
     }));
     const groups: { heading: string; items: Item[] }[] = [];
     if (!q) {
-      if (fileItems.length) groups.push({ heading: 'Recent files', items: fileItems });
-      groups.push({ heading: 'Commands', items: cmdItems });
+      if (fileItems.length) groups.push({ heading: t('Recent files'), items: fileItems });
+      groups.push({ heading: t('Commands'), items: cmdItems });
     } else {
       // Show whichever group matches better first.
       const bestCmd = cmdItems.length ? fuzzyFilter(q, [cmdItems[0].label], (s) => s)[0]?.match.score ?? -1e9 : -1e9;
       const bestFile = fileItems.length ? fuzzyFilter(q, [fileItems[0].label], (s) => s)[0]?.match.score ?? -1e9 : -1e9;
-      const cg = { heading: 'Commands', items: cmdItems.slice(0, 12) };
-      const fg = { heading: 'Files', items: fileItems };
+      const cg = { heading: t('Commands'), items: cmdItems.slice(0, 12) };
+      const fg = { heading: t('Files'), items: fileItems };
       for (const g of bestFile > bestCmd ? [fg, cg] : [cg, fg]) if (g.items.length) groups.push(g);
       const inFiles: Item[] = matches.map((m) => ({
         type: 'match',
@@ -160,12 +161,12 @@
         len: m.len,
         text: m.text,
       }));
-      if (inFiles.length) groups.push({ heading: 'In files', items: inFiles });
+      if (inFiles.length) groups.push({ heading: t('In files'), items: inFiles });
       const top = hits?.[0]?.score ?? 0;
       const meaning: Item[] = (hits ?? [])
         .filter((h) => h.score >= top - MEANING_SPREAD)
         .map((h) => ({ type: 'meaning', path: h.path, label: `${display(h.path)}:${h.line}`, detail: h.snippet, positions: [], line: h.line, score: h.score }));
-      if (meaning.length) groups.push({ heading: 'By meaning', items: meaning });
+      if (meaning.length) groups.push({ heading: t('By meaning'), items: meaning });
     }
     return groups;
   });
@@ -212,12 +213,12 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <div class="overlay" onclick={close}>
-  <div class="palette" onclick={(e) => e.stopPropagation()} role="dialog" tabindex="-1" aria-label="Command palette">
+  <div class="palette" onclick={(e) => e.stopPropagation()} role="dialog" tabindex="-1" aria-label={t('Command palette')}>
     <input
       bind:this={input}
       bind:value={query}
       class="q"
-      placeholder="Search files, text and commands…  (type > for commands only)"
+      placeholder={t('Search files, text and commands…  (type > for commands only)')}
       spellcheck="false"
       autocomplete="off"
       onkeydown={keydown}
@@ -246,11 +247,11 @@
         {/each}
       {/each}
       {#if meaningState}
-        <div class="heading">By meaning</div>
+        <div class="heading">{t('By meaning')}</div>
         <div class="pending">{meaningState}</div>
       {/if}
       {#if flat.length === 0 && !meaningState}
-        <div class="none">No matching commands or files</div>
+        <div class="none">{t('No matching commands or files')}</div>
       {/if}
     </div>
   </div>

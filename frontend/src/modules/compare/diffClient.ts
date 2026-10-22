@@ -29,7 +29,7 @@ export class DiffClient {
 
   destroy() {
     this.w.terminate();
-    for (const p of this.waiting.values()) p.reject(new Error('closed'));
+    for (const p of this.waiting.values()) p.reject(new Error('closed')); // i18n-ignore: internal, never shown
     this.waiting.clear();
   }
 }

@@ -2,6 +2,7 @@
   // One row per overlay under the timeline: drag the bar to move it in time,
   // its ends to trim, a keyframe diamond to retime it (click seeks there).
   import type { Layer } from './project';
+  import { t, num } from '../../core/i18n';
 
   let {
     layers,
@@ -66,7 +67,7 @@
 </script>
 
 {#if layers.length}
-  <div class="tracks" role="list" aria-label="Overlays">
+  <div class="tracks" role="list" aria-label={t('Overlays')}>
     {#each layers as l (l.id)}
       <div class="row" role="listitem">
         <span class="name" class:sel={l.id === selected} title={l.name}>{l.kind === 'blur' ? '◌' : '▣'} {l.name}</span>
@@ -79,7 +80,7 @@
             style:width="{Math.max(4, xOf(l.end) - xOf(l.start))}px"
             role="button"
             tabindex="-1"
-            title="{l.name}: drag to move in time, drag the ends to trim"
+            title={t('{name}: drag to move in time, drag the ends to trim', { name: l.name })}
             onpointerdown={(e) => down(e, l, 'move')}
             onpointermove={(e) => move(e)}
             onpointerup={(e) => move(e, true)}
@@ -95,7 +96,7 @@
                 style:left="{xOf(k.t)}px"
                 role="button"
                 tabindex="-1"
-                title="Keyframe at {k.t.toFixed(2)} s — click to go there, drag to retime"
+                title={t('Keyframe at {s} s — click to go there, drag to retime', { s: num(k.t, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) })}
                 onpointerdown={(e) => down(e, l, 'key', i)}
                 onpointermove={(e) => move(e)}
                 onpointerup={(e) => move(e, true)}

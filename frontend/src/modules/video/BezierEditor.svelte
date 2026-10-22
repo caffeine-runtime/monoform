@@ -2,6 +2,7 @@
   // Drag two handles to shape a timing curve (CSS cubic-bezier). x stays
   // within 0..1; y may overshoot for anticipation/overshoot motion.
   import { cubicBezier } from './project';
+  import { t } from '../../core/i18n';
 
   let { value, onchange }: { value: [number, number, number, number]; onchange: (v: [number, number, number, number]) => void } = $props();
 
@@ -39,7 +40,7 @@
   width={S + PAD * 2}
   height={S + PAD * 2}
   role="application"
-  aria-label="Timing curve"
+  aria-label={t('Timing curve')}
   onpointermove={move}
   onpointerup={() => (drag = null)}
   onpointerleave={() => (drag = null)}
@@ -55,7 +56,7 @@
       r="6"
       class="handle"
       role="slider"
-      aria-label={h ? 'End handle' : 'Start handle'}
+      aria-label={h ? t('End handle') : t('Start handle')}
       aria-valuenow={value[h * 2]}
       tabindex="0"
       onpointerdown={(e) => {
@@ -64,9 +65,9 @@
       }}
     />
   {/each}
-  <text x={PAD} y={S + PAD * 2 - 4} class="lbl">time →</text>
+  <text x={PAD} y={S + PAD * 2 - 4} class="lbl">{t('time →')}</text>
 </svg>
-<div class="vals">cubic-bezier({value.join(', ')})</div>
+<div class="vals">cubic-bezier({value.join(', ')})</div><!-- i18n-ignore: CSS function -->
 
 <style>
   .bez {

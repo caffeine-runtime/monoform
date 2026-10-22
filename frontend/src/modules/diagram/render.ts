@@ -4,6 +4,7 @@
 // preview only draws what changed.
 import DotWorker from './dotWorker?worker';
 import type { DiagramKind } from './fence';
+import { t } from '../../core/i18n';
 
 export type { DiagramKind };
 export { kindOfFence } from './fence';
@@ -38,13 +39,34 @@ let worker: Worker | null = null;
 let seq = 0;
 const pending = new Map<number, (r: DiagramResult) => void>();
 
+/** A DOT syntax error from the worker (dot.ts, in English) in the interface language. */
+export function dotMessage(msg: string): string {
+  const m = /^Line (\d+): ([\s\S]*)$/.exec(msg);
+  if (!m) return msg;
+  const s = m[2];
+  const found = (f: string) => (f === 'end of file' ? t('end of file') : f);
+  let x: RegExpExecArray | null;
+  let out = s;
+  if (s === 'unterminated string') out = t('unterminated string');
+  else if (s === 'unterminated HTML label') out = t('unterminated HTML label');
+  else if (s === 'a DOT file starts with “graph” or “digraph”') out = t('a DOT file starts with “graph” or “digraph”');
+  else if (s === 'unclosed “[”') out = t('unclosed “[”');
+  else if (s === '“->” in an undirected graph (use “--”)') out = t('“->” in an undirected graph (use “--”)');
+  else if (s === '“--” in a directed graph (use “->”)') out = t('“--” in a directed graph (use “->”)');
+  else if ((x = /^unexpected character “([\s\S]*)”$/.exec(s))) out = t('unexpected character “{char}”', { char: x[1] });
+  else if ((x = /^expected a name but found “([\s\S]*)”$/.exec(s))) out = t('expected a name but found “{found}”', { found: found(x[1]) });
+  else if ((x = /^expected “([\s\S]*)” but found “([\s\S]*)”$/.exec(s))) out = t('expected “{expected}” but found “{found}”', { expected: x[1], found: found(x[2]) });
+  else if ((x = /^unexpected “([\s\S]*)” after the graph$/.exec(s))) out = t('unexpected “{token}” after the graph', { token: x[1] });
+  return t('Line {line}: {message}', { line: m[1], message: out });
+}
+
 function dot(src: string): Promise<DiagramResult> {
   if (!worker) {
     worker = new DotWorker();
     worker.onmessage = (e) => {
       const done = pending.get(e.data.id);
       pending.delete(e.data.id);
-      done?.(e.data);
+      done?.(e.data.error ? { ...e.data, error: dotMessage(e.data.error) } : e.data);
     };
   }
   const id = ++seq;
@@ -127,7 +149,7 @@ export function fillDiagrams(root: HTMLElement) {
         el.classList.add('error');
         const msg = document.createElement('div');
         msg.className = 'diagram-error';
-        msg.textContent = `${kind === 'dot' ? 'Graphviz' : 'Mermaid'}: ${r.error ?? 'could not draw this diagram'}`;
+        msg.textContent = `${kind === 'dot' ? 'Graphviz' : 'Mermaid'}: ${r.error ?? t('could not draw this diagram')}`;
         el.prepend(msg);
       }
     };

@@ -6,9 +6,12 @@
   import { workspace } from '../core/tabs.svelte';
   import { basename, dirname, relative } from '../core/paths';
   import { iconFor } from '../core/fileicons';
+  import { t, tn } from '../core/i18n';
 
   const root = $derived(sidebar.searchRoot || workspace.folder);
   let timer: ReturnType<typeof setTimeout> | undefined;
+  // "in <folder>", around the folder name.
+  const inFolder = t('in {folder}').split('{folder}');
   const total = $derived(s.results.reduce((n, r) => n + r.matches.length, 0));
 
   function schedule() {
@@ -47,29 +50,29 @@
 <div class="search">
   <div class="bar">
     <div class="field">
-      <input id="folder-search" class="input" placeholder="Find in folder" bind:value={s.query} oninput={schedule} onkeydown={key} spellcheck="false" autocomplete="off" />
+      <input id="folder-search" class="input" placeholder={t('Find in folder')} bind:value={s.query} oninput={schedule} onkeydown={key} spellcheck="false" autocomplete="off" />
       <div class="opts">
-        <button class="icon-btn sm" class:on={s.caseSensitive} title="Match case" onclick={() => toggle('caseSensitive')}><Icon icon={CaseSensitive} size={15} /></button>
-        <button class="icon-btn sm" class:on={s.wholeWord} title="Whole word" onclick={() => toggle('wholeWord')}><Icon icon={WholeWord} size={15} /></button>
-        <button class="icon-btn sm" class:on={s.regex} title="Regular expression" onclick={() => toggle('regex')}><Icon icon={Regex} size={15} /></button>
+        <button class="icon-btn sm" class:on={s.caseSensitive} title={t('Match case')} onclick={() => toggle('caseSensitive')}><Icon icon={CaseSensitive} size={15} /></button>
+        <button class="icon-btn sm" class:on={s.wholeWord} title={t('Whole word')} onclick={() => toggle('wholeWord')}><Icon icon={WholeWord} size={15} /></button>
+        <button class="icon-btn sm" class:on={s.regex} title={t('Regular expression')} onclick={() => toggle('regex')}><Icon icon={Regex} size={15} /></button>
       </div>
     </div>
-    <button class="icon-btn" title="Back to files (Esc)" onclick={() => (sidebar.mode = 'files')}><Icon icon={X} size={15} /></button>
+    <button class="icon-btn" title={t('Back to files ({key})', { key: 'Esc' })} onclick={() => (sidebar.mode = 'files')}><Icon icon={X} size={15} /></button>
   </div>
   <div class="meta">
     {#if !root}
-      Open a folder to search it.
+      {t('Open a folder to search it.')}
     {:else if s.error}
       <span class="err">{s.error}</span>
     {:else if s.running}
-      <span class="spinner"></span> Searching… {s.scanned} files {#if total}· {total} matches{/if}
-      <button class="link" onclick={() => s.cancel()}>Stop</button>
+      <span class="spinner"></span> {t('Searching…')} {tn('{n} file', '{n} files', s.scanned)} {#if total}· {tn('{n} match', '{n} matches', total)}{/if}
+      <button class="link" onclick={() => s.cancel()}>{t('Stop')}</button>
     {:else if s.summary}
-      {s.summary.matches} {s.summary.matches === 1 ? 'match' : 'matches'} in {s.summary.files} {s.summary.files === 1 ? 'file' : 'files'}
-      <span class="faint">({s.summary.scanned} files searched in {s.summary.millis} ms)</span>
-      {#if s.summary.truncated}<span class="warn">· showing the first {s.summary.matches}</span>{/if}
+      {tn('{n} match', '{n} matches', s.summary.matches)} {tn('in {n} file', 'in {n} files', s.summary.files)}
+      <span class="faint">{tn('({n} file searched in {ms} ms)', '({n} files searched in {ms} ms)', s.summary.scanned, { ms: s.summary.millis })}</span>
+      {#if s.summary.truncated}<span class="warn">· {t('showing the first {n}', { n: s.summary.matches })}</span>{/if}
     {:else}
-      in <span title={root}>{basename(root)}</span>
+      {inFolder[0]}<span title={root}>{basename(root)}</span>{inFolder[1] ?? ''}
     {/if}
   </div>
   <div class="results" role="tree">
@@ -83,12 +86,12 @@
       </button>
       {#if r.open}
         {#each r.matches.slice(0, 200) as m (m.line + ':' + m.col)}
-          <button class="match" onclick={() => open(m.path, m.line, m.col, m.len, m.text.slice(m.at, m.at + m.len))} title="Line {m.line}">
+          <button class="match" onclick={() => open(m.path, m.line, m.col, m.len, m.text.slice(m.at, m.at + m.len))} title={t('Line {n}', { n: m.line })}>
             <span class="ln">{m.line}</span>
             <span class="txt">{m.text.slice(0, m.at)}<mark>{m.text.slice(m.at, m.at + m.len)}</mark>{m.text.slice(m.at + m.len)}</span>
           </button>
         {/each}
-        {#if r.matches.length > 200}<div class="more">…{r.matches.length - 200} more in this file</div>{/if}
+        {#if r.matches.length > 200}<div class="more">{t('…{n} more in this file', { n: r.matches.length - 200 })}</div>{/if}
       {/if}
     {/each}
   </div>

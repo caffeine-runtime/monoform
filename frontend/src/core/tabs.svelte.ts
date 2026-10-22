@@ -3,9 +3,10 @@
 import { makeSplit, without, type Split, type SplitLayout } from './split';
 import { api, errorMessage, fileUrl, readFile, saveFile, endpoint, type Body, type Entry, type SessionTab } from './backend';
 import { modules } from './modules';
-import { basename, dirname } from './paths';
+import { basename, dirname, extname, join } from './paths';
 import { settings } from './settings.svelte';
 import { ui, toastError } from './ui.svelte';
+import { t } from './i18n';
 import type { Accepts, Transfer } from './transfer.svelte';
 
 export type TabSource =
@@ -55,7 +56,19 @@ export class Tab {
   readonly id = `tab-${++seq}`;
   source = $state<TabSource>({ kind: 'untitled', name: '' });
   moduleId = $state('');
-  dirty = $state(false);
+  private changed = $state(false);
+  /**
+   * A new document that isn't saved anywhere yet (pasted into an empty tab):
+   * its name. The content lives in a temp file; Save asks where to keep it.
+   */
+  scratch = $state<string | null>(null);
+  /** Unsaved changes — always true for a scratch document until it is saved. */
+  get dirty(): boolean {
+    return this.changed || !!this.scratch;
+  }
+  set dirty(v: boolean) {
+    this.changed = v;
+  }
   readOnly = $state(false);
   /** Preview mode: a file on disk shown read-only until the user chooses Edit. */
   preview = $state(false);
@@ -90,6 +103,7 @@ export class Tab {
   }
 
   get title(): string {
+    if (this.scratch) return this.scratch;
     const s = this.source;
     switch (s.kind) {
       case 'file':
@@ -97,7 +111,7 @@ export class Tab {
       case 'archive-entry':
         return basename(s.entry);
       case 'tool':
-        if (s.tool === 'history' && s.path) return `History · ${basename(s.path)}`;
+        if (s.tool === 'history' && s.path) return t('History · {name}', { name: basename(s.path) });
         return modules.get(s.tool)?.name ?? s.tool;
       case 'untitled':
         return s.name;
@@ -105,9 +119,10 @@ export class Tab {
   }
 
   get subtitle(): string {
+    if (this.scratch) return t('Not saved yet');
     const s = this.source;
     if (s.kind === 'file') return s.path;
-    if (s.kind === 'archive-entry') return `${s.entry} — in ${basename(s.path)}`;
+    if (s.kind === 'archive-entry') return t('{entry} — in {archive}', { entry: s.entry, archive: basename(s.path) });
     return '';
   }
 
@@ -123,7 +138,7 @@ export class Tab {
     if (s.kind === 'file') return fileUrl(s.path);
     if (s.kind === 'archive-entry') return endpoint('archive/entry', { archive: s.path, entry: s.entry });
     if (s.kind === 'tool' && s.path) return fileUrl(s.path);
-    throw new Error('this tab has no backing file');
+    throw new Error(t('this tab has no backing file'));
   }
 
   /** Read the tab's bytes. */
@@ -144,7 +159,7 @@ export class Tab {
 
   /** Write bytes to the tab's file (atomic). */
   async write(data: Body, path = this.filePath): Promise<Entry> {
-    if (!path) throw new Error('no path to save to');
+    if (!path) throw new Error(t('no path to save to'));
     const e = await saveFile(path, data);
     this.size = e.size;
     return e;
@@ -154,6 +169,11 @@ export class Tab {
   retarget(path: string) {
     const old = this.filePath;
     if (old === path) return;
+    if (this.scratch && old) {
+      // Saved somewhere real: the temp copy goes.
+      this.scratch = null;
+      void api.RemoveTemp(old);
+    }
     if (old) void api.UnwatchFile(old);
     this.source = { kind: 'file', path };
     this.readOnly = false;
@@ -261,7 +281,7 @@ class Workspace {
     try {
       entry = await api.Stat(path);
     } catch (e) {
-      toastError(e, `Can't open ${basename(path)}`);
+      toastError(e, t("Can't open {name}", { name: basename(path) }));
       settings.removeRecent(path);
       return;
     }
@@ -314,12 +334,12 @@ class Workspace {
     if (tab.source.kind !== 'file' || tab.preview === on) return false;
     if (on && tab.dirty) {
       const r = await ui.ask({
-        title: 'Save changes first?',
-        message: `${tab.title} has unsaved changes. Preview mode shows the file as it is on disk.`,
+        title: t('Save changes first?'),
+        message: t('{name} has unsaved changes. Preview mode shows the file as it is on disk.', { name: tab.title }),
         buttons: [
-          { id: 'cancel', label: 'Cancel' },
-          { id: 'discard', label: 'Discard changes', danger: true },
-          { id: 'save', label: 'Save' },
+          { id: 'cancel', label: t('Cancel') },
+          { id: 'discard', label: t('Discard changes'), danger: true },
+          { id: 'save', label: t('Save') },
         ],
       });
       if (r.button === 'cancel') return false;
@@ -334,7 +354,7 @@ class Workspace {
   }
 
   newUntitled(moduleId = 'text'): Tab {
-    const tab = new Tab({ kind: 'untitled', name: `Untitled-${++this.untitledSeq}` }, moduleId);
+    const tab = new Tab({ kind: 'untitled', name: t('Untitled-{n}', { n: String(++this.untitledSeq) }) }, moduleId);
     this.add(tab, true);
     return tab;
   }
@@ -394,12 +414,12 @@ class Workspace {
     if (tab.dirty && !opts.force) {
       this.activate(tab);
       const r = await ui.ask({
-        title: `Save changes to ${tab.title}?`,
-        message: 'Your changes will be lost if you don’t save them.',
+        title: t('Save changes to {name}?', { name: tab.title }),
+        message: t('Your changes will be lost if you don’t save them.'),
         buttons: [
-          { id: 'discard', label: 'Don’t save', danger: true },
-          { id: 'cancel', label: 'Cancel' },
-          { id: 'save', label: 'Save', primary: true },
+          { id: 'discard', label: t('Don’t save'), danger: true },
+          { id: 'cancel', label: t('Cancel') },
+          { id: 'save', label: t('Save'), primary: true },
         ],
       });
       if (r.button === 'cancel') return false;
@@ -412,7 +432,8 @@ class Workspace {
     if (idx < 0) return true;
     this.tabs.splice(idx, 1);
     if (tab.filePath) void api.UnwatchFile(tab.filePath);
-    if (tab.source.kind !== 'untitled') this.closed.push($state.snapshot(tab.source) as TabSource);
+    if (tab.scratch && tab.filePath) void api.RemoveTemp(tab.filePath);
+    else if (tab.source.kind !== 'untitled') this.closed.push($state.snapshot(tab.source) as TabSource);
     const wasSplit = this.split;
     this.split = without(this.split, tab.id);
     if (this.activeId === tab.id) {
@@ -444,9 +465,10 @@ class Workspace {
 
   async save(tab: Tab | null = this.active, as = false): Promise<boolean> {
     if (!tab) return false;
+    if (tab.scratch) return this.saveScratch(tab);
     const h = as || tab.source.kind === 'untitled' || tab.readOnly ? (tab.handlers.saveAs ?? tab.handlers.save) : tab.handlers.save;
     if (!h) {
-      ui.toast('This tab has nothing to save.');
+      ui.toast(t('This tab has nothing to save.'));
       return false;
     }
     try {
@@ -455,7 +477,44 @@ class Workspace {
       tab.external = null;
       return true;
     } catch (e) {
-      toastError(e, 'Save failed');
+      toastError(e, t('Save failed'));
+      return false;
+    }
+  }
+
+  /**
+   * Open a temp file as a new, unsaved document called `name` (what was
+   * pasted into an empty tab): it opens in the editor for its kind.
+   */
+  async openScratch(temp: string, name: string): Promise<Tab | undefined> {
+    const tab = await this.openPath(temp, { quiet: true, preview: false });
+    if (tab) tab.scratch = name;
+    return tab;
+  }
+
+  /**
+   * First save of a scratch document: ask where, let its editor write the
+   * temp copy (in whatever way it saves), then copy that into place and point
+   * the tab there.
+   */
+  private async saveScratch(tab: Tab): Promise<boolean> {
+    const name = tab.scratch!;
+    const ext = extname(name);
+    let dest = await api.SaveFileDialog(t('Save as'), this.folder ? join(this.folder, name) : name, [{ name: ext.toUpperCase(), patterns: `*.${ext}` }]);
+    if (!dest) return false;
+    if (extname(dest) !== ext) dest += `.${ext}`;
+    try {
+      const h = tab.handlers.save;
+      if (h && (await h()) === false) return false;
+      const src = tab.filePath;
+      if (!src) return false;
+      await api.CopyFile(src, dest);
+      tab.retarget(dest);
+      tab.dirty = false;
+      tab.external = null;
+      return true;
+    } catch (e) {
+      toastError(e, t('Save failed'));
       return false;
     }
   }
@@ -476,7 +535,7 @@ class Workspace {
     const tabs: SessionTab[] = [];
     for (const t of this.tabs) {
       const s = t.source;
-      if (s.kind === 'untitled') continue;
+      if (s.kind === 'untitled' || t.scratch) continue;
       let state: string | undefined;
       try {
         const st = t.handlers.getState?.() ?? t.restoredState;
@@ -494,7 +553,7 @@ class Workspace {
         pinned: false,
       } as SessionTab);
     }
-    const persisted = this.tabs.filter((t) => t.source.kind !== 'untitled');
+    const persisted = this.tabs.filter((t) => t.source.kind !== 'untitled' && !t.scratch);
     const active = Math.max(0, persisted.findIndex((t) => t.id === this.activeId));
     const panes = this.split?.panes.map((id) => persisted.findIndex((t) => t.id === id)).filter((i) => i >= 0) ?? [];
     const split = this.split && panes.length >= 2 ? { layout: this.split.layout, panes, x: this.split.x, y: this.split.y } : undefined;
@@ -563,7 +622,7 @@ class Workspace {
     try {
       await tab.handlers.reload?.();
     } catch (e) {
-      ui.toast(`Reload failed: ${errorMessage(e)}`, 'error');
+      ui.toast(t('Reload failed: {error}', { error: errorMessage(e) }), 'error');
     }
   }
 

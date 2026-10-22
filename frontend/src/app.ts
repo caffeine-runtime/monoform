@@ -13,6 +13,7 @@ import { theme } from './core/theme.svelte';
 import { tree } from './core/tree.svelte';
 import { ui, menu } from './core/ui.svelte';
 import { showWelcome } from './core/firstrun';
+import { checkAtStartup } from './core/updates.svelte';
 import { dropHandlers } from './core/drop';
 import { registerBuiltinModules } from './modules/registry';
 import { registerArchiveIntegration } from './core/archives';
@@ -119,6 +120,8 @@ export async function start(info: BootInfo, tScript: number, tBoot: number) {
   if (!boot.extraWindow) semantic.start();
   // First start: a short welcome.
   if (showWelcome(info)) ui.firstRun = true;
+  // A new version? (asked a few seconds later; Settings › About turns it off)
+  checkAtStartup(info, !peek.on && !boot.extraWindow);
 
   if (info.testScript) {
     const { runSelfTest } = await import('./test/selftest');

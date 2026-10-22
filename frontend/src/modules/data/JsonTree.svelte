@@ -5,6 +5,7 @@
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import type { DataClient, TreeNode } from './dataClient';
   import { formatPath } from './jsonparse';
+  import { t } from '../../core/i18n';
 
   let { client, root, version = 0, onselect }: { client: DataClient; root: TreeNode; version?: number; onselect?: (n: TreeNode) => void } = $props();
 
@@ -150,14 +151,14 @@
           }}
         >
           <span class="chev" class:open={expanded.has(keyOf(n.path))}>{container ? '›' : ''}</span>
-          <span class="k" class:idx={typeof n.key === 'number'}>{n.path.length === 0 ? 'root' : n.key}</span>
+          <span class="k" class:idx={typeof n.key === 'number'}>{n.path.length === 0 ? t('root') : n.key}</span>
           <span class="colon">:</span>
           <span class="v {n.type}">{n.preview}</span>
         </div>
       {:else}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
         <div class="row more" style:top="{(start + i) * ROW}px" style:padding-left="{26 + r.depth * 16}px" onclick={() => load(r.path, true)}>
-          Show {Math.min(PAGE, r.remaining)} more ({r.remaining.toLocaleString()} remaining)
+          {t('Show {n} more ({remaining} remaining)', { n: Math.min(PAGE, r.remaining), remaining: r.remaining })}
         </div>
       {/if}
     {/each}

@@ -10,6 +10,7 @@
 // is held however many models are open.
 import * as THREE from 'three';
 import { roomEnvironment } from './env';
+import { t } from '../../core/i18n';
 import { FloorGrid } from './grid';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
@@ -150,7 +151,7 @@ export class ModelViewer {
     c.height = src.height;
     c.getContext('2d')!.drawImage(src, 0, 0);
     c.className = 'still';
-    c.title = 'Click to move and rotate this model';
+    c.title = t('Click to move and rotate this model');
     Object.assign(c.style, { position: 'absolute', inset: '0', width: '100%', height: '100%' });
     this.still?.remove();
     this.still = c;
@@ -392,7 +393,7 @@ export class ModelViewer {
   screenshot(): Promise<Blob> {
     this.attach();
     this.renderer.render(this.scene, this.camera);
-    return new Promise((res, rej) => this.renderer.domElement.toBlob((b) => (b ? res(b) : rej(new Error('screenshot failed'))), 'image/png'));
+    return new Promise((res, rej) => this.renderer.domElement.toBlob((b) => (b ? res(b) : rej(new Error(t('screenshot failed')))), 'image/png'));
   }
 
   private clear() {

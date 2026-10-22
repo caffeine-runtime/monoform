@@ -30,6 +30,7 @@
   const consoleModule = () => import('./SqlConsole.svelte');
   import * as P from './edits';
   import { dbViews } from './views';
+  import { num, t, tn } from '../../core/i18n';
 
   type Obj = { type: string; name: string; table?: string; sql: string; columns?: { name: string; type: string; notNull: boolean; default?: string; pk: number }[]; rows: number; rowid: boolean };
   type Pane = 'data' | 'structure' | 'sql';
@@ -191,7 +192,7 @@
       try {
         await block(0);
       } catch (e) {
-        toastError(e, 'Can’t read this table');
+        toastError(e, t('Can’t read this table'));
       }
     }
     version++;
@@ -207,7 +208,7 @@
         version++;
         void refreshMarks();
       })
-      .catch((e) => toastError(e, 'Filter failed'));
+      .catch((e) => toastError(e, t('Filter failed')));
   }
 
   let filterTimer: ReturnType<typeof setTimeout> | undefined;
@@ -293,7 +294,7 @@
     }
     if (!ids.length && !fresh.length) return;
     commit(P.deleteRows(pending, current, ids, fresh));
-    ui.toast(`${ids.length + fresh.length} row${ids.length + fresh.length > 1 ? 's' : ''} marked for deletion — Save to delete, Revert to keep.`, 'info');
+    ui.toast(tn('{n} row marked for deletion — Save to delete, Revert to keep.', '{n} rows marked for deletion — Save to delete, Revert to keep.', ids.length + fresh.length), 'info');
   }
 
   async function setNull() {
@@ -306,7 +307,7 @@
     try {
       await api.DBApply(id, P.toChanges(pending) as never);
     } catch (e) {
-      toastError(e, 'Saving failed — nothing was changed');
+      toastError(e, t('Saving failed — nothing was changed'));
       return false;
     }
     const n = changes;
@@ -316,7 +317,7 @@
     tab.dirty = false;
     await refreshSchema();
     await selectTable(current, false);
-    ui.toast(`Saved ${n} change${n > 1 ? 's' : ''} to ${basename(tab.filePath ?? '')}`, 'success');
+    ui.toast(tn('Saved {n} change to {name}', 'Saved {n} changes to {name}', n, { name: basename(tab.filePath ?? '') }), 'success');
     return true;
   }
 
@@ -340,30 +341,30 @@
   }
 
   async function exportCsv(name = current, sqlText = '') {
-    let dest = await api.SaveFileDialog('Export as CSV', join(dirname(tab.filePath ?? ''), `${sqlText ? `${stem(tab.title)} query` : name}.csv`), [{ name: 'CSV', patterns: '*.csv' }]);
+    let dest = await api.SaveFileDialog(t('Export as CSV'), join(dirname(tab.filePath ?? ''), `${sqlText ? t('{name} query', { name: stem(tab.title) }) : name}.csv`), [{ name: 'CSV', patterns: '*.csv' }]);
     if (!dest) return;
     if (!dest.toLowerCase().endsWith('.csv')) dest += '.csv';
     try {
       const n = await api.DBExportCSV(id, { ...query(0), table: name, offset: 0, limit: 0 } as never, sqlText, dest);
-      ui.toast(`Exported ${n} rows to ${basename(dest)}`, 'success');
+      ui.toast(tn('Exported {n} row to {name}', 'Exported {n} rows to {name}', n, { name: basename(dest) }), 'success');
     } catch (e) {
-      toastError(e, 'Export failed');
+      toastError(e, t('Export failed'));
     }
   }
 
   function tableMenu(e: MouseEvent, o: Obj) {
     e.preventDefault();
     menu.show(e, [
-      { label: 'Show rows', run: () => ((pane = 'data'), void selectTable(o.name)) },
-      { label: 'Structure', run: () => ((pane = 'structure'), void selectTable(o.name)) },
-      { label: 'Query in SQL console', run: () => queryTable(o.name) },
-      { label: 'Export as CSV…', run: () => void exportCsv(o.name) },
+      { label: t('Show rows'), run: () => ((pane = 'data'), void selectTable(o.name)) },
+      { label: t('Structure'), run: () => ((pane = 'structure'), void selectTable(o.name)) },
+      { label: t('Query in SQL console'), run: () => queryTable(o.name) },
+      { label: t('Export as CSV…'), run: () => void exportCsv(o.name) },
     ]);
   }
 
   async function toggleReadOnly() {
     if (changes && !readOnly) {
-      const r = await ui.ask({ title: 'Discard unsaved changes?', message: 'Switching to read-only drops the pending changes.', buttons: [{ id: 'cancel', label: 'Cancel' }, { id: 'ok', label: 'Discard', danger: true }] });
+      const r = await ui.ask({ title: t('Discard unsaved changes?'), message: t('Switching to read-only drops the pending changes.'), buttons: [{ id: 'cancel', label: t('Cancel') }, { id: 'ok', label: t('Discard'), danger: true }] });
       if (r.button !== 'ok') return;
       pending = P.empty();
       tab.dirty = false;
@@ -372,7 +373,7 @@
   }
 
   function status() {
-    tab.status = { ...tab.status, type: 'SQLite database', position: current ? `${current}: ${total.toLocaleString()} rows` : `${tables.length} tables`, info: changes ? `${changes} unsaved change${changes > 1 ? 's' : ''}` : readOnly ? 'read-only' : undefined };
+    tab.status = { ...tab.status, type: t('SQLite database'), position: current ? tn('{name}: {n} row', '{name}: {n} rows', total, { name: current }) : tn('{n} table', '{n} tables', tables.length), info: changes ? tn('{n} unsaved change', '{n} unsaved changes', changes) : readOnly ? t('read-only') : undefined };
   }
 
   dbViews.set(tab.id, { undo, redo, addRow, deleteSelected, setNull, run: () => consoleRef?.run(), pane: () => pane });
@@ -413,22 +414,22 @@
 
 <div class="db" bind:clientWidth={bodyW}>
   {#if !narrow || schemaOpen}
-  <aside data-sidepanel class="schema" class:floating={narrow} class:left={narrow} aria-label="Database objects">
-    <input class="input" placeholder="Filter tables" bind:value={sidebarFilter} aria-label="Filter tables" />
-    <h4>Tables <span class="muted">{tables.length}</span></h4>
+  <aside data-sidepanel class="schema" class:floating={narrow} class:left={narrow} aria-label={t('Database objects')}>
+    <input class="input" placeholder={t('Filter tables')} bind:value={sidebarFilter} aria-label={t('Filter tables')} />
+    <h4>{t('Tables')} <span class="muted">{tables.length}</span></h4>
     {#each shownTables as o (o.name)}
       <button class="obj" class:on={o.name === current && pane !== 'sql'} title={o.sql} onclick={() => ((pane = pane === 'sql' ? 'data' : pane), void selectTable(o.name))} oncontextmenu={(e) => tableMenu(e, o)}>
-        <span class="nm">▦ {o.name}</span><span class="muted">{o.rows >= 0 ? o.rows.toLocaleString() : ''}</span>
+        <span class="nm">▦ {o.name}</span><span class="muted">{o.rows >= 0 ? num(o.rows) : ''}</span>
       </button>
     {/each}
     {#if views.length}
-      <h4>Views <span class="muted">{views.length}</span></h4>
+      <h4>{t('Views')} <span class="muted">{views.length}</span></h4>
       {#each views as o (o.name)}
         <button class="obj" class:on={o.name === current && pane !== 'sql'} title={o.sql} onclick={() => ((pane = pane === 'sql' ? 'data' : pane), void selectTable(o.name))} oncontextmenu={(e) => tableMenu(e, o)}><span class="nm">◫ {o.name}</span></button>
       {/each}
     {/if}
     {#if others.length}
-      <h4>Indexes &amp; triggers <span class="muted">{others.length}</span></h4>
+      <h4>{t('Indexes & triggers')} <span class="muted">{others.length}</span></h4>
       {#each others as o (o.type + o.name)}
         <div class="obj small" title={o.sql}><span class="nm">{o.type === 'index' ? '⚡' : '⚙'} {o.name}</span><span class="muted">{o.table}</span></div>
       {/each}
@@ -438,34 +439,34 @@
 
   <section class="main">
     <div class="toolbar" use:fitBar>
-      {#if narrow}<button class="icon-btn" class:on={schemaOpen} title="Tables and views" onclick={() => (schemaOpen = !schemaOpen)}><Icon icon={PanelLeft} /></button>{/if}
-      <div class="seg" role="tablist" aria-label="View">
-        <button class="btn ghost" class:on={pane === 'data'} role="tab" aria-selected={pane === 'data'} disabled={!current} onclick={() => (pane = 'data')}><Icon icon={Table} size={14} /> Data</button>
-        <button class="btn ghost" class:on={pane === 'structure'} role="tab" aria-selected={pane === 'structure'} disabled={!current} onclick={() => (pane = 'structure')}><Icon icon={TableProperties} size={14} /> Structure</button>
+      {#if narrow}<button class="icon-btn" class:on={schemaOpen} title={t('Tables and views')} onclick={() => (schemaOpen = !schemaOpen)}><Icon icon={PanelLeft} /></button>{/if}
+      <div class="seg" role="tablist" aria-label={t('View', {}, 'noun')}>
+        <button class="btn ghost" class:on={pane === 'data'} role="tab" aria-selected={pane === 'data'} disabled={!current} onclick={() => (pane = 'data')}><Icon icon={Table} size={14} /> {t('Data')}</button>
+        <button class="btn ghost" class:on={pane === 'structure'} role="tab" aria-selected={pane === 'structure'} disabled={!current} onclick={() => (pane = 'structure')}><Icon icon={TableProperties} size={14} /> {t('Structure')}</button>
         <button class="btn ghost" class:on={pane === 'sql'} role="tab" aria-selected={pane === 'sql'} onclick={() => (pane = 'sql')}><Icon icon={Terminal} size={14} /> SQL</button>
       </div>
       {#if pane === 'data' && obj}
-        <input class="input search" placeholder="Search rows…" bind:value={filterText} oninput={filterChanged} aria-label="Search rows" title="Find text in any column" />
-        <button class="btn ghost" class:on={showWhere} title="Filter with an SQL condition (WHERE …)" onclick={() => ((showWhere = !showWhere), reload())}><Icon icon={Funnel} size={14} /> WHERE</button>
+        <input class="input search" placeholder={t('Search rows…')} bind:value={filterText} oninput={filterChanged} aria-label={t('Search rows')} title={t('Find text in any column')} />
+        <button class="btn ghost" class:on={showWhere} title={t('Filter with an SQL condition (WHERE …)')} onclick={() => ((showWhere = !showWhere), reload())}><Icon icon={Funnel} size={14} /> WHERE</button> <!-- i18n-ignore -->
         <span class="sep"></span>
-        <button class="btn ghost" disabled={!editable} title="Add a row (saved with Save)" onclick={addRow}><Icon icon={Plus} size={14} /> Row</button>
-        <button class="btn ghost" disabled={!editable || !selection} title="Mark the selected rows for deletion (Delete)" onclick={deleteSelected}><Icon icon={Trash2} size={14} /> Delete rows</button>
-        <button class="btn ghost" disabled={!editable || !selection} title="Set the selected cells to NULL (or type NULL)" onclick={setNull}><Icon icon={Ban} size={14} /> NULL</button>
-        <button class="btn ghost" title="Export these rows as CSV" onclick={() => void exportCsv()}><Icon icon={Download} size={14} /> Export CSV…</button>
+        <button class="btn ghost" disabled={!editable} title={t('Add a row (saved with Save)')} onclick={addRow}><Icon icon={Plus} size={14} /> {t('Row')}</button>
+        <button class="btn ghost" disabled={!editable || !selection} title={t('Mark the selected rows for deletion (Delete)')} onclick={deleteSelected}><Icon icon={Trash2} size={14} /> {t('Delete rows')}</button>
+        <button class="btn ghost" disabled={!editable || !selection} title={t('Set the selected cells to NULL (or type NULL)')} onclick={setNull}><Icon icon={Ban} size={14} /> NULL</button> <!-- i18n-ignore -->
+        <button class="btn ghost" title={t('Export these rows as CSV')} onclick={() => void exportCsv()}><Icon icon={Download} size={14} /> {t('Export CSV…')}</button>
       {/if}
       <span class="spacer"></span>
       {#if changes}
-        <span class="pending">{changes} unsaved change{changes > 1 ? 's' : ''}</span>
-        <button class="btn ghost" title="Drop all unsaved changes" onclick={revert}>Revert</button>
-        <button class="btn primary" title="Write the changes in one transaction ({formatShortcut('Mod+S')})" onclick={() => void save()}>Save</button>
+        <span class="pending">{tn('{n} unsaved change', '{n} unsaved changes', changes)}</span>
+        <button class="btn ghost" title={t('Drop all unsaved changes')} onclick={revert}>{t('Revert')}</button>
+        <button class="btn primary" title={t('Write the changes in one transaction ({shortcut})', { shortcut: formatShortcut('Mod+S') })} onclick={() => void save()}>{t('Save')}</button>
       {/if}
-      <button class="btn ghost" class:on={readOnly} title={readOnly ? 'Read-only: click to allow changes' : 'Click to open read-only (no changes possible)'} onclick={toggleReadOnly}><Icon icon={readOnly ? Lock : LockOpen} size={14} /> {readOnly ? 'Read-only' : 'Editable'}</button>
+      <button class="btn ghost" class:on={readOnly} title={readOnly ? t('Read-only: click to allow changes') : t('Click to open read-only (no changes possible)')} onclick={toggleReadOnly}><Icon icon={readOnly ? Lock : LockOpen} size={14} /> {readOnly ? t('Read-only') : t('Editable')}</button>
     </div>
     {#if pane === 'data' && showWhere && obj}
       <div class="where">
-        <span class="mono">WHERE</span>
-        <input class="input mono" placeholder="amount > 100 AND city = 'Warsaw'" bind:value={where} onkeydown={(e) => e.key === 'Enter' && reload()} aria-label="WHERE condition" />
-        <button class="btn ghost" onclick={reload}>Apply</button>
+        <span class="mono">WHERE</span> <!-- i18n-ignore -->
+        <input class="input mono" placeholder={t("amount > 100 AND city = 'Warsaw'")} bind:value={where} onkeydown={(e) => e.key === 'Enter' && reload()} aria-label={t('WHERE condition')} />
+        <button class="btn ghost" onclick={reload}>{t('Apply')}</button>
       </div>
     {/if}
     {#if error}
@@ -479,7 +480,7 @@
     {:else if pane === 'structure' && obj}
       <div class="structure">
         <table>
-          <thead><tr><th>Column</th><th>Type</th><th>Not null</th><th>Default</th><th>Key</th></tr></thead>
+          <thead><tr><th>{t('Column')}</th><th>{t('Type')}</th><th>{t('Not null')}</th><th>{t('Default')}</th><th>{t('Key')}</th></tr></thead>
           <tbody>
             {#each obj.columns ?? [] as c (c.name)}
               <tr><td class="mono">{c.name}</td><td class="mono">{c.type || '—'}</td><td>{c.notNull ? '✓' : ''}</td><td class="mono">{c.default ?? ''}</td><td>{c.pk ? `PK${(obj.columns ?? []).filter((x) => x.pk).length > 1 ? ` ${c.pk}` : ''}` : ''}</td></tr>
@@ -487,12 +488,12 @@
           </tbody>
         </table>
         {#if others.some((o) => o.table === obj.name)}
-          <h4>Indexes and triggers</h4>
+          <h4>{t('Indexes and triggers')}</h4>
           {#each others.filter((o) => o.table === obj.name) as o (o.name)}<pre class="mono">{o.sql}</pre>{/each}
         {/if}
-        <h4>Definition</h4>
+        <h4>{t('Definition')}</h4>
         <pre class="mono">{obj.sql}</pre>
-        {#if !obj.rowid && obj.type === 'table'}<p class="muted">This table has no rowid (WITHOUT ROWID): use the SQL console to change it.</p>{/if}
+        {#if !obj.rowid && obj.type === 'table'}<p class="muted">{t('This table has no rowid (WITHOUT ROWID): use the SQL console to change it.')}</p>{/if}
       </div>
     {:else if obj}
       <div class="grid">
@@ -514,10 +515,10 @@
         />
       </div>
       <div class="foot muted">
-        {total.toLocaleString()} row{total === 1 ? '' : 's'}{filterText || (showWhere && where) ? ' match' : ''} · {millis} ms{#if !editable && obj.type === 'view'}&nbsp;· views are read-only{/if}{#if editable}&nbsp;· type NULL for a null value; changes are written with Save{/if}
+        {filterText || (showWhere && where) ? tn('{n} row match', '{n} rows match', total) : tn('{n} row', '{n} rows', total)} · {millis} ms{#if !editable && obj.type === 'view'}&nbsp;· {t('views are read-only')}{/if}{#if editable}&nbsp;· {t('type NULL for a null value; changes are written with Save')}{/if}
       </div>
     {:else}
-      <div class="empty-state">This database has no tables yet. Create one in the SQL tab.</div>
+      <div class="empty-state">{t('This database has no tables yet. Create one in the SQL tab.')}</div>
     {/if}
   </section>
 </div>

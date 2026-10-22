@@ -5,6 +5,7 @@ import { api, type AIPack } from './backend';
 import { jobs } from './jobs.svelte';
 import { formatBytes } from './paths';
 import { toastError, ui } from './ui.svelte';
+import { t } from './i18n';
 
 class AIModels {
   packs = $state<AIPack[]>([]);
@@ -38,30 +39,30 @@ class AIModels {
     if (!p) return false;
     if (p.installed) return true;
     if (!p.supported) {
-      ui.toast(`${p.name} isn't available on this computer's system.`, 'warning');
+      ui.toast(t("{name} isn't available on this computer's system.", { name: p.name }), 'warning');
       return false;
     }
     const r = await ui.ask({
-      title: `Download ${p.name}?`,
-      message: `${why ? why + ' ' : ''}${p.purpose} It's a one-time download of ${formatBytes(p.download)} (${formatBytes(p.disk)} on disk) from huggingface.co and nuget.org; after that everything runs on this computer, offline. You can remove it in Settings › AI models.`,
-      details: [`Model: ${p.model} (${p.license}) — ${p.source.split('@')[0]}`, 'Runs with ONNX Runtime (MIT, Microsoft)'],
+      title: t('Download {name}?', { name: p.name }),
+      message: `${why ? why + ' ' : ''}${p.purpose} ${t("It's a one-time download of {size} ({disk} on disk) from huggingface.co and nuget.org; after that everything runs on this computer, offline. You can remove it in Settings › AI models.", { size: formatBytes(p.download), disk: formatBytes(p.disk) })}`,
+      details: [t('Model: {model} ({license}) — {source}', { model: p.model, license: p.license, source: p.source.split('@')[0] }), t('Runs with ONNX Runtime (MIT, Microsoft)')],
       buttons: [
-        { id: 'cancel', label: 'Not now' },
-        { id: 'ok', label: `Download ${formatBytes(p.download)}`, primary: true },
+        { id: 'cancel', label: t('Not now') },
+        { id: 'ok', label: t('Download {size}', { size: formatBytes(p.download) }), primary: true },
       ],
     });
     if (r.button !== 'ok') return false;
     this.busy = id;
     try {
-      const done = await jobs.run(`Downloading ${p.name}`, () => api.AIInstall(id));
+      const done = await jobs.run(t('Downloading {name}', { name: p.name }), () => api.AIInstall(id));
       if (done.cancelled) return false;
       if (done.error) {
-        ui.toast(`Download failed: ${done.error}`, 'error');
+        ui.toast(t('Download failed: {error}', { error: done.error }), 'error');
         return false;
       }
       await this.refresh();
       const ok = !!this.pack(id)?.installed;
-      if (ok) ui.toast(`${p.name} is installed.`, 'success');
+      if (ok) ui.toast(t('{name} is installed.', { name: p.name }), 'success');
       return ok;
     } finally {
       this.busy = null;
@@ -71,7 +72,7 @@ class AIModels {
   async remove(id: string) {
     const p = this.pack(id);
     if (!p) return;
-    const ok = await ui.confirm(`Remove ${p.name}?`, `This frees ${formatBytes(p.disk)}. You can download it again any time.`, 'Remove');
+    const ok = await ui.confirm(t('Remove {name}?', { name: p.name }), t('This frees {size}. You can download it again any time.', { size: formatBytes(p.disk) }), t('Remove'));
     if (!ok) return;
     try {
       await api.AIRemove(id);

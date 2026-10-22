@@ -37,6 +37,7 @@
   import { workspace, type Tab } from '../../core/tabs.svelte';
   import { menu, toastError, ui } from '../../core/ui.svelte';
   import { formatShortcut } from '../../core/keys';
+  import { num, t, tn } from '../../core/i18n';
 
   let { tab }: { tab: Tab } = $props();
 
@@ -104,8 +105,8 @@
     tab.status = {
       ...tab.status,
       type: 'PDF',
-      position: pages ? `Page ${page} of ${pages}` : undefined,
-      info: `${Math.round(scale * 100)}%${opsDirty ? ' · pages changed' : ''}`,
+      position: pages ? t('Page {page} of {pages}', { page, pages }) : undefined,
+      info: `${Math.round(scale * 100)}%${opsDirty ? ' · ' + t('pages changed') : ''}`,
     };
   }
 
@@ -224,7 +225,7 @@
       void checkScanned(d);
     } catch (e) {
       const err = e as Error & { name?: string };
-      error = err?.name === 'PasswordException' ? 'This PDF is password-protected (opening encrypted PDFs arrives with the encryption tools).' : `Couldn't open this PDF: ${err?.message ?? err}`;
+      error = err?.name === 'PasswordException' ? t('This PDF is password-protected (opening encrypted PDFs arrives with the encryption tools).') : t("Couldn't open this PDF: {error}", { error: String(err?.message ?? err) });
     } finally {
       loading = false;
     }
@@ -236,7 +237,7 @@
 
   /** A file on disk with the current state (annotations included), for pdfcpu. */
   async function materialize(): Promise<string> {
-    if (!doc) throw new Error('no document');
+    if (!doc) throw new Error(t('no document'));
     if (annotDirty || !working) {
       const tmp = await api.TempPath(`${stem(tab.name) || 'document'}.pdf`);
       const bytes = annotDirty ? await doc.saveDocument() : await doc.getData();
@@ -255,7 +256,7 @@
       opsDirty = true;
       await load(fileUrl(out), keepView());
     } catch (e) {
-      toastError(e, 'Page operation failed');
+      toastError(e, t('Page operation failed'));
     }
   }
 
@@ -269,7 +270,7 @@
   }
 
   async function saveAs(): Promise<boolean> {
-    const p = await api.SaveFileDialog('Save PDF as', tab.filePath ?? tab.title, [{ name: 'PDF', patterns: '*.pdf' }]);
+    const p = await api.SaveFileDialog(t('Save PDF as'), tab.filePath ?? tab.title, [{ name: 'PDF', patterns: '*.pdf' }]);
     if (!p) return false;
     const target = /\.pdf$/i.test(p) ? p : `${p}.pdf`;
     const ok = await writeTo(target);
@@ -350,13 +351,13 @@
     signOpen = false;
     placing = { src, aspect };
     markMode = 'sign';
-    ui.toast('Click on the page where the signature goes. You can move and resize it afterwards.', 'info');
+    ui.toast(t('Click on the page where the signature goes. You can move and resize it afterwards.'), 'info');
   }
 
   /** Redaction boxes over every match of the find query, on every page. */
   async function redactMatches() {
     if (!doc || !query) return;
-    busy = 'Finding matches…';
+    busy = t('Finding matches…');
     let n = 0;
     const add: Mark[] = [];
     try {
@@ -371,14 +372,21 @@
       busy = '';
     }
     marks = [...marks, ...add];
-    ui.toast(add.length ? `Marked ${add.length} match${add.length === 1 ? '' : 'es'} for redaction. Check them, then Apply.` : 'No matches to redact.', add.length ? 'success' : 'info');
+    ui.toast(add.length ? tn('Marked {n} match for redaction. Check them, then Apply.', 'Marked {n} matches for redaction. Check them, then Apply.', add.length) : t('No matches to redact.'), add.length ? 'success' : 'info');
   }
 
   /** Write pending marks into the working copy: redacted pages become images, then signatures are stamped. */
   async function applyMarks(): Promise<boolean> {
     if (!doc || !marks.length) return true;
     const redactPages = [...new Set(marks.filter((m) => m.kind === 'redact').map((m) => m.page))].sort((a, b) => a - b);
-    if (redactPages.length && !(await ui.confirm('Apply redactions?', `The content under the black boxes is removed for good: ${redactPages.length === 1 ? `page ${redactPages[0]} becomes` : `${redactPages.length} pages become`} an image (its text can no longer be selected or searched; comments and form fields on it are flattened).`, 'Redact', true))) return false;
+    if (redactPages.length && !(await ui.confirm(
+          t('Apply redactions?'),
+          redactPages.length === 1
+            ? t('The content under the black boxes is removed for good: page {page} becomes an image (its text can no longer be selected or searched; comments and form fields on it are flattened).', { page: redactPages[0] })
+            : tn('The content under the black boxes is removed for good: {n} page becomes an image (its text can no longer be selected or searched; comments and form fields on it are flattened).', 'The content under the black boxes is removed for good: {n} pages become an image (its text can no longer be selected or searched; comments and form fields on it are flattened).', redactPages.length),
+          t('Redact'),
+          true,
+        ))) return false;
     const view = keepView();
     const temps: string[] = [];
     try {
@@ -388,7 +396,7 @@
         try {
           const pagesOut: { page: number; image: string; m: number[] }[] = [];
           for (const [i, n] of redactPages.entries()) {
-            busy = `Redacting page ${n} (${i + 1} of ${redactPages.length})…`;
+            busy = t('Redacting page {page} ({i} of {total})…', { page: n, i: i + 1, total: redactPages.length });
             const page = await rdoc.getPage(n);
             const [x0, y0, x1, y1] = page.view;
             const s = scaleFor(200, x1 - x0, y1 - y0);
@@ -417,7 +425,7 @@
       }
       const signs = marks.filter((m) => m.kind === 'sign' && m.src);
       if (signs.length) {
-        busy = 'Placing signatures…';
+        busy = t('Placing signatures…');
         const stamps: { page: number; image: string; m: number[] }[] = [];
         for (const m of signs) {
           const page = await doc.getPage(m.page);
@@ -437,7 +445,7 @@
       await load(fileUrl(src), view);
       return true;
     } catch (e) {
-      toastError(e, 'Couldn’t apply the changes');
+      toastError(e, t('Couldn’t apply the changes'));
       return false;
     } finally {
       busy = '';
@@ -474,15 +482,15 @@
   }
 
   async function runOcr(langs: string[], progress: (s: string, p: number) => void) {
-    if (!doc) throw new Error('No document');
+    if (!doc) throw new Error(t('No document'));
     const d = doc;
     const list = ocrScope === 'page' ? [page] : Array.from({ length: pages }, (_, i) => i + 1);
     const parts: string[] = [];
     let conf = 0;
     for (const [i, n] of list.entries()) {
-      const r = await ocrPage(d, n, langs, false, (st, p) => progress(list.length > 1 ? `Page ${n} of ${list.length}: ${st}` : st, (i + p) / list.length));
+      const r = await ocrPage(d, n, langs, false, (st, p) => progress(list.length > 1 ? t('Page {page} of {pages}: {status}', { page: n, pages: list.length, status: st }) : st, (i + p) / list.length));
       conf += r.confidence;
-      parts.push(list.length > 1 ? `— Page ${n} —\n${r.text}` : r.text);
+      parts.push(list.length > 1 ? `— ${t('Page {page}', { page: n })} —\n${r.text}` : r.text);
     }
     return { text: parts.join('\n\n'), confidence: conf / list.length };
   }
@@ -499,14 +507,14 @@
       else todo.push(n);
     }
     if (!todo.length) {
-      ui.toast(rotated ? 'The pages without text are rotated; turn them upright first (page operations), then try again.' : 'Every page already has text.', 'info');
+      ui.toast(rotated ? t('The pages without text are rotated; turn them upright first (page operations), then try again.') : t('Every page already has text.'), 'info');
       return;
     }
     const view = keepView();
     try {
       const layers: { page: number; pdf: string }[] = [];
       for (const [i, n] of todo.entries()) {
-        busy = `Recognising page ${n} (${i + 1} of ${todo.length})…`;
+        busy = t('Recognising page {page} ({i} of {total})…', { page: n, i: i + 1, total: todo.length });
         const r = await ocrPage(d, n, langs, true);
         if (!r.pdf || !r.text.trim()) continue;
         let bin = '';
@@ -514,18 +522,19 @@
         layers.push({ page: n, pdf: btoa(bin) });
       }
       if (!layers.length) {
-        ui.toast('No text was found on those pages.', 'info');
+        ui.toast(t('No text was found on those pages.'), 'info');
         return;
       }
-      busy = 'Adding the text layer…';
+      busy = t('Adding the text layer…');
       const out = await api.PdfAddTextLayer(await materialize(), layers as never);
       if (working && working !== tab.filePath) void api.RemoveTemp(working);
       working = out;
       opsDirty = true;
       await load(fileUrl(out), view);
-      ui.toast(`${layers.length} page${layers.length === 1 ? ' is' : 's are'} now searchable${rotated ? ` (${rotated} rotated page${rotated === 1 ? '' : 's'} skipped)` : ''}. Save to keep it.`, 'success');
+      const skipped = rotated ? ` (${tn('{n} rotated page skipped', '{n} rotated pages skipped', rotated)})` : '';
+      ui.toast(tn('{n} page is now searchable{skipped}. Save to keep it.', '{n} pages are now searchable{skipped}. Save to keep it.', layers.length, { skipped }), 'success');
     } catch (e) {
-      toastError(e, 'Couldn’t make the PDF searchable');
+      toastError(e, t('Couldn’t make the PDF searchable'));
     } finally {
       busy = '';
     }
@@ -540,30 +549,31 @@
   // ---------- compress, export, insert images ----------
 
   async function compress() {
-    const choice = await ui.pick('Compress PDF', [
-      { id: '75:2000', label: 'Smaller — images as good-quality JPEG, up to 2000 px' },
-      { id: '55:1200', label: 'Smallest — stronger compression, up to 1200 px' },
-      { id: '0:0', label: 'Lossless — only clean up the file structure' },
+    const choice = await ui.pick(t('Compress PDF'), [
+      { id: '75:2000', label: t('Smaller — images as good-quality JPEG, up to {px} px', { px: '2000' }) },
+      { id: '55:1200', label: t('Smallest — stronger compression, up to {px} px', { px: '1200' }) },
+      { id: '0:0', label: t('Lossless — only clean up the file structure') },
     ]);
     if (!choice) return;
     const [q, px] = choice.split(':').map(Number);
-    busy = 'Compressing…';
+    busy = t('Compressing…');
     try {
       const src = await materialize();
       const r = await api.PdfCompress(src, q, px);
       if (r.after >= r.before) {
         void api.RemoveTemp(r.path);
-        ui.toast('This PDF is already as small as these settings can make it.', 'info');
+        ui.toast(t('This PDF is already as small as these settings can make it.'), 'info');
         return;
       }
       if (working && working !== tab.filePath) void api.RemoveTemp(working);
       working = r.path;
       opsDirty = true;
       await load(fileUrl(r.path), keepView());
-      const mb = (b: number) => (b > 1 << 20 ? `${(b / (1 << 20)).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`);
-      ui.toast(`${mb(r.before)} → ${mb(r.after)} (${Math.round((1 - r.after / r.before) * 100)}% smaller${r.recompressed ? `, ${r.recompressed} image${r.recompressed === 1 ? '' : 's'} recompressed` : ''}). Save to keep it.`, 'success');
+      const mb = (b: number) => (b > 1 << 20 ? `${num(b / (1 << 20), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MB` : `${Math.round(b / 1024)} KB`);
+      const images = r.recompressed ? `, ${tn('{n} image recompressed', '{n} images recompressed', r.recompressed)}` : '';
+      ui.toast(t('{before} → {after} ({pct}% smaller{images}). Save to keep it.', { before: mb(r.before), after: mb(r.after), pct: Math.round((1 - r.after / r.before) * 100), images }), 'success');
     } catch (e) {
-      toastError(e, 'Compress failed');
+      toastError(e, t('Compress failed'));
     } finally {
       busy = '';
     }
@@ -571,32 +581,32 @@
 
   async function exportImages() {
     if (!doc) return;
-    const fmt = await ui.pick('Export pages as images', [
-      { id: 'png:150', label: 'PNG, 150 dpi' },
-      { id: 'png:300', label: 'PNG, 300 dpi (print)' },
-      { id: 'jpeg:150', label: 'JPEG, 150 dpi (smaller files)' },
-      { id: 'jpeg:300', label: 'JPEG, 300 dpi' },
-      { id: 'png:72', label: 'PNG, 72 dpi (screen)' },
+    const fmt = await ui.pick(t('Export pages as images'), [
+      { id: 'png:150', label: t('{format}, {dpi} dpi', { format: 'PNG', dpi: 150 }) },
+      { id: 'png:300', label: t('{format}, {dpi} dpi (print)', { format: 'PNG', dpi: 300 }) },
+      { id: 'jpeg:150', label: t('{format}, {dpi} dpi (smaller files)', { format: 'JPEG', dpi: 150 }) },
+      { id: 'jpeg:300', label: t('{format}, {dpi} dpi', { format: 'JPEG', dpi: 300 }) },
+      { id: 'png:72', label: t('{format}, {dpi} dpi (screen)', { format: 'PNG', dpi: 72 }) },
     ]);
     if (!fmt) return;
     const [type, dpiS] = fmt.split(':');
     const list = selected.length ? [...selected].sort((a, b) => a - b) : Array.from({ length: pages }, (_, i) => i + 1);
-    const dir = await api.OpenFolderDialog(`Save ${list.length} image${list.length === 1 ? '' : 's'} in`);
+    const dir = await api.OpenFolderDialog(tn('Save {n} image in', 'Save {n} images in', list.length));
     if (!dir) return;
     const src = annotDirty ? await openDocument({ url: fileUrl(await materialize()) }).promise : doc;
     const ext = type === 'png' ? 'png' : 'jpg';
     const digits = String(pages).length;
     try {
       for (const [i, n] of list.entries()) {
-        busy = `Exporting page ${n} (${i + 1} of ${list.length})…`;
+        busy = t('Exporting page {page} ({i} of {total})…', { page: n, i: i + 1, total: list.length });
         const page = await src.getPage(n);
         const [x0, y0, x1, y1] = page.view;
         const c = await renderPage(src, n, scaleFor(+dpiS, x1 - x0, y1 - y0));
         await saveFile(join(dir, `${stem(tab.name)}-${String(n).padStart(digits, '0')}.${ext}`), await toBlob(c, `image/${type}`, 0.9));
       }
-      ui.toast(`Exported ${list.length} page${list.length === 1 ? '' : 's'} to ${basename(dir)}`, 'success');
+      ui.toast(tn('Exported {n} page to {folder}', 'Exported {n} pages to {folder}', list.length, { folder: basename(dir) }), 'success');
     } catch (e) {
-      toastError(e, 'Export failed');
+      toastError(e, t('Export failed'));
     } finally {
       busy = '';
       if (src !== doc) void src.loadingTask.destroy();
@@ -604,19 +614,19 @@
   }
 
   async function insertImages() {
-    const files = await api.OpenFilesDialog('Images to add as pages', [{ name: 'Images', patterns: IMAGE_PATTERNS }]);
+    const files = await api.OpenFilesDialog(t('Images to add as pages'), [{ name: t('Images'), patterns: IMAGE_PATTERNS }]);
     if (!files?.length) return;
     const size = await pickPageSize();
     if (!size) return;
-    busy = 'Adding images…';
+    busy = t('Adding images…');
     try {
       const tmp = await api.TempPath('images.pdf');
       const made = await buildFromImages([...files].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), tmp, size);
       await pageOp({ kind: 'merge', others: [made] });
       void api.RemoveTemp(made);
-      ui.toast(`Added ${files.length} page${files.length === 1 ? '' : 's'} at the end. Save to keep them.`, 'success');
+      ui.toast(tn('Added {n} page at the end. Save to keep them.', 'Added {n} pages at the end. Save to keep them.', files.length), 'success');
     } catch (e) {
-      toastError(e, 'Couldn’t add the images');
+      toastError(e, t('Couldn’t add the images'));
     } finally {
       busy = '';
     }
@@ -649,7 +659,7 @@
   }
 
   async function gotoPrompt() {
-    const v = await ui.prompt(`Go to page (1–${pages})`, String(page), 'Go');
+    const v = await ui.prompt(t('Go to page ({range})', { range: `1–${pages}` }), String(page), t('Go'));
     if (v) gotoPage(Number(v));
   }
 
@@ -661,90 +671,91 @@
   async function deletePages() {
     const p = targetPages();
     if (p.length >= pages) {
-      ui.toast("A PDF needs at least one page.", 'warning');
+      ui.toast(t('A PDF needs at least one page.'), 'warning');
       return;
     }
-    if (!(await ui.confirm(`Delete ${p.length === 1 ? `page ${p[0]}` : `${p.length} pages`}?`, 'You can still close without saving to undo this.', 'Delete', true))) return;
+    if (!(await ui.confirm(p.length === 1 ? t('Delete page {page}?', { page: p[0] }) : tn('Delete {n} page?', 'Delete {n} pages?', p.length), t('You can still close without saving to undo this.'), t('Delete'), true))) return;
     selected = [];
     await pageOp({ kind: 'delete', pages: p });
   }
 
   async function extract() {
     const p = targetPages();
-    const def = join(dirname(tab.path ?? ''), `${stem(tab.name)} (pages ${p.length > 3 ? `${p[0]}-${p[p.length - 1]}` : p.join(',')}).pdf`);
-    const dest = await api.SaveFileDialog('Extract pages to', def, [{ name: 'PDF', patterns: '*.pdf' }]);
+    const def = join(dirname(tab.path ?? ''), `${stem(tab.name)} (${t('pages {list}', { list: p.length > 3 ? `${p[0]}-${p[p.length - 1]}` : p.join(',') })}).pdf`);
+    const dest = await api.SaveFileDialog(t('Extract pages to'), def, [{ name: 'PDF', patterns: '*.pdf' }]);
     if (!dest) return;
     try {
       const src = await materialize();
       const out = await api.PdfOp(src, /\.pdf$/i.test(dest) ? dest : `${dest}.pdf`, { kind: 'extract', pages: p, degrees: 0, order: [], others: [] });
-      ui.toast(`Extracted ${p.length} page${p.length === 1 ? '' : 's'} to ${basename(out)}`, 'success', { label: 'Open', run: () => void workspace.openPath(out) });
+      ui.toast(tn('Extracted {n} page to {name}', 'Extracted {n} pages to {name}', p.length, { name: basename(out) }), 'success', { label: t('Open'), run: () => void workspace.openPath(out) });
     } catch (e) {
-      toastError(e, 'Extract failed');
+      toastError(e, t('Extract failed'));
     }
   }
 
   async function merge() {
-    const files = await api.OpenFilesDialog('Choose PDFs to append', [{ name: 'PDF', patterns: '*.pdf' }]);
+    const files = await api.OpenFilesDialog(t('Choose PDFs to append'), [{ name: 'PDF', patterns: '*.pdf' }]);
     if (!files?.length) return;
     await pageOp({ kind: 'merge', others: files });
-    ui.toast(`Appended ${files.length} file${files.length === 1 ? '' : 's'}. Save to keep the result.`, 'success');
+    ui.toast(tn('Appended {n} file. Save to keep the result.', 'Appended {n} files. Save to keep the result.', files.length), 'success');
   }
 
   async function split() {
-    const span = await ui.prompt('Pages per file', '1', 'Choose folder…');
+    const span = await ui.prompt(t('Pages per file'), '1', t('Choose folder…'));
     if (!span) return;
     const n = Number(span);
     if (!Number.isInteger(n) || n < 1) {
-      ui.toast('Enter a whole number of pages.', 'warning');
+      ui.toast(t('Enter a whole number of pages.'), 'warning');
       return;
     }
-    const dir = await api.OpenFolderDialog('Save the parts in');
+    const dir = await api.OpenFolderDialog(t('Save the parts in'));
     if (!dir) return;
     const src = await materialize();
-    const done = await jobs.run<string[]>('Splitting PDF', () => api.PdfSplit(src, dir, n));
-    if (done.error) toastError(done.error, 'Split failed');
-    else ui.toast(`Wrote ${done.result.length} files to ${basename(dir)}`, 'success');
+    const done = await jobs.run<string[]>(t('Splitting PDF'), () => api.PdfSplit(src, dir, n));
+    if (done.error) toastError(done.error, t('Split failed'));
+    else ui.toast(tn('Wrote {n} file to {folder}', 'Wrote {n} files to {folder}', done.result.length, { folder: basename(dir) }), 'success');
   }
 
   function thumbMenu(e: MouseEvent) {
     const n = targetPages().length;
-    const what = n === 1 ? 'page' : `${n} pages`;
+    const one = n === 1;
     menu.show(e, [
-      { label: `Rotate ${what} clockwise`, run: () => pageOp({ kind: 'rotate', pages: targetPages(), degrees: 90 }) },
-      { label: `Rotate ${what} counter-clockwise`, run: () => pageOp({ kind: 'rotate', pages: targetPages(), degrees: -90 }) },
+      { label: one ? t('Rotate page clockwise') : tn('Rotate {n} page clockwise', 'Rotate {n} pages clockwise', n), run: () => pageOp({ kind: 'rotate', pages: targetPages(), degrees: 90 }) },
+      { label: one ? t('Rotate page counter-clockwise') : tn('Rotate {n} page counter-clockwise', 'Rotate {n} pages counter-clockwise', n), run: () => pageOp({ kind: 'rotate', pages: targetPages(), degrees: -90 }) },
       { separator: true },
-      { label: `Extract ${what} to new PDF…`, run: extract },
-      { label: `Delete ${what}`, run: deletePages },
+      { label: one ? t('Extract page to new PDF…') : tn('Extract {n} page to new PDF…', 'Extract {n} pages to new PDF…', n), run: extract },
+      { label: one ? t('Delete page') : tn('Delete {n} page', 'Delete {n} pages', n), run: deletePages },
     ]);
   }
 
   function opsMenu(e: MouseEvent) {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const n = targetPages().length;
-    const what = n === 1 ? `page ${targetPages()[0]}` : `${n} selected pages`;
+    const one = n === 1;
+    const pg = targetPages()[0];
     menu.show({ clientX: r.right - 220, clientY: r.bottom + 4 }, [
-      { label: `Rotate ${what} clockwise`, run: () => pageOp({ kind: 'rotate', pages: targetPages(), degrees: 90 }) },
-      { label: `Rotate ${what} counter-clockwise`, run: () => pageOp({ kind: 'rotate', pages: targetPages(), degrees: -90 }) },
-      { label: `Delete ${what}`, run: deletePages },
-      { label: `Extract ${what} to new PDF…`, run: extract },
+      { label: one ? t('Rotate page {page} clockwise', { page: pg }) : tn('Rotate {n} selected page clockwise', 'Rotate {n} selected pages clockwise', n), run: () => pageOp({ kind: 'rotate', pages: targetPages(), degrees: 90 }) },
+      { label: one ? t('Rotate page {page} counter-clockwise', { page: pg }) : tn('Rotate {n} selected page counter-clockwise', 'Rotate {n} selected pages counter-clockwise', n), run: () => pageOp({ kind: 'rotate', pages: targetPages(), degrees: -90 }) },
+      { label: one ? t('Delete page {page}', { page: pg }) : tn('Delete {n} selected page', 'Delete {n} selected pages', n), run: deletePages },
+      { label: one ? t('Extract page {page} to new PDF…', { page: pg }) : tn('Extract {n} selected page to new PDF…', 'Extract {n} selected pages to new PDF…', n), run: extract },
       {
-        label: 'Extract page range…',
+        label: t('Extract page range…'),
         run: async () => {
-          const v = await ui.prompt(`Pages to extract (e.g. 1-3, 7) of ${pages}`, `1-${pages}`, 'Next');
+          const v = await ui.prompt(t('Pages to extract (e.g. 1-3, 7) of {pages}', { pages }), `1-${pages}`, t('Next'));
           if (!v) return;
           const list = parseRanges(v, pages);
-          if (!list) return ui.toast('That page range is not valid.', 'warning');
+          if (!list) return ui.toast(t('That page range is not valid.'), 'warning');
           selected = list;
           await extract();
         },
       },
       { separator: true },
-      { label: 'Append PDFs…', run: merge },
-      { label: 'Add images as pages…', run: insertImages },
-      { label: 'Split into files…', run: split },
+      { label: t('Append PDFs…'), run: merge },
+      { label: t('Add images as pages…'), run: insertImages },
+      { label: t('Split into files…'), run: split },
       { separator: true },
-      { label: 'Compress…', run: compress },
-      { label: 'Export pages as images…', run: exportImages },
+      { label: t('Compress…'), run: compress },
+      { label: t('Export pages as images…'), run: exportImages },
     ]);
   }
 
@@ -858,49 +869,49 @@
   });
 
   const tools: { id: ToolId; icon: any; label: string }[] = [
-    { id: 'none', icon: MousePointer, label: 'Select text' },
-    { id: 'highlight', icon: Highlighter, label: 'Highlight (select text)' },
-    { id: 'freetext', icon: MessageSquare, label: 'Text comment (click to place)' },
-    { id: 'ink', icon: PenLine, label: 'Draw' },
+    { id: 'none', icon: MousePointer, label: t('Select text') },
+    { id: 'highlight', icon: Highlighter, label: t('Highlight (select text)') },
+    { id: 'freetext', icon: MessageSquare, label: t('Text comment (click to place)') },
+    { id: 'ink', icon: PenLine, label: t('Draw') },
   ];
 </script>
 
 <div class="toolbar" use:fitBar>
-  <button class="icon-btn" class:on={thumbsOpen} title="Page thumbnails" onclick={() => (thumbsOpen = !thumbsOpen)}><Icon icon={PanelLeft} /></button>
+  <button class="icon-btn" class:on={thumbsOpen} title={t('Page thumbnails')} onclick={() => (thumbsOpen = !thumbsOpen)}><Icon icon={PanelLeft} /></button>
   <span class="sep"></span>
   <input
     class="input page"
     bind:value={pageInput}
     onkeydown={(e) => e.key === 'Enter' && gotoPage(Number(pageInput))}
     onblur={() => (pageInput = String(page))}
-    aria-label="Page number"
+    aria-label={t('Page number')}
   />
-  <span class="label">of {pages}</span>
+  <span class="label">{t('of {pages}', { pages })}</span>
   <span class="sep"></span>
-  <button class="btn ghost" title="Zoom out ({formatShortcut('Mod+-')})" onclick={() => zoom(-1)}>−</button>
-  <button class="btn ghost zoomlabel" title="Actual size" onclick={() => zoom(0)}>{Math.round(scale * 100)}%</button>
-  <button class="btn ghost" title="Zoom in ({formatShortcut('Mod+=')})" onclick={() => zoom(1)}>+</button>
-  <button class="btn ghost" onclick={() => viewer && (viewer.currentScaleValue = 'page-width')}><Icon icon={ArrowLeftRight} size={14} /> Fit width</button>
-  <button class="btn ghost" onclick={() => viewer && (viewer.currentScaleValue = 'page-fit')}><Icon icon={Maximize} size={14} /> Fit page</button>
+  <button class="btn ghost" title={t('Zoom out ({shortcut})', { shortcut: formatShortcut('Mod+-') })} onclick={() => zoom(-1)}>−</button>
+  <button class="btn ghost zoomlabel" title={t('Actual size')} onclick={() => zoom(0)}>{Math.round(scale * 100)}%</button>
+  <button class="btn ghost" title={t('Zoom in ({shortcut})', { shortcut: formatShortcut('Mod+=') })} onclick={() => zoom(1)}>+</button>
+  <button class="btn ghost" onclick={() => viewer && (viewer.currentScaleValue = 'page-width')}><Icon icon={ArrowLeftRight} size={14} /> {t('Fit width')}</button>
+  <button class="btn ghost" onclick={() => viewer && (viewer.currentScaleValue = 'page-fit')}><Icon icon={Maximize} size={14} /> {t('Fit page')}</button>
   <span class="sep"></span>
-  {#each tools as t (t.id)}
-    <button class="icon-btn" class:on={tool === t.id} title={t.label} disabled={tab.readOnly && t.id !== 'none'} onclick={() => setTool(t.id)}><Icon icon={t.icon} /></button>
+  {#each tools as tl (tl.id)}
+    <button class="icon-btn" class:on={tool === tl.id} title={tl.label} disabled={tab.readOnly && tl.id !== 'none'} onclick={() => setTool(tl.id)}><Icon icon={tl.icon} /></button>
   {/each}
-  <button class="icon-btn" class:on={markMode === 'sign' || signOpen} title="Sign — draw, type or import your signature and place it on the page" disabled={tab.readOnly} onclick={startSign}><Icon icon={SignatureIcon} /></button>
-  <button class="icon-btn" class:on={markMode === 'redact'} title="Redact — drag black boxes over what must go, then Apply (the content underneath is removed, not just covered)" disabled={tab.readOnly} onclick={startRedact}><Icon icon={Redact} /></button>
+  <button class="icon-btn" class:on={markMode === 'sign' || signOpen} title={t('Sign — draw, type or import your signature and place it on the page')} disabled={tab.readOnly} onclick={startSign}><Icon icon={SignatureIcon} /></button>
+  <button class="icon-btn" class:on={markMode === 'redact'} title={t('Redact — drag black boxes over what must go, then Apply (the content underneath is removed, not just covered)')} disabled={tab.readOnly} onclick={startRedact}><Icon icon={Redact} /></button>
   {#if tool !== 'none'}
     <span class="sep"></span>
-    <input class="color" type="color" title="Colour for new {tool === 'freetext' ? 'text' : tool === 'ink' ? 'drawings' : 'highlights'}" bind:value={inkColor} onchange={applyParams} />
+    <input class="color" type="color" title={tool === 'freetext' ? t('Colour for new text') : tool === 'ink' ? t('Colour for new drawings') : t('Colour for new highlights')} bind:value={inkColor} onchange={applyParams} />
     {#if tool === 'freetext'}
-      <label class="opt" title="Text size">Size <input class="input num" type="number" min="4" max="100" bind:value={textSize} onchange={applyParams} /></label>
+      <label class="opt" title={t('Text size')}>{t('Size')} <input class="input num" type="number" min="4" max="100" bind:value={textSize} onchange={applyParams} /></label>
     {:else if tool === 'ink'}
-      <label class="opt" title="Line thickness">Width <input type="range" min="1" max="20" bind:value={inkWidth} onchange={applyParams} /></label>
+      <label class="opt" title={t('Line thickness')}>{t('Width')} <input type="range" min="1" max="20" bind:value={inkWidth} onchange={applyParams} /></label>
     {/if}
   {/if}
   <span class="spacer"></span>
-  <button class="icon-btn" class:on={ocrOpen} title="Recognise text (OCR) — copy text from scanned pages, or make the PDF searchable" aria-label="Recognise text" onclick={() => (ocrOpen ? (ocrOpen = false) : openOcr(pages > 1 ? 'page' : 'all'))}><Icon icon={ScanText} /></button>
-  <button class="icon-btn" class:on={findOpen} title="Find ({formatShortcut('Mod+F')})" onclick={() => (findOpen ? closeFind() : openFind())}><Icon icon={Search} /></button>
-  <button class="icon-btn" title="Page operations" disabled={tab.readOnly} onclick={opsMenu}><Icon icon={Ellipsis} /></button>
+  <button class="icon-btn" class:on={ocrOpen} title={t('Recognise text (OCR) — copy text from scanned pages, or make the PDF searchable')} aria-label={t('Recognise text')} onclick={() => (ocrOpen ? (ocrOpen = false) : openOcr(pages > 1 ? 'page' : 'all'))}><Icon icon={ScanText} /></button>
+  <button class="icon-btn" class:on={findOpen} title={t('Find ({shortcut})', { shortcut: formatShortcut('Mod+F') })} onclick={() => (findOpen ? closeFind() : openFind())}><Icon icon={Search} /></button>
+  <button class="icon-btn" title={t('Page operations')} disabled={tab.readOnly} onclick={opsMenu}><Icon icon={Ellipsis} /></button>
 </div>
 
 {#if findOpen}
@@ -910,22 +921,22 @@
       class:bad={notFound && query}
       bind:this={findInput}
       bind:value={query}
-      placeholder="Find in document"
+      placeholder={t('Find in document')}
       oninput={() => find(false, false)}
       onkeydown={(e) => {
         if (e.key === 'Enter') find(e.shiftKey);
         else if (e.key === 'Escape') closeFind();
       }}
     />
-    <button class="icon-btn" title="Previous (Shift+Enter)" onclick={() => find(true)}><Icon icon={ChevronUp} /></button>
-    <button class="icon-btn" title="Next (Enter)" onclick={() => find(false)}><Icon icon={ChevronDown} /></button>
-    <label class="chk"><input type="checkbox" bind:checked={caseSensitive} onchange={() => find(false, false)} /> Match case</label>
+    <button class="icon-btn" title={t('Previous ({shortcut})', { shortcut: 'Shift+Enter' })} onclick={() => find(true)}><Icon icon={ChevronUp} /></button>
+    <button class="icon-btn" title={t('Next ({shortcut})', { shortcut: 'Enter' })} onclick={() => find(false)}><Icon icon={ChevronDown} /></button>
+    <label class="chk"><input type="checkbox" bind:checked={caseSensitive} onchange={() => find(false, false)} /> {t('Match case')}</label>
     <span class="label">
-      {#if query && matches}{matches.total ? `${matches.current} of ${matches.total}` : 'No matches'}{/if}
+      {#if query && matches}{matches.total ? t('{current} of {total}', { current: matches.current, total: matches.total }) : t('No matches')}{/if}
     </span>
-    {#if query && matches?.total && !tab.readOnly}<button class="btn ghost" title="Put a redaction box over every match (you can check and adjust them before applying)" onclick={redactMatches}><Icon icon={Redact} size={14} /> Redact all matches</button>{/if}
+    {#if query && matches?.total && !tab.readOnly}<button class="btn ghost" title={t('Put a redaction box over every match (you can check and adjust them before applying)')} onclick={redactMatches}><Icon icon={Redact} size={14} /> {t('Redact all matches')}</button>{/if}
     <span class="spacer"></span>
-    <button class="icon-btn" title="Close (Esc)" onclick={closeFind}><Icon icon={XIcon} /></button>
+    <button class="icon-btn" title={t('Close ({shortcut})', { shortcut: 'Esc' })} onclick={closeFind}><Icon icon={XIcon} /></button>
   </div>
 {/if}
 
@@ -933,26 +944,26 @@
   {@const ns = marks.filter((m) => m.kind === 'sign').length}
   {@const nr = marks.length - ns}
   <div class="banner">
-    <span class="grow">{[ns ? `${ns} signature${ns === 1 ? '' : 's'}` : '', nr ? `${nr} redaction${nr === 1 ? '' : 's'}` : ''].filter(Boolean).join(' and ')} not applied yet — move or resize them, then Apply (Save applies them too).</span>
-    <button class="btn ghost" onclick={() => ((marks = []), (markMode = null), (placing = null))}>Discard</button>
-    <button class="btn primary" onclick={() => applyMarks()}>Apply</button>
+    <span class="grow">{t('{marks} not applied yet — move or resize them, then Apply (Save applies them too).', { marks: ns && nr ? t('{a} and {b}', { a: tn('{n} signature', '{n} signatures', ns), b: tn('{n} redaction', '{n} redactions', nr) }) : ns ? tn('{n} signature', '{n} signatures', ns) : tn('{n} redaction', '{n} redactions', nr) })}</span>
+    <button class="btn ghost" onclick={() => ((marks = []), (markMode = null), (placing = null))}>{t('Discard')}</button>
+    <button class="btn primary" onclick={() => applyMarks()}>{t('Apply')}</button>
   </div>
 {:else if markMode === 'redact'}
-  <div class="banner"><span class="grow">Drag boxes over what to remove. Find (Ctrl+F) can mark every match at once.</span><button class="btn ghost" onclick={() => (markMode = null)}>Done</button></div>
+  <div class="banner"><span class="grow">{t('Drag boxes over what to remove. Find ({shortcut}) can mark every match at once.', { shortcut: 'Ctrl+F' })}</span><button class="btn ghost" onclick={() => (markMode = null)}>{t('Done')}</button></div>
 {/if}
 {#if busy}<div class="banner"><span class="spinner inline"></span><span class="grow">{busy}</span></div>{/if}
 {#if scanned && !ocrOpen && !busy}
   <div class="banner scanned">
-    <Icon icon={ScanText} size={14} /><span class="grow">This looks like a scan: its pages have no text to select or search.</span>
-    <button class="btn ghost" onclick={() => openOcr('all')}>Copy text</button>
-    {#if !tab.readOnly}<button class="btn primary" onclick={() => (ocrOpen = false, void makeSearchable(settings.value.ocrLangs?.length ? settings.value.ocrLangs : ['eng']))}>Make searchable</button>{/if}
-    <button class="icon-btn" title="Dismiss" onclick={() => (scanned = false)}><Icon icon={XIcon} /></button>
+    <Icon icon={ScanText} size={14} /><span class="grow">{t('This looks like a scan: its pages have no text to select or search.')}</span>
+    <button class="btn ghost" onclick={() => openOcr('all')}>{t('Copy text')}</button>
+    {#if !tab.readOnly}<button class="btn primary" onclick={() => (ocrOpen = false, void makeSearchable(settings.value.ocrLangs?.length ? settings.value.ocrLangs : ['eng']))}>{t('Make searchable')}</button>{/if}
+    <button class="icon-btn" title={t('Dismiss')} onclick={() => (scanned = false)}><Icon icon={XIcon} /></button>
   </div>
 {/if}
 
 {#if opsDirty}
   <div class="banner">
-    <span class="grow">Pages were changed. Save to write them to {tab.filePath ? basename(tab.filePath) : 'a file'}, or close without saving to discard.</span>
+    <span class="grow">{tab.filePath ? t('Pages were changed. Save to write them to {name}, or close without saving to discard.', { name: basename(tab.filePath) }) : t('Pages were changed. Save to write them to a file, or close without saving to discard.')}</span>
   </div>
 {/if}
 
@@ -973,13 +984,13 @@
   </div>
   {#if ocrOpen && doc}
     {#key ocrKey}
-      <OcrPanel title={ocrScope === 'page' ? `Text on page ${page}` : 'Text in the document'} run={runOcr} onclose={() => (ocrOpen = false)}>
+      <OcrPanel title={ocrScope === 'page' ? t('Text on page {page}', { page }) : t('Text in the document')} run={runOcr} onclose={() => (ocrOpen = false)}>
         {#snippet actions({ langs })}
-          <select class="input scope" value={ocrScope} onchange={(e) => openOcr((e.currentTarget as HTMLSelectElement).value as 'page' | 'all')} aria-label="Pages to read">
-            <option value="page">This page</option>
-            <option value="all">All pages</option>
+          <select class="input scope" value={ocrScope} onchange={(e) => openOcr((e.currentTarget as HTMLSelectElement).value as 'page' | 'all')} aria-label={t('Pages to read')}>
+            <option value="page">{t('This page')}</option>
+            <option value="all">{t('All pages')}</option>
           </select>
-          {#if !tab.readOnly}<button class="btn ghost" title="Add an invisible text layer to the pages that have none, so the PDF can be searched and copied from" onclick={() => void makeSearchable(langs)}>Make searchable</button>{/if}
+          {#if !tab.readOnly}<button class="btn ghost" title={t('Add an invisible text layer to the pages that have none, so the PDF can be searched and copied from')} onclick={() => void makeSearchable(langs)}>{t('Make searchable')}</button>{/if}
         {/snippet}
       </OcrPanel>
     {/key}

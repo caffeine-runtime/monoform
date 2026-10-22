@@ -74,7 +74,7 @@ export class ModuleRegistry {
     let p = this.cache.get(id);
     if (!p) {
       const def = this.get(id);
-      if (!def) return Promise.reject(new Error(`unknown module ${id}`));
+      if (!def) return Promise.reject(new Error(`unknown module ${id}`) /* i18n-ignore: programming error */);
       p = def.load();
       p.catch(() => this.cache.delete(id));
       this.cache.set(id, p);

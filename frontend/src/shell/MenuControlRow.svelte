@@ -8,6 +8,7 @@
   import { theme } from '../core/theme.svelte';
   import { workspace } from '../core/tabs.svelte';
   import type { MenuControl } from '../core/ui.svelte';
+  import { t } from '../core/i18n';
   import Icon from './Icon.svelte';
   import Square from '@lucide/svelte/icons/square';
   import Columns2 from '@lucide/svelte/icons/columns-2';
@@ -19,9 +20,9 @@
   const s = $derived(settings.value);
 
   const THEMES = [
-    { id: 'system', label: 'System' },
-    { id: 'light', label: 'Light' },
-    { id: 'dark', label: 'Dark' },
+    { id: 'system', label: t('System', {}, 'theme') },
+    { id: 'light', label: t('Light', {}, 'theme') },
+    { id: 'dark', label: t('Dark', {}, 'theme') },
   ] as const;
   const scaleIndex = $derived(Math.max(0, UI_SCALES.findIndex((v) => Math.abs(v - (s.uiScale || 1)) < 1e-3)));
   const layout = $derived.by(() => {
@@ -30,25 +31,25 @@
     return sp.layout === 'grid' ? (sp.panes.length === 3 ? 'three' : 'grid') : sp.layout;
   });
   const LAYOUTS = [
-    { id: 'one', title: 'One tab', icon: Square, cmd: 'view.unsplit' },
-    { id: 'columns', title: 'Two side by side', icon: Columns2, cmd: 'view.splitColumns' },
-    { id: 'rows', title: 'Two stacked', icon: Rows2, cmd: 'view.splitRows' },
-    { id: 'three', title: 'Three', icon: Columns3, cmd: 'view.splitThree' },
-    { id: 'grid', title: 'Four (grid)', icon: Grid2x2, cmd: 'view.splitGrid' },
+    { id: 'one', title: t('One tab'), icon: Square, cmd: 'view.unsplit' },
+    { id: 'columns', title: t('Two side by side'), icon: Columns2, cmd: 'view.splitColumns' },
+    { id: 'rows', title: t('Two stacked'), icon: Rows2, cmd: 'view.splitRows' },
+    { id: 'three', title: t('Three'), icon: Columns3, cmd: 'view.splitThree' },
+    { id: 'grid', title: t('Four (grid)'), icon: Grid2x2, cmd: 'view.splitGrid' },
   ];
 </script>
 
 <!-- Clicks and keys inside a control stay in it (the menu stays open). -->
 <div class="row" data-control={control} role="group" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key !== 'Escape' && e.stopPropagation()}>
   {#if control === 'theme'}
-    <span class="lbl">Theme</span>
-    <div class="seg" role="radiogroup" aria-label="Theme">
-      {#each THEMES as t (t.id)}
-        <button role="radio" aria-checked={s.theme === t.id} class:on={s.theme === t.id} onclick={() => theme.set(t.id)}>{t.label}</button>
+    <span class="lbl">{t('Theme')}</span>
+    <div class="seg" role="radiogroup" aria-label={t('Theme')}>
+      {#each THEMES as th (th.id)}
+        <button role="radio" aria-checked={s.theme === th.id} class:on={s.theme === th.id} onclick={() => theme.set(th.id)}>{th.label}</button>
       {/each}
     </div>
   {:else if control === 'uiScale'}
-    <label class="lbl" for="menu-uis">Interface</label>
+    <label class="lbl" for="menu-uis">{t('Interface')}</label>
     <input
       id="menu-uis"
       type="range"
@@ -56,13 +57,13 @@
       max={UI_SCALES.length - 1}
       step="1"
       value={scaleIndex}
-      title="Double-click: 100%"
+      title={t('Double-click: {value}', { value: '100%' })}
       ondblclick={() => settings.update((x) => (x.uiScale = 1))}
       oninput={(e) => settings.update((x) => (x.uiScale = UI_SCALES[+(e.target as HTMLInputElement).value]))}
     />
     <span class="val">{Math.round((s.uiScale || 1) * 100)}%</span>
   {:else if control === 'fontSize'}
-    <label class="lbl" for="menu-fs">Text size</label>
+    <label class="lbl" for="menu-fs">{t('Text size')}</label>
     <input
       id="menu-fs"
       type="range"
@@ -70,14 +71,14 @@
       max="32"
       step="1"
       value={s.fontSize}
-      title="Double-click: 14"
+      title={t('Double-click: {value}', { value: '14' })}
       ondblclick={() => settings.update((x) => (x.fontSize = 14))}
       oninput={(e) => settings.update((x) => (x.fontSize = +(e.target as HTMLInputElement).value))}
     />
     <span class="val">{s.fontSize}</span>
   {:else if control === 'split'}
-    <span class="lbl">Split</span>
-    <div class="seg icons" role="radiogroup" aria-label="Split view">
+    <span class="lbl">{t('Split')}</span>
+    <div class="seg icons" role="radiogroup" aria-label={t('Split view')}>
       {#each LAYOUTS as l (l.id)}
         <button
           role="radio"

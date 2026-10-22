@@ -3,6 +3,7 @@
 // Relative resources (.bin, textures, .mtl) are fetched from the file's
 // folder through `base` (the read-only page route).
 import * as THREE from 'three';
+import { t } from '../../core/i18n';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
@@ -178,7 +179,7 @@ export async function loadModel(ext: string, data: ArrayBuffer, base: string, na
       break;
     case 'dae': {
       const c = new ColladaLoader(manager).parse(text(), base);
-      if (!c) throw new Error('not a valid Collada file');
+      if (!c) throw new Error(t('not a valid Collada file'));
       scene = c.scene;
       animations = c.scene.animations ?? [];
       break;
@@ -212,7 +213,7 @@ export async function loadModel(ext: string, data: ArrayBuffer, base: string, na
       scene = new AMFLoader(manager).parse(data);
       break;
     default:
-      throw new Error(`.${ext} files are not supported`);
+      throw new Error(t('.{ext} files are not supported', { ext }));
   }
   await done;
   // STL, 3MF and AMF come from CAD and 3D printing, where Z is up; three.js

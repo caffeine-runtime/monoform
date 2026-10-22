@@ -4,6 +4,7 @@
   import { onMount } from 'svelte';
   import type { Tab } from '../../core/tabs.svelte';
   import { toastError } from '../../core/ui.svelte';
+  import { t } from '../../core/i18n';
   import { TextController, type ControllerOptions } from './controller';
   import { controllers } from './controllers';
 
@@ -46,7 +47,7 @@
       .then(() => ctl.view.focus())
       .catch((e) => {
         failed = String(e?.message ?? e);
-        toastError(e, `Couldn't open ${tab.title}`);
+        toastError(e, t("Couldn't open {name}", { name: tab.title }));
       });
     return () => {
       controllers.delete(tab.id);

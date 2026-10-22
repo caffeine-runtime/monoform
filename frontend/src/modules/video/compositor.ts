@@ -5,6 +5,7 @@
 // with y down; frame and FBO textures keep row 0 at the top.
 
 import { MAX_POINTS, NO_MASK, maskOf, stateAt, visibleAt, type Layer, type Mask, type TransitionKind } from './project';
+import { t } from '../../core/i18n';
 
 const VERT = `#version 300 es
 in vec2 p;
@@ -173,7 +174,7 @@ export class Compositor {
   constructor(canvas?: HTMLCanvasElement) {
     this.canvas = canvas ?? document.createElement('canvas');
     const gl = this.canvas.getContext('webgl2', { premultipliedAlpha: false, preserveDrawingBuffer: true, antialias: false, alpha: false });
-    if (!gl) throw new Error('WebGL2 is not available');
+    if (!gl) throw new Error(t('WebGL2 is not available'));
     this.gl = gl;
     this.draw = this.program(DRAW);
     this.blur = this.program(BLUR);
@@ -192,7 +193,7 @@ export class Compositor {
       const s = gl.createShader(type)!;
       gl.shaderSource(s, src);
       gl.compileShader(s);
-      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(`shader: ${gl.getShaderInfoLog(s)}`);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(`shader: ${gl.getShaderInfoLog(s)}`); // i18n-ignore: GPU driver log
       return s;
     };
     const p = gl.createProgram()!;
@@ -200,7 +201,7 @@ export class Compositor {
     gl.attachShader(p, sh(gl.FRAGMENT_SHADER, frag));
     gl.bindAttribLocation(p, 0, 'p');
     gl.linkProgram(p);
-    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(`program: ${gl.getProgramInfoLog(p)}`);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(`program: ${gl.getProgramInfoLog(p)}`); // i18n-ignore: GPU driver log
     return p;
   }
 

@@ -1,6 +1,8 @@
 // Transient UI: toasts and modal dialogs, driven by promises so any code can
 // `await confirm(...)` without owning a component.
 
+import { t } from './i18n';
+
 export type ToastKind = 'info' | 'success' | 'error' | 'warning';
 
 export interface Toast {
@@ -51,7 +53,7 @@ class UIState {
   paletteQuery = $state('');
   private seq = 0;
 
-  toast(message: string, kind: ToastKind = 'info', action?: Toast['action'], ms?: number) {
+  toast(message: string, kind: ToastKind = 'info', action?: Toast['action'], ms?: number) { // i18n-ignore
     const id = ++this.seq;
     this.toasts = [...this.toasts, { id, kind, message, action }];
     setTimeout(() => this.dismiss(id), ms ?? (kind === 'error' ? 7000 : 3500));
@@ -62,7 +64,7 @@ class UIState {
   }
 
   /** Show a dialog; resolves with the clicked button id ("cancel" on Escape). */
-  ask(req: Omit<DialogRequest, 'id' | 'resolve'>): Promise<{ button: string; value?: string }> {
+  ask(req: Omit<DialogRequest, 'id' | 'resolve'>): Promise<{ button: string; value?: string }> { // i18n-ignore
     return new Promise((resolve) => {
       const prev = this.dialog;
       if (prev) prev.resolve({ button: 'cancel' });
@@ -77,23 +79,23 @@ class UIState {
     });
   }
 
-  async confirm(title: string, message: string, ok = 'OK', danger = false): Promise<boolean> {
+  async confirm(title: string, message: string, ok = t('OK'), danger = false): Promise<boolean> {
     const r = await this.ask({
       title,
       message,
       buttons: [
-        { id: 'cancel', label: 'Cancel' },
+        { id: 'cancel', label: t('Cancel') },
         { id: 'ok', label: ok, primary: !danger, danger },
       ],
     });
     return r.button === 'ok';
   }
 
-  async prompt(title: string, value = '', ok = 'OK', selectStem = false): Promise<string | null> {
+  async prompt(title: string, value = '', ok = t('OK'), selectStem = false): Promise<string | null> {
     const r = await this.ask({
       title,
       buttons: [
-        { id: 'cancel', label: 'Cancel' },
+        { id: 'cancel', label: t('Cancel') },
         { id: 'ok', label: ok, primary: true },
       ],
       input: { value, selectStem },

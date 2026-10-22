@@ -20,6 +20,7 @@
   import { api } from '../../core/backend';
   import { dirname } from '../../core/paths';
   import { toastError } from '../../core/ui.svelte';
+  import { t, tn } from '../../core/i18n';
   import TextEditor from '../text/TextEditor.svelte';
   import type { TextController } from '../text/controller';
   import { buildPage } from './page';
@@ -79,7 +80,7 @@
     const built = buildPage(ctl.view.state.doc.toString(), { base: base || `${location.origin}/__mf/page/none/`, origin: location.origin, scripts, remote });
     info = { title: built.title, remoteRefs: built.remoteRefs, externalLinks: built.externalLinks };
     srcdoc = built.html;
-    tab.status = { ...tab.status, type: 'HTML page', info: built.title || undefined };
+    tab.status = { ...tab.status, type: t('HTML page'), info: built.title || undefined };
   }
 
   function toggle(which: 'scripts' | 'remote') {
@@ -103,24 +104,24 @@
 </script>
 
 <div class="toolbar" use:fitBar>
-  <div class="seg" role="group" aria-label="View">
-    <button class="btn ghost" class:on={view === 'source'} onclick={() => htmlViews.get(tab.id)?.set('source')}><Icon icon={Code} size={14} /> Source</button>
-    <button class="btn ghost" class:on={view === 'split'} onclick={() => htmlViews.get(tab.id)?.set('split')}><Icon icon={Columns2} size={14} /> Split</button>
-    <button class="btn ghost" class:on={view === 'preview'} onclick={() => htmlViews.get(tab.id)?.set('preview')}><Icon icon={Eye} size={14} /> Page</button>
+  <div class="seg" role="group" aria-label={t('View')}>
+    <button class="btn ghost" class:on={view === 'source'} onclick={() => htmlViews.get(tab.id)?.set('source')}><Icon icon={Code} size={14} /> {t('Source')}</button>
+    <button class="btn ghost" class:on={view === 'split'} onclick={() => htmlViews.get(tab.id)?.set('split')}><Icon icon={Columns2} size={14} /> {t('Split', {}, 'view')}</button>
+    <button class="btn ghost" class:on={view === 'preview'} onclick={() => htmlViews.get(tab.id)?.set('preview')}><Icon icon={Eye} size={14} /> {t('Page')}</button>
   </div>
   <span class="spacer"></span>
   {#if view !== 'source'}
-    <button class="btn ghost" class:on={scripts} title="Run the page's JavaScript (sandboxed, no access to your files or the app)" onclick={() => toggle('scripts')}><Icon icon={SquareCode} size={14} /> Scripts</button>
-    <button class="btn ghost" class:on={remote} title="Load images, fonts and styles from the internet" onclick={() => toggle('remote')}><Icon icon={Globe} size={14} /> Remote content</button>
-    <button class="btn ghost" title="Reload" onclick={render}><Icon icon={RefreshCw} size={14} /> Reload</button>
+    <button class="btn ghost" class:on={scripts} title={t("Run the page's JavaScript (sandboxed, no access to your files or the app)")} onclick={() => toggle('scripts')}><Icon icon={SquareCode} size={14} /> {t('Scripts')}</button>
+    <button class="btn ghost" class:on={remote} title={t('Load images, fonts and styles from the internet')} onclick={() => toggle('remote')}><Icon icon={Globe} size={14} /> {t('Remote content')}</button>
+    <button class="btn ghost" title={t('Reload')} onclick={render}><Icon icon={RefreshCw} size={14} /> {t('Reload')}</button>
     <span class="sep"></span>
   {/if}
-  {#if tab.filePath}<button class="btn ghost" title="Open in your web browser" onclick={() => api.OpenInBrowser(tab.filePath!).catch((e) => toastError(e))}><Icon icon={ExternalLink} size={14} /> Open in browser</button>{/if}
+  {#if tab.filePath}<button class="btn ghost" title={t('Open in your web browser')} onclick={() => api.OpenInBrowser(tab.filePath!).catch((e) => toastError(e))}><Icon icon={ExternalLink} size={14} /> {t('Open in browser')}</button>{/if}
 </div>
 {#if view !== 'source' && !remote && info.remoteRefs > 0}
   <div class="banner">
-    <span class="grow">This page references {info.remoteRefs} item{info.remoteRefs === 1 ? '' : 's'} on the internet (images, fonts, styles or scripts), blocked to keep you offline.</span>
-    <button class="btn" onclick={() => toggle('remote')}>Load remote content</button>
+    <span class="grow">{tn('This page references {n} item on the internet (images, fonts, styles or scripts), blocked to keep you offline.', 'This page references {n} items on the internet (images, fonts, styles or scripts), blocked to keep you offline.', info.remoteRefs)}</span>
+    <button class="btn" onclick={() => toggle('remote')}>{t('Load remote content')}</button>
   </div>
 {/if}
 <div class="panes" data-view={view}>

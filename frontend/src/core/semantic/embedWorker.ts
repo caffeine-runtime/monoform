@@ -44,7 +44,7 @@ async function init(token: string, d: number) {
 const empty = () => new ort.Tensor('float32', new Float32Array(0), [0, 512]);
 
 async function embed(id: number, texts: string[], maxTokens: number) {
-  if (!session || !tokenizer) throw new Error('model not loaded');
+  if (!session || !tokenizer) throw new Error('model not loaded'); // i18n-ignore: worker-internal
   const t0 = performance.now();
   const out = new Float32Array(texts.length * dims);
   let tokens = 0;

@@ -17,6 +17,7 @@
   import { formatShortcut } from '../core/keys';
   import { newFolderIn, copyText } from './treeActions';
   import { newFileOfKind } from '../core/newfile';
+  import { t } from '../core/i18n';
 
   let pinnedOpen = $state(true);
   let recentsOpen = $state(true);
@@ -33,11 +34,11 @@
 
   function listMenu(e: MouseEvent, path: string, recent: boolean) {
     const items: MenuItem[] = [
-      { label: 'Open', run: () => workspace.openPath(path) },
-      { label: settings.isPinned(path) ? 'Unpin' : 'Pin', run: () => settings.togglePin(path) },
-      { label: 'Copy path', run: () => copyText(path) },
+      { label: t('Open'), run: () => workspace.openPath(path) },
+      { label: settings.isPinned(path) ? t('Unpin') : t('Pin'), run: () => settings.togglePin(path) },
+      { label: t('Copy path'), run: () => copyText(path) },
     ];
-    if (recent) items.push({ separator: true }, { label: 'Remove from recents', run: () => settings.removeRecent(path) });
+    if (recent) items.push({ separator: true }, { label: t('Remove from recents'), run: () => settings.removeRecent(path) });
     menu.show(e, items);
   }
 
@@ -61,13 +62,13 @@
   <header class="head" class:mac={boot.platform === 'darwin'}>
     <h1 class="title"><span class="mark" aria-hidden="true">{@html logoMark}</span>Monoform</h1>
     <div class="actions">
-      <button class="icon-btn" class:on={sidebar.mode === 'search'} title="Find in folder ({formatShortcut('Mod+Shift+F')})" onclick={() => commands.execute('search.inFolder')}>
+      <button class="icon-btn" class:on={sidebar.mode === 'search'} title={t('Find in folder ({shortcut})', { shortcut: formatShortcut('Mod+Shift+F') })} onclick={() => commands.execute('search.inFolder')}>
         <Icon icon={Search} />
       </button>
-      <button class="icon-btn" title="Open folder ({formatShortcut('Mod+Shift+O')})" onclick={() => commands.execute('file.openFolder')}>
+      <button class="icon-btn" title={t('Open folder ({shortcut})', { shortcut: formatShortcut('Mod+Shift+O') })} onclick={() => commands.execute('file.openFolder')}>
         <Icon icon={FolderOpen} />
       </button>
-      <button class="icon-btn" title="Menu" onclick={appMenu}><Icon icon={Menu} /></button>
+      <button class="icon-btn" title={t('Menu')} onclick={appMenu}><Icon icon={Menu} /></button>
     </div>
   </header>
 
@@ -80,17 +81,17 @@
           <div class="label row-label" title={workspace.folder}>
             <span class="label-text">{folderName}</span>
             <span class="label-actions">
-              <button class="icon-btn sm" title="New file ({formatShortcut('Mod+Alt+N')})" onclick={() => newFileOfKind(workspace.folder)}><Icon icon={FilePlus} size={14} /></button>
-              <button class="icon-btn sm" title="New folder" onclick={() => newFolderIn(workspace.folder)}><Icon icon={FolderPlus} size={14} /></button>
-              <button class="icon-btn sm" title="Refresh" onclick={() => tree.refreshAll()}><Icon icon={RefreshCw} size={14} /></button>
-              <button class="icon-btn sm" title="Collapse all" onclick={() => tree.collapseAll(workspace.folder)}><Icon icon={ListCollapse} size={14} /></button>
-              <button class="icon-btn sm" title="Close folder" onclick={() => commands.execute('folder.close')}><Icon icon={X} size={14} /></button>
+              <button class="icon-btn sm" title={t('New file ({shortcut})', { shortcut: formatShortcut('Mod+Alt+N') })} onclick={() => newFileOfKind(workspace.folder)}><Icon icon={FilePlus} size={14} /></button>
+              <button class="icon-btn sm" title={t('New folder')} onclick={() => newFolderIn(workspace.folder)}><Icon icon={FolderPlus} size={14} /></button>
+              <button class="icon-btn sm" title={t('Refresh')} onclick={() => tree.refreshAll()}><Icon icon={RefreshCw} size={14} /></button>
+              <button class="icon-btn sm" title={t('Collapse all')} onclick={() => tree.collapseAll(workspace.folder)}><Icon icon={ListCollapse} size={14} /></button>
+              <button class="icon-btn sm" title={t('Close folder')} onclick={() => commands.execute('folder.close')}><Icon icon={X} size={14} /></button>
             </span>
           </div>
           <div class="tree-wrap"><FileTree root={workspace.folder} /></div>
         {:else}
           <div class="no-folder">
-            <button class="btn" onclick={() => commands.execute('file.openFolder')}><Icon icon={FolderOpen} /> Open folder</button>
+            <button class="btn" onclick={() => commands.execute('file.openFolder')}><Icon icon={FolderOpen} /> {t('Open folder')}</button>
             {#if settings.value.recentFolders.length}
               <div class="recent-folders">
                 {#each settings.value.recentFolders.slice(0, 4) as f (f)}
@@ -100,7 +101,7 @@
                       <span class="name">{basename(f)}</span>
                       <span class="hint">{tildify(dirname(f), boot.home)}</span>
                     </button>
-                    <button class="rm icon-btn xs" title="Remove from recent folders" aria-label="Remove {basename(f)} from recent folders" onclick={() => settings.removeRecentFolder(f)}><Icon icon={X} size={12} /></button>
+                    <button class="rm icon-btn xs" title={t('Remove from recent folders')} aria-label={t('Remove {name} from recent folders', { name: basename(f) })} onclick={() => settings.removeRecentFolder(f)}><Icon icon={X} size={12} /></button>
                   </div>
                 {/each}
               </div>
@@ -112,7 +113,7 @@
       {#if settings.value.pinned.length}
         <section class="list">
           <button class="label toggle" onclick={() => (pinnedOpen = !pinnedOpen)}>
-            <span class="chev" class:open={pinnedOpen}><Icon icon={ChevronRight} size={12} /></span>Pinned
+            <span class="chev" class:open={pinnedOpen}><Icon icon={ChevronRight} size={12} /></span>{t('Pinned')}
           </button>
           {#if pinnedOpen}
             {#each settings.value.pinned as p (p)}
@@ -128,7 +129,7 @@
       {#if recents.length}
         <section class="list">
           <button class="label toggle" onclick={() => (recentsOpen = !recentsOpen)}>
-            <span class="chev" class:open={recentsOpen}><Icon icon={ChevronRight} size={12} /></span>Recents
+            <span class="chev" class:open={recentsOpen}><Icon icon={ChevronRight} size={12} /></span>{t('Recents')}
           </button>
           {#if recentsOpen}
             {#each recents as p (p)}
@@ -138,7 +139,7 @@
                   <span class="name">{basename(p)}</span>
                   <span class="hint">{basename(dirname(p))}</span>
                 </button>
-                <button class="rm icon-btn xs" title="Remove from recents" aria-label="Remove {basename(p)} from recents" onclick={() => settings.removeRecent(p)}><Icon icon={X} size={12} /></button>
+                <button class="rm icon-btn xs" title={t('Remove from recents')} aria-label={t('Remove {name} from recents', { name: basename(p) })} onclick={() => settings.removeRecent(p)}><Icon icon={X} size={12} /></button>
               </div>
             {/each}
           {/if}

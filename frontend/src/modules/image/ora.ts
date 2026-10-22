@@ -6,6 +6,7 @@
 // to the layer's PNG too; the unmasked pixels and the mask are stored beside
 // it (mf:raw, mf:mask) so the mask stays editable here.
 import { endpoint } from '../../core/backend';
+import { t } from '../../core/i18n';
 
 export interface OraLayer {
   name: string;
@@ -75,13 +76,13 @@ export async function writeOra(img: OraImage): Promise<ArrayBuffer> {
   for (let i = 0; i < img.layers.length; i++) files.push({ name: `data/layer${i}.png`, data: await img.layers[i].png.arrayBuffer() });
   for (const x of img.extra ?? []) if (x) files.push({ name: x.name, data: await x.png.arrayBuffer() });
   files.push({ name: 'mergedimage.png', data: await img.merged.arrayBuffer() });
-  files.push({ name: 'Thumbnails/thumbnail.png', data: await img.thumbnail.arrayBuffer() });
+  files.push({ name: 'Thumbnails/thumbnail.png', data: await img.thumbnail.arrayBuffer() }); // i18n-ignore: path in the file
   const { default: ZipWorker } = await import('./zipWorker?worker');
   const w = new ZipWorker();
   try {
     return await new Promise<ArrayBuffer>((resolve, reject) => {
       w.onmessage = (e: MessageEvent<ArrayBuffer>) => resolve(e.data);
-      w.onerror = (e) => reject(new Error(e.message || 'zip failed'));
+      w.onerror = (e) => reject(new Error(e.message || t('zip failed')));
       w.postMessage(files, files.map((f) => f.data));
     });
   } finally {
@@ -108,17 +109,17 @@ const attr = (l: Element, name: string) => l.getAttribute(`mf:${name}`) ?? l.get
 export async function readOra(path: string): Promise<{ width: number; height: number; layers: (OraStackLayer & { bitmap: ImageBitmap })[] }> {
   const entry = async (name: string) => {
     const r = await fetch(endpoint('zip', { path, entry: name }));
-    if (!r.ok) throw new Error(`${name} missing in the .ora file`);
+    if (!r.ok) throw new Error(t('{name} missing in the .ora file', { name }));
     return r;
   };
   const doc = new DOMParser().parseFromString(await (await entry('stack.xml')).text(), 'application/xml');
   const image = doc.querySelector('image');
-  if (!image) throw new Error('not an OpenRaster file');
+  if (!image) throw new Error(t('not an OpenRaster file'));
   const width = Number(image.getAttribute('w'));
   const height = Number(image.getAttribute('h'));
   // Nested stacks are flattened in document order.
   const stackLayers = [...doc.querySelectorAll('layer')].map<OraStackLayer>((l) => ({
-    name: l.getAttribute('name') ?? 'Layer',
+    name: l.getAttribute('name') ?? t('Layer'),
     src: l.getAttribute('src') ?? '',
     x: Number(l.getAttribute('x') ?? 0),
     y: Number(l.getAttribute('y') ?? 0),
@@ -135,6 +136,6 @@ export async function readOra(path: string): Promise<{ width: number; height: nu
       .reverse()
       .map(async (l) => ({ ...l, bitmap: await createImageBitmap(await (await entry(l.src)).blob()) })),
   );
-  if (!width || !height || !layers.length) throw new Error('the .ora file has no image layers');
+  if (!width || !height || !layers.length) throw new Error(t('the .ora file has no image layers'));
   return { width, height, layers };
 }

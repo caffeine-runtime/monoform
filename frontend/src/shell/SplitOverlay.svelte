@@ -3,6 +3,7 @@
   // and drop zones while a tab is dragged from the tab bar (drop on an edge
   // to split, in the middle to replace).
   import { onMount } from 'svelte';
+  import { t } from '../core/i18n';
   import { workspace } from '../core/tabs.svelte';
   import { tabDrag } from '../core/tabdrag.svelte';
   import { dividers, dropInto, paneRect, type Edge, type Rect } from '../core/split';
@@ -115,10 +116,10 @@
         style:left={pct(s.x)}
         role="separator"
         aria-orientation="vertical"
-        aria-label="Resize panes"
+        aria-label={t('Resize panes')}
         aria-valuenow={Math.round(s.x * 100)}
         tabindex="0"
-        title="Drag to resize · double-click: equal sizes"
+        title={t('Drag to resize · double-click: equal sizes')}
         onpointerdown={(e) => down(e, 'x')}
         onpointermove={move}
         onpointerup={up}
@@ -140,10 +141,10 @@
         style:right="0"
         role="separator"
         aria-orientation="horizontal"
-        aria-label="Resize panes"
+        aria-label={t('Resize panes')}
         aria-valuenow={Math.round(s.y * 100)}
         tabindex="0"
-        title="Drag to resize · double-click: equal sizes"
+        title={t('Drag to resize · double-click: equal sizes')}
         onpointerdown={(e) => down(e, 'y')}
         onpointermove={move}
         onpointerup={up}
@@ -158,7 +159,7 @@
   {/if}
   {#if dragging && hover}
     <div class="zone" style:left={pct(hover.rect.left)} style:top={pct(hover.rect.top)} style:width={pct(hover.rect.width)} style:height={pct(hover.rect.height)}>
-      <span>{hover.edge === 'center' ? (s ? 'Show here' : 'Open') : 'Split here'}</span>
+      <span>{hover.edge === 'center' ? (s ? t('Show here') : t('Open')) : t('Split here')}</span>
     </div>
   {/if}
 </div>

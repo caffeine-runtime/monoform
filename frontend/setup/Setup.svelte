@@ -11,6 +11,7 @@
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import appIcon from '../../build/appicon.png';
   import { api, type Info, type Options, type Progress } from './api';
+  import { t } from '../src/core/i18n';
 
   let info = $state<Info | null>(null);
   let page = $state<'start' | 'working' | 'done' | 'removed' | 'error'>('start');
@@ -22,6 +23,8 @@
   let o = $state<Options>({ dir: '', everyone: false, desktop: false, defaults: false, command: true, version: '' });
 
   const update = $derived(!!info?.installed);
+  // "The <code>monoform</code> command in the terminal", around the command.
+  const commandLabel = t('The {command} command in the terminal').split('{command}');
   const pct = $derived(progress.total > 0 ? Math.min(100, Math.round((progress.done / progress.total) * 100)) : 0);
 
   onMount(() => {
@@ -56,7 +59,7 @@
 
   async function run(work: () => Promise<void>, next: 'done' | 'removed') {
     page = 'working';
-    progress = { step: 'Starting', done: 0, total: 1 };
+    progress = { step: t('Starting'), done: 0, total: 1 };
     try {
       await work();
       page = next;
@@ -82,105 +85,105 @@
 <div class="win">
   <header class="bar" style="--wails-draggable: drag">
     <img src={appIcon} alt="" class="logo" />
-    <span class="title">Monoform {info?.mode === 'uninstall' ? 'Uninstall' : 'Setup'}</span>
-    {#if info?.demo}<span class="demo" title="Nothing is changed on this computer: files go to a test folder">demo</span>{/if}
+    <span class="title">{info?.mode === 'uninstall' ? t('Monoform Uninstall') : t('Monoform Setup')}</span>
+    {#if info?.demo}<span class="demo" title={t('Nothing is changed on this computer: files go to a test folder')}>{t('demo')}</span>{/if}
     <span class="spacer"></span>
-    <button class="wbtn" title="Minimise" aria-label="Minimise" onclick={api.minimise}><Icon icon={Minus} size={14} /></button>
-    <button class="wbtn close" title="Close" aria-label="Close" disabled={page === 'working'} onclick={api.quit}><Icon icon={X} size={14} /></button>
+    <button class="wbtn" title={t('Minimise')} aria-label={t('Minimise')} onclick={api.minimise}><Icon icon={Minus} size={14} /></button>
+    <button class="wbtn close" title={t('Close')} aria-label={t('Close')} disabled={page === 'working'} onclick={api.quit}><Icon icon={X} size={14} /></button>
   </header>
 
   {#if !info}
-    <main class="center"><span class="muted">One moment…</span></main>
+    <main class="center"><span class="muted">{t('One moment…')}</span></main>
   {:else if page === 'start' && info.mode === 'install'}
     <main>
       <div class="hero">
         <img src={appIcon} alt="" class="big" />
         <div>
-          <h1>{update ? 'Update' : 'Install'} Monoform</h1>
-          <p class="muted">Version {info.version}{update && info.installed?.version ? ` · replaces ${info.installed.version}` : ''}. One window for your everyday files — offline, no account.</p>
+          <h1>{update ? t('Update Monoform') : t('Install Monoform')}</h1>
+          <p class="muted">{update && info.installed?.version ? t('Version {version} · replaces {old}.', { version: info.version, old: info.installed.version }) : t('Version {version}.', { version: info.version })} {t('One window for your everyday files — offline, no account.')}</p>
         </div>
       </div>
 
       {#if info.running}
         <div class="note warn">
-          <span>Monoform is open. Close it first (unsaved work will be asked about).</span>
-          <button class="btn" disabled={closing} onclick={closeApp}>{closing ? 'Closing…' : 'Close it'}</button>
+          <span>{t('Monoform is open. Close it first (unsaved work will be asked about).')}</span>
+          <button class="btn" disabled={closing} onclick={closeApp}>{closing ? t('Closing…') : t('Close it')}</button>
         </div>
       {/if}
 
-      <button class="more" aria-expanded={more} onclick={() => (more = !more)}><Icon icon={ChevronDown} size={14} /> Options</button>
+      <button class="more" aria-expanded={more} onclick={() => (more = !more)}><Icon icon={ChevronDown} size={14} /> {t('Options')}</button>
       {#if more}
         <div class="opts">
           <label class="row path">
-            <span>Folder</span>
+            <span>{t('Folder')}</span>
             <input class="input" bind:value={o.dir} spellcheck="false" />
-            <button class="icon-btn" title="Choose a folder" onclick={browse}><Icon icon={Folder} size={15} /></button>
+            <button class="icon-btn" title={t('Choose a folder')} onclick={browse}><Icon icon={Folder} size={15} /></button>
           </label>
-          <label class="chk"><input type="checkbox" checked={o.everyone} onchange={(e) => setEveryone((e.target as HTMLInputElement).checked)} /> For everyone on this computer <span class="muted">(asks for permission)</span></label>
-          <label class="chk"><input type="checkbox" bind:checked={o.desktop} /> Shortcut on the desktop</label>
-          <label class="chk"><input type="checkbox" bind:checked={o.command} /> The <code>monoform</code> command in the terminal</label>
-          <label class="chk"><input type="checkbox" bind:checked={o.defaults} /> Open text, Markdown, PDF, images, Office files and archives with Monoform by default</label>
+          <label class="chk"><input type="checkbox" checked={o.everyone} onchange={(e) => setEveryone((e.target as HTMLInputElement).checked)} /> {t('For everyone on this computer')} <span class="muted">{t('(asks for permission)')}</span></label>
+          <label class="chk"><input type="checkbox" bind:checked={o.desktop} /> {t('Shortcut on the desktop')}</label>
+          <label class="chk"><input type="checkbox" bind:checked={o.command} /> {commandLabel[0]}<code>monoform</code>{commandLabel[1] ?? ''}</label><!-- i18n-ignore -->
+          <label class="chk"><input type="checkbox" bind:checked={o.defaults} /> {t('Open text, Markdown, PDF, images, Office files and archives with Monoform by default')}</label>
         </div>
       {:else}
-        <p class="summary muted">Into {o.dir}{o.desktop ? ' · desktop shortcut' : ''}{o.defaults ? ' · default app' : ''}. Always listed in “Open with”.</p>
+        <p class="summary muted">{t('Into {folder}', { folder: o.dir })}{o.desktop ? ` · ${t('desktop shortcut')}` : ''}{o.defaults ? ` · ${t('default app')}` : ''}. {t('Always listed in “Open with”.')}</p>
       {/if}
     </main>
     <footer>
-      <button class="btn ghost" onclick={api.quit}>Cancel</button>
-      <button class="btn primary" disabled={info.running || !o.dir} onclick={install}>{update ? 'Update' : 'Install'}</button>
+      <button class="btn ghost" onclick={api.quit}>{t('Cancel')}</button>
+      <button class="btn primary" disabled={info.running || !o.dir} onclick={install}>{update ? t('Update') : t('Install')}</button>
     </footer>
   {:else if page === 'start'}
     <main>
       <div class="hero">
         <img src={appIcon} alt="" class="big" />
         <div>
-          <h1>Remove Monoform?</h1>
-          <p class="muted">The app, its shortcuts and its file-type settings are removed{info.installed ? ` from ${info.installed.dir}` : ''}. Your own files are never touched.</p>
+          <h1>{t('Remove Monoform?')}</h1>
+          <p class="muted">{info.installed ? t('The app, its shortcuts and its file-type settings are removed from {folder}.', { folder: info.installed.dir }) : t('The app, its shortcuts and its file-type settings are removed.')} {t('Your own files are never touched.')}</p>
         </div>
       </div>
       {#if info.running}
         <div class="note warn">
-          <span>Monoform is open. Close it first.</span>
-          <button class="btn" disabled={closing} onclick={closeApp}>{closing ? 'Closing…' : 'Close it'}</button>
+          <span>{t('Monoform is open. Close it first.')}</span>
+          <button class="btn" disabled={closing} onclick={closeApp}>{closing ? t('Closing…') : t('Close it')}</button>
         </div>
       {/if}
-      <label class="chk"><input type="checkbox" bind:checked={removeData} /> Also delete my settings, file history and search index</label>
+      <label class="chk"><input type="checkbox" bind:checked={removeData} /> {t('Also delete my settings, file history and search index')}</label>
     </main>
     <footer>
-      <button class="btn ghost" onclick={api.quit}>Keep it</button>
-      <button class="btn primary danger" disabled={info.running} onclick={remove}>Remove</button>
+      <button class="btn ghost" onclick={api.quit}>{t('Keep it')}</button>
+      <button class="btn primary danger" disabled={info.running} onclick={remove}>{t('Remove')}</button>
     </footer>
   {:else if page === 'working'}
     <main class="center">
-      <h2>{info.mode === 'install' ? (update ? 'Updating…' : 'Installing…') : 'Removing…'}</h2>
+      <h2>{info.mode === 'install' ? (update ? t('Updating…') : t('Installing…')) : t('Removing…')}</h2>
       <div class="meter" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><span style:width="{pct}%"></span></div>
       <p class="muted step">{progress.step}</p>
     </main>
   {:else if page === 'done'}
     <main class="center">
       <span class="ok"><Icon icon={Check} size={22} /></span>
-      <h2>Monoform is {update ? 'updated' : 'installed'}</h2>
-      <p class="muted">Find it in the Start menu{o.desktop ? ' and on the desktop' : ''}. Right-click any file for “Quick peek with Monoform”.</p>
+      <h2>{update ? t('Monoform is updated') : t('Monoform is installed')}</h2>
+      <p class="muted">{o.desktop ? t('Find it in the Start menu and on the desktop.') : t('Find it in the Start menu.')} {t('Right-click any file for “Quick peek with Monoform”.')}</p>
     </main>
     <footer>
-      <button class="btn ghost" onclick={api.quit}>Close</button>
-      <button class="btn primary" onclick={() => void api.launch().then(api.quit)}>Open Monoform</button>
+      <button class="btn ghost" onclick={api.quit}>{t('Close')}</button>
+      <button class="btn primary" onclick={() => void api.launch().then(api.quit)}>{t('Open Monoform')}</button>
     </footer>
   {:else if page === 'removed'}
     <main class="center">
       <span class="ok"><Icon icon={Check} size={22} /></span>
-      <h2>Monoform is removed</h2>
-      <p class="muted">{removeData ? 'Its settings and history are gone too.' : 'Your settings stay, in case you install it again.'}</p>
+      <h2>{t('Monoform is removed')}</h2>
+      <p class="muted">{removeData ? t('Its settings and history are gone too.') : t('Your settings stay, in case you install it again.')}</p>
     </main>
-    <footer><button class="btn primary" onclick={api.quit}>Close</button></footer>
+    <footer><button class="btn primary" onclick={api.quit}>{t('Close')}</button></footer>
   {:else}
     <main class="center">
-      <h2>That didn’t work</h2>
+      <h2>{t('That didn’t work')}</h2>
       <p class="err">{error}</p>
     </main>
     <footer>
-      <button class="btn ghost" onclick={api.quit}>Close</button>
-      <button class="btn primary" onclick={() => (page = 'start')}>Back</button>
+      <button class="btn ghost" onclick={api.quit}>{t('Close')}</button>
+      <button class="btn primary" onclick={() => (page = 'start')}>{t('Back')}</button>
     </footer>
   {/if}
 </div>

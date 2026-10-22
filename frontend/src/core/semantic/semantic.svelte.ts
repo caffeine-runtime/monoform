@@ -8,6 +8,7 @@ import { jobs } from '../jobs.svelte';
 import { settings } from '../settings.svelte';
 import { workspace } from '../tabs.svelte';
 import { basename } from '../paths';
+import { t } from '../i18n';
 import type { EmbedIn, EmbedOut } from './embedWorker';
 
 const DOC_TOKENS = 256;
@@ -63,8 +64,8 @@ class SemanticState {
         const root = workspace.folder;
         const on = this.enabled;
         if (!on || !root) return;
-        const t = setTimeout(() => void this.refresh().then(() => this.indexFolder(root)), 2000);
-        return () => clearTimeout(t);
+        const timer = setTimeout(() => void this.refresh().then(() => this.indexFolder(root)), 2000);
+        return () => clearTimeout(timer);
       });
     });
     setInterval(() => this.maybeReindex(), 60_000);
@@ -90,7 +91,7 @@ class SemanticState {
     this.error = '';
     await this.refresh();
     if (!this.info?.installed) {
-      const done = await jobs.run('Downloading search model', () => api.SemanticDownload());
+      const done = await jobs.run(t('Downloading search model'), () => api.SemanticDownload());
       if (done.cancelled) return false;
       if (done.error) {
         this.error = done.error;
@@ -156,8 +157,8 @@ class SemanticState {
         this.index = { files: pending.indexed, passages: pending.passages, total: pending.total };
         const files = pending.files ?? [];
         if (!files.length || !alive()) return;
-        job ??= jobs.local('Indexing for search by meaning', () => this.indexRun++);
-        job.label(files.some((f) => !f.partial) ? 'Indexing for search by meaning' : 'Indexing for search by meaning (details)');
+        job ??= jobs.local(t('Indexing for search by meaning'), () => this.indexRun++);
+        job.label(files.some((f) => !f.partial) ? t('Indexing for search by meaning') : t('Indexing for search by meaning (details)'));
         this.indexing = { done: 0, total: files.length };
         const t0 = performance.now();
         for (let i = 0; i < files.length; i++) {
@@ -256,7 +257,7 @@ class SemanticState {
             p?.req.reject(new Error(m.message));
           }
         };
-        w.onerror = (e) => reject(new Error(e.message || 'embedding worker failed'));
+        w.onerror = (e) => reject(new Error(e.message || t('embedding worker failed')));
         this.post({ type: 'init', token: sessionToken(), dims: this.info?.dims ?? 256 });
       });
     })();
@@ -287,7 +288,7 @@ class SemanticState {
     this.worker = null;
     this.ready = null;
     this.model = 'unloaded';
-    const err = new Error('search model unloaded');
+    const err = new Error('search model unloaded'); // i18n-ignore: rejects pending requests, not shown
     for (const { req } of this.waiting.values()) req.reject(err);
     this.waiting.clear();
     for (const r of [...this.high, ...this.low]) r.reject(err);

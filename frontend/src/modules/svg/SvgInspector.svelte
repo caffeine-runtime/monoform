@@ -3,6 +3,7 @@
   // every attribute), arrange/duplicate/delete, defaults for new shapes, and
   // an outline of the document to select from.
   import { attr, duplicate, moveSibling, removeEl, setAttr, setAttrs, setContent, type Change, type El } from './svgdoc';
+  import { t } from '../../core/i18n';
 
   let {
     text,
@@ -81,30 +82,30 @@
   const val = (e: Event) => (e.target as HTMLInputElement).value;
 </script>
 
-<aside data-sidepanel class="inspector" aria-label="Properties">
+<aside data-sidepanel class="inspector" aria-label={t('Properties')}>
   {#if el && el.index > 0}
     <div class="head">
       <strong>&lt;{el.tag}&gt;</strong>
-      <input class="input id" placeholder="id" value={attr(el, 'id') ?? ''} aria-label="id" onchange={(e) => set('id', val(e))} />
+      <input class="input id" placeholder="id" value={attr(el, 'id') ?? ''} aria-label="id" onchange={(e) => set('id', val(e))} /><!-- i18n-ignore: the SVG attribute name -->
     </div>
-    <h4>Appearance</h4>
+    <h4>{t('Appearance')}</h4>
     <div class="grid">
-      {#each [['fill', 'Fill'], ['stroke', 'Stroke']] as [k, label] (k)}
+      {#each [['fill', t('Fill'), t('Fill colour')], ['stroke', t('Stroke'), t('Stroke colour')]] as [k, label, colourLabel] (k)}
         {@const v = prop(el, k)}
         <span>{label}</span>
         <span class="row">
-          <input type="color" value={hex(v)} disabled={v === 'none'} aria-label="{label} colour" onchange={(e) => setProp(el, k, val(e))} />
-          <label class="chk"><input type="checkbox" checked={v === 'none'} onchange={(e) => setProp(el, k, (e.target as HTMLInputElement).checked ? 'none' : '#000000')} /> none</label>
+          <input type="color" value={hex(v)} disabled={v === 'none'} aria-label={colourLabel} onchange={(e) => setProp(el, k, val(e))} />
+          <label class="chk"><input type="checkbox" checked={v === 'none'} onchange={(e) => setProp(el, k, (e.target as HTMLInputElement).checked ? 'none' : '#000000')} /> {t('none', {}, 'paint')}</label>
           {#if v && v !== 'none' && !v.startsWith('#')}<span class="muted mono">{v}</span>{/if}
         </span>
       {/each}
-      <label for="sw">Stroke width</label>
+      <label for="sw">{t('Stroke width')}</label>
       <input id="sw" class="input num" type="number" min="0" step="0.5" value={prop(el, 'stroke-width') ?? ''} placeholder="1" onchange={(e) => setProp(el, 'stroke-width', val(e) || null)} />
-      <label for="op">Opacity</label>
+      <label for="op">{t('Opacity')}</label>
       <span class="row"><input id="op" type="range" min="0" max="1" step="0.05" value={prop(el, 'opacity') ?? '1'} onchange={(e) => setProp(el, 'opacity', val(e) === '1' ? null : val(e))} /> {Math.round(+(prop(el, 'opacity') ?? 1) * 100)}%</span>
     </div>
     {#if GEOMETRY[el.tag]}
-      <h4>Geometry</h4>
+      <h4>{t('Geometry')}</h4>
       <div class="grid">
         {#each GEOMETRY[el.tag] as k (k)}
           <label for="g-{k}">{k}</label>
@@ -113,49 +114,49 @@
       </div>
     {/if}
     {#if el.tag === 'path' || el.tag === 'polygon' || el.tag === 'polyline'}
-      <h4>{el.tag === 'path' ? 'Path data (d)' : 'Points'}</h4>
+      <h4>{el.tag === 'path' ? t('Path data (d)') : t('Points')}</h4>
       <textarea class="input code" rows="4" value={attr(el, el.tag === 'path' ? 'd' : 'points') ?? ''} onchange={(e) => set(el.tag === 'path' ? 'd' : 'points', (e.target as HTMLTextAreaElement).value)}></textarea>
     {/if}
     {#if content !== null}
-      <h4>Text</h4>
-      <input class="input" value={content} aria-label="Text" onchange={(e) => {
+      <h4>{t('Text')}</h4>
+      <input class="input" value={content} aria-label={t('Text')} onchange={(e) => {
         const c = setContent(text, el, val(e));
         if (c) onchange([c], el.index);
       }} />
     {/if}
     {#if attr(el, 'transform')}
-      <h4>Transform</h4>
-      <div class="row"><span class="mono small">{attr(el, 'transform')}</span><button class="btn ghost sm" title="Remove the move/scale/rotation" onclick={() => set('transform', null)}>Reset</button></div>
+      <h4>{t('Transform')}</h4>
+      <div class="row"><span class="mono small">{attr(el, 'transform')}</span><button class="btn ghost sm" title={t('Remove the move/scale/rotation')} onclick={() => set('transform', null)}>{t('Reset')}</button></div>
     {/if}
-    <h4>Arrange</h4>
+    <h4>{t('Arrange')}</h4>
     <div class="btns">
-      <button class="btn ghost sm" title="Bring forward (drawn later)" onclick={() => { const c = moveSibling(text, el, els, 1); if (c) onchange(c, null); }}>Forward</button>
-      <button class="btn ghost sm" title="Send backward (drawn earlier)" onclick={() => { const c = moveSibling(text, el, els, -1); if (c) onchange(c, null); }}>Backward</button>
-      <button class="btn ghost sm" title="Duplicate (Ctrl+D)" onclick={() => onchange([duplicate(text, el, new Set(ids))], null)}>Duplicate</button>
-      <button class="btn ghost sm" title="Select the group containing this" disabled={el.parent <= 0} onclick={() => (selected = el.parent)}>Parent</button>
-      <button class="btn ghost sm danger" title="Delete (Del)" onclick={() => onchange([removeEl(text, el)], null)}>Delete</button>
+      <button class="btn ghost sm" title={t('Bring forward (drawn later)')} onclick={() => { const c = moveSibling(text, el, els, 1); if (c) onchange(c, null); }}>{t('Forward')}</button>
+      <button class="btn ghost sm" title={t('Send backward (drawn earlier)')} onclick={() => { const c = moveSibling(text, el, els, -1); if (c) onchange(c, null); }}>{t('Backward')}</button>
+      <button class="btn ghost sm" title={t('Duplicate ({key})', { key: 'Ctrl+D' })} onclick={() => onchange([duplicate(text, el, new Set(ids))], null)}>{t('Duplicate')}</button>
+      <button class="btn ghost sm" title={t('Select the group containing this')} disabled={el.parent <= 0} onclick={() => (selected = el.parent)}>{t('Parent')}</button>
+      <button class="btn ghost sm danger" title={t('Delete ({key})', { key: 'Del' })} onclick={() => onchange([removeEl(text, el)], null)}>{t('Delete')}</button>
     </div>
-    <h4>All attributes</h4>
+    <h4>{t('All attributes')}</h4>
     <div class="grid attrs">
       {#each el.attrs.filter((a) => !SHOWN.has(a.name) && !(GEOMETRY[el.tag] ?? []).includes(a.name)) as a (a.name)}
         <span class="mono small" title={a.name}>{a.name}</span>
-        <span class="row"><input class="input" value={attr(el, a.name) ?? ''} onchange={(e) => set(a.name, val(e))} /><button class="x" title="Remove" onclick={() => set(a.name, null)}>×</button></span>
+        <span class="row"><input class="input" value={attr(el, a.name) ?? ''} onchange={(e) => set(a.name, val(e))} /><button class="x" title={t('Remove')} onclick={() => set(a.name, null)}>×</button></span>
       {/each}
-      <input class="input" placeholder="new attribute" bind:value={newAttr} aria-label="New attribute name" />
-      <button class="btn ghost sm" disabled={!/^[a-zA-Z_:][-\w:.]*$/.test(newAttr)} onclick={() => { const c = setAttrs(text, el, { [newAttr]: '' }); onchange(c, el.index); newAttr = ''; }}>Add</button>
+      <input class="input" placeholder={t('new attribute')} bind:value={newAttr} aria-label={t('New attribute name')} />
+      <button class="btn ghost sm" disabled={!/^[a-zA-Z_:][-\w:.]*$/.test(newAttr)} onclick={() => { const c = setAttrs(text, el, { [newAttr]: '' }); onchange(c, el.index); newAttr = ''; }}>{t('Add')}</button>
     </div>
   {:else}
-    <h4>New shapes</h4>
+    <h4>{t('New shapes')}</h4>
     <div class="grid">
-      <span>Fill</span>
-      <span class="row"><input type="color" value={hex(style.fill)} disabled={style.fill === 'none'} aria-label="Fill colour" oninput={(e) => (style = { ...style, fill: val(e) })} /><label class="chk"><input type="checkbox" checked={style.fill === 'none'} onchange={(e) => (style = { ...style, fill: (e.target as HTMLInputElement).checked ? 'none' : '#4a90d9' })} /> none</label></span>
-      <span>Stroke</span>
-      <span class="row"><input type="color" value={hex(style.stroke)} disabled={style.stroke === 'none'} aria-label="Stroke colour" oninput={(e) => (style = { ...style, stroke: val(e) })} /><label class="chk"><input type="checkbox" checked={style.stroke === 'none'} onchange={(e) => (style = { ...style, stroke: (e.target as HTMLInputElement).checked ? 'none' : '#222222' })} /> none</label></span>
-      <label for="nsw">Stroke width</label>
+      <span>{t('Fill')}</span>
+      <span class="row"><input type="color" value={hex(style.fill)} disabled={style.fill === 'none'} aria-label={t('Fill colour')} oninput={(e) => (style = { ...style, fill: val(e) })} /><label class="chk"><input type="checkbox" checked={style.fill === 'none'} onchange={(e) => (style = { ...style, fill: (e.target as HTMLInputElement).checked ? 'none' : '#4a90d9' })} /> {t('none', {}, 'paint')}</label></span>
+      <span>{t('Stroke')}</span>
+      <span class="row"><input type="color" value={hex(style.stroke)} disabled={style.stroke === 'none'} aria-label={t('Stroke colour')} oninput={(e) => (style = { ...style, stroke: val(e) })} /><label class="chk"><input type="checkbox" checked={style.stroke === 'none'} onchange={(e) => (style = { ...style, stroke: (e.target as HTMLInputElement).checked ? 'none' : '#222222' })} /> {t('none', {}, 'paint')}</label></span>
+      <label for="nsw">{t('Stroke width')}</label>
       <input id="nsw" class="input num" type="number" min="0" step="0.5" value={style.strokeWidth} oninput={(e) => (style = { ...style, strokeWidth: +val(e) })} />
     </div>
     {#if els[0]}
-      <h4>Document</h4>
+      <h4>{t('Document')}</h4>
       <div class="grid">
         {#each ['width', 'height', 'viewBox'] as k (k)}
           <label for="d-{k}">{k}</label>
@@ -164,8 +165,8 @@
       </div>
     {/if}
   {/if}
-  <h4>Outline</h4>
-  <div class="outline" role="tree" aria-label="Elements">
+  <h4>{t('Outline')}</h4>
+  <div class="outline" role="tree" aria-label={t('Elements')}>
     {#each outline as o (o.e.index)}
       <button class="node" class:sel={o.e.index === selected} role="treeitem" aria-selected={o.e.index === selected} style:padding-left="{6 + (o.e.depth - 1) * 12}px" onclick={() => (selected = o.e.index)}>{o.label}</button>
     {/each}

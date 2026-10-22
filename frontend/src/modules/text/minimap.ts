@@ -7,6 +7,7 @@ import { EditorView, ViewPlugin, Decoration, type DecorationSet, type ViewUpdate
 import { RangeSetBuilder, type Extension } from '@codemirror/state';
 import { getIndentUnit, syntaxTree } from '@codemirror/language';
 import { highlightTree, tagHighlighter, tags as t } from '@lezer/highlight';
+import { minimapTitle } from './phrases';
 
 const WIDTH = 96;
 const LINE = 3; // px per line
@@ -33,7 +34,7 @@ class Minimap {
   constructor(private view: EditorView) {
     const c = (this.canvas = document.createElement('canvas'));
     c.className = 'cm-minimap';
-    c.title = 'Minimap — click or drag to scroll';
+    c.title = minimapTitle();
     view.dom.appendChild(c);
     view.scrollDOM.addEventListener('scroll', this.onScroll, { passive: true });
     c.addEventListener('pointerdown', (e) => {

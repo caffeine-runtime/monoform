@@ -12,22 +12,23 @@
   import Merge from '@lucide/svelte/icons/merge';
   import Contrast from '@lucide/svelte/icons/contrast';
   import { menu, ui, type MenuItem } from '../../core/ui.svelte';
+  import { t } from '../../core/i18n';
   import type { Blend, EditorState, ImageEditor } from './editor';
 
   let { editor, es }: { editor: ImageEditor; es: EditorState } = $props();
 
   const BLENDS: { id: Blend; label: string }[] = [
-    { id: 'source-over', label: 'Normal' },
-    { id: 'multiply', label: 'Multiply' },
-    { id: 'screen', label: 'Screen' },
-    { id: 'overlay', label: 'Overlay' },
-    { id: 'darken', label: 'Darken' },
-    { id: 'lighten', label: 'Lighten' },
-    { id: 'soft-light', label: 'Soft light' },
-    { id: 'hard-light', label: 'Hard light' },
-    { id: 'difference', label: 'Difference' },
-    { id: 'color-dodge', label: 'Colour dodge' },
-    { id: 'color-burn', label: 'Colour burn' },
+    { id: 'source-over', label: t('Normal', {}, 'blend') },
+    { id: 'multiply', label: t('Multiply', {}, 'blend') },
+    { id: 'screen', label: t('Screen', {}, 'blend') },
+    { id: 'overlay', label: t('Overlay', {}, 'blend') },
+    { id: 'darken', label: t('Darken', {}, 'blend') },
+    { id: 'lighten', label: t('Lighten', {}, 'blend') },
+    { id: 'soft-light', label: t('Soft light', {}, 'blend') },
+    { id: 'hard-light', label: t('Hard light', {}, 'blend') },
+    { id: 'difference', label: t('Difference', {}, 'blend') },
+    { id: 'color-dodge', label: t('Colour dodge', {}, 'blend') },
+    { id: 'color-burn', label: t('Colour burn', {}, 'blend') },
   ];
 
   const top = $derived([...es.layers].reverse());
@@ -69,15 +70,15 @@
       const k = Math.min(node.width / m.width, node.height / m.height);
       const w = m.width * k;
       const h = m.height * k;
-      const t = document.createElement('canvas');
-      t.width = node.width;
-      t.height = node.height;
-      const tg = t.getContext('2d')!;
+      const tc = document.createElement('canvas');
+      tc.width = node.width;
+      tc.height = node.height;
+      const tg = tc.getContext('2d')!;
       tg.fillStyle = '#fff';
-      tg.fillRect(0, 0, t.width, t.height);
+      tg.fillRect(0, 0, tc.width, tc.height);
       tg.globalCompositeOperation = 'destination-in';
       tg.drawImage(m, (node.width - w) / 2, (node.height - h) / 2, w, h);
-      g.drawImage(t, 0, 0);
+      g.drawImage(tc, 0, 0);
     };
     draw(args);
     return { update: draw };
@@ -96,35 +97,35 @@
     const sel = !!es.pixelSelection;
     const items: MenuItem[] = !active.mask
       ? [
-          { label: 'Show all (paint to hide)', run: () => editor.addMask('show') },
-          { label: 'Hide all (paint to show)', run: () => editor.addMask('hide') },
-          { label: 'Show only the selection', disabled: !sel, run: () => editor.addMask('selection') },
+          { label: t('Show all (paint to hide)'), run: () => editor.addMask('show') },
+          { label: t('Hide all (paint to show)'), run: () => editor.addMask('hide') },
+          { label: t('Show only the selection'), disabled: !sel, run: () => editor.addMask('selection') },
         ]
       : [
-          { label: es.editMask ? 'Paint on the pixels' : 'Paint on the mask', run: () => editor.setEditMask(!es.editMask) },
+          { label: es.editMask ? t('Paint on the pixels') : t('Paint on the mask'), run: () => editor.setEditMask(!es.editMask) },
           { separator: true },
-          { label: sel ? 'Hide the selection' : 'Hide everything', run: () => editor.fillMask(false) },
-          { label: sel ? 'Show the selection' : 'Show everything', run: () => editor.fillMask(true) },
-          { label: 'Invert the mask', run: () => editor.invertMask() },
+          { label: sel ? t('Hide the selection') : t('Hide everything'), run: () => editor.fillMask(false) },
+          { label: sel ? t('Show the selection') : t('Show everything'), run: () => editor.fillMask(true) },
+          { label: t('Invert the mask'), run: () => editor.invertMask() },
           { separator: true },
-          { label: active.maskOn ? 'Turn the mask off' : 'Turn the mask on', run: () => editor.toggleMask() },
-          { label: 'Apply the mask (erase what it hides)', run: () => editor.applyMask() },
-          { label: 'Delete the mask', run: () => editor.deleteMask() },
+          { label: active.maskOn ? t('Turn the mask off') : t('Turn the mask on'), run: () => editor.toggleMask() },
+          { label: t('Apply the mask (erase what it hides)'), run: () => editor.applyMask() },
+          { label: t('Delete the mask'), run: () => editor.deleteMask() },
         ];
     menu.show({ clientX: r.left, clientY: r.top - 4 }, items);
   }
 
   async function rename(id: string, name: string) {
-    const n = await ui.prompt('Layer name', name, 'Rename');
+    const n = await ui.prompt(t('Layer name'), name, t('Rename'));
     if (n && n !== name) editor.setLayerProps(id, { name: n });
   }
 </script>
 
 <div class="layers">
-  <div class="list" role="listbox" aria-label="Layers">
+  <div class="list" role="listbox" aria-label={t('Layers')}>
     {#each top as l (l.id)}
       <div class="layer" class:active={l.id === es.activeId} role="option" aria-selected={l.id === es.activeId} tabindex="-1" onclick={() => editor.setActive(l.id)} ondblclick={() => rename(l.id, l.name)} onkeydown={() => {}}>
-        <button class="icon-btn xs eye" title={l.visible ? 'Hide layer' : 'Show layer'} aria-label={l.visible ? `Hide ${l.name}` : `Show ${l.name}`} onclick={(e) => (e.stopPropagation(), editor.setLayerProps(l.id, { visible: !l.visible }))}>
+        <button class="icon-btn xs eye" title={l.visible ? t('Hide layer') : t('Show layer')} aria-label={l.visible ? t('Hide {name}', { name: l.name }) : t('Show {name}', { name: l.name })} onclick={(e) => (e.stopPropagation(), editor.setLayerProps(l.id, { visible: !l.visible }))}>
           <Icon icon={l.visible ? Eye : EyeOff} size={13} />
         </button>
         <canvas class="thumb checker-sm" class:target={l.id === es.activeId && l.mask && !es.editMask} width="40" height="30" use:thumb={{ id: l.id, v: es.version }} onclick={(e) => pick(e, l.id, false)}></canvas>
@@ -135,28 +136,28 @@
             class:off={!l.maskOn}
             width="40"
             height="30"
-            title="Mask: shown parts are white (click to paint on it, Shift+click to turn it {l.maskOn ? 'off' : 'on'})"
+            title={l.maskOn ? t('Mask: shown parts are white (click to paint on it, Shift+click to turn it off)') : t('Mask: shown parts are white (click to paint on it, Shift+click to turn it on)')}
             use:maskThumb={{ id: l.id, v: es.version }}
             onclick={(e) => pick(e, l.id, true)}
           ></canvas>
         {/if}
-        <span class="name" title="{l.name} (double-click to rename)">{l.name}</span>
+        <span class="name" title={t('{name} (double-click to rename)', { name: l.name })}>{l.name}</span>
         {#if l.opacity < 1}<span class="op">{Math.round(l.opacity * 100)}%</span>{/if}
       </div>
     {/each}
   </div>
   {#if active?.mask && es.editMask}
-    <p class="masknote">Painting the mask: the brush {editor.opts.maskHide ? 'hides' : 'shows'}, the eraser {editor.opts.maskHide ? 'shows' : 'hides'}.</p>
+    <p class="masknote">{editor.opts.maskHide ? t('Painting the mask: the brush hides, the eraser shows.') : t('Painting the mask: the brush shows, the eraser hides.')}</p>
   {/if}
   {#if active}
     <div class="props">
       <label class="row">
-        <span>Opacity</span>
+        <span>{t('Opacity')}</span>
         <input type="range" min="0" max="100" value={Math.round(active.opacity * 100)} oninput={(e) => editor.setLayerProps(active.id, { opacity: +(e.target as HTMLInputElement).value / 100 }, false)} onchange={(e) => editor.setLayerProps(active.id, { opacity: +(e.target as HTMLInputElement).value / 100 })} />
         <span class="num">{Math.round(active.opacity * 100)}%</span>
       </label>
       <label class="row">
-        <span>Blend</span>
+        <span>{t('Blend')}</span>
         <select value={active.blend} onchange={(e) => editor.setLayerProps(active.id, { blend: (e.target as HTMLSelectElement).value as Blend })}>
           {#each BLENDS as b (b.id)}<option value={b.id}>{b.label}</option>{/each}
         </select>
@@ -164,13 +165,13 @@
     </div>
   {/if}
   <div class="actions">
-    <button class="icon-btn" title="New layer" onclick={() => editor.addLayer()}><Icon icon={Plus} size={15} /></button>
-    <button class="icon-btn" title="Duplicate layer" onclick={() => editor.duplicateLayer()}><Icon icon={Copy} size={15} /></button>
-    <button class="icon-btn" title="Move up" disabled={activeIndex >= es.layers.length - 1} onclick={() => editor.moveLayer(es.activeId, 1)}><Icon icon={ArrowUp} size={15} /></button>
-    <button class="icon-btn" title="Move down" disabled={activeIndex <= 0} onclick={() => editor.moveLayer(es.activeId, -1)}><Icon icon={ArrowDown} size={15} /></button>
-    <button class="icon-btn" class:on={active?.mask} title={active?.mask ? 'Mask…' : 'Add a mask: hide parts of the layer without erasing them'} onclick={maskMenu}><Icon icon={Contrast} size={15} /></button>
-    <button class="icon-btn" title="Merge down" disabled={activeIndex <= 0} onclick={() => editor.mergeDown()}><Icon icon={Merge} size={15} /></button>
-    <button class="icon-btn" title="Delete layer" disabled={es.layers.length < 2} onclick={() => editor.deleteLayer()}><Icon icon={Trash} size={15} /></button>
+    <button class="icon-btn" title={t('New layer')} onclick={() => editor.addLayer()}><Icon icon={Plus} size={15} /></button>
+    <button class="icon-btn" title={t('Duplicate layer')} onclick={() => editor.duplicateLayer()}><Icon icon={Copy} size={15} /></button>
+    <button class="icon-btn" title={t('Move up')} disabled={activeIndex >= es.layers.length - 1} onclick={() => editor.moveLayer(es.activeId, 1)}><Icon icon={ArrowUp} size={15} /></button>
+    <button class="icon-btn" title={t('Move down')} disabled={activeIndex <= 0} onclick={() => editor.moveLayer(es.activeId, -1)}><Icon icon={ArrowDown} size={15} /></button>
+    <button class="icon-btn" class:on={active?.mask} title={active?.mask ? t('Mask…') : t('Add a mask: hide parts of the layer without erasing them')} onclick={maskMenu}><Icon icon={Contrast} size={15} /></button>
+    <button class="icon-btn" title={t('Merge down')} disabled={activeIndex <= 0} onclick={() => editor.mergeDown()}><Icon icon={Merge} size={15} /></button>
+    <button class="icon-btn" title={t('Delete layer')} disabled={es.layers.length < 2} onclick={() => editor.deleteLayer()}><Icon icon={Trash} size={15} /></button>
   </div>
 </div>
 

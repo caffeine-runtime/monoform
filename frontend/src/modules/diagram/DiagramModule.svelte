@@ -24,6 +24,7 @@
   import { api, saveFile } from '../../core/backend';
   import { dirname, extname, join, stem } from '../../core/paths';
   import { toastError, ui } from '../../core/ui.svelte';
+  import { t, tn } from '../../core/i18n';
   import TextEditor from '../text/TextEditor.svelte';
   import type { TextController } from '../text/controller';
   import { diagramViews, type ViewMode } from './views';
@@ -100,13 +101,13 @@
       errorLine = 0;
       const nodes = (r as { nodes?: number }).nodes;
       const edges = (r as { edges?: number }).edges;
-      stats = nodes !== undefined ? `${nodes} nodes · ${edges} edges` : '';
-      tab.status = { ...tab.status, type: kind === 'dot' ? 'Graphviz diagram' : 'Mermaid diagram', info: stats };
+      stats = nodes !== undefined ? `${tn('{n} node', '{n} nodes', nodes)} · ${tn('{n} edge', '{n} edges', edges ?? 0)}` : '';
+      tab.status = { ...tab.status, type: kind === 'dot' ? t('Graphviz diagram') : t('Mermaid diagram'), info: stats };
       if (first || fitted) queueMicrotask(fit);
     } else {
-      error = r.error ?? 'Could not draw this diagram.';
+      error = r.error ?? t('Could not draw this diagram.');
       errorLine = r.line ?? 0;
-      tab.status = { ...tab.status, type: kind === 'dot' ? 'Graphviz diagram' : 'Mermaid diagram', info: 'Error' };
+      tab.status = { ...tab.status, type: kind === 'dot' ? t('Graphviz diagram') : t('Mermaid diagram'), info: t('Error') };
     }
   }
 
@@ -181,21 +182,21 @@
 
   async function exportSvg() {
     if (!svg) return;
-    let path = await api.SaveFileDialog('Export SVG', join(dirname(tab.filePath ?? tab.path ?? ''), `${stem(tab.title)}.svg`), [{ name: 'SVG', patterns: '*.svg' }]);
+    let path = await api.SaveFileDialog(t('Export SVG'), join(dirname(tab.filePath ?? tab.path ?? ''), `${stem(tab.title)}.svg`), [{ name: 'SVG', patterns: '*.svg' }]);
     if (!path) return;
     if (extname(path) !== 'svg') path += '.svg';
     try {
       await saveFile(path, svgText());
       const p = path;
-      ui.toast('Exported SVG', 'success', { label: 'Open', run: () => void workspace.openPath(p) });
+      ui.toast(t('Exported SVG'), 'success', { label: t('Open'), run: () => void workspace.openPath(p) });
     } catch (e) {
-      toastError(e, 'Export failed');
+      toastError(e, t('Export failed'));
     }
   }
 
   async function exportPng() {
     if (!svg || !size.w) return;
-    let path = await api.SaveFileDialog('Export PNG', join(dirname(tab.filePath ?? tab.path ?? ''), `${stem(tab.title)}.png`), [{ name: 'PNG', patterns: '*.png' }]);
+    let path = await api.SaveFileDialog(t('Export PNG'), join(dirname(tab.filePath ?? tab.path ?? ''), `${stem(tab.title)}.png`), [{ name: 'PNG', patterns: '*.png' }]);
     if (!path) return;
     if (extname(path) !== 'png') path += '.png';
     await pngTo(path, 2);
@@ -216,13 +217,13 @@
       g.fillRect(0, 0, w, h);
       g.drawImage(img, 0, 0, w, h);
       URL.revokeObjectURL(img.src);
-      const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('encoding failed'))), 'image/png'));
+      const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error(t('encoding failed')))), 'image/png'));
       await saveFile(path, blob);
       const p = path;
-      ui.toast(`Exported ${w} × ${h} PNG`, 'success', { label: 'Open', run: () => void workspace.openPath(p) });
+      ui.toast(t('Exported {w} × {h} PNG', { w: String(w), h: String(h) }), 'success', { label: t('Open'), run: () => void workspace.openPath(p) });
       return true;
     } catch (e) {
-      toastError(e, 'Export failed');
+      toastError(e, t('Export failed'));
       return false;
     }
   }
@@ -263,23 +264,23 @@
 </script>
 
 <div class="toolbar" use:fitBar>
-  <div class="seg" role="group" aria-label="View">
-    <button class="btn ghost" class:on={view === 'source'} onclick={() => diagramViews.get(tab.id)?.set('source')}><Icon icon={Code} size={14} /> Source</button>
-    <button class="btn ghost" class:on={view === 'split'} onclick={() => diagramViews.get(tab.id)?.set('split')}><Icon icon={Columns2} size={14} /> Split</button>
-    <button class="btn ghost" class:on={view === 'preview'} onclick={() => diagramViews.get(tab.id)?.set('preview')}><Icon icon={Eye} size={14} /> Preview</button>
+  <div class="seg" role="group" aria-label={t('View')}>
+    <button class="btn ghost" class:on={view === 'source'} onclick={() => diagramViews.get(tab.id)?.set('source')}><Icon icon={Code} size={14} /> {t('Source')}</button>
+    <button class="btn ghost" class:on={view === 'split'} onclick={() => diagramViews.get(tab.id)?.set('split')}><Icon icon={Columns2} size={14} /> {t('Split', {}, 'view')}</button>
+    <button class="btn ghost" class:on={view === 'preview'} onclick={() => diagramViews.get(tab.id)?.set('preview')}><Icon icon={Eye} size={14} /> {t('Preview')}</button>
   </div>
   <span class="sep"></span>
-  <button class="icon-btn" title="Zoom out" onclick={() => zoomBy(1 / 1.25)} disabled={view === 'source'}><Icon icon={ZoomOut} /></button>
+  <button class="icon-btn" title={t('Zoom out')} onclick={() => zoomBy(1 / 1.25)} disabled={view === 'source'}><Icon icon={ZoomOut} /></button>
   <span class="label zoom">{Math.round(zoom * 100)}%</span>
-  <button class="icon-btn" title="Zoom in" onclick={() => zoomBy(1.25)} disabled={view === 'source'}><Icon icon={ZoomIn} /></button>
-  <button class="icon-btn" title="Fit" onclick={fit} disabled={view === 'source'}><Icon icon={Maximize} /></button>
+  <button class="icon-btn" title={t('Zoom in')} onclick={() => zoomBy(1.25)} disabled={view === 'source'}><Icon icon={ZoomIn} /></button>
+  <button class="icon-btn" title={t('Fit')} onclick={fit} disabled={view === 'source'}><Icon icon={Maximize} /></button>
   {#if theme.resolved === 'dark'}
-    <button class="icon-btn" class:on={theme.darkCanvas} title={theme.darkCanvas ? 'Show the diagram on white' : 'Darken the diagram to match the theme'} aria-pressed={theme.darkCanvas} onclick={() => theme.setDarkCanvas(!theme.darkCanvas)} disabled={view === 'source'}><Icon icon={theme.darkCanvas ? Moon : Sun} /></button>
+    <button class="icon-btn" class:on={theme.darkCanvas} title={theme.darkCanvas ? t('Show the diagram on white') : t('Darken the diagram to match the theme')} aria-pressed={theme.darkCanvas} onclick={() => theme.setDarkCanvas(!theme.darkCanvas)} disabled={view === 'source'}><Icon icon={theme.darkCanvas ? Moon : Sun} /></button>
   {/if}
   <span class="spacer"></span>
   {#if stats}<span class="label">{stats}</span>{/if}
-  <button class="btn ghost" onclick={exportSvg} disabled={!svg}><Icon icon={FileDown} size={14} /> Export SVG…</button>
-  <button class="btn ghost" onclick={exportPng} disabled={!svg}><Icon icon={ImageDown} size={14} /> Export PNG…</button>
+  <button class="btn ghost" onclick={exportSvg} disabled={!svg}><Icon icon={FileDown} size={14} /> {t('Export SVG…')}</button>
+  <button class="btn ghost" onclick={exportPng} disabled={!svg}><Icon icon={ImageDown} size={14} /> {t('Export PNG…')}</button>
 </div>
 <div class="panes" data-view={view}>
   <div class="src" style:flex={view === 'split' ? `0 0 ${ratio * 100}%` : null}><TextEditor {tab} {options} onready={ready} /></div>
@@ -287,7 +288,7 @@
   {#if view !== 'source'}
     <div class="preview">
       {#if error}
-        <button class="err" onclick={() => errorLine && goLine(errorLine)} title={errorLine ? 'Go to the line' : ''}>
+        <button class="err" onclick={() => errorLine && goLine(errorLine)} title={errorLine ? t('Go to the line') : ''}>
           <Icon icon={AlertTriangle} size={14} /><span>{error}</span>
         </button>
       {/if}
@@ -300,7 +301,7 @@
         {:else if !error}
           <div class="empty-state"><span class="spinner"></span></div>
         {/if}
-        {#if busy}<div class="busy"><span class="spinner"></span> Laying out…</div>{/if}
+        {#if busy}<div class="busy"><span class="spinner"></span> {t('Laying out…')}</div>{/if}
       </div>
     </div>
   {/if}

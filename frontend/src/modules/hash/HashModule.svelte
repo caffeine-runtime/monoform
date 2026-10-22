@@ -16,6 +16,7 @@
   import { toastError, ui } from '../../core/ui.svelte';
   import { ALGOS, compare } from './compare';
   import { hashControllers } from './controllers';
+  import { num, t } from '../../core/i18n';
 
   let { tab }: { tab: Tab } = $props();
 
@@ -95,7 +96,7 @@
       return false;
     }
     progress = { done: 0, total: size ?? 0, started: performance.now() };
-    const done = await jobs.run<Record<string, string>>(`Hashing ${basename(f)}`, async () => (jobId = await api.HashFile(f, want)), { onProgress });
+    const done = await jobs.run<Record<string, string>>(t('Hashing {name}', { name: basename(f) }), async () => (jobId = await api.HashFile(f, want)), { onProgress });
     jobId = '';
     progress = null;
     if (f !== file) {
@@ -108,7 +109,7 @@
       return false;
     }
     results = { ...results, ...done.result };
-    tab.status = { ...tab.status, info: `${formatBytes(size ?? 0)} in ${(done.millis / 1000).toFixed(1)} s` };
+    tab.status = { ...tab.status, info: t('{size} in {seconds} s', { size: formatBytes(size ?? 0), seconds: num(done.millis / 1000, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }) };
     return true;
   }
 
@@ -121,7 +122,7 @@
   }
 
   async function pick() {
-    const r = await api.OpenFilesDialog('Choose a file to hash', []);
+    const r = await api.OpenFilesDialog(t('Choose a file to hash'), []);
     if (r?.[0]) setFile(r[0]);
   }
 
@@ -137,7 +138,7 @@
   }
 
   function copy(v: string) {
-    void navigator.clipboard.writeText(v).then(() => ui.toast('Copied', 'success'));
+    void navigator.clipboard.writeText(v).then(() => ui.toast(t('Copied'), 'success'));
   }
 
   async function verify() {
@@ -146,7 +147,7 @@
     error = '';
     const t0 = performance.now();
     progress = { done: 0, total: 0, started: t0 };
-    const done = await jobs.run<unknown>(`Verifying ${tab.title}`, async () => (jobId = await api.HashVerify(tab.filePath!)), {
+    const done = await jobs.run<unknown>(t('Verifying {name}', { name: tab.title }), async () => (jobId = await api.HashVerify(tab.filePath!)), {
       onProgress,
       onData: (r: { name: string; path: string; algo: string; expected: string; actual: string; status: string; error?: string }) => (rows = [...rows, r]),
     });
@@ -168,7 +169,7 @@
       reload: () => (verifyMode ? verify() : run()),
       save: async () => false,
     };
-    tab.status = { ...tab.status, type: verifyMode ? 'Checksum file' : 'Hash' };
+    tab.status = { ...tab.status, type: verifyMode ? t('Checksum file') : t('Hash') };
     if (verifyMode) void verify();
     else if (file) void run();
     return () => {
@@ -189,11 +190,11 @@
             <div class="muted small selectable">{dirname(file)}{size != null ? ` · ${formatBytes(size)}` : ''}</div>
           </div>
         {:else}
-          <div class="fn muted">Drop a file here, or choose one.</div>
+          <div class="fn muted">{t('Drop a file here, or choose one.')}</div>
         {/if}
-        <button class="btn" onclick={pick}>Choose file…</button>
+        <button class="btn" onclick={pick}>{t('Choose file…')}</button>
       </div>
-      <div class="algos" role="group" aria-label="Algorithms">
+      <div class="algos" role="group" aria-label={t('Algorithms')}>
         {#each ALGOS as a (a.id)}
           <label class="algo" class:on={algos.includes(a.id)}>
             <input type="checkbox" checked={algos.includes(a.id)} onchange={() => toggle(a.id)} />
@@ -207,9 +208,9 @@
       <div class="progress">
         <div class="bar"><span style:width="{progress.total ? (progress.done / progress.total) * 100 : 0}%"></span></div>
         <div class="pinfo">
-          <span>{formatBytes(progress.done)} of {formatBytes(progress.total)}</span>
-          <span>{speed ? `${formatBytes(speed)}/s` : ''}{speed && progress.total ? ` · ${Math.max(0, Math.ceil((progress.total - progress.done) / speed))} s left` : ''}</span>
-          <button class="btn ghost" onclick={() => jobs.cancel(jobId)}>Cancel</button>
+          <span>{t('{done} of {total}', { done: formatBytes(progress.done), total: formatBytes(progress.total) })}</span>
+          <span>{speed ? `${formatBytes(speed)}/s` : ''}{speed && progress.total ? ` · ${t('{seconds} s left', { seconds: Math.max(0, Math.ceil((progress.total - progress.done) / speed)) })}` : ''}</span>
+          <button class="btn ghost" onclick={() => jobs.cancel(jobId)}>{t('Cancel')}</button>
         </div>
       </div>
     {/if}
@@ -222,7 +223,7 @@
           <div class="res" class:hit>
             <span class="al">{a.label}</span>
             <code class="digest selectable">{results[a.id]}</code>
-            <button class="icon-btn" title="Copy" onclick={() => copy(results[a.id])}><Icon icon={Copy} size={14} /></button>
+            <button class="icon-btn" title={t('Copy')} onclick={() => copy(results[a.id])}><Icon icon={Copy} size={14} /></button>
           </div>
         {/each}
       </div>
@@ -230,17 +231,17 @@
 
     <div class="card">
       <label class="exp">
-        <span class="muted small">Expected hash (paste to compare)</span>
-        <input class="input mono" bind:value={expected} placeholder="e.g. 3a7bd3e2360a3d…" spellcheck="false" />
+        <span class="muted small">{t('Expected hash (paste to compare)')}</span>
+        <input class="input mono" bind:value={expected} placeholder={t('e.g. {example}', { example: '3a7bd3e2360a3d…' })} spellcheck="false" />
       </label>
       {#if verdict.kind === 'match'}
-        <div class="verdict good"><Icon icon={CircleCheck} size={22} /> Match — the {ALGOS.find((a) => a.id === verdict.algo)?.label} hash is identical.</div>
+        <div class="verdict good"><Icon icon={CircleCheck} size={22} /> {t('Match — the {algorithm} hash is identical.', { algorithm: ALGOS.find((a) => a.id === verdict.algo)?.label ?? '' })}</div>
       {:else if verdict.kind === 'mismatch'}
-        <div class="verdict bad"><Icon icon={CircleX} size={22} /> Mismatch — this file is not the one the expected hash describes.</div>
+        <div class="verdict bad"><Icon icon={CircleX} size={22} /> {t('Mismatch — this file is not the one the expected hash describes.')}</div>
       {:else if verdict.kind === 'invalid'}
-        <div class="verdict unk"><Icon icon={CircleHelp} size={22} /> That doesn't look like an MD5, SHA or BLAKE3 hash.</div>
+        <div class="verdict unk"><Icon icon={CircleHelp} size={22} /> {t("That doesn't look like an MD5, SHA or BLAKE3 hash.")}</div>
       {:else if verdict.kind === 'pending' && file}
-        <div class="verdict unk"><span class="spinner"></span> Computing {ALGOS.find((a) => a.id === verdict.algo)?.label}…</div>
+        <div class="verdict unk"><span class="spinner"></span> {t('Computing {algorithm}…', { algorithm: ALGOS.find((a) => a.id === verdict.algo)?.label ?? '' })}</div>
       {/if}
     </div>
   {:else}
@@ -248,24 +249,24 @@
       <div class="file">
         <span class="fi"><Icon icon={FileIcon} size={20} /></span>
         <div class="fn">
-          <div class="name">Verifying files listed in {tab.title}</div>
-          <div class="muted small">Paths are relative to {dirname(tab.filePath ?? '')}</div>
+          <div class="name">{t('Verifying files listed in {name}', { name: tab.title })}</div>
+          <div class="muted small">{t('Paths are relative to {folder}', { folder: dirname(tab.filePath ?? '') })}</div>
         </div>
-        <button class="btn" disabled={!!jobId} onclick={verify}>Verify again</button>
+        <button class="btn" disabled={!!jobId} onclick={verify}>{t('Verify again')}</button>
       </div>
       {#if progress}
         <div class="progress inline">
           <div class="bar"><span style:width="{progress.total ? (progress.done / progress.total) * 100 : 0}%"></span></div>
-          <button class="btn ghost" onclick={() => jobs.cancel(jobId)}>Cancel</button>
+          <button class="btn ghost" onclick={() => jobs.cancel(jobId)}>{t('Cancel')}</button>
         </div>
       {/if}
       {#if verifyDone}
         <div class="summary">
           <span class="good">{verifyDone.ok} OK</span>
-          {#if verifyDone.bad}<span class="bad">{verifyDone.bad} mismatched</span>{/if}
-          {#if verifyDone.missing}<span class="unk">{verifyDone.missing} missing</span>{/if}
-          {#if verifyDone.errors}<span class="unk">{verifyDone.errors} unreadable</span>{/if}
-          <span class="muted">· {(verifyDone.millis / 1000).toFixed(1)} s</span>
+          {#if verifyDone.bad}<span class="bad">{t('{n} mismatched', { n: verifyDone.bad })}</span>{/if}
+          {#if verifyDone.missing}<span class="unk">{t('{n} missing', { n: verifyDone.missing })}</span>{/if}
+          {#if verifyDone.errors}<span class="unk">{t('{n} unreadable', { n: verifyDone.errors })}</span>{/if}
+          <span class="muted">· {num(verifyDone.millis / 1000, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s</span>
         </div>
       {/if}
       {#if error}<p class="err">{error}</p>{/if}
@@ -278,7 +279,7 @@
           </span>
           <span class="vn selectable" title={r.path}>{relative(dirname(tab.filePath ?? ''), r.path) ?? r.name}</span>
           <span class="va">{r.algo.toUpperCase()}</span>
-          <span class="vt">{r.status === 'ok' ? 'OK' : r.status === 'mismatch' ? 'Mismatch' : r.status === 'missing' ? 'Missing' : (r.error ?? 'Error')}</span>
+          <span class="vt">{r.status === 'ok' ? 'OK' : r.status === 'mismatch' ? t('Mismatch') : r.status === 'missing' ? t('Missing') : (r.error ?? t('Error'))}</span>
         </div>
       {/each}
     </div>

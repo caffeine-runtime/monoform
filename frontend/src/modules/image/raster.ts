@@ -1,6 +1,7 @@
 // Destructive edits on the base raster. Each returns a new canvas so the old
 // one can stay in the undo history.
 import type { Rect } from './geometry';
+import { t } from '../../core/i18n';
 
 export function makeCanvas(w: number, h: number): HTMLCanvasElement {
   const c = document.createElement('canvas');
@@ -118,7 +119,7 @@ export function pixelateRegion(src: HTMLCanvasElement, r: Rect, block?: number):
 }
 
 export function toPNG(c: HTMLCanvasElement): Promise<Blob> {
-  return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('could not encode image'))), 'image/png'));
+  return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error(t('could not encode image')))), 'image/png'));
 }
 
 /** Rotation size: the bounding box of a w×h image rotated by degrees. */

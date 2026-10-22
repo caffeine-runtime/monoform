@@ -32,6 +32,7 @@
   import { tick } from 'svelte';
   import { ui } from '../../core/ui.svelte';
   import { fillSeries, norm, parseTSV, rangeCells, rangeCols, rangeRows, shiftFormula, toTSV, inRange } from './gridOps';
+  import { t } from '../../core/i18n';
 
   let {
     source,
@@ -248,7 +249,7 @@
     if (!editable || !onapply) return false;
     const n = edit.cells.length + edit.clear.reduce((a, r) => a + rangeCells(r), 0);
     if (edit.cells.length > MAX_EDIT_CELLS) {
-      ui.toast(`That’s ${n.toLocaleString()} cells — too many to change at once. Select fewer.`, 'warning');
+      ui.toast(t('That’s {n} cells — too many to change at once. Select fewer.', { n }), 'warning');
       return false;
     }
     busy = true;
@@ -346,7 +347,7 @@
   export function copy(cut = false): Promise<string> {
     const r = { ...sel };
     if (rangeCells(r) > MAX_COPY_CELLS) {
-      ui.toast('That selection is too large to copy. Select fewer cells.', 'warning');
+      ui.toast(t('That selection is too large to copy. Select fewer cells.'), 'warning');
       return Promise.resolve('');
     }
     const text = (async () => {
@@ -395,7 +396,7 @@
     else target = { r0: sel.r0, c0: sel.c0, r1: sel.r0 + h - 1, c1: sel.c0 + w - 1 };
     if (target.c1 >= columns.length) {
       target.c1 = columns.length - 1;
-      ui.toast('Some pasted columns didn’t fit and were left out.', 'info');
+      ui.toast(t('Some pasted columns didn’t fit and were left out.'), 'info');
     }
     const move = !!clip && clip.cut && clip.grid === id;
     const cells: { row: number; col: number; value: string }[] = [];
@@ -506,7 +507,7 @@
     const raw = await block(src, true);
     const existing = await block(to);
     const overwrites = existing.some((r, i) => r.some((v, j) => v !== '' && (copyCells || !inRange(src, to.r0 + i, to.c0 + j))));
-    if (overwrites && !(await ui.confirm('Replace the cells there?', 'The destination already has data.', 'Replace'))) return;
+    if (overwrites && !(await ui.confirm(t('Replace the cells there?'), t('The destination already has data.'), t('Replace')))) return;
     const cells: { row: number; col: number; value: string }[] = [];
     raw.forEach((r, i) =>
       r.forEach((v, j) => cells.push({ row: to.r0 + i, col: to.c0 + j, value: copyCells && formulas ? shiftFormula(v, dRow, dCol) : v })),
@@ -879,6 +880,16 @@
   const cutRect = $derived(cutRange ? rect(cutRange) : null);
   const ghostRect = $derived(ghost ? rect(ghost.range) : null);
   const handleVisible = $derived(editable && !!onapply && sel.r1 <= last + 1 && sel.r1 >= first - 1);
+
+  /** Tooltip of a column header: what clicking it does. */
+  function headerTitle(name: string): string {
+    const sort = !!onsort;
+    const rename = !!(editable && onheaderedit);
+    if (sort && rename) return t('{name} — click to select the column, ▾ to sort, double-click to rename', { name });
+    if (sort) return t('{name} — click to select the column, ▾ to sort', { name });
+    if (rename) return t('{name} — click to select the column, double-click to rename', { name });
+    return t('{name} — click to select the column', { name });
+  }
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
@@ -910,7 +921,7 @@
       <div
         class="num corner"
         style:width="{NUM_W}px"
-        title="Select all"
+        title={t('Select all')}
         onpointerdown={(e) => {
           e.stopPropagation();
           select({ r0: 0, c0: 0, r1: rowCount - 1, c1: columns.length - 1 }, undefined, false);
@@ -925,7 +936,7 @@
           class:fullcol={sel.r0 === 0 && sel.r1 === rowCount - 1 && i >= sel.c0 && i <= sel.c1}
           style:width="{c.width}px"
           role="columnheader"
-          title="{c.name} — click to select the column{onsort ? ', ▾ to sort' : ''}{editable && onheaderedit ? ', double-click to rename' : ''}"
+          title={headerTitle(c.name)}
           onpointerdown={(e) => {
             e.stopPropagation();
             colHeaderDown(e, i);
@@ -937,7 +948,7 @@
             <button
               class="sortbtn"
               class:on={sortCol === i}
-              title="Sort by {c.name}"
+              title={t('Sort by {column}', { column: c.name })}
               onpointerdown={(e) => e.stopPropagation()}
               onclick={(e) => {
                 e.stopPropagation();
@@ -981,7 +992,7 @@
         <div class="ghost" class:fill={ghost?.kind === 'fill'} style:top="{ghostRect.top}px" style:left="{ghostRect.left}px" style:width="{ghostRect.width}px" style:height="{ghostRect.height}px"></div>
       {/if}
       {#if handleVisible}
-        <div class="handle" title="Drag to fill" style:top="{(sel.r1 + 1) * ROW - 4}px" style:left="{colLeft(sel.c1 + 1) - 4}px"></div>
+        <div class="handle" title={t('Drag to fill')} style:top="{(sel.r1 + 1) * ROW - 4}px" style:left="{colLeft(sel.c1 + 1) - 4}px"></div>
       {/if}
     </div>
     {#if editing}

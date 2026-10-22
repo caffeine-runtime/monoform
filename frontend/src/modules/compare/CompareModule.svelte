@@ -18,6 +18,7 @@
   import { basename, extname } from '../../core/paths';
   import { workspace, type Tab } from '../../core/tabs.svelte';
   import { toastError } from '../../core/ui.svelte';
+  import { num, t, tn } from '../../core/i18n';
   import { DiffClient } from './diffClient';
   import { fold, type DataChange, type RowChange, type Stats } from './diff';
   import TextDiff from './TextDiff.svelte';
@@ -115,7 +116,7 @@
       res = null;
       return;
     }
-    busy = 'Comparing…';
+    busy = t('Comparing…');
     try {
       const urls = [new URL(fileUrl(a), location.href).href, new URL(fileUrl(b), location.href).href];
       res = await client.call<TextResult | BinResult>({ type: 'text', urls, exts: [extname(a), extname(b)], kind, ignoreWs, normalize, keyCol });
@@ -134,9 +135,9 @@
     const s = text?.stats;
     tab.status = {
       ...tab.status,
-      type: 'Compare',
+      type: t('Compare'),
       position: undefined,
-      info: s ? (text!.hunks.length ? `${text!.hunks.length} change${text!.hunks.length === 1 ? '' : 's'}` : 'No differences') : imgResult ? `${imgResult.changed.toLocaleString()} pixels differ` : undefined,
+      info: s ? (text!.hunks.length ? tn('{n} change', '{n} changes', text!.hunks.length) : t('No differences')) : imgResult ? tn('{n} pixel differs', '{n} pixels differ', imgResult.changed) : undefined,
     };
   }
 
@@ -148,7 +149,7 @@
   }
 
   async function choose(side: 'a' | 'b') {
-    const r = await api.OpenFilesDialog(`Choose the ${side === 'a' ? 'left' : 'right'} file`, []);
+    const r = await api.OpenFilesDialog(side === 'a' ? t('Choose the left file') : t('Choose the right file'), []);
     if (!r?.[0]) return;
     if (side === 'a') {
       a = r[0];
@@ -164,7 +165,7 @@
   }
 
   const fmtVal = (v: unknown) => (v === undefined ? '' : typeof v === 'string' ? JSON.stringify(v) : JSON.stringify(v) ?? String(v));
-  const mb = (n: number) => (n >= 1 << 20 ? `${(n / (1 << 20)).toFixed(1)} MB` : n >= 1024 ? `${(n / 1024).toFixed(1)} KB` : `${n} bytes`);
+  const mb = (n: number) => (n >= 1 << 20 ? `${num(n / (1 << 20), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MB` : n >= 1024 ? `${num(n / 1024, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} KB` : tn('{n} byte', '{n} bytes', n));
 
   compareViews.set(tab.id, { next: () => go(1), prev: () => go(-1), swap, refresh: () => void run() });
 
@@ -200,29 +201,29 @@
 </script>
 
 <div class="toolbar" use:fitBar>
-  <button class="file" title="{a} — click to choose another file" onclick={() => choose('a')}><span class="tag">A</span>{a ? basename(a) : 'Choose a file…'}<Icon icon={FolderOpen} size={13} /></button>
-  <button class="icon-btn" title="Swap left and right" onclick={swap}><Icon icon={ArrowLeftRight} /></button>
-  <button class="file" title="{b} — click to choose another file" onclick={() => choose('b')}><span class="tag">B</span>{b ? basename(b) : 'Choose a file…'}<Icon icon={FolderOpen} size={13} /></button>
+  <button class="file" title={t('{name} — click to choose another file', { name: a })} onclick={() => choose('a')}><span class="tag">A</span>{a ? basename(a) : t('Choose a file…')}<Icon icon={FolderOpen} size={13} /></button>
+  <button class="icon-btn" title={t('Swap left and right')} onclick={swap}><Icon icon={ArrowLeftRight} /></button>
+  <button class="file" title={t('{name} — click to choose another file', { name: b })} onclick={() => choose('b')}><span class="tag">B</span>{b ? basename(b) : t('Choose a file…')}<Icon icon={FolderOpen} size={13} /></button>
   <span class="sep"></span>
   {#if kind === 'image'}
-    <div class="seg" role="radiogroup" aria-label="Image view">
-      {#each [['side', 'Side by side'], ['swipe', 'Swipe'], ['onion', 'Onion skin'], ['diff', 'Difference']] as [m, l] (m)}
+    <div class="seg" role="radiogroup" aria-label={t('Image view')}>
+      {#each [['side', t('Side by side')], ['swipe', t('Swipe')], ['onion', t('Onion skin')], ['diff', t('Difference')]] as [m, l] (m)}
         <button role="radio" aria-checked={imageMode === m} class:on={imageMode === m} onclick={() => (imageMode = m as never)}>{l}</button>
       {/each}
     </div>
-    {#if imageMode === 'diff'}<label class="opt" title="Ignore differences up to this much per colour channel (0–255): JPEG noise, slight colour shifts">Tolerance <input type="range" min="0" max="64" bind:value={tol} /><span class="v">{tol}</span></label>{/if}
+    {#if imageMode === 'diff'}<label class="opt" title={t('Ignore differences up to this much per colour channel (0–255): JPEG noise, slight colour shifts')}>{t('Tolerance')} <input type="range" min="0" max="64" bind:value={tol} /><span class="v">{tol}</span></label>{/if}
   {:else}
     {#if (kind === 'data' || kind === 'csv') && text}
-      <div class="seg" role="radiogroup" aria-label="View">
-        <button role="radio" aria-checked={view === 'side'} class:on={view === 'side'} onclick={() => (view = 'side')}><Icon icon={Columns2} size={14} /> Side by side</button>
-        <button role="radio" aria-checked={view === 'changes'} class:on={view === 'changes'} onclick={() => (view = 'changes')}><Icon icon={Diff} size={14} /> Changes ({(text.changes ?? text.rowChanges ?? []).length})</button>
+      <div class="seg" role="radiogroup" aria-label={t('View')}>
+        <button role="radio" aria-checked={view === 'side'} class:on={view === 'side'} onclick={() => (view = 'side')}><Icon icon={Columns2} size={14} /> {t('Side by side')}</button>
+        <button role="radio" aria-checked={view === 'changes'} class:on={view === 'changes'} onclick={() => (view = 'changes')}><Icon icon={Diff} size={14} /> {t('Changes ({n})', { n: (text.changes ?? text.rowChanges ?? []).length })}</button>
       </div>
     {/if}
-    <label class="opt" title="Hide unchanged lines (3 lines of context around each change)"><input type="checkbox" bind:checked={onlyChanges} /> Only changes</label>
-    <label class="opt" title="Treat lines that differ only in spaces and indentation as equal"><input type="checkbox" bind:checked={ignoreWs} onchange={run} /> Ignore whitespace</label>
-    {#if kind === 'data'}<label class="opt" title="Compare pretty-printed with keys sorted, so formatting and key order don't count"><input type="checkbox" bind:checked={normalize} onchange={run} /> Normalise</label>{/if}
+    <label class="opt" title={t('Hide unchanged lines (3 lines of context around each change)')}><input type="checkbox" bind:checked={onlyChanges} /> {t('Only changes')}</label>
+    <label class="opt" title={t('Treat lines that differ only in spaces and indentation as equal')}><input type="checkbox" bind:checked={ignoreWs} onchange={run} /> {t('Ignore whitespace')}</label>
+    {#if kind === 'data'}<label class="opt" title={t("Compare pretty-printed with keys sorted, so formatting and key order don't count")}><input type="checkbox" bind:checked={normalize} onchange={run} /> {t('Normalise')}</label>{/if}
     {#if kind === 'csv' && text?.header}
-      <label class="opt" title="Column that identifies a row (rows are matched by it, so reordering doesn't count as a change)">Key
+      <label class="opt" title={t("Column that identifies a row (rows are matched by it, so reordering doesn't count as a change)")}>{t('Key')}
         <select class="input" bind:value={keyCol} onchange={run}>{#each text.header as h, i (i)}<option value={i}>{h}</option>{/each}</select>
       </label>
     {/if}
@@ -231,57 +232,57 @@
   {#if busy}<span class="label"><span class="spinner inline"></span> {busy}</span>{/if}
   {#if text}
     <span class="label stat">
-      {#if text.identicalBytes}<b class="same">Identical</b>
-      {:else if !text.hunks.length}<b class="same">No differences{ignoreWs ? ' (ignoring whitespace)' : normalize && kind === 'data' ? ' in content' : ''}</b>
-      {:else}<span class="add">+{text.stats.added}</span> <span class="del">−{text.stats.removed}</span> <span class="chg">~{text.stats.changed}</span> · {current >= 0 ? `${current + 1} of ` : ''}{text.hunks.length} change{text.hunks.length === 1 ? '' : 's'}{/if}
+      {#if text.identicalBytes}<b class="same">{t('Identical')}</b>
+      {:else if !text.hunks.length}<b class="same">{ignoreWs ? t('No differences (ignoring whitespace)') : normalize && kind === 'data' ? t('No differences in content') : t('No differences')}</b>
+      {:else}<span class="add">+{text.stats.added}</span> <span class="del">−{text.stats.removed}</span> <span class="chg">~{text.stats.changed}</span> · {current >= 0 ? tn('{current} of {n} change', '{current} of {n} changes', text.hunks.length, { current: current + 1 }) : tn('{n} change', '{n} changes', text.hunks.length)}{/if}
     </span>
-    <button class="icon-btn" title="Previous change ({formatShortcut('Shift+F7')})" disabled={!text.hunks.length} onclick={() => go(-1)}><Icon icon={ChevronUp} /></button>
-    <button class="icon-btn" title="Next change ({formatShortcut('F7')})" disabled={!text.hunks.length} onclick={() => go(1)}><Icon icon={ChevronDown} /></button>
+    <button class="icon-btn" title={t('Previous change ({shortcut})', { shortcut: formatShortcut('Shift+F7') })} disabled={!text.hunks.length} onclick={() => go(-1)}><Icon icon={ChevronUp} /></button>
+    <button class="icon-btn" title={t('Next change ({shortcut})', { shortcut: formatShortcut('F7') })} disabled={!text.hunks.length} onclick={() => go(1)}><Icon icon={ChevronDown} /></button>
   {:else if imgResult && kind === 'image'}
-    <span class="label stat">{imgResult.changed ? `${imgResult.changed.toLocaleString()} pixels differ (${((imgResult.changed / imgResult.total) * 100).toFixed(2)} %)` : 'Pixel-identical'}{imgResult.sizes[0] !== imgResult.sizes[1] ? ` · sizes ${imgResult.sizes[0]} vs ${imgResult.sizes[1]}` : ''}</span>
+    <span class="label stat">{imgResult.changed ? tn('{n} pixel differs ({pct} %)', '{n} pixels differ ({pct} %)', imgResult.changed, { pct: num((imgResult.changed / imgResult.total) * 100, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }) : t('Pixel-identical')}{imgResult.sizes[0] !== imgResult.sizes[1] ? ' · ' + t('sizes {a} vs {b}', { a: imgResult.sizes[0], b: imgResult.sizes[1] }) : ''}</span>
   {/if}
-  <button class="icon-btn" title="Compare again (after the files changed)" onclick={run}><Icon icon={RefreshCw} /></button>
+  <button class="icon-btn" title={t('Compare again (after the files changed)')} onclick={run}><Icon icon={RefreshCw} /></button>
 </div>
 
 <div class="body">
   {#if !a || !b}
-    <div class="empty-state">Choose two files to compare.</div>
+    <div class="empty-state">{t('Choose two files to compare.')}</div>
   {:else if error}
     <div class="empty-state">{error}</div>
   {:else if kind === 'image'}
     <ImageDiff {client} srcA={fileUrl(a)} srcB={fileUrl(b)} mode={imageMode} {tol} onresult={(r) => ('error' in r ? (error = r.error) : ((imgResult = r), status()))} />
   {:else if res?.kind === 'binary'}
     <div class="empty-state binary">
-      {#if res.firstDiff < 0}<p><b>The files are identical</b> ({mb(res.sizes[0])}).</p>
-      {:else}<p><b>The files differ</b> — first at byte {res.firstDiff.toLocaleString()} (0x{res.firstDiff.toString(16).toUpperCase()}).</p>
-        <p>Sizes: {mb(res.sizes[0])} and {mb(res.sizes[1])}.</p>{/if}
-      <p class="muted">These aren't text files, so they're compared byte by byte.</p>
+      {#if res.firstDiff < 0}<p><b>{t('The files are identical')}</b> ({mb(res.sizes[0])}).</p>
+      {:else}<p><b>{t('The files differ')}</b> {t('— first at byte {offset} ({hex}).', { offset: res.firstDiff, hex: '0x' + res.firstDiff.toString(16).toUpperCase() })}</p>
+        <p>{t('Sizes: {a} and {b}.', { a: mb(res.sizes[0]), b: mb(res.sizes[1]) })}</p>{/if}
+      <p class="muted">{t("These aren't text files, so they're compared byte by byte.")}</p>
     </div>
   {:else if text}
-    {#if text.parseError}<div class="banner"><span class="grow">Couldn't read the data ({text.parseError}); comparing the text instead.</span></div>{/if}
+    {#if text.parseError}<div class="banner"><span class="grow">{t("Couldn't read the data ({error}); comparing the text instead.", { error: text.parseError })}</span></div>{/if}
     {#if view === 'changes' && text.changes}
       <div class="changes">
-        {#if !text.changes.length}<div class="empty-state">No differences in content.</div>{/if}
+        {#if !text.changes.length}<div class="empty-state">{t('No differences in content.')}</div>{/if}
         <table>
-          <thead><tr><th>Path</th><th>A</th><th>B</th></tr></thead>
+          <thead><tr><th>{t('Path')}</th><th>A</th><th>B</th></tr></thead>
           <tbody>
             {#each text.changes.slice(0, 5000) as c (c.path)}
               <tr class={c.kind}><td class="path">{c.path}</td><td>{fmtVal(c.a)}</td><td>{fmtVal(c.b)}</td></tr>
             {/each}
           </tbody>
         </table>
-        {#if text.changes.length > 5000}<p class="muted">Showing the first 5,000 of {text.changes.length.toLocaleString()} changes.</p>{/if}
+        {#if text.changes.length > 5000}<p class="muted">{t('Showing the first {max} of {n} changes.', { max: 5000, n: text.changes.length })}</p>{/if}
       </div>
     {:else if view === 'changes' && text.rowChanges}
       <div class="changes">
-        {#if !text.rowChanges.length}<div class="empty-state">No differences in rows (matched by {text.header?.[keyCol] ?? 'the first column'}).</div>{/if}
+        {#if !text.rowChanges.length}<div class="empty-state">{t('No differences in rows (matched by {column}).', { column: text.header?.[keyCol] ?? t('the first column') })}</div>{/if}
         <table>
-          <thead><tr><th>{text.header?.[keyCol] ?? 'Key'}</th><th>Change</th><th>Details</th></tr></thead>
+          <thead><tr><th>{text.header?.[keyCol] ?? t('Key')}</th><th>{t('Change', {}, 'noun')}</th><th>{t('Details')}</th></tr></thead>
           <tbody>
             {#each text.rowChanges.slice(0, 5000) as c, i (i)}
               <tr class={c.kind}>
                 <td class="path">{c.key}</td>
-                <td>{c.kind === 'added' ? `added (row ${c.rb + 1} in B)` : c.kind === 'removed' ? `removed (row ${c.ra + 1} in A)` : `changed (row ${c.ra + 1} → ${c.rb + 1})`}</td>
+                <td>{c.kind === 'added' ? t('added (row {row} in B)', { row: c.rb + 1 }) : c.kind === 'removed' ? t('removed (row {row} in A)', { row: c.ra + 1 }) : t('changed (row {a} → {b})', { a: c.ra + 1, b: c.rb + 1 })}</td>
                 <td>{#if c.cells}{#each c.cells as cell (cell.col)}<span class="cell"><b>{cell.name}:</b> <s>{cell.a}</s> → {cell.b}</span>{/each}{/if}</td>
               </tr>
             {/each}

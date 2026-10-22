@@ -14,6 +14,7 @@
 </script>
 
 <script lang="ts">
+  import { t } from '../core/i18n';
   // A draggable divider between the two halves of an editor's split view
   // (source | preview). The first half gets `ratio` of the width; drag,
   // arrow keys or double-click (back to 50 %) change it.
@@ -71,9 +72,9 @@
   aria-valuemin={MIN * 100}
   aria-valuemax={MAX * 100}
   aria-valuenow={Math.round(ratio * 100)}
-  aria-label="Resize editor and preview"
+  aria-label={t('Resize editor and preview')}
   tabindex="0"
-  title="Drag to resize · double-click: 50 / 50"
+  title={t('Drag to resize · double-click: 50 / 50')}
   onpointerdown={down}
   onpointermove={move}
   onpointerup={up}

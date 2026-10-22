@@ -4,6 +4,8 @@
 // `filter` isn't available in every webview, and per-pixel JavaScript would
 // block the UI on large photos.
 
+import { t } from '../../core/i18n';
+
 export interface Adjustments {
   exposure: number; // stops, -2..2
   brightness: number; // -1..1
@@ -30,13 +32,13 @@ export interface Adjustments {
 
 export type BlurType = 'gaussian' | 'motion' | 'zoom' | 'spin' | 'lens' | 'tiltshift' | 'surface';
 export const BLUR_TYPES: { id: BlurType; label: string; help: string }[] = [
-  { id: 'gaussian', label: 'Gaussian', help: 'Soft, even blur' },
-  { id: 'motion', label: 'Motion', help: 'Streaks along a direction, like a moving camera' },
-  { id: 'zoom', label: 'Zoom', help: 'Radial streaks from the centre point, like zooming during the exposure' },
-  { id: 'spin', label: 'Spin', help: 'Circular blur around the centre point' },
-  { id: 'lens', label: 'Lens', help: 'Round out-of-focus blur with bright bokeh highlights' },
-  { id: 'tiltshift', label: 'Tilt-shift', help: 'Sharp band, increasingly blurred above and below (miniature look)' },
-  { id: 'surface', label: 'Surface', help: 'Smooths surfaces and noise but keeps edges sharp' },
+  { id: 'gaussian', label: t('Gaussian'), help: t('Soft, even blur') },
+  { id: 'motion', label: t('Motion', {}, 'blur'), help: t('Streaks along a direction, like a moving camera') },
+  { id: 'zoom', label: t('Zoom', {}, 'blur'), help: t('Radial streaks from the centre point, like zooming during the exposure') },
+  { id: 'spin', label: t('Spin', {}, 'blur'), help: t('Circular blur around the centre point') },
+  { id: 'lens', label: t('Lens', {}, 'blur'), help: t('Round out-of-focus blur with bright bokeh highlights') },
+  { id: 'tiltshift', label: t('Tilt-shift'), help: t('Sharp band, increasingly blurred above and below (miniature look)') },
+  { id: 'surface', label: t('Surface', {}, 'blur'), help: t('Smooths surfaces and noise but keeps edges sharp') },
 ];
 
 export const NEUTRAL: Adjustments = {
@@ -212,7 +214,7 @@ function compile(gl: WebGL2RenderingContext, type: number, src: string): WebGLSh
   const s = gl.createShader(type)!;
   gl.shaderSource(s, src);
   gl.compileShader(s);
-  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(`shader: ${gl.getShaderInfoLog(s)}`);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(`shader: ${gl.getShaderInfoLog(s)}`); // i18n-ignore: GPU compiler log
   return s;
 }
 
@@ -222,7 +224,7 @@ function program(gl: WebGL2RenderingContext, frag: string): WebGLProgram {
   gl.attachShader(p, compile(gl, gl.FRAGMENT_SHADER, frag));
   gl.bindAttribLocation(p, 0, 'p');
   gl.linkProgram(p);
-  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(`program: ${gl.getProgramInfoLog(p)}`);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(`program: ${gl.getProgramInfoLog(p)}`); // i18n-ignore: GPU compiler log
   return p;
 }
 
@@ -255,7 +257,7 @@ export class Adjuster {
     this.canvas.width = this.w;
     this.canvas.height = this.h;
     const gl = this.canvas.getContext('webgl2', { premultipliedAlpha: false, preserveDrawingBuffer: true, antialias: false });
-    if (!gl) throw new Error('WebGL2 is not available');
+    if (!gl) throw new Error(t('WebGL2 is not available'));
     this.gl = gl;
     this.main = program(gl, MAIN);
     this.blur = program(gl, BLUR);

@@ -14,9 +14,9 @@
 export type Lang = 'en' | 'pl' | 'es';
 
 export const LANGUAGES: readonly { id: Lang; name: string }[] = [
-  { id: 'en', name: 'English' },
-  { id: 'pl', name: 'Polski' },
-  { id: 'es', name: 'Español' },
+  { id: 'en', name: 'English' }, // i18n-ignore: each language by its own name
+  { id: 'pl', name: 'Polski' }, // i18n-ignore
+  { id: 'es', name: 'Español' }, // i18n-ignore
 ];
 
 type Plural = Partial<Record<Intl.LDMLPluralRule, string>>;

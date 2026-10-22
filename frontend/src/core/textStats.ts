@@ -3,6 +3,7 @@
 // each Chinese/Japanese character counts as a word, and characters are
 // everything but line breaks. For Markdown the markup that isn't read is left
 // out: front matter, link targets, and the # of headings.
+import { tn } from './i18n';
 
 const CJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/gu;
 const WORD = /[\p{L}\p{N}\p{M}_]+(?:['’.\-][\p{L}\p{N}\p{M}_]+)*/gu;
@@ -43,11 +44,9 @@ export function countMarkdown(md: string): Counts {
 
 /** "1,234 words · 5,678 characters" (or "12 of 1,234 words · …" for a selection). */
 export function formatCounts(all: Counts, sel?: Counts | null): string {
-  const n = (v: number) => v.toLocaleString();
-  const w = (v: number) => (v === 1 ? 'word' : 'words');
-  const c = (v: number) => (v === 1 ? 'character' : 'characters');
-  if (sel && (sel.words || sel.chars)) return `${n(sel.words)} of ${n(all.words)} ${w(all.words)} · ${n(sel.chars)} of ${n(all.chars)} ${c(all.chars)}`;
-  return `${n(all.words)} ${w(all.words)} · ${n(all.chars)} ${c(all.chars)}`;
+  if (sel && (sel.words || sel.chars))
+    return `${tn('{sel} of {n} word', '{sel} of {n} words', all.words, { sel: sel.words })} · ${tn('{sel} of {n} character', '{sel} of {n} characters', all.chars, { sel: sel.chars })}`;
+  return `${tn('{n} word', '{n} words', all.words)} · ${tn('{n} character', '{n} characters', all.chars)}`;
 }
 
 export interface OutlineItem {
