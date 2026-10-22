@@ -21,6 +21,8 @@ export interface DocContext {
   partUrl: (entry: string) => string;
   /** List definitions (numbering.xml) and the lists paragraph styles turn on. */
   numbering?: Numbering;
+  /** The raw styles.xml (new heading / title styles are added to it). */
+  stylesXml?: string;
 }
 
 /** The deepest list level Word has. */
@@ -40,6 +42,9 @@ export class DocModel {
   private atoms: Element[] = []; // atom id -> standalone w:r
   styleIdByName = new Map<string, string>();
   readonly numbering: Numbering;
+  private stylesDoc: XMLDocument | null = null;
+  /** True once the editor added a paragraph style (styles.xml must be written). */
+  stylesChanged = false;
 
   constructor(
     documentXml: string,
@@ -409,20 +414,23 @@ export class DocModel {
     // browser created by splitting it with Enter).
     const pPrOrig = child(orig, 'pPr');
     let pPr = pPrOrig ? (pPrOrig.cloneNode(true) as Element) : null;
-    const wantLevel = /^H([1-6])$/.exec(el.tagName)?.[1];
-    const origLevel = orig ? /^heading\s*(\d)/.exec(this.paragraphStyle(orig))?.[1] : undefined;
-    const isTitle = orig ? this.paragraphStyle(orig) === 'title' : false;
-    if ((wantLevel ?? '') !== (origLevel ?? '') && !(isTitle && wantLevel === '1')) {
+    // Headings and the title are styles; a plain paragraph keeps any other style it had.
+    const level = /^H([1-6])$/.exec(el.tagName)?.[1];
+    const want = level ? (el.classList.contains('title') ? 'title' : `heading ${level}`) : '';
+    const had = orig ? this.paragraphStyle(orig) : '';
+    const hadHeading = /^(heading\s*\d|title)$/.test(had);
+    if (want !== had && (want || hadHeading)) {
       pPr ??= xml.createElementNS(W, 'w:pPr');
       let ps = child(pPr, 'pStyle');
-      if (wantLevel) {
+      if (want) {
         if (!ps) {
           ps = xml.createElementNS(W, 'w:pStyle');
           pPr.insertBefore(ps, pPr.firstChild);
         }
-        ps.setAttributeNS(W, 'w:val', this.styleIdByName.get(`heading ${wantLevel}`) ?? `Heading${wantLevel}`);
+        ps.setAttributeNS(W, 'w:val', this.ensureStyle(want));
       } else if (ps) pPr.removeChild(ps);
     }
+    pPr = this.serializeParagraphFormat(el, pPr);
     pPr = this.serializeList(el, pPr, orig);
     if (pPr) p.append(pPr);
     // Bookmarks belong to the first copy of a split paragraph.
@@ -489,6 +497,85 @@ export class DocModel {
     return p;
   }
 
+  /** Alignment, left indent and line spacing, where the editor changed them from what the paragraph showed. */
+  private serializeParagraphFormat(el: HTMLElement, pPr: Element | null): Element | null {
+    const shown = el.ownerDocument.createElement('p');
+    const origPPr = child(this.node(el.dataset.p), 'pPr');
+    if (origPPr) applyParagraphStyle(shown, origPPr);
+    const xml = this.xml;
+    const ensure = () => (pPr ??= xml.createElementNS(W, 'w:pPr'));
+    const align = el.style.textAlign;
+    if (align !== shown.style.textAlign) {
+      const old = child(ensure(), 'jc');
+      if (old) pPr!.removeChild(old);
+      const jc = { left: 'left', start: 'left', center: 'center', right: 'right', end: 'right', justify: 'both' }[align];
+      if (jc) {
+        const e = xml.createElementNS(W, 'w:jc');
+        e.setAttributeNS(W, 'w:val', jc);
+        insertPPr(pPr!, e);
+      }
+    }
+    if (!el.classList.contains('li') && !el.dataset.listIndent && el.style.marginLeft !== shown.style.marginLeft) {
+      let ind = child(ensure(), 'ind');
+      const px = parseFloat(el.style.marginLeft) || 0;
+      if (px > 0) {
+        if (!ind) insertPPr(pPr!, (ind = xml.createElementNS(W, 'w:ind')));
+        ind.removeAttributeNS(W, 'start');
+        ind.setAttributeNS(W, 'w:left', String(Math.round(px * 15)));
+      } else if (ind) {
+        ind.removeAttributeNS(W, 'left');
+        ind.removeAttributeNS(W, 'start');
+        if (!ind.attributes.length) pPr!.removeChild(ind);
+      }
+    }
+    if (el.style.lineHeight !== shown.style.lineHeight) {
+      let sp = child(ensure(), 'spacing');
+      const v = Number(el.style.lineHeight);
+      if (v > 0) {
+        if (!sp) insertPPr(pPr!, (sp = xml.createElementNS(W, 'w:spacing')));
+        sp.setAttributeNS(W, 'w:line', String(Math.round(v * 240)));
+        sp.setAttributeNS(W, 'w:lineRule', 'auto');
+      } else if (sp) {
+        sp.removeAttributeNS(W, 'line');
+        sp.removeAttributeNS(W, 'lineRule');
+        if (!sp.attributes.length) pPr!.removeChild(sp);
+      }
+    }
+    return pPr;
+  }
+
+  /** The id of a paragraph style by name ("heading 4", "title"), added to styles.xml when the document lacks it. */
+  ensureStyle(name: string): string {
+    const have = this.styleIdByName.get(name);
+    if (have) return have;
+    const level = /^heading (\d)$/.exec(name)?.[1];
+    const id = level ? `Heading${level}` : 'Title';
+    this.stylesDoc ??= new DOMParser().parseFromString(this.ctx.stylesXml?.trim() ? this.ctx.stylesXml : `<w:styles xmlns:w="${W}"/>`, 'application/xml');
+    const root = this.stylesDoc.documentElement;
+    const mk = (tag: string, attrs: Record<string, string> = {}, ...kids: Element[]) => {
+      const e = this.stylesDoc!.createElementNS(W, `w:${tag}`);
+      for (const [k, v] of Object.entries(attrs)) e.setAttributeNS(W, `w:${k}`, v);
+      e.append(...kids);
+      return e;
+    };
+    const size = level ? [32, 26, 24, 22, 22, 22][Number(level) - 1] : 56;
+    const rPr = mk('rPr', {}, ...(level && Number(level) <= 4 ? [mk('b')] : []), ...(level && Number(level) >= 5 ? [mk('i')] : []), mk('sz', { val: String(size) }), mk('szCs', { val: String(size) }));
+    const pPr = level ? mk('pPr', {}, mk('keepNext'), mk('spacing', { before: '240', after: '80' }), mk('outlineLvl', { val: String(Number(level) - 1) })) : mk('pPr', {}, mk('spacing', { after: '80' }), mk('contextualSpacing'));
+    const normal = this.styleIdByName.get('normal');
+    root.append(mk('style', { type: 'paragraph', styleId: id }, mk('name', { val: level ? name : 'Title' }), ...(normal ? [mk('basedOn', { val: normal }), mk('next', { val: normal })] : []), mk('qFormat'), pPr, rPr)); // i18n-ignore: Word's style name in the file
+    this.styleIdByName.set(name, id);
+    this.ctx.styles[id] = name;
+    this.stylesChanged = true;
+    return id;
+  }
+
+  /** styles.xml with the styles the editor added. */
+  serializeStyles(): string {
+    let s = this.stylesDoc ? new XMLSerializer().serializeToString(this.stylesDoc) : this.ctx.stylesXml ?? '';
+    if (!s.startsWith('<?xml')) s = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' + s;
+    return s;
+  }
+
   /** The paragraph's list (numPr) when the editor changed it; anything else stays as it was. */
   private serializeList(el: HTMLElement, pPr: Element | null, orig: Element | undefined): Element | null {
     const numId = el.dataset.numId;
@@ -531,6 +618,29 @@ export class DocModel {
       nu.setAttributeNS(W, 'w:val', 'single');
       if (!u) insertRPr(rPr, nu);
     } else if (!fmt.u && u) rPr.removeChild(u);
+    // The rest only where it differs from what the run showed (theme colours, other fonts stay).
+    const was = fmtOfRPr(rPrOrig);
+    const set = (name: string, attrs: Record<string, string> | null) => {
+      const old = child(rPr, name);
+      if (old) rPr.removeChild(old);
+      if (!attrs) return;
+      const e = xml.createElementNS(W, `w:${name}`);
+      for (const [k, v] of Object.entries(attrs)) e.setAttributeNS(W, `w:${k}`, v);
+      insertRPr(rPr, e);
+    };
+    if (fmt.color !== was.color) set('color', fmt.color ? { val: fmt.color } : null);
+    if (fmt.size !== was.size) {
+      const half = fmt.size ? String(Math.round(fmt.size * 2)) : null;
+      set('sz', half ? { val: half } : null);
+      set('szCs', half ? { val: half } : null);
+    }
+    if (fmt.font !== was.font) set('rFonts', fmt.font ? { ascii: fmt.font, hAnsi: fmt.font, cs: fmt.font, eastAsia: fmt.font } : null);
+    if (fmt.bg !== was.bg) {
+      const name = fmt.bg ? highlightName(fmt.bg) : undefined;
+      set('highlight', name ? { val: name } : null);
+      set('shd', fmt.bg && !name ? { val: 'clear', color: 'auto', fill: fmt.bg } : null);
+    }
+    if (fmt.va !== was.va) set('vertAlign', fmt.va ? { val: fmt.va } : null);
     if (rPr.children.length) r.append(rPr);
     return r;
   }
@@ -541,6 +651,11 @@ export interface Fmt {
   i: boolean;
   u: boolean;
   s: boolean;
+  color?: string; // RRGGBB
+  bg?: string; // RRGGBB (a highlight or shading)
+  size?: number; // points
+  font?: string;
+  va?: 'superscript' | 'subscript';
 }
 
 export type Segment =
@@ -549,7 +664,62 @@ export type Segment =
   | { kind: 'atom'; atom: string; link?: string };
 
 export function sameFmt(a: Fmt, b: Fmt) {
-  return a.b === b.b && a.i === b.i && a.u === b.u && a.s === b.s;
+  return a.b === b.b && a.i === b.i && a.u === b.u && a.s === b.s && a.color === b.color && a.bg === b.bg && a.size === b.size && a.font === b.font && a.va === b.va;
+}
+
+/** A CSS colour (rgb(), #rgb, #rrggbb) as RRGGBB; undefined for none or transparent. */
+export function hexColor(css: string | null | undefined): string | undefined {
+  if (!css) return undefined;
+  const c = css.trim().toLowerCase();
+  let m = /^#([0-9a-f]{3})$/.exec(c);
+  if (m) return m[1].split('').map((x) => x + x).join('').toUpperCase();
+  m = /^#([0-9a-f]{6})$/.exec(c);
+  if (m) return m[1].toUpperCase();
+  const r = /^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s/]+([\d.]+))?\s*\)$/.exec(c);
+  if (r) {
+    if (r[4] !== undefined && Number(r[4]) === 0) return undefined;
+    return [r[1], r[2], r[3]].map((v) => Math.min(255, Number(v)).toString(16).padStart(2, '0')).join('').toUpperCase();
+  }
+  return undefined;
+}
+
+/** A CSS font size in points (pt or px; relative sizes are not a run's own). */
+function points(css: string): number | undefined {
+  const m = /^([\d.]+)(pt|px)$/.exec(css.trim());
+  if (!m) return undefined;
+  const v = m[2] === 'pt' ? Number(m[1]) : Number(m[1]) * 0.75;
+  return Math.round(v * 2) / 2;
+}
+
+/** The first family of a CSS font-family list (the document default isn't a choice). */
+function firstFamily(css: string): string | undefined {
+  const f = css.split(',')[0]?.trim().replace(/^["']|["']$/g, '');
+  return f && !f.startsWith('var(') ? f : undefined;
+}
+
+/** What render() shows of a run's properties, as a Fmt (to tell what the editor changed). */
+function fmtOfRPr(rPr: Element | null): Fmt {
+  const f: Fmt = { b: on(child(rPr, 'b')), i: on(child(rPr, 'i')), u: !!child(rPr, 'u') && child(rPr, 'u')!.getAttributeNS(W, 'val') !== 'none', s: on(child(rPr, 'strike')) };
+  if (!rPr) return f;
+  const color = child(rPr, 'color')?.getAttributeNS(W, 'val');
+  if (color && color !== 'auto') f.color = color.toUpperCase();
+  const sz = child(rPr, 'sz')?.getAttributeNS(W, 'val');
+  if (sz) f.size = Number(sz) / 2;
+  const fonts = child(rPr, 'rFonts');
+  const font = fonts?.getAttributeNS(W, 'ascii') || fonts?.getAttributeNS(W, 'hAnsi');
+  if (font) f.font = font;
+  const hl = child(rPr, 'highlight')?.getAttributeNS(W, 'val');
+  const fill = child(rPr, 'shd')?.getAttributeNS(W, 'fill');
+  if (hl && hl !== 'none') f.bg = hexColor(HIGHLIGHT[hl] ?? '');
+  else if (fill && fill !== 'auto') f.bg = fill.toUpperCase();
+  const va = child(rPr, 'vertAlign')?.getAttributeNS(W, 'val');
+  if (va === 'superscript' || va === 'subscript') f.va = va;
+  return f;
+}
+
+/** Word's highlight name for a colour of the highlight palette. */
+function highlightName(hex: string): string | undefined {
+  return Object.entries(HIGHLIGHT).find(([, v]) => hexColor(v) === hex)?.[0];
 }
 
 /** Walk a paragraph's DOM collecting text with its effective formatting. */
@@ -589,6 +759,20 @@ export function collect(el: HTMLElement): Segment[] {
       f.s = deco.includes('line-through');
     }
     if (e.dataset.fmtB) f.b = e.dataset.fmtB === '1';
+    if (tag === 'SUP') f.va = 'superscript';
+    if (tag === 'SUB') f.va = 'subscript';
+    if (tag === 'FONT') {
+      const c = hexColor(e.getAttribute('color'));
+      if (c) f.color = c;
+      const face = e.getAttribute('face');
+      if (face) f.font = firstFamily(face) ?? f.font;
+    }
+    if (st.color) f.color = hexColor(st.color) ?? f.color;
+    if (st.backgroundColor) f.bg = hexColor(st.backgroundColor);
+    if (st.fontSize) f.size = points(st.fontSize) ?? f.size;
+    if (st.fontFamily) f.font = firstFamily(st.fontFamily) ?? f.font;
+    if (st.verticalAlign === 'super') f.va = 'superscript';
+    else if (st.verticalAlign === 'sub') f.va = 'subscript';
     const r = e.dataset.r ?? run;
     const l = e.dataset.hl ?? link;
     for (const c of Array.from(e.childNodes)) walk(c, f, r, l);
@@ -685,6 +869,9 @@ function applyParagraphStyle(el: HTMLElement, pPr: Element) {
   const after = sp?.getAttributeNS(W, 'after');
   if (before) el.style.marginTop = `${twipsToPx(before)}px`;
   if (after) el.style.marginBottom = `${twipsToPx(after)}px`;
+  const line = Number(sp?.getAttributeNS(W, 'line') ?? '');
+  const rule = sp?.getAttributeNS(W, 'lineRule') ?? 'auto';
+  if (line > 0) el.style.lineHeight = rule === 'auto' ? String(Math.round((line / 240) * 100) / 100) : `${line / 20}pt`;
 }
 
 function applyRunStyle(s: HTMLElement, rPr: Element | null) {
@@ -694,12 +881,11 @@ function applyRunStyle(s: HTMLElement, rPr: Element | null) {
   const sz = child(rPr, 'sz')?.getAttributeNS(W, 'val');
   if (sz) s.style.fontSize = `${Number(sz) / 2}pt`;
   const hl = child(rPr, 'highlight')?.getAttributeNS(W, 'val');
+  const fill = child(rPr, 'shd')?.getAttributeNS(W, 'fill');
   if (hl && hl !== 'none') s.style.backgroundColor = HIGHLIGHT[hl] ?? hl;
-  const va = child(rPr, 'vertAlign')?.getAttributeNS(W, 'val');
-  if (va === 'superscript') s.style.verticalAlign = 'super';
-  if (va === 'subscript') s.style.verticalAlign = 'sub';
-  if (va) s.style.fontSize = '0.75em';
-  const font = child(rPr, 'rFonts')?.getAttributeNS(W, 'ascii');
+  else if (fill && fill !== 'auto') s.style.backgroundColor = `#${fill}`;
+  const fonts = child(rPr, 'rFonts');
+  const font = fonts?.getAttributeNS(W, 'ascii') || fonts?.getAttributeNS(W, 'hAnsi');
   if (font) s.style.fontFamily = `"${font}", var(--doc-font)`;
 }
 
@@ -716,10 +902,13 @@ function wrapFormatting(doc: Document, s: HTMLElement, rPr: Element | null): HTM
   const u = child(rPr, 'u');
   if (u && u.getAttributeNS(W, 'val') !== 'none') wrap('u');
   if (on(child(rPr, 'strike'))) wrap('s');
+  const va = child(rPr, 'vertAlign')?.getAttributeNS(W, 'val');
+  if (va === 'superscript') wrap('sup');
+  if (va === 'subscript') wrap('sub');
   return out;
 }
 
-const HIGHLIGHT: Record<string, string> = {
+export const HIGHLIGHT: Record<string, string> = {
   yellow: '#fff59d',
   green: '#c5e1a5',
   cyan: '#b2ebf2',

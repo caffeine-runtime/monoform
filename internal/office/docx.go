@@ -151,6 +151,7 @@ const (
 // Content types of the parts the editor adds.
 var partContentTypes = map[string]string{
 	"word/numbering.xml": "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml",
+	"word/styles.xml":    "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
 }
 var extContentTypes = map[string]string{
 	"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "gif": "image/gif", "bmp": "image/bmp", "webp": "image/webp", "svg": "image/svg+xml",
