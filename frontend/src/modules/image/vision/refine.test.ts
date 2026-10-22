@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { refineMask } from './refine';
+import { refineMask, snapMask } from './refine';
 
 const W = 80;
 const H = 40;
@@ -78,5 +78,68 @@ describe('refineMask', () => {
     let wrong = 0;
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (Math.abs(a[y * w + x] - (inDisc(x, y) ? 1 : 0)) > 0.5) wrong++;
     expect(wrong).toBe(0);
+  });
+});
+
+describe('snapMask', () => {
+  /** A noisy picture (w×h) from an inside test and two colours, with a soft model mask from a distance function. */
+  function scene(w: number, h: number, inside: (x: number, y: number) => boolean, fg: number[], bg: number[], modelDist: (x: number, y: number) => number) {
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647) * 24 - 12;
+    const px = new Uint8ClampedArray(w * h * 4);
+    const p = new Float32Array(w * h);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const c = inside(x, y) ? fg : bg;
+        px.set([c[0] + rnd(), c[1] + rnd(), c[2] + rnd(), 255], (y * w + x) * 4);
+        p[y * w + x] = 1 / (1 + Math.exp(modelDist(x, y) / 2.5));
+      }
+    }
+    return { px, p };
+  }
+
+  it('lands a soft, slightly offset edge on the real one', () => {
+    const w = 200;
+    const h = 150;
+    const inDisc = (x: number, y: number) => (x - 100) ** 2 + (y - 75) ** 2 < 50 ** 2;
+    const { px, p } = scene(w, h, inDisc, [200, 40, 50], [40, 90, 200], (x, y) => Math.hypot(x - 101.5, y - 74) - 50); // ~2 px off
+    const a = snapMask(px, w, h, p, 4);
+    let wrong = 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (a[y * w + x] > 0.5 !== inDisc(x, y)) wrong++;
+    expect(wrong).toBeLessThanOrEqual(3);
+  });
+
+  it('keeps out a cloud as light as the object next to it', () => {
+    // A light-grey wing (x < 100) beside blue sky with a wisp of white cloud at x 100–109.
+    const w = 200;
+    const h = 60;
+    const wing = (x: number) => x < 100;
+    const cloud = (x: number) => x >= 100 && x < 110;
+    let seed = 3;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647) * 16 - 8;
+    const px = new Uint8ClampedArray(w * h * 4);
+    const p = new Float32Array(w * h);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const c = wing(x) ? [190, 190, 185] : cloud(x) ? [235, 238, 242] : [50, 80, 160];
+        px.set([c[0] + rnd(), c[1] + rnd(), c[2] + rnd(), 255], (y * w + x) * 4);
+        p[y * w + x] = 1 / (1 + Math.exp((x + 0.5 - 100) / 2.5)); // the model has the wing right
+      }
+    }
+    const a = snapMask(px, w, h, p, 4);
+    for (const x of [103, 105, 108, 120]) expect(a[30 * w + x]).toBeLessThan(0.5);
+    for (const x of [60, 90, 96]) expect(a[30 * w + x]).toBeGreaterThan(0.5);
+    // Re-deciding by colour (refineMask) takes the cloud for wing — what spoiled cut-outs on photos.
+    const old = refineMask(px, w, h, p, 12);
+    expect(old[30 * w + 105]).toBeGreaterThan(0.5);
+  });
+
+  it('leaves pixels far from the edge as the model has them', () => {
+    const w = 120;
+    const h = 40;
+    const { px, p } = scene(w, h, (x) => x < 60, [230, 230, 230], [20, 20, 20], (x) => x + 0.5 - 60);
+    const a = snapMask(px, w, h, p, 3);
+    expect(a[20 * w + 10]).toBe(1);
+    expect(a[20 * w + 110]).toBe(0);
   });
 });

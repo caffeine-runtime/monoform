@@ -204,7 +204,7 @@ export default async function m9(dir: string) {
   log(`remove background again (model loaded) ${Math.round(performance.now() - t0)} ms, longest UI frame ${Math.round(warm.maxGap)} ms`);
   ed.undo();
 
-  // ---- object selection (SlimSAM) ----
+  // ---- object selection (EfficientSAM-Ti) ----
   t0 = performance.now();
   const obJank = await measureJank(() => h.objectAt(200, 150, 'replace'));
   const ob = ed.state().pixelSelection;

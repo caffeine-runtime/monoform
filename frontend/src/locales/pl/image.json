@@ -156,7 +156,7 @@
     "other": "{zoom}% · {n} warstwy"
   },
   "Magic wand failed": "Różdżka nie zadziałała",
-  "Analysing the image to find objects… (once per image, may take ~15 s)": "Analizowanie obrazu w poszukiwaniu obiektów… (raz na obraz, może potrwać ok. 15 s)",
+  "Analysing the image to find objects… (once per image)": "Analizowanie obrazu w poszukiwaniu obiektów… (raz na obraz)",
   "Object selection failed": "Nie udało się zaznaczyć obiektu",
   "Finding the object’s edges…": "Wyszukiwanie krawędzi obiektu…",
   "Finding the subject…": "Wyszukiwanie głównego obiektu…",

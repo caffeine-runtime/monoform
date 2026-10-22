@@ -1,4 +1,5 @@
-// Edge refinement for model masks (object selection, select subject).
+// Edge refinement for model masks: snapMask for object selection, refineMask
+// for select subject.
 //
 // The models see the image at 256–320 px, so their masks are soft and a few
 // pixels off at full size. refineMask re-decides every pixel near the coarse
@@ -87,6 +88,100 @@ export function sample(m: Float32Array, w: number, h: number, x: number, y: numb
 }
 
 const SURE = 1e-4;
+
+/**
+ * Snap a model mask's edge to the image's (object selection). A colour guided
+ * filter (He et al.) makes the mask, within r px, a local linear function of
+ * the pixels' colours, so its edge settles on the colour edge. Unlike
+ * refineMask nothing is re-decided by colour alone: a cloud as white as the
+ * shuttle beside it stays out, a shadow on the shuttle stays in.
+ * px: RGBA (w×h); prior: model probability 0..1; r: filter radius (about
+ * half a model pixel). Returns alpha 0..1; only pixels near the edge change.
+ */
+export function snapMask(px: Uint8ClampedArray, w: number, h: number, prior: Float32Array, r: number): Float32Array {
+  const n = w * h;
+  r = Math.max(1, Math.round(r));
+  const alpha = new Float32Array(n);
+  for (let i = 0; i < n; i++) alpha[i] = prior[i] > 0.5 ? 1 : 0;
+  // The band: within 2r of the 0.5 contour, or where the model is unsure.
+  const near = boxFilter(alpha, w, h, 2 * r);
+  const band = new Uint8Array(n);
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0, i = 0; y < h; y++) {
+    for (let x = 0; x < w; x++, i++) {
+      if ((near[i] > SURE && near[i] < 1 - SURE) || (prior[i] > 0.03 && prior[i] < 0.97)) {
+        band[i] = 1;
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+  }
+  if (x1 < 0) return alpha;
+  // The band's bounding box plus the filter's reach.
+  const m = 2 * r + 1;
+  const cx = Math.max(0, x0 - m), cy = Math.max(0, y0 - m);
+  const cw = Math.min(w, x1 + m + 1) - cx, ch = Math.min(h, y1 + m + 1) - cy;
+  const cn = cw * ch;
+  const I = [new Float32Array(cn), new Float32Array(cn), new Float32Array(cn)];
+  const p = new Float32Array(cn);
+  for (let y = 0; y < ch; y++) {
+    for (let x = 0; x < cw; x++) {
+      const i = (y + cy) * w + x + cx;
+      const j = y * cw + x;
+      for (let k = 0; k < 3; k++) I[k][j] = px[i * 4 + k] / 255;
+      p[j] = prior[i];
+    }
+  }
+  const q = guidedColor(I, p, cw, ch, r, 1e-3);
+  for (let y = 0; y < ch; y++) {
+    for (let x = 0; x < cw; x++) {
+      const i = (y + cy) * w + x + cx;
+      if (!band[i]) continue;
+      // Gentle contrast so edges stay crisp (1–2 px of anti-aliasing).
+      const v = Math.min(1, Math.max(0, (q[y * cw + x] - 0.1) / 0.8));
+      alpha[i] = v * v * (3 - 2 * v);
+    }
+  }
+  return alpha;
+}
+
+/** Guided filter with a colour guide (three planes 0..1): q = a·I + b, fitted per window. */
+export function guidedColor(I: Float32Array[], p: Float32Array, w: number, h: number, r: number, eps: number): Float32Array {
+  const n = w * h;
+  const box = (f: (i: number) => number) => {
+    const t = new Float32Array(n);
+    for (let i = 0; i < n; i++) t[i] = f(i);
+    return boxFilter(t, w, h, r);
+  };
+  const [R, G, B] = I;
+  const mR = boxFilter(R, w, h, r), mG = boxFilter(G, w, h, r), mB = boxFilter(B, w, h, r);
+  const mp = boxFilter(p, w, h, r);
+  const mRp = box((i) => R[i] * p[i]), mGp = box((i) => G[i] * p[i]), mBp = box((i) => B[i] * p[i]);
+  const mRR = box((i) => R[i] * R[i]), mRG = box((i) => R[i] * G[i]), mRB = box((i) => R[i] * B[i]);
+  const mGG = box((i) => G[i] * G[i]), mGB = box((i) => G[i] * B[i]), mBB = box((i) => B[i] * B[i]);
+  const aR = new Float32Array(n), aG = new Float32Array(n), aB = new Float32Array(n), b = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    // Covariance of the colour (3×3, + eps) and of colour with the mask.
+    const rr = mRR[i] - mR[i] * mR[i] + eps, rg = mRG[i] - mR[i] * mG[i], rb = mRB[i] - mR[i] * mB[i];
+    const gg = mGG[i] - mG[i] * mG[i] + eps, gb = mGB[i] - mG[i] * mB[i], bb = mBB[i] - mB[i] * mB[i] + eps;
+    const cr = mRp[i] - mR[i] * mp[i], cg = mGp[i] - mG[i] * mp[i], cb = mBp[i] - mB[i] * mp[i];
+    // Solve by the symmetric matrix's inverse (adjugate / determinant).
+    const i00 = gg * bb - gb * gb, i01 = rb * gb - rg * bb, i02 = rg * gb - rb * gg;
+    const i11 = rr * bb - rb * rb, i12 = rb * rg - rr * gb, i22 = rr * gg - rg * rg;
+    const det = rr * i00 + rg * i01 + rb * i02;
+    const k = det > 1e-12 ? 1 / det : 0;
+    aR[i] = (i00 * cr + i01 * cg + i02 * cb) * k;
+    aG[i] = (i01 * cr + i11 * cg + i12 * cb) * k;
+    aB[i] = (i02 * cr + i12 * cg + i22 * cb) * k;
+    b[i] = mp[i] - aR[i] * mR[i] - aG[i] * mG[i] - aB[i] * mB[i];
+  }
+  const maR = boxFilter(aR, w, h, r), maG = boxFilter(aG, w, h, r), maB = boxFilter(aB, w, h, r), mb = boxFilter(b, w, h, r);
+  const q = new Float32Array(n);
+  for (let i = 0; i < n; i++) q[i] = maR[i] * R[i] + maG[i] * G[i] + maB[i] * B[i] + mb[i];
+  return q;
+}
 
 /**
  * Snap a coarse mask to the image's edges.

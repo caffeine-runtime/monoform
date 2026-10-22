@@ -494,21 +494,31 @@
   }
 
   /** Make sure the object model has seen the current image. */
-  async function analyse(): Promise<string | null> {
-    if (!editor) return null;
+  /** The analysis under way (choosing the tool starts it; a click meanwhile waits for it). */
+  let analysing: { key: string; done: Promise<string | null> } | null = null;
+
+  function analyse(): Promise<string | null> {
+    if (!editor) return Promise.resolve(null);
     const key = `${tab.id}:${editor.state().version}`;
-    if (vision.samKey === key) return key;
+    if (vision.samKey === key) return Promise.resolve(key);
+    if (analysing?.key === key) return analysing.done;
     objectPoints = [];
-    busy = t('Analysing the image to find objects… (once per image, may take ~15 s)');
-    try {
-      await vision.analyse(editor.composite(), key);
-      return key;
-    } catch (e) {
-      toastError(e, t('Object selection failed'));
-      return null;
-    } finally {
-      busy = '';
-    }
+    const src = editor.composite();
+    const done = (async () => {
+      busy = t('Analysing the image to find objects… (once per image)');
+      try {
+        await vision.analyse(src, key);
+        return key;
+      } catch (e) {
+        toastError(e, t('Object selection failed'));
+        return null;
+      } finally {
+        busy = '';
+        if (analysing?.key === key) analysing = null;
+      }
+    })();
+    analysing = { key, done };
+    return done;
   }
 
   async function objectAt(x: number, y: number, mode: SelectMode) {
@@ -780,6 +790,8 @@
     tool = next;
     editor?.setTool(next);
     if (next === 'text' && !fonts.length) fonts = availableFonts();
+    // The image is analysed while the pointer travels to the object.
+    if (next === 'object') void analyse();
   }
 
   function setOpt<K extends keyof ToolOptions>(k: K, v: ToolOptions[K]) {
