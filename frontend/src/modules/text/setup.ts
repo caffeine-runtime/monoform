@@ -14,7 +14,7 @@ import {
   highlightWhitespace,
 } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab, copyLineDown, cursorMatchingBracket } from '@codemirror/commands';
-import { autocompletion, closeBrackets, closeBracketsKeymap, completeAnyWord, completionKeymap } from '@codemirror/autocomplete';
+import { autocompletion, closeBrackets, closeBracketsKeymap, completeAnyWord, completionKeymap, type CompletionContext } from '@codemirror/autocomplete';
 import { addCursorVertical, expandToLine, insertLineAbove, joinLines, sortLines, splitIntoLines, transformCase } from './editing';
 import { indentGuides, minimap } from './minimap';
 import { indentOnInput, bracketMatching, foldGutter, foldKeymap, syntaxHighlighting, HighlightStyle, LanguageDescription } from '@codemirror/language';
@@ -142,6 +142,11 @@ export function whitespaceExt(on: boolean): Extension {
   return on ? highlightWhitespace() : [];
 }
 
+/** Words in the document, except inside a [[note link]] (Markdown completes note names there). */
+function wordsOutsideNoteLinks(ctx: CompletionContext) {
+  return ctx.matchBefore(/\[\[[^\]\n]*$/) ? null : completeAnyWord(ctx);
+}
+
 /** Features that are too costly for huge files. */
 export function heavyFeatures(large: boolean): Extension {
   if (large) return [];
@@ -155,7 +160,7 @@ export function heavyFeatures(large: boolean): Extension {
     indentGuides(),
     // Completions from the language where it has them, plus words in the document (as in Sublime).
     autocompletion({ activateOnTyping: true, maxRenderedOptions: 40 }),
-    EditorState.languageData.of(() => [{ autocomplete: completeAnyWord }]),
+    EditorState.languageData.of(() => [{ autocomplete: wordsOutsideNoteLinks }]),
   ];
 }
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fitBar } from '../../core/fit';
   // .docx and .odt editing on a page-like canvas; .doc is converted to .docx.
-  import { onMount, tick } from 'svelte';
+  import { onMount, tick, untrack } from 'svelte';
   import Icon from '../../shell/Icon.svelte';
   import Bold from '@lucide/svelte/icons/bold';
   import Italic from '@lucide/svelte/icons/italic';
@@ -10,6 +10,10 @@
   import Undo2 from '@lucide/svelte/icons/undo-2';
   import Redo2 from '@lucide/svelte/icons/redo-2';
   import InfoIcon from '@lucide/svelte/icons/info';
+  import ListTree from '@lucide/svelte/icons/list-tree';
+  import OutlineTree from '../../shell/OutlineTree.svelte';
+  import { isNarrow } from '../../core/fit';
+  import { countText, formatCounts, type Counts, type OutlineItem } from '../../core/textStats';
   import { api, endpoint } from '../../core/backend';
   import { basename } from '../../core/paths';
   import type { Tab } from '../../core/tabs.svelte';
@@ -30,7 +34,35 @@
   let error = $state('');
   let loading = $state(true);
   let blockStyle = $state('p');
-  let words = $state(0);
+  let counts = $state<Counts>({ words: 0, chars: 0 });
+  let selCounts = $state<Counts | null>(null);
+  // The Navigation pane: the document's headings; click one to go to it.
+  const OUTLINE_KEY = 'mf.docOutline';
+  let outlineOpen = $state(remembered());
+  let headings = $state.raw<OutlineItem[]>([]);
+  let headingEls: HTMLElement[] = [];
+  let active = $state(-1);
+  let desk = $state<HTMLDivElement>();
+  let bodyW = $state(0);
+  const narrow = $derived(isNarrow(bodyW));
+  $effect(() => {
+    if (narrow) outlineOpen = false;
+  });
+  function remembered(): boolean {
+    try {
+      return localStorage.getItem(OUTLINE_KEY) !== '0';
+    } catch {
+      return true;
+    }
+  }
+  function toggleOutline() {
+    outlineOpen = !outlineOpen;
+    try {
+      localStorage.setItem(OUTLINE_KEY, outlineOpen ? '1' : '0');
+    } catch {
+      /* not remembered */
+    }
+  }
   // The .docx whose other parts (styles, images, headers…) are copied on save.
   let sourcePath = '';
 
@@ -60,9 +92,59 @@
   }
 
   function count() {
-    const text = page?.innerText ?? '';
-    words = (text.match(/\S+/g) ?? []).length;
-    tab.status = { ...tab.status, type: odt ? 'OpenDocument text' : template ? 'Word 97–2003 document' : 'Word document', info: `${words.toLocaleString()} words` };
+    counts = countText(page?.innerText ?? '');
+    headingEls = page ? Array.from(page.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')) : [];
+    headings = headingEls.map((h, i) => ({ level: Number(h.tagName[1]), text: (h.textContent ?? '').replace(/\s+/g, ' ').trim(), line: i }));
+    tab.status = { ...tab.status, type: odt ? 'OpenDocument text' : template ? 'Word 97–2003 document' : 'Word document' };
+    findActive();
+  }
+
+  $effect(() => {
+    tab.status = { ...untrack(() => tab.status), counts: formatCounts(counts, selCounts) };
+  });
+
+  /** The heading the top of the view is in. */
+  function findActive() {
+    if (!desk) return;
+    const top = desk.getBoundingClientRect().top + 32;
+    let k = -1;
+    for (let i = 0; i < headingEls.length; i++) {
+      if (headingEls[i].getBoundingClientRect().top <= top) k = i;
+      else break;
+    }
+    active = k;
+  }
+  let scrollFrame = 0;
+  function scrolled() {
+    cancelAnimationFrame(scrollFrame);
+    scrollFrame = requestAnimationFrame(findActive);
+  }
+
+  function goHeading(i: number) {
+    const h = headingEls[i];
+    if (!h || !desk) return;
+    desk.scrollTop += h.getBoundingClientRect().top - desk.getBoundingClientRect().top - 16;
+    active = i;
+    // Put the cursor at the heading, as Word's Navigation pane does.
+    if (!tab.readOnly) {
+      const r = document.createRange();
+      r.selectNodeContents(h);
+      r.collapse(true);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(r);
+      page?.focus({ preventScroll: true });
+    }
+    if (narrow) outlineOpen = false;
+  }
+
+  function selectionCounts() {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !page || !page.contains(sel.anchorNode)) {
+      selCounts = null;
+      return;
+    }
+    selCounts = countText(sel.toString());
   }
 
   let countTimer: ReturnType<typeof setTimeout> | undefined;
@@ -169,7 +251,7 @@
     underline: () => exec('underline'),
     style: (s) => setStyle(s),
   });
-  (tab as unknown as { docTest: unknown }).docTest = { page: () => page, model: () => model, save, writeTo, exec };
+  (tab as unknown as { docTest: unknown }).docTest = { page: () => page, model: () => model, save, writeTo, exec, headings: () => headings, active: () => active, counts: () => counts, selCounts: () => selCounts, goHeading, outlineOpen: () => outlineOpen, toggleOutline, desk: () => desk };
 
   onMount(() => {
     tab.handlers = {
@@ -185,17 +267,21 @@
       },
     };
     void load();
-    const sel = () => syncBlock();
+    const sel = () => {
+      syncBlock();
+      selectionCounts();
+    };
     document.addEventListener('selectionchange', sel);
     return () => {
       document.removeEventListener('selectionchange', sel);
       officeControllers.delete(tab.id);
+      cancelAnimationFrame(scrollFrame);
     };
   });
 </script>
 
-{#if !tab.readOnly}
-  <div class="toolbar" use:fitBar>
+<div class="toolbar" use:fitBar>
+  {#if !tab.readOnly}
     <select class="input sel" value={blockStyle} onchange={(e) => setStyle((e.currentTarget as HTMLSelectElement).value)} aria-label="Paragraph style">
       <option value="p">Normal text</option>
       <option value="h1">Heading 1</option>
@@ -210,14 +296,15 @@
     <span class="sep"></span>
     <button class="icon-btn" title="Undo" onmousedown={(e) => e.preventDefault()} onclick={() => exec('undo')}><Icon icon={Undo2} /></button>
     <button class="icon-btn" title="Redo" onmousedown={(e) => e.preventDefault()} onclick={() => exec('redo')}><Icon icon={Redo2} /></button>
-    <span class="spacer"></span>
-    <span class="label">{words.toLocaleString()} words</span>
-  </div>
-{/if}
+  {/if}
+  <span class="spacer"></span>
+  <button class="btn ghost" class:on={outlineOpen} aria-pressed={outlineOpen} title="Headings of the document — click one to go to it" onclick={toggleOutline}><Icon icon={ListTree} size={14} /> Outline</button>
+</div>
 {#if note}
   <div class="banner"><Icon icon={InfoIcon} /><span class="grow">{note}</span></div>
 {/if}
-<div class="desk">
+<div class="body" bind:clientWidth={bodyW}>
+<div class="desk" bind:this={desk} onscroll={scrolled}>
   {#if error}
     <div class="empty-state">{error}</div>
   {/if}
@@ -238,6 +325,13 @@
   ></div>
   {#if loading}<div class="empty-state overlay"><span class="spinner"></span></div>{/if}
 </div>
+{#if outlineOpen}
+  <aside data-sidepanel class="outline" class:floating={narrow} class:right={narrow} aria-label="Outline">
+    <div class="head">Outline</div>
+    <div class="tree"><OutlineTree items={headings} {active} onpick={goHeading} empty="No headings. Use Heading 1–3 in the paragraph style menu to build an outline." /></div>
+  </aside>
+{/if}
+</div>
 
 <style>
   .sel {
@@ -245,8 +339,35 @@
     padding: 0 6px;
     min-width: 140px;
   }
+  .body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    position: relative;
+  }
+  .outline {
+    width: 240px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--border-soft);
+    background: var(--bg-sidebar);
+  }
+  .outline .head {
+    padding: 8px 12px 6px;
+    font-size: var(--fs-small);
+    font-weight: 600;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .outline .tree {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
   .desk {
     flex: 1;
+    min-width: 0;
     min-height: 0;
     overflow: auto;
     background: var(--bg-sidebar);

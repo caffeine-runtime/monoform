@@ -455,6 +455,15 @@
   inside a drawing stay as they are, and a drawing that already has a dark background is left alone. A moon button
   in the drawing/diagram toolbar (and *Settings › Appearance*) keeps them light. CAD drawings already followed the
   theme. Unit tests (`core/canvas.test.ts`) and self-test `m45`.
+- **Obsidian-style notes; outline for documents.** Markdown notes link with `[[Note]]`, `[[folder/Note#Heading|label]]`,
+  `![[picture.png]]` and relative `[text](Note.md)` links: resolved by note name across the open folder (nearest note
+  first, as Obsidian does), followed by a click in the preview or Ctrl+click in the source, and a link to a note that
+  doesn't exist yet is dimmed and creates it when clicked. `[[` completes note names. A side panel (*Outline*) shows the
+  note's headings as a foldable tree (click to go; the heading you're in is highlighted, in the editor or the preview),
+  **backlinks** — every note linking here, with the line — and outgoing links. The status bar counts words and
+  characters (of the selection too), Obsidian-style. Word/OpenDocument documents get the same outline of their
+  headings and the counts. The folder's links are indexed in Go (`internal/notes`, parallel, unchanged files
+  remembered). Go tests, unit tests and self-test `m46`.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

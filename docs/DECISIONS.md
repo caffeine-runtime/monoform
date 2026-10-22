@@ -357,6 +357,19 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   selection overlay are separate `<svg>` layers so handles keep the accent colour; photos get the inverse filter
   (as in Excalidraw); the paper and the label editor's text colour are computed with the same matrix. Drawings whose
   background is already dark aren't filtered. Off with `lightCanvases` (Settings › Appearance or the toolbar).
+- **Note links are indexed in Go, resolved in TypeScript** (`internal/notes`, `modules/markdown/links.ts`). Reading
+  every note of a folder from the webview would be one request per file; Go walks the folder (same skips as folder
+  search, plus `.obsidian`/`.trash`), parses notes in parallel and keeps them by size + modification time, so the
+  index refreshed after each save only re-reads what changed (limits: 20,000 notes, 4 MB each). Resolution follows
+  Obsidian: wiki links match by note name (folders written in the link as a path suffix), case-insensitively, the
+  note sharing the most folders with the linking one winning; Markdown links are relative paths. The current note's
+  own links, headings and counts come from its (unsaved) text in the preview worker, so typing never waits on disk.
+  Link parsing exists in both languages and both test suites check the same cases. Embedding notes (`![[Note]]`
+  transclusion), unlinked mentions, the graph view and aliases from front matter were left out for now.
+- **Counts follow Obsidian**: words are runs of letters/digits (inner apostrophes, hyphens and dots keep one word),
+  each Chinese/Japanese character is a word, characters are everything except line breaks (an emoji is one); in
+  Markdown, front matter, link targets and heading/list marks aren't counted. Shown in the status bar (`counts`),
+  with "N of M" for a selection.
 - **Side panels float in narrow panes** (< 600 px, `isNarrow`): over the content with a shadow, closed when the
   pane becomes narrow, opened from the toolbar — a 260 px panel beside a 400 px pane would leave the canvas or
   table unusable.

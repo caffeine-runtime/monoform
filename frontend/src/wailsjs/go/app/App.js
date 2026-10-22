@@ -218,6 +218,10 @@ export function NewWindow(arg1, arg2, arg3) {
   return window['go']['app']['App']['NewWindow'](arg1, arg2, arg3);
 }
 
+export function NoteIndex(arg1) {
+  return window['go']['app']['App']['NoteIndex'](arg1);
+}
+
 export function OcrAddLanguage(arg1) {
   return window['go']['app']['App']['OcrAddLanguage'](arg1);
 }

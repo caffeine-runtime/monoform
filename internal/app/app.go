@@ -22,6 +22,7 @@ import (
 	"github.com/caffeine-runtime/monoform/internal/fs"
 	"github.com/caffeine-runtime/monoform/internal/history"
 	"github.com/caffeine-runtime/monoform/internal/jobs"
+	"github.com/caffeine-runtime/monoform/internal/notes"
 	"github.com/caffeine-runtime/monoform/internal/office"
 	"github.com/caffeine-runtime/monoform/internal/search"
 	"github.com/caffeine-runtime/monoform/internal/server"
@@ -38,6 +39,7 @@ type App struct {
 	Jobs     *jobs.Manager
 	watcher  *fs.Watcher
 	books    *office.Books
+	notes    *notes.Scanner
 	// History keeps earlier versions of saved files (nil if unavailable).
 	History *history.Store
 	// Assets is the frontend bundle (set by main): bundled OCR language data is read from it.
@@ -57,7 +59,7 @@ type App struct {
 // New creates the app. start is the process start time used for the
 // startup-time measurement.
 func New(start time.Time, launchFiles []string, launchMode string) *App {
-	a := &App{start: start, launchFiles: launchFiles, launchMode: launchMode, books: office.NewBooks()}
+	a := &App{start: start, launchFiles: launchFiles, launchMode: launchMode, books: office.NewBooks(), notes: notes.NewScanner()}
 	a.Server = server.New(server.NewToken())
 	server.RecordPages = os.Getenv("MF_TEST") != ""
 	path, err := settings.DefaultPath()

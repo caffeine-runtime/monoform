@@ -20,6 +20,8 @@ export interface StatusFields {
   encoding?: string;
   eol?: string;
   info?: string;
+  /** Word and character counts (documents and notes). */
+  counts?: string;
   /** Overrides the file type label. */
   type?: string;
 }
