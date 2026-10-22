@@ -473,6 +473,16 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   recorded folder and choices, including the elevated "for everyone" case, then starts it) so the registry,
   uninstaller and shortcuts stay right. Not code-signed yet, so updates carry the same first-launch warnings as
   downloads. Rejected: a third-party updater framework (licences, cgo) and a custom update server.
+- **One right-click menu for all editors** (`core/contextMenu.ts`): a `contextmenu` listener on the document —
+  after the views' own handlers (file tree, tabs, grids keep theirs by preventing the event), before the Wails
+  runtime's listener on the window, which drops right-clicks outside text fields when the default menu is off.
+  Text items come from what is under the pointer (input, contenteditable, CodeMirror); a view adds its own items
+  through `tab.handlers.contextMenu` (it may move the caret to the click first) and the rest are its registered
+  commands from a short list per module, those available now — so the menu and the palette can't disagree.
+  CodeMirror is worked through its API (selection captured at the right-click, history, `replaceSelection`):
+  it ignores synthetic clipboard events and the menu takes the focus. Clipboard text goes through the Wails
+  runtime (`ClipboardSetText` / `ClipboardGetText`), which reaches the system clipboard reliably; rich text and
+  pictures through the async clipboard API where the webview allows it.
 - **Tighter corners**: radius tokens 3 / 4 / 6 px (were 6 / 8 / 12) and the fixed radii scaled to match; chips and
   the start page's tools are rounded rectangles, not pills.
 - **Settings are tiles in CSS columns** (`columns: 22rem`): as many columns as fit, reflowing as the window is

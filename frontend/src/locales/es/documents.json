@@ -663,5 +663,10 @@
   "Replaced {n} times": {
     "one": "Reemplazado {n} vez",
     "other": "Reemplazado {n} veces"
-  }
+  },
+  "Clear formatting": "Borrar formato",
+  "Bulleted list": "Lista con viñetas",
+  "Numbered list": "Lista numerada",
+  "Edit link…": "Editar enlace…",
+  "Open link": "Abrir enlace"
 }

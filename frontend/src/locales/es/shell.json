@@ -432,5 +432,8 @@
     "other": "{n} modelos aún no están descargados."
   },
   "Download all ({size})": "Descargar todos ({size})",
-  "Downloading… {percent}%": "Descargando… {percent}%"
+  "Downloading… {percent}%": "Descargando… {percent}%",
+  "Change case": "Cambiar mayúsculas/minúsculas",
+  "Lines": "Líneas",
+  "Paste as plain text": "Pegar como texto sin formato"
 }

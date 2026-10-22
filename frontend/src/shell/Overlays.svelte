@@ -41,6 +41,14 @@
     }
   }
 
+
+  /** A right-click while a menu is open: the menu for what is under the pointer instead. */
+  function reopenMenu(e: MouseEvent) {
+    e.preventDefault();
+    menu.close();
+    const { clientX, clientY } = e;
+    requestAnimationFrame(() => document.elementFromPoint(clientX, clientY)?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX, clientY, button: 2 })));
+  }
 </script>
 
 {#if ui.dialog}
@@ -69,7 +77,7 @@
 
 {#if menu.open}
   <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
-  <div class="menu-catcher" onclick={() => menu.close()} oncontextmenu={(e) => { e.preventDefault(); menu.close(); }}></div>
+  <div class="menu-catcher" onclick={() => menu.close()} oncontextmenu={reopenMenu}></div>
   <MenuList items={menu.open.items} x={menu.open.x} y={menu.open.y} />
 {/if}
 
