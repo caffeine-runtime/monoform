@@ -15,3 +15,7 @@ cmd/setup/build/windows/icon.ico
 cmd/setup/build/bin/
 cmd/setup/build/appicon.png
 cmd/setup/frontend/wailsjs/
+
+# A plain `go build` in the repo root writes the binary here.
+/monoform
+/monoform.exe
