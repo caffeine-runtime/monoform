@@ -42,6 +42,9 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
     platform's library is read out of it with **HTTP Range requests** (6 MB for Windows instead of the 160 MB package;
     offsets pinned from its central directory). No runtime for Intel Macs (Microsoft doesn't publish one), so the
     packs show as unavailable there. Removing the last pack removes the runtime too.
+  - **Several packs can download at once** (each its own job). The runtime is part of every install, so a per-file
+    lock (`install.go`) makes a second install wait for the file the first is fetching and then count it as done,
+    instead of fetching it twice. *Download all* asks once for everything missing.
   - **Models are loaded on first use and freed after a minute idle**, one inference at a time; nothing runs in the
     background.
   - **BiRefNet:** the onnx-community export decomposes deformable convolutions into GatherND/ScatterND chains: 29 s
@@ -390,6 +393,13 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   people learn they exist where they'd use them, and the click leads to the one place they are installed (Settings ›
   AI models, `core/settingsLink.ts` scrolls to and highlights the row). They are actions next to Select object, not
   new tool modes. The standard Select subject keeps the bundled model so the two can be compared.
+- **Paint bucket reuses the magic wand's flood fill** (in the vision worker, so a large picture doesn't stall the
+  window) on the active layer's pixels and fills through that mask with the same blend the selection tools use, so
+  an active selection limits it like every other pixel edit. It samples the active layer only (like most editors'
+  default); tolerance and contiguous are shared with the wand. The edge is hard (no anti-aliasing), as in a plain fill.
+- **Layer reordering by dragging the row** with pointer events (a 4 px threshold so a click still selects; the drop
+  gap from row midpoints) rather than HTML drag and drop, which WebKitGTK draws with a ghost image and no control of
+  the drop line; one `placeLayer` step, so a drag is one undo.
 - **Updates from GitHub releases, no update server.** The check is one unauthenticated request to the public
   releases API (`/releases/latest`, so pre-releases are never offered); the package for the system is a release asset
   and is verified against the release's `SHA256SUMS`. Installing replaces the running copy by renaming (a running

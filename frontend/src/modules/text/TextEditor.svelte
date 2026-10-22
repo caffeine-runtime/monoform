@@ -7,6 +7,7 @@
   import { t } from '../../core/i18n';
   import { TextController, type ControllerOptions } from './controller';
   import { controllers } from './controllers';
+  import { settings } from '../../core/settings.svelte';
 
   let { tab, options = {}, onready }: { tab: Tab; options?: ControllerOptions; onready?: (c: TextController) => void } = $props();
 
@@ -53,6 +54,18 @@
       controllers.delete(tab.id);
       ctl.destroy();
     };
+  });
+
+  // Text or interface size changed (settings, sliders): the font is CSS, so
+  // CodeMirror doesn't notice — have it measure its lines again, else it keeps
+  // the old line height (lines overlap or gap, clicks land on the wrong line).
+  $effect(() => {
+    void settings.value.fontSize;
+    void settings.value.uiScale;
+    const ctl = controllers.get(tab.id);
+    if (!ctl) return;
+    // After App's effect has set the new CSS variables and the browser has applied them.
+    requestAnimationFrame(() => ctl.view.requestMeasure());
   });
 
   // A search result clicked while the tab is already open.

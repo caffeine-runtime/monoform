@@ -33,7 +33,17 @@ func TestStore(t *testing.T) {
 	if s.Installed(Subject) || s.DownloadBytes(Subject) <= Subject.Files[0].Size {
 		t.Fatalf("empty store: installed %v, download %d", s.Installed(Subject), s.DownloadBytes(Subject))
 	}
+	// The shared runtime is counted in each pack's download.
+	if rt := s.RuntimeDownloadBytes(); rt <= 0 || s.DownloadBytes(Subject) != rt+Subject.Files[0].Transfer() {
+		t.Errorf("runtime share %d of %d", rt, s.DownloadBytes(Subject))
+	}
 	sparse(t, s.RuntimePath(), r.Size)
+	for _, f := range runtimeNotices {
+		sparse(t, filepath.Join(s.runtimeDir(), f.name), f.Size)
+	}
+	if s.RuntimeDownloadBytes() != 0 {
+		t.Errorf("runtime there: share %d", s.RuntimeDownloadBytes())
+	}
 	sparse(t, s.ModelPath(Subject, "birefnet-lite-1024.onnx"), Subject.Files[0].Size)
 	if !s.Installed(Subject) || s.Installed(Eraser) {
 		t.Errorf("installed: subject %v eraser %v", s.Installed(Subject), s.Installed(Eraser))

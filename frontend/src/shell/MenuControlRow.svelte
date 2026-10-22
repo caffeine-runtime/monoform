@@ -25,6 +25,9 @@
     { id: 'dark', label: t('Dark', {}, 'theme') },
   ] as const;
   const scaleIndex = $derived(Math.max(0, UI_SCALES.findIndex((v) => Math.abs(v - (s.uiScale || 1)) < 1e-3)));
+  // While the interface slider is dragged only its number changes: rescaling
+  // the menu under the pointer would move the slider and make it jump.
+  let dragScale = $state<number | null>(null);
   const layout = $derived.by(() => {
     const sp = workspace.split;
     if (!sp) return 'one';
@@ -59,9 +62,13 @@
       value={scaleIndex}
       title={t('Double-click: {value}', { value: '100%' })}
       ondblclick={() => settings.update((x) => (x.uiScale = 1))}
-      oninput={(e) => settings.update((x) => (x.uiScale = UI_SCALES[+(e.target as HTMLInputElement).value]))}
+      oninput={(e) => (dragScale = UI_SCALES[+(e.target as HTMLInputElement).value])}
+      onchange={(e) => {
+        dragScale = null;
+        settings.update((x) => (x.uiScale = UI_SCALES[+(e.target as HTMLInputElement).value]));
+      }}
     />
-    <span class="val">{Math.round((s.uiScale || 1) * 100)}%</span>
+    <span class="val">{Math.round((dragScale ?? (s.uiScale || 1)) * 100)}%</span>
   {:else if control === 'fontSize'}
     <label class="lbl" for="menu-fs">{t('Text size')}</label>
     <input

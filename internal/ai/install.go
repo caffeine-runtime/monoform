@@ -5,9 +5,32 @@ import (
 	"errors"
 	"net/http"
 	"path/filepath"
+	"sync"
 
 	"github.com/caffeine-runtime/monoform/internal/download"
 )
+
+// Seams for tests.
+var (
+	present = download.Present
+	fetch   = download.Fetch
+)
+
+// fileLocks lets several packs install at once without fetching a shared
+// file (the runtime is part of every install) twice: dst → a 1-slot channel.
+var fileLocks sync.Map
+
+// lockFile waits for its turn at dst (or for ctx to end).
+func lockFile(ctx context.Context, dst string) (unlock func(), err error) {
+	v, _ := fileLocks.LoadOrStore(dst, make(chan struct{}, 1))
+	ch := v.(chan struct{})
+	select {
+	case ch <- struct{}{}:
+		return func() { <-ch }, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
 
 // Install downloads a pack (and the runtime, if missing), verifying every
 // file. Files already there are kept, so an interrupted install resumes per
@@ -29,18 +52,26 @@ func (s Store) Install(ctx context.Context, client *http.Client, p Pack, progres
 		jobs = append(jobs, job{filepath.Join(s.packDir(p), f.Name), f.File})
 	}
 	var total, done int64
+	var todo []job
 	for _, j := range jobs {
-		if !download.Present(j.dst, j.f) {
+		if !present(j.dst, j.f) {
 			total += j.f.Transfer()
+			todo = append(todo, j)
 		}
 	}
 	progress(0, total)
-	for _, j := range jobs {
-		if download.Present(j.dst, j.f) {
-			continue
+	for _, j := range todo {
+		unlock, err := lockFile(ctx, j.dst)
+		if err != nil {
+			return err
 		}
-		base := done
-		if err := download.Fetch(ctx, client, j.dst, j.f, func(n int64) { progress(base+n, total) }); err != nil {
+		// Another install may have fetched it while this one waited.
+		if !present(j.dst, j.f) {
+			base := done
+			err = fetch(ctx, client, j.dst, j.f, func(n int64) { progress(base+n, total) })
+		}
+		unlock()
+		if err != nil {
 			return err
 		}
 		done += j.f.Transfer()

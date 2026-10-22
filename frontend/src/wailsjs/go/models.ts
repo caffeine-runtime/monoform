@@ -11,6 +11,7 @@ export namespace app {
 	    supported: boolean;
 	    download: number;
 	    disk: number;
+	    runtime: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new AIPack(source);
@@ -28,6 +29,7 @@ export namespace app {
 	        this.supported = source["supported"];
 	        this.download = source["download"];
 	        this.disk = source["disk"];
+	        this.runtime = source["runtime"];
 	    }
 	}
 	export class AnimFrame {

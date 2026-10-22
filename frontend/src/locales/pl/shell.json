@@ -446,5 +446,15 @@
   "Monoform is removed": "Usunięto Monoform",
   "Its settings and history are gone too.": "Jego ustawienia i historia również zostały usunięte.",
   "Your settings stay, in case you install it again.": "Twoje ustawienia zostają na wypadek ponownej instalacji.",
-  "That didn’t work": "Nie udało się"
+  "That didn’t work": "Nie udało się",
+  "Download all AI models?": "Pobrać wszystkie modele AI?",
+  "It's a one-time download of {size} from huggingface.co and nuget.org; after that everything runs on this computer, offline. You can remove them in Settings › AI models.": "To jednorazowe pobranie {size} z huggingface.co i nuget.org; potem wszystko działa na tym komputerze, offline. Możesz je usunąć w Ustawienia › Modele AI.",
+  "{n} models aren’t downloaded yet.": {
+    "one": "{n} model nie jest jeszcze pobrany.",
+    "few": "{n} modele nie są jeszcze pobrane.",
+    "many": "{n} modeli nie jest jeszcze pobranych.",
+    "other": "{n} modelu nie pobrano jeszcze."
+  },
+  "Download all ({size})": "Pobierz wszystkie ({size})",
+  "Downloading… {percent}%": "Pobieranie… {percent}%"
 }

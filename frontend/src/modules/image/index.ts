@@ -26,6 +26,7 @@ const cmds: Command[] = [
   { id: 'image.toolObject', title: t('Tool: select object'), category: t('Image'), shortcut: 'O', when: edit, run: run((c) => c.tool('object')) },
   { id: 'image.toolCrop', title: t('Tool: crop'), category: t('Image'), shortcut: 'C', when: edit, run: run((c) => c.tool('crop')) },
   { id: 'image.toolBrush', title: t('Tool: brush'), category: t('Image'), shortcut: 'B', when: edit, run: run((c) => c.tool('brush')) },
+  { id: 'image.toolFill', title: t('Tool: paint bucket'), category: t('Image'), shortcut: 'G', when: edit, run: run((c) => c.tool('fill')) },
   { id: 'image.toolEraser', title: t('Tool: eraser'), category: t('Image'), shortcut: 'E', when: edit, run: run((c) => c.tool('eraser')) },
   { id: 'image.toolArrow', title: t('Tool: arrow'), category: t('Image'), shortcut: 'A', when: edit, run: run((c) => c.tool('arrow')) },
   { id: 'image.toolRect', title: t('Tool: rectangle'), category: t('Image'), shortcut: 'R', when: edit, run: run((c) => c.tool('rect')) },

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { LANGUAGES, t, type Lang } from '../../core/i18n';
+  import { LANGUAGES, t, tn, type Lang } from '../../core/i18n';
   import { chooseLanguage, systemLanguage } from '../../core/language';
   import { updates } from '../../core/updates.svelte';
   import { UI_SCALES } from '../../core/appCommands';
@@ -63,6 +63,8 @@
       toastError(e);
     }
   }
+  // The interface slider applies on release: rescaling the page while it is dragged moves the slider under the pointer.
+  let dragScale = $state<number | null>(null);
 </script>
 
 <div class="wrap">
@@ -92,8 +94,8 @@
     <div class="row">
       <label class="lbl" for="uis" title={t('Makes text, buttons and icons everywhere larger or smaller ({shortcuts})', { shortcuts: 'Ctrl+Alt+= / Ctrl+Alt+−' })}>{t('Interface size')}</label>
       <span class="scale">
-        <input id="uis" type="range" min="0" max={UI_SCALES.length - 1} step="1" value={Math.max(0, UI_SCALES.findIndex((v) => Math.abs(v - (s.uiScale || 1)) < 1e-3))} oninput={(e) => settings.update((x) => (x.uiScale = UI_SCALES[+(e.target as HTMLInputElement).value]))} />
-        <span class="pct">{Math.round((s.uiScale || 1) * 100)}%</span>
+        <input id="uis" type="range" min="0" max={UI_SCALES.length - 1} step="1" value={Math.max(0, UI_SCALES.findIndex((v) => Math.abs(v - (s.uiScale || 1)) < 1e-3))} oninput={(e) => (dragScale = UI_SCALES[+(e.target as HTMLInputElement).value])} onchange={(e) => { dragScale = null; settings.update((x) => (x.uiScale = UI_SCALES[+(e.target as HTMLInputElement).value])); }} />
+        <span class="pct">{Math.round((dragScale ?? (s.uiScale || 1)) * 100)}%</span>
       </span>
     </div>
     <div class="row">
@@ -200,6 +202,12 @@
   <section class="card ai">
     <h3>{t('AI models')}</h3>
     <p class="muted small">{t('Optional downloads for the image editor. They run on this computer only, and only while you use them.')}</p>
+    {#if aiModels.missing.length > 1}
+      <div class="row all">
+        <span class="lbl muted small">{tn('{n} model isn’t downloaded yet.', '{n} models aren’t downloaded yet.', aiModels.missing.length)}</span>
+        <button class="btn" onclick={() => aiModels.installAll()}>{t('Download all ({size})', { size: formatBytes(aiModels.downloadSize(aiModels.missing)) })}</button>
+      </div>
+    {/if}
     {#each aiModels.packs as p (p.id)}
       <div class="row pack" data-pack={p.id}>
         <div class="lbl">
@@ -212,7 +220,8 @@
         {:else if !p.supported}
           <span class="muted small">{t('Not available on this system')}</span>
         {:else}
-          <button class="btn primary" disabled={aiModels.busy === p.id} onclick={() => aiModels.install(p.id)}>{aiModels.busy === p.id ? t('Downloading…') : t('Install')}</button>
+          {@const pr = aiModels.progress[p.id]}
+          <button class="btn primary" disabled={pr !== undefined} onclick={() => aiModels.install(p.id)}>{pr === undefined ? t('Install') : pr > 0 ? t('Downloading… {percent}%', { percent: Math.floor(pr * 100) }) : t('Downloading…')}</button>
         {/if}
       </div>
     {/each}

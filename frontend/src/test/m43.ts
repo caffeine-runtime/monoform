@@ -7,7 +7,8 @@
 // installed, Select subject (AI) uses the model; Remove object
 // without its model offers the download ("Not now" changes nothing), and
 // with it removes the selected blue square through a background job, undoably;
-// Remove in Settings uninstalls.
+// Remove in Settings uninstalls; Download all asks once and downloads both
+// at the same time (as do two Installs started one after the other).
 import { api } from '../core/backend';
 import { join } from '../core/paths';
 import { ui } from '../core/ui.svelte';
@@ -118,6 +119,31 @@ export default async function m43(dir: string) {
   row('eraser')!.querySelector<HTMLButtonElement>('button')!.click();
   await answer('ok', 'remove confirmation');
   await waitFor(() => (row('eraser')?.querySelector('button')?.textContent?.includes('Install') ? true : null), 'eraser removed');
+
+  // Download all: with both missing, one question, then both download at the same time.
+  await api.AIRemove('subject');
+  await aiModels.refresh();
+  const all = await waitFor(() => document.querySelector<HTMLElement>(`.tabview[data-tab-id="${settingsTab.id}"] .ai .row.all`), 'Download all offered');
+  assert(all.textContent!.includes('2 models'), `says how many (${all.textContent})`);
+  all.querySelector('button')!.click();
+  const da = await waitFor(() => ui.dialog, 'one question for both');
+  assertEq(da.title, 'Download all AI models?', da.title);
+  assert(da.details!.length === 3 && da.message!.includes('huggingface.co'), `names both models and the source (${da.details})`);
+  da.resolve({ button: 'ok' });
+  await waitFor(() => (aiModels.busy('subject') && aiModels.busy('eraser') ? true : null), 'both downloading at once', 5000);
+  await waitFor(() => (row('subject')?.querySelector('button')?.textContent?.includes('Downloading') && row('eraser')?.querySelector('button')?.textContent?.includes('Downloading') ? true : null), 'both rows show it');
+  await waitFor(() => (row('subject')?.textContent?.includes('Installed') && row('eraser')?.textContent?.includes('Installed') ? true : null), 'both installed', 10000);
+  assert(!document.querySelector(`.tabview[data-tab-id="${settingsTab.id}"] .ai .row.all`), 'nothing left to download all of');
+  // One at a time also runs side by side: start one, then the other while it downloads.
+  for (const id of ['subject', 'eraser']) await api.AIRemove(id);
+  await aiModels.refresh();
+  const one = aiModels.install('subject');
+  await answer('ok', 'first download');
+  const two = aiModels.install('eraser');
+  await answer('ok', 'second download while the first runs');
+  await waitFor(() => (aiModels.busy('subject') && aiModels.busy('eraser') ? true : null), 'two downloads side by side', 5000);
+  assert((await one) && (await two), 'both installed');
+  log('download all, and two downloads at the same time');
 
   await workspace.close(t, { force: true });
   await workspace.close(settingsTab, { force: true });
