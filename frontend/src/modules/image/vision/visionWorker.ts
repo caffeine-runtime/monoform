@@ -12,6 +12,7 @@ import { fetchBytes } from '../../../core/fetchbytes';
 import { measure, pickMask } from './pick';
 import { refineMask, sample } from './refine';
 import { dilate, ERASE_SIZE, feather, type Rect } from './erase';
+import { plainBorder, removePlain } from './plainbg';
 import u2netpUrl from '../models/u2netp.onnx?url';
 import samEncUrl from '../models/slimsam-77-vision_encoder_quantized.onnx?url';
 import samDecUrl from '../models/slimsam-77-prompt_encoder_mask_decoder_quantized.onnx?url';
@@ -27,6 +28,7 @@ export interface MaskResult {
 export type VisionIn =
   | { id: number; type: 'wand'; image: ImageBitmap; x: number; y: number; tolerance: number; contiguous: boolean }
   | { id: number; type: 'removeBg'; image: ImageBitmap }
+  | { id: number; type: 'plainBg'; image: ImageBitmap; everywhere: boolean | 'auto'; force: boolean }
   | { id: number; type: 'samEncode'; image: ImageBitmap; key: string }
   | { id: number; type: 'samDecode'; key: string; points: { x: number; y: number; positive: boolean }[] }
   | { id: number; type: 'edges'; image: ImageBitmap }
@@ -45,7 +47,15 @@ export interface ErasePatch {
   rect: Rect;
 }
 
-export type VisionOut = { id: number; ok: true; result: MaskResult | { millis: number } | EraseStarted | ErasePatch } | { id: number; ok: false; error: string };
+/** A plain background made transparent (null colour: the border isn't one colour). */
+export interface PlainOut {
+  image: ImageBitmap | null;
+  color: [number, number, number] | null;
+  everywhere: boolean;
+}
+
+type Result = MaskResult | { millis: number } | EraseStarted | ErasePatch | PlainOut;
+export type VisionOut = { id: number; ok: true; result: Result } | { id: number; ok: false; error: string };
 
 const MEAN = [0.485, 0.456, 0.406];
 const STD = [0.229, 0.224, 0.225];
@@ -428,6 +438,22 @@ async function eraseFinish(st: EraseStarted, base: string): Promise<ErasePatch> 
   return { patch: big.transferToImageBitmap(), rect };
 }
 
+// ---- plain background ----
+
+function plainBg(img: ImageBitmap, everywhere: boolean | 'auto', force: boolean): PlainOut {
+  const w = img.width;
+  const h = img.height;
+  const px = pixels(img);
+  img.close();
+  let color = plainBorder(px, w, h);
+  if (!color && force) color = plainBorder(px, w, h, 1, 0); // asked for: the border's median colour anyway
+  if (!color) return { image: null, color: null, everywhere: false };
+  const r = removePlain(px, w, h, color, everywhere);
+  const c = new OffscreenCanvas(w, h);
+  c.getContext('2d')!.putImageData(new ImageData(r.rgba, w, h), 0, 0);
+  return { image: c.transferToImageBitmap(), color, everywhere: r.everywhere };
+}
+
 function edgesOnly(img: ImageBitmap): MaskResult {
   const t0 = performance.now();
   const px = pixels(img);
@@ -442,16 +468,17 @@ function edgesOnly(img: ImageBitmap): MaskResult {
 self.onmessage = async (e: MessageEvent<VisionIn>) => {
   const m = e.data;
   try {
-    let result: MaskResult | { millis: number } | EraseStarted | ErasePatch;
+    let result: Result;
     if (m.type === 'wand') result = wand(m.image, m.x, m.y, m.tolerance, m.contiguous);
     else if (m.type === 'aiSubject') result = await aiSubject(m.image, m.base);
     else if (m.type === 'eraseBegin') result = await eraseBegin(m.image, m.mask, m.rect, m.base, m.seed);
     else if (m.type === 'eraseFinish') result = await eraseFinish(m.started, m.base);
     else if (m.type === 'removeBg') result = await removeBg(m.image);
+    else if (m.type === 'plainBg') result = plainBg(m.image, m.everywhere, m.force);
     else if (m.type === 'samEncode') result = await samEncode(m.image, m.key);
     else if (m.type === 'samDecode') result = await samDecode(m.key, m.points);
     else result = edgesOnly(m.image);
-    const transfer = 'mask' in result ? [result.mask, result.edges] : 'patch' in result ? [result.patch] : [];
+    const transfer = 'mask' in result ? [result.mask, result.edges] : 'patch' in result ? [result.patch] : 'everywhere' in result && result.image ? [result.image] : [];
     (self as unknown as Worker).postMessage({ id: m.id, ok: true, result } satisfies VisionOut, transfer);
   } catch (err) {
     (self as unknown as Worker).postMessage({ id: m.id, ok: false, error: err instanceof Error ? err.message : String(err) } satisfies VisionOut);

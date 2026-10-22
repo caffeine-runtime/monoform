@@ -30,6 +30,7 @@ export interface ImageController {
   flatten(): void;
   mask(op: MaskOp): void;
   removeBackground(): void;
+  openCleanup(): void;
   selectSubject(): void;
   removeObject(): void;
   saveCopy(): void;
