@@ -25,6 +25,8 @@ export interface Adjustments {
   blurY: number; // 0..1
   blurBand: number; // 0..1, tilt-shift: half-height of the sharp band (fraction of the image)
   vignette: number; // 0..1
+  /** Square blocks this many pixels wide (0 or 1 = off). */
+  pixelate: number;
   /** Effects that are on, each with its strength (0..1), applied in EFFECTS order. */
   effects: Partial<Record<Effect, number>>;
   /** Clean up: pale pixels (a light watermark, scanner shading) turn white; 0 = off, 1 = everything lighter than mid-grey. */
@@ -87,6 +89,7 @@ export const NEUTRAL: Adjustments = {
   blurY: 0.5,
   blurBand: 0.15,
   vignette: 0,
+  pixelate: 0,
   effects: {},
   lightMarks: 0,
   markColor: '',
@@ -183,7 +186,7 @@ uniform sampler2D mask;
 uniform bool useMask, useSharp, useBlur, tilt;
 uniform vec2 tiltC, tiltN, size;
 uniform float tiltW;
-uniform float exposure, brightness, contrast, highlights, shadows, saturation, vibrance, temperature, tint, hue, sharpen, vignette;
+uniform float exposure, brightness, contrast, highlights, shadows, saturation, vibrance, temperature, tint, hue, sharpen, vignette, pixelate;
 uniform bool useMark;
 uniform float fxAmt[${EFFECTS.length}]; // strength of each effect (EFFECTS order), 0 = off
 uniform float lightMarks, markTol;
@@ -250,7 +253,14 @@ vec3 applyLook(vec3 c, int look) {
 
 void main() {
   vec4 orig = texture(src, uv);
-  vec4 base = useBlur ? texture(blurSrc, uv) : orig;
+  // Pixelate: every pixel of a block takes the block's middle (blocks counted from the image's top left).
+  vec2 puv = uv;
+  if (pixelate > 1.0) {
+    vec2 ip = vec2(uv.x, 1.0 - uv.y) * size;
+    vec2 cell = min((floor(ip / pixelate) + 0.5) * pixelate, size - 0.5);
+    puv = vec2(cell.x, size.y - cell.y) / size;
+  }
+  vec4 base = useBlur ? texture(blurSrc, puv) : texture(src, puv);
   if (useBlur && tilt) {
     // Distance from the sharp band's centre line, in units of the image height.
     float d = abs(dot(uv * size - tiltC, tiltN)) / size.y;
@@ -266,7 +276,7 @@ void main() {
     vec3 d = abs(c - markColor);
     c = mix(c, vec3(1.0), 1.0 - smoothstep(markTol * 0.7, markTol + 0.002, max(d.r, max(d.g, d.b))));
   }
-  if (useSharp) c += (c - texture(sharpSrc, uv).rgb) * sharpen * 2.5;
+  if (useSharp) c += (c - texture(sharpSrc, puv).rgb) * sharpen * 2.5;
   c *= exp2(exposure);
   // Temperature/tint as channel gains.
   c *= vec3(1.0 + temperature * 0.25, 1.0 - tint * 0.15, 1.0 - temperature * 0.25);
@@ -475,7 +485,7 @@ export class Adjuster {
     gl.uniform2f(u('tiltC'), a.blurX * this.w, (1 - a.blurY) * this.h);
     gl.uniform2f(u('tiltN'), Math.sin(tr), Math.cos(tr)); // normal of a band at angle tr (flipped y)
     gl.uniform1f(u('tiltW'), a.blurBand);
-    for (const k of ['exposure', 'brightness', 'contrast', 'highlights', 'shadows', 'saturation', 'vibrance', 'temperature', 'tint', 'hue', 'sharpen', 'vignette'] as const) {
+    for (const k of ['exposure', 'brightness', 'contrast', 'highlights', 'shadows', 'saturation', 'vibrance', 'temperature', 'tint', 'hue', 'sharpen', 'vignette', 'pixelate'] as const) {
       gl.uniform1f(u(k), a[k]);
     }
     gl.uniform1fv(u('fxAmt'), EFFECTS.map((e) => a.effects[e.id] ?? 0));

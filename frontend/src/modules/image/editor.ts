@@ -127,6 +127,10 @@ export interface ToolOptions {
   wandContiguous: boolean;
   /** On a mask the brush hides (eraser shows); false swaps them. */
   maskHide: boolean;
+  /** Blur region tool: strength (1 = the usual). */
+  regionBlur: number;
+  /** Pixelate region tool: block size in pixels (0 = automatic, from the picture's size). */
+  pixelSize: number;
 }
 
 interface LayerModel {
@@ -208,6 +212,10 @@ export class ImageEditor {
   private checker: { key: string; fill: CanvasPattern | string; base: string; edge: string } | null = null;
   private region: KRect;
   private regionTr: Transformer;
+  /** Blur / pixelate region tools: the result shown inside the area before it is applied. */
+  private regionPreview: KImage;
+  private regionSrc: { key: string; canvas: HTMLCanvasElement } | null = null;
+  private previewRaf = 0;
   /** Handles round the selection: they move, scale and turn the outline, never the pixels. */
   private selFrame: KRect;
   private selTr: Transformer;
@@ -256,6 +264,8 @@ export class ImageEditor {
     wandTolerance: 32,
     wandContiguous: true,
     maskHide: true,
+    regionBlur: 1,
+    pixelSize: 0,
   };
   editMask = false;
   selection: Selection | null = null;
@@ -298,7 +308,10 @@ export class ImageEditor {
     this.selPaintLine = new KLine({ points: [], stroke: 'rgba(255, 70, 70, 0.45)', lineCap: 'round', lineJoin: 'round', listening: false });
     this.world.add(this.selPaintLine);
     this.region = new KRect({ visible: false, stroke: '#ffffff', dash: [6, 4], strokeScaleEnabled: false, strokeWidth: 1.5, fill: 'rgba(217,119,87,0.12)', draggable: true, name: 'region' });
+    this.regionPreview = new KImage({ image: undefined, visible: false, listening: false });
+    this.world.add(this.regionPreview);
     this.world.add(this.region);
+    this.region.on('dragmove transform dragend transformend', () => this.schedulePreview());
     this.regionTr = new Transformer({ rotateEnabled: false, keepRatio: false, borderStroke: ACCENT, anchorStroke: ACCENT, anchorSize: ANCHOR, anchorCornerRadius: 3, ignoreStroke: true });
     this.selFrame = new KRect({ visible: false, fill: 'rgba(0,0,0,0)', draggable: true, name: 'selection-frame' });
     this.world.add(this.selFrame);
@@ -429,6 +442,7 @@ export class ImageEditor {
 
   setOptions(o: Partial<ToolOptions>) {
     Object.assign(this.opts, o);
+    if ('regionBlur' in o || 'pixelSize' in o) this.schedulePreview();
   }
 
   private updateDraggable() {
@@ -685,7 +699,10 @@ export class ImageEditor {
       if (this.draft instanceof Arrow) this.draft.points([s.x, s.y, p.x, p.y]);
       else if (this.draft instanceof KRect) this.draft.setAttrs({ width: p.x - s.x, height: p.y - s.y });
       else if (this.draft instanceof KEllipse) this.draft.setAttrs({ x: (s.x + p.x) / 2, y: (s.y + p.y) / 2, radiusX: Math.abs(p.x - s.x) / 2, radiusY: Math.abs(p.y - s.y) / 2 });
-      else if (this.region.visible()) this.region.setAttrs({ width: p.x - s.x, height: p.y - s.y });
+      else if (this.region.visible()) {
+        this.region.setAttrs({ width: p.x - s.x, height: p.y - s.y });
+        this.schedulePreview();
+      }
       this.klayer.batchDraw();
     });
 
@@ -750,6 +767,7 @@ export class ImageEditor {
       }
       this.region.setAttrs(r);
       this.regionTr.nodes([this.region]);
+      this.schedulePreview();
       this.klayer.batchDraw();
       this.emit();
     });
@@ -771,6 +789,7 @@ export class ImageEditor {
   setRegion(r: Rect) {
     this.region.setAttrs({ ...r, scaleX: 1, scaleY: 1, visible: true });
     this.regionTr.nodes([this.region]);
+    this.schedulePreview();
     this.klayer.batchDraw();
     this.emit();
   }
@@ -778,6 +797,9 @@ export class ImageEditor {
   cancelRegion() {
     this.region.setAttrs({ visible: false, scaleX: 1, scaleY: 1 });
     this.regionTr.nodes([]);
+    cancelAnimationFrame(this.previewRaf);
+    this.regionPreview.visible(false);
+    this.regionSrc = null;
     this.klayer.batchDraw();
     this.emit();
   }
@@ -788,8 +810,36 @@ export class ImageEditor {
     const tool = this.tool;
     this.cancelRegion();
     if (tool === 'crop') this.crop(r);
-    else if (tool === 'blur') this.pixelOp((c) => raster.blurRegion(c, r));
-    else if (tool === 'pixelate') this.pixelOp((c) => raster.pixelateRegion(c, r));
+    else if (tool === 'blur') this.pixelOp((c) => raster.blurRegion(c, r, this.opts.regionBlur));
+    else if (tool === 'pixelate') this.pixelOp((c) => raster.pixelateRegion(c, r, this.pixelBlock()));
+  }
+
+  /** Pixelate region: the block size (automatic: about 1/80 of the picture's longer side). */
+  pixelBlock(): number {
+    return this.opts.pixelSize || Math.max(6, Math.round(Math.max(this.docW, this.docH) / 80));
+  }
+
+  private schedulePreview() {
+    if (this.tool !== 'blur' && this.tool !== 'pixelate') return;
+    cancelAnimationFrame(this.previewRaf);
+    this.previewRaf = requestAnimationFrame(() => this.drawRegionPreview());
+  }
+
+  /** The area blurred or pixelated as it will be, over the picture (only the area is worked out). */
+  private drawRegionPreview() {
+    const r = this.region.visible() ? normRect(this.regionRect(), this.docW, this.docH) : null;
+    if (!r || r.width < 2 || r.height < 2 || (this.tool !== 'blur' && this.tool !== 'pixelate')) {
+      this.regionPreview.visible(false);
+      this.klayer.batchDraw();
+      return;
+    }
+    const key = `${this.activeId}:${this.version}:${this.index}`;
+    if (this.regionSrc?.key !== key) this.regionSrc = { key, canvas: this.layerDocCanvas(this.active) };
+    const part = raster.crop(this.regionSrc.canvas, r);
+    const all = { x: 0, y: 0, width: r.width, height: r.height };
+    const out = this.tool === 'blur' ? raster.blurRegion(part, all, this.opts.regionBlur) : raster.pixelateRegion(part, all, this.pixelBlock());
+    this.regionPreview.setAttrs({ image: out, x: r.x, y: r.y, width: r.width, height: r.height, visible: true });
+    this.klayer.batchDraw();
   }
 
   // ---- pixel selection ----
@@ -1295,6 +1345,8 @@ export class ImageEditor {
     const saved = { ...this.view };
     const trNodes = this.tr.nodes();
     const regionVisible = this.region.visible();
+    const previewVisible = this.regionPreview.visible();
+    this.regionPreview.visible(false);
     const sel0 = this.selection;
     const selNodes = this.selTr.nodes();
     this.tr.nodes([]);
@@ -1314,6 +1366,7 @@ export class ImageEditor {
       this.selection = sel0;
       this.tr.nodes(trNodes);
       this.selTr.nodes(selNodes);
+      this.regionPreview.visible(previewVisible);
       if (regionVisible) {
         this.region.visible(true);
         this.regionTr.nodes([this.region]);

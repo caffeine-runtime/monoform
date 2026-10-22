@@ -548,6 +548,12 @@
   zooms); on a touch screen one finger works like the mouse (draw, select, drag layers, selections and handles,
   bigger handles), two fingers pinch-zoom and pan, and a second finger cancels what the first began. Unit tests
   (wheelIntent, viewWith, effects), self-tests `m61` (turned canvas), `m62`, `m63`, `m64`.
+- **Adjust is a list of pages, pixelate and blur with their own settings**: the Adjust panel lists Light, Colour,
+  Detail, Blur, Pixelate, Effects and Clean up (a dot marks the changed ones); each opens a page with only its own
+  controls and a Back button. **Pixelate** (block size) is new there — live on the GPU and limited to a selection.
+  The selection bar's Blur and Pixelate buttons open their page with a visible strength already set. The **Blur
+  region** and **Pixelate region** tools have a strength / block size in the tool bar and show the result inside
+  the area before Enter. Self-test `m65`.
 - **Image editor: fifteen looks** in Adjust › Effects besides black & white, sepia and invert — Vintage, Faded,
   Warm, Cool, Noir, Teal & orange, Cross-process, Lomo, Posterize, Solarize, Threshold, Emboss, Pencil sketch,
   Film grain, Thermal — one at a time with an Amount slider, previewed live on the GPU and limited to the

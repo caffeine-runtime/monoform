@@ -492,6 +492,11 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   it, wand edges worked out again), so turning it many times doesn't blur it. The frame stays turned while that
   selection lasts. Only the rectangle, ellipse and lasso tools show it — the brush and the wand need clicks
   inside a selection.
+- **Adjust is a list of pages** (image editor): with twenty-odd sliders, chips and the clean-up in one column the
+  panel was hard to read, so it lists its kinds of adjustment and opens one at a time; all pages still feed one
+  preview and one Apply. Pixelate became an adjustment (the shader samples each block's middle) so it previews
+  live and stays inside a selection's mask like the rest. The region tools preview by running the same raster
+  function on just the area's pixels, so what is shown is what Enter applies.
 - **Touch and touchpad in the image editor**: a wheel event with whole 120 notches (or lines) is a mouse wheel
   and zooms; anything else is a touchpad scroll and pans, and Ctrl+wheel (a pinch) zooms. Two-finger touch is
   handled before Konva sees it (capture phase), so a second finger can't start a drag or a stroke; it cancels
