@@ -11,6 +11,10 @@
   import Redo2 from '@lucide/svelte/icons/redo-2';
   import InfoIcon from '@lucide/svelte/icons/info';
   import ListTree from '@lucide/svelte/icons/list-tree';
+  import ListIcon from '@lucide/svelte/icons/list';
+  import ListOrdered from '@lucide/svelte/icons/list-ordered';
+  import IndentIncrease from '@lucide/svelte/icons/indent-increase';
+  import IndentDecrease from '@lucide/svelte/icons/indent-decrease';
   import OutlineTree from '../../shell/OutlineTree.svelte';
   import { isNarrow } from '../../core/fit';
   import { countText, formatCounts, type Counts, type OutlineItem } from '../../core/textStats';
@@ -21,6 +25,7 @@
   import { formatShortcut } from '../../core/keys';
   import { t } from '../../core/i18n';
   import { DocModel } from './docxModel';
+  import { Numbering, type ListKind } from './docxNumbering';
   import { OdtModel } from './odtModel';
   import { officeControllers } from './controllers';
 
@@ -35,6 +40,10 @@
   let error = $state('');
   let loading = $state(true);
   let blockStyle = $state('p');
+  /** The kind of list the cursor is in (the list buttons show it). */
+  let listAt = $state<ListKind | null>(null);
+  /** numbering.xml's entry and whether document.xml already has a relationship to it. */
+  let numberingPart = { name: 'word/numbering.xml', related: false };
   let counts = $state<Counts>({ words: 0, chars: 0 });
   let selCounts = $state<Counts | null>(null);
   // The Navigation pane: the document's headings; click one to go to it.
@@ -80,9 +89,14 @@
       sourcePath = template ? '' : path;
       odt = r.format === 'odt';
       const partUrl = (entry: string) => endpoint('zip', { path, entry });
-      model = odt ? new OdtModel(r.document, { styles: r.styles ?? {}, textStyles: r.textStyles ?? {}, partUrl }) : new DocModel(r.document, { styles: r.styles ?? {}, rels: r.rels ?? [], partUrl });
+      const numRel = (r.rels ?? []).find((x) => x.type === 'numbering' && !x.external);
+      numberingPart = { name: numRel?.target ?? 'word/numbering.xml', related: !!numRel };
+      model = odt
+        ? new OdtModel(r.document, { styles: r.styles ?? {}, textStyles: r.textStyles ?? {}, partUrl })
+        : new DocModel(r.document, { styles: r.styles ?? {}, rels: r.rels ?? [], partUrl, numbering: new Numbering(r.numbering ?? '', r.stylesXml ?? '') });
       await tick();
       page!.replaceChildren(model.render(document));
+      renumber();
       tab.dirty = false;
       count();
     } catch (e) {
@@ -148,9 +162,15 @@
     selCounts = countText(sel.toString());
   }
 
+  /** Word list markers follow every edit (a new item, a removed one, a level change). */
+  function renumber() {
+    if (model instanceof DocModel && page) model.renumber(page);
+  }
+
   let countTimer: ReturnType<typeof setTimeout> | undefined;
   function input() {
     tab.dirty = true;
+    renumber();
     clearTimeout(countTimer);
     countTimer = setTimeout(count, 400);
   }
@@ -169,16 +189,95 @@
   }
 
   function syncBlock() {
-    const sel = window.getSelection();
-    let n: Node | null = sel?.anchorNode ?? null;
+    const b = blockAt(window.getSelection()?.anchorNode ?? null);
+    if (!b) return;
+    const t = b.tagName.toLowerCase();
+    blockStyle = t === 'div' ? 'p' : t;
+    listAt = model instanceof DocModel ? model.listKind(b) : null;
+  }
+
+  const BLOCK = /^(P|H[1-6]|DIV)$/;
+
+  /** The paragraph (or heading) a node is in. */
+  function blockAt(n: Node | null): HTMLElement | null {
     while (n && n !== page) {
-      if (n.nodeType === 1 && /^(P|H[1-6]|DIV)$/.test((n as HTMLElement).tagName)) {
-        const t = (n as HTMLElement).tagName.toLowerCase();
-        blockStyle = t === 'div' ? 'p' : t;
-        return;
-      }
+      if (n.nodeType === 1 && BLOCK.test((n as HTMLElement).tagName) && !(n as HTMLElement).dataset.opaque) return n as HTMLElement;
       n = n.parentNode;
     }
+    return null;
+  }
+
+  /** The editable paragraphs the selection touches, in order. */
+  function selectedBlocks(): HTMLElement[] {
+    const sel = window.getSelection();
+    if (!sel?.rangeCount || !page) return [];
+    const r = sel.getRangeAt(0);
+    if (!page.contains(r.commonAncestorContainer)) return [];
+    if (r.collapsed) {
+      const b = blockAt(r.startContainer);
+      return b ? [b] : [];
+    }
+    return Array.from(page.querySelectorAll<HTMLElement>('p, h1, h2, h3, h4, h5, h6, div')).filter(
+      (b) => BLOCK.test(b.tagName) && !b.dataset.opaque && !b.querySelector('p, h1, h2, h3, h4, h5, h6, div') && r.intersectsNode(b),
+    );
+  }
+
+  /** Bulleted / numbered list on or off for the selected paragraphs. */
+  function toggleList(kind: ListKind) {
+    if (tab.readOnly || !(model instanceof DocModel)) return;
+    const paras = selectedBlocks();
+    if (!paras.length) return;
+    model.toggleList(paras, kind);
+    input();
+    syncBlock();
+  }
+
+  /** A list level deeper (+1) or shallower (-1). */
+  function listLevel(delta: number) {
+    if (tab.readOnly || !(model instanceof DocModel)) return;
+    const paras = selectedBlocks().filter((p) => (model as DocModel).listKind(p));
+    if (!paras.length) return;
+    model.changeLevel(paras, delta);
+    input();
+    syncBlock();
+  }
+
+  /** Whether the caret sits at the very start of a paragraph. */
+  function caretAtStart(b: HTMLElement): boolean {
+    const sel = window.getSelection();
+    if (!sel?.isCollapsed || !sel.rangeCount) return false;
+    const r = document.createRange();
+    r.selectNodeContents(b);
+    r.setEnd(sel.getRangeAt(0).startContainer, sel.getRangeAt(0).startOffset);
+    return r.toString().length === 0 && !r.cloneContents().querySelector('img, .atom');
+  }
+
+  /** Word's list keys: Tab / Shift+Tab change the level, Enter on an empty item and Backspace at the start end it. */
+  function listKeys(e: KeyboardEvent): boolean {
+    if (!(model instanceof DocModel) || e.ctrlKey || e.metaKey || e.altKey) return false;
+    const paras = selectedBlocks();
+    const b = paras[0];
+    const inList = !!b && !!model.listKind(b);
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      if (inList && (paras.length > 1 || caretAtStart(b))) listLevel(e.shiftKey ? -1 : 1);
+      else if (!e.shiftKey) exec('insertText', '\t');
+      return true;
+    }
+    if (!inList || paras.length !== 1) return false;
+    if (e.key === 'Enter' && !e.shiftKey && !(b.textContent ?? '').trim() && !b.querySelector('img, .atom')) {
+      e.preventDefault();
+      listLevel(-1);
+      return true;
+    }
+    if (e.key === 'Backspace' && caretAtStart(b)) {
+      e.preventDefault();
+      model.changeLevel([b], -(Number(b.dataset.ilvl ?? 0) + 1));
+      input();
+      syncBlock();
+      return true;
+    }
+    return false;
   }
 
   async function save(): Promise<boolean> {
@@ -207,7 +306,11 @@
   async function writeTo(path: string, retarget: boolean): Promise<boolean> {
     try {
       const xml = model!.serialize(page!);
-      await api.DocSave(path, sourcePath, xml);
+      const parts = [];
+      if (model instanceof DocModel && model.numbering.changed) {
+        parts.push({ name: numberingPart.name, data: utf8Base64(model.numbering.serialize()), relId: numberingPart.related ? '' : 'rIdMfNumbering', relType: 'numbering' });
+      }
+      await api.DocSave(path, sourcePath, xml, parts);
       tab.dirty = false;
       if (retarget && path !== tab.filePath) {
         tab.retarget(path);
@@ -229,9 +332,16 @@
   }
 
   function keydown(e: KeyboardEvent) {
+    if (!tab.readOnly && listKeys(e)) return;
     const mod = e.ctrlKey || e.metaKey;
     if (!mod || e.altKey) return;
     const k = e.key.toLowerCase();
+    // Lists: Ctrl+Shift+8 / 7 (bulleted / numbered), Ctrl+Shift+L (Word's List Bullet).
+    if (e.shiftKey && (e.code === 'Digit8' || e.code === 'Digit7' || k === 'l')) {
+      e.preventDefault();
+      toggleList(e.code === 'Digit7' ? 'number' : 'bullet');
+      return;
+    }
     if (k === 'b' || k === 'i' || k === 'u') {
       e.preventDefault();
       exec(k === 'b' ? 'bold' : k === 'i' ? 'italic' : 'underline');
@@ -252,7 +362,14 @@
     underline: () => exec('underline'),
     style: (s) => setStyle(s),
   });
-  (tab as unknown as { docTest: unknown }).docTest = { page: () => page, model: () => model, save, writeTo, exec, headings: () => headings, active: () => active, counts: () => counts, selCounts: () => selCounts, goHeading, outlineOpen: () => outlineOpen, toggleOutline, desk: () => desk };
+
+  function utf8Base64(s: string): string {
+    const b = new TextEncoder().encode(s);
+    let bin = '';
+    for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode(...b.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
+  (tab as unknown as { docTest: unknown }).docTest = { page: () => page, model: () => model, save, writeTo, exec, toggleList, listLevel, listAt: () => listAt, headings: () => headings, active: () => active, counts: () => counts, selCounts: () => selCounts, goHeading, outlineOpen: () => outlineOpen, toggleOutline, desk: () => desk };
 
   onMount(() => {
     tab.handlers = {
@@ -295,6 +412,13 @@
     <button class="icon-btn" title={t('Underline ({shortcut})', { shortcut: formatShortcut('Mod+U') })} onmousedown={(e) => e.preventDefault()} onclick={() => exec('underline')}><Icon icon={Underline} /></button>
     <button class="icon-btn" title={t('Strikethrough')} onmousedown={(e) => e.preventDefault()} onclick={() => exec('strikeThrough')}><Icon icon={Strikethrough} /></button>
     <span class="sep"></span>
+    {#if !odt}
+      <button class="icon-btn" class:on={listAt === 'bullet'} aria-pressed={listAt === 'bullet'} title={t('Bulleted list ({shortcut})', { shortcut: formatShortcut('Mod+Shift+8') })} onmousedown={(e) => e.preventDefault()} onclick={() => toggleList('bullet')}><Icon icon={ListIcon} /></button>
+      <button class="icon-btn" class:on={listAt === 'number'} aria-pressed={listAt === 'number'} title={t('Numbered list ({shortcut})', { shortcut: formatShortcut('Mod+Shift+7') })} onmousedown={(e) => e.preventDefault()} onclick={() => toggleList('number')}><Icon icon={ListOrdered} /></button>
+      <button class="icon-btn" disabled={!listAt} title={t('Decrease list level (Shift+Tab)')} onmousedown={(e) => e.preventDefault()} onclick={() => listLevel(-1)}><Icon icon={IndentDecrease} /></button>
+      <button class="icon-btn" disabled={!listAt} title={t('Increase list level (Tab)')} onmousedown={(e) => e.preventDefault()} onclick={() => listLevel(1)}><Icon icon={IndentIncrease} /></button>
+      <span class="sep"></span>
+    {/if}
     <button class="icon-btn" title={t('Undo')} onmousedown={(e) => e.preventDefault()} onclick={() => exec('undo')}><Icon icon={Undo2} /></button>
     <button class="icon-btn" title={t('Redo')} onmousedown={(e) => e.preventDefault()} onclick={() => exec('redo')}><Icon icon={Redo2} /></button>
   {/if}
@@ -391,6 +515,9 @@
     outline: none;
     caret-color: #c15f3c;
     cursor: text;
+    /* Spaces and tabs as typed (Word keeps them). */
+    white-space: pre-wrap;
+    tab-size: 4;
   }
   .page.hidden {
     display: none;
@@ -399,6 +526,12 @@
   .page.odt {
     white-space: pre-wrap;
     --doc-font: 'Liberation Serif', 'Times New Roman', 'Source Serif 4 Variable', serif;
+  }
+  /* Word lists: the marker Word would draw (data-marker), in the hanging indent. */
+  .page:not(.odt) :global(.li)::before {
+    content: attr(data-marker);
+    left: 0;
+    white-space: pre;
   }
   .page :global(.li.num)::before {
     content: attr(data-n);

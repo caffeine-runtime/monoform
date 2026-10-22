@@ -1,12 +1,21 @@
 {
   "Comparing…": "Comparando…",
   "Compare": "Comparar",
-  "{n} changes": {"one": "{n} cambio", "other": "{n} cambios"},
+  "{n} changes": {
+    "one": "{n} cambio",
+    "other": "{n} cambios"
+  },
   "No differences": "Sin diferencias",
-  "{n} pixels differ": {"one": "{n} píxel distinto", "other": "{n} píxeles distintos"},
+  "{n} pixels differ": {
+    "one": "{n} píxel distinto",
+    "other": "{n} píxeles distintos"
+  },
   "Choose the left file": "Elegir el archivo izquierdo",
   "Choose the right file": "Elegir el archivo derecho",
-  "{n} bytes": {"one": "{n} byte", "other": "{n} bytes"},
+  "{n} bytes": {
+    "one": "{n} byte",
+    "other": "{n} bytes"
+  },
   "{name} — click to choose another file": "{name} — haz clic para elegir otro archivo",
   "Choose a file…": "Elegir un archivo…",
   "Swap left and right": "Intercambiar izquierda y derecha",
@@ -30,10 +39,16 @@
   "Identical": "Idénticos",
   "No differences (ignoring whitespace)": "Sin diferencias (ignorando espacios en blanco)",
   "No differences in content": "Sin diferencias en el contenido",
-  "{current} of {n} changes": {"one": "{current} de {n} cambio", "other": "{current} de {n} cambios"},
+  "{current} of {n} changes": {
+    "one": "{current} de {n} cambio",
+    "other": "{current} de {n} cambios"
+  },
   "Previous change ({shortcut})": "Cambio anterior ({shortcut})",
   "Next change ({shortcut})": "Cambio siguiente ({shortcut})",
-  "{n} pixels differ ({pct} %)": {"one": "{n} píxel distinto ({pct} %)", "other": "{n} píxeles distintos ({pct} %)"},
+  "{n} pixels differ ({pct} %)": {
+    "one": "{n} píxel distinto ({pct} %)",
+    "other": "{n} píxeles distintos ({pct} %)"
+  },
   "Pixel-identical": "Idénticas píxel a píxel",
   "sizes {a} vs {b}": "tamaños {a} frente a {b}",
   "Compare again (after the files changed)": "Comparar de nuevo (tras cambiar los archivos)",
@@ -61,7 +76,10 @@
   "[side] Left": "Izquierda",
   "[side] Right": "Derecha",
   "Opacity of B": "Opacidad de B",
-  "{n} unchanged lines — click to show": {"one": "{n} línea sin cambios — haz clic para mostrarla", "other": "{n} líneas sin cambios — haz clic para mostrarlas"},
+  "{n} unchanged lines — click to show": {
+    "one": "{n} línea sin cambios — haz clic para mostrarla",
+    "other": "{n} líneas sin cambios — haz clic para mostrarlas"
+  },
   "Overview of the changes — click to jump": "Vista general de los cambios — haz clic para saltar",
   "Before the first save": "Antes del primer guardado",
   "Changed by another program": "Modificado por otro programa",
@@ -72,7 +90,10 @@
   "{n} min ago": "hace {n} min",
   "{n} h ago": "hace {n} h",
   "yesterday": "ayer",
-  "{n} days ago": {"one": "hace {n} día", "other": "hace {n} días"},
+  "{n} days ago": {
+    "one": "hace {n} día",
+    "other": "hace {n} días"
+  },
   "Today": "Hoy",
   "Yesterday": "Ayer",
   "same size": "mismo tamaño",
@@ -107,7 +128,10 @@
   "File history is off (Settings → Files).": "El historial de archivos está desactivado (Ajustes → Archivos).",
   "Save a file and its earlier content is kept here.": "Guarda un archivo y su contenido anterior se conservará aquí.",
   "Deleted": "Eliminado",
-  "{n} versions": {"one": "{n} versión", "other": "{n} versiones"},
+  "{n} versions": {
+    "one": "{n} versión",
+    "other": "{n} versiones"
+  },
   "Kept versions use {used} of {limit} · new versions are not being kept.": "Las versiones guardadas ocupan {used} de {limit} · no se están guardando versiones nuevas.",
   "Kept versions use {used} of {limit}.": "Las versiones guardadas ocupan {used} de {limit}.",
   "Forget this history": "Olvidar este historial",
@@ -196,7 +220,10 @@
   "This file has no text body.": "Este archivo no tiene cuerpo de texto.",
   "Spreadsheets inside archives open read-only after extracting them.": "Las hojas de cálculo dentro de archivos comprimidos se abren en solo lectura después de extraerlas.",
   "OpenDocument spreadsheet": "Hoja de cálculo OpenDocument",
-  "{n} rows": {"one": "{n} fila", "other": "{n} filas"},
+  "{n} rows": {
+    "one": "{n} fila",
+    "other": "{n} filas"
+  },
   "Could not change the cells": "No se pudieron cambiar las celdas",
   "New sheet name": "Nombre de la hoja nueva",
   "Sheet{n}": "Hoja{n}",
@@ -212,7 +239,10 @@
   "Copy": "Copiar",
   "Paste": "Pegar",
   "Clear contents": "Borrar contenido",
-  "Delete {n} rows": {"one": "Eliminar {n} fila", "other": "Eliminar {n} filas"},
+  "Delete {n} rows": {
+    "one": "Eliminar {n} fila",
+    "other": "Eliminar {n} filas"
+  },
   "Add sheet": "Añadir hoja",
   "UTF-8 with BOM": "UTF-8 con BOM",
   "Loading…": "Cargando…",
@@ -228,7 +258,10 @@
   "Reopen": "Volver a abrir",
   "Ln {line}, Col {col}": "Lín. {line}, col. {col}",
   "({n} selected)": "(seleccionados: {n})",
-  "{n} cursors": {"one": "{n} cursor", "other": "{n} cursores"},
+  "{n} cursors": {
+    "one": "{n} cursor",
+    "other": "{n} cursores"
+  },
   "[line endings] Mixed": "Mixtos",
   "Find and replace": "Buscar y reemplazar",
   "Go to line…": "Ir a la línea…",
@@ -334,7 +367,10 @@
   "Images to put in a PDF (one per page)": "Imágenes para poner en un PDF (una por página)",
   "Images": "Imágenes",
   "Save PDF as": "Guardar PDF como",
-  "Created a {n}-page PDF": {"one": "Se creó un PDF de {n} página", "other": "Se creó un PDF de {n} páginas"},
+  "Created a {n}-page PDF": {
+    "one": "Se creó un PDF de {n} página",
+    "other": "Se creó un PDF de {n} páginas"
+  },
   "Couldn’t create the PDF": "No se pudo crear el PDF",
   "Signature image": "Imagen de la firma",
   "Couldn’t read that image": "No se pudo leer esa imagen",
@@ -370,11 +406,17 @@
   "Page operation failed": "Falló la operación con páginas",
   "Click on the page where the signature goes. You can move and resize it afterwards.": "Haz clic en la página donde va la firma. Después puedes moverla y cambiar su tamaño.",
   "Finding matches…": "Buscando coincidencias…",
-  "Marked {n} matches for redaction. Check them, then Apply.": {"one": "Se marcó {n} coincidencia para censurar. Revísala y luego pulsa Aplicar.", "other": "Se marcaron {n} coincidencias para censurar. Revísalas y luego pulsa Aplicar."},
+  "Marked {n} matches for redaction. Check them, then Apply.": {
+    "one": "Se marcó {n} coincidencia para censurar. Revísala y luego pulsa Aplicar.",
+    "other": "Se marcaron {n} coincidencias para censurar. Revísalas y luego pulsa Aplicar."
+  },
   "No matches to redact.": "No hay coincidencias que censurar.",
   "Apply redactions?": "¿Aplicar las censuras?",
   "The content under the black boxes is removed for good: page {page} becomes an image (its text can no longer be selected or searched; comments and form fields on it are flattened).": "El contenido bajo los recuadros negros se elimina para siempre: la página {page} se convierte en una imagen (su texto ya no se podrá seleccionar ni buscar; los comentarios y campos de formulario se aplanan).",
-  "The content under the black boxes is removed for good: {n} pages become an image (its text can no longer be selected or searched; comments and form fields on it are flattened).": {"one": "El contenido bajo los recuadros negros se elimina para siempre: {n} página se convierte en una imagen (su texto ya no se podrá seleccionar ni buscar; los comentarios y campos de formulario se aplanan).", "other": "El contenido bajo los recuadros negros se elimina para siempre: {n} páginas se convierten en imágenes (su texto ya no se podrá seleccionar ni buscar; los comentarios y campos de formulario se aplanan)."},
+  "The content under the black boxes is removed for good: {n} pages become an image (its text can no longer be selected or searched; comments and form fields on it are flattened).": {
+    "one": "El contenido bajo los recuadros negros se elimina para siempre: {n} página se convierte en una imagen (su texto ya no se podrá seleccionar ni buscar; los comentarios y campos de formulario se aplanan).",
+    "other": "El contenido bajo los recuadros negros se elimina para siempre: {n} páginas se convierten en imágenes (su texto ya no se podrá seleccionar ni buscar; los comentarios y campos de formulario se aplanan)."
+  },
   "Redact": "Censurar",
   "Redacting page {page} ({i} of {total})…": "Censurando la página {page} ({i} de {total})…",
   "Placing signatures…": "Colocando firmas…",
@@ -386,8 +428,14 @@
   "Recognising page {page} ({i} of {total})…": "Reconociendo la página {page} ({i} de {total})…",
   "No text was found on those pages.": "No se encontró texto en esas páginas.",
   "Adding the text layer…": "Añadiendo la capa de texto…",
-  "{n} rotated pages skipped": {"one": "{n} página girada omitida", "other": "{n} páginas giradas omitidas"},
-  "{n} pages are now searchable{skipped}. Save to keep it.": {"one": "{n} página ahora admite búsquedas{skipped}. Guarda para conservarlo.", "other": "{n} páginas ahora admiten búsquedas{skipped}. Guarda para conservarlo."},
+  "{n} rotated pages skipped": {
+    "one": "{n} página girada omitida",
+    "other": "{n} páginas giradas omitidas"
+  },
+  "{n} pages are now searchable{skipped}. Save to keep it.": {
+    "one": "{n} página ahora admite búsquedas{skipped}. Guarda para conservarlo.",
+    "other": "{n} páginas ahora admiten búsquedas{skipped}. Guarda para conservarlo."
+  },
   "Couldn’t make the PDF searchable": "No se pudo hacer que el PDF admita búsquedas",
   "Compress PDF": "Comprimir PDF",
   "Smaller — images as good-quality JPEG, up to {px} px": "Más pequeño: imágenes en JPEG de buena calidad, hasta {px} px",
@@ -395,7 +443,10 @@
   "Lossless — only clean up the file structure": "Sin pérdida: solo limpiar la estructura del archivo",
   "Compressing…": "Comprimiendo…",
   "This PDF is already as small as these settings can make it.": "Este PDF ya es tan pequeño como permiten estos ajustes.",
-  "{n} images recompressed": {"one": "{n} imagen recomprimida", "other": "{n} imágenes recomprimidas"},
+  "{n} images recompressed": {
+    "one": "{n} imagen recomprimida",
+    "other": "{n} imágenes recomprimidas"
+  },
   "{before} → {after} ({pct}% smaller{images}). Save to keep it.": "{before} → {after} ({pct}% menos{images}). Guarda para conservarlo.",
   "Compress failed": "No se pudo comprimir",
   "Export pages as images": "Exportar páginas como imágenes",
@@ -403,50 +454,95 @@
   "{format}, {dpi} dpi (print)": "{format}, {dpi} ppp (impresión)",
   "{format}, {dpi} dpi (smaller files)": "{format}, {dpi} ppp (archivos más pequeños)",
   "{format}, {dpi} dpi (screen)": "{format}, {dpi} ppp (pantalla)",
-  "Save {n} images in": {"one": "Guardar {n} imagen en", "other": "Guardar {n} imágenes en"},
+  "Save {n} images in": {
+    "one": "Guardar {n} imagen en",
+    "other": "Guardar {n} imágenes en"
+  },
   "Exporting page {page} ({i} of {total})…": "Exportando la página {page} ({i} de {total})…",
-  "Exported {n} pages to {folder}": {"one": "Se exportó {n} página a {folder}", "other": "Se exportaron {n} páginas a {folder}"},
+  "Exported {n} pages to {folder}": {
+    "one": "Se exportó {n} página a {folder}",
+    "other": "Se exportaron {n} páginas a {folder}"
+  },
   "Export failed": "No se pudo exportar",
   "Images to add as pages": "Imágenes para añadir como páginas",
   "Adding images…": "Añadiendo imágenes…",
-  "Added {n} pages at the end. Save to keep them.": {"one": "Se añadió {n} página al final. Guarda para conservarla.", "other": "Se añadieron {n} páginas al final. Guarda para conservarlas."},
+  "Added {n} pages at the end. Save to keep them.": {
+    "one": "Se añadió {n} página al final. Guarda para conservarla.",
+    "other": "Se añadieron {n} páginas al final. Guarda para conservarlas."
+  },
   "Couldn’t add the images": "No se pudieron añadir las imágenes",
   "Go to page ({range})": "Ir a la página ({range})",
   "Go": "Ir",
   "A PDF needs at least one page.": "Un PDF necesita al menos una página.",
   "Delete page {page}?": "¿Eliminar la página {page}?",
-  "Delete {n} pages?": {"one": "¿Eliminar {n} página?", "other": "¿Eliminar {n} páginas?"},
+  "Delete {n} pages?": {
+    "one": "¿Eliminar {n} página?",
+    "other": "¿Eliminar {n} páginas?"
+  },
   "You can still close without saving to undo this.": "Aún puedes cerrar sin guardar para deshacerlo.",
   "Delete": "Eliminar",
   "pages {list}": "páginas {list}",
   "Extract pages to": "Extraer páginas a",
-  "Extracted {n} pages to {name}": {"one": "Se extrajo {n} página a {name}", "other": "Se extrajeron {n} páginas a {name}"},
+  "Extracted {n} pages to {name}": {
+    "one": "Se extrajo {n} página a {name}",
+    "other": "Se extrajeron {n} páginas a {name}"
+  },
   "Extract failed": "No se pudo extraer",
   "Choose PDFs to append": "Elegir los PDF que añadir al final",
-  "Appended {n} files. Save to keep the result.": {"one": "Se añadió {n} archivo. Guarda para conservar el resultado.", "other": "Se añadieron {n} archivos. Guarda para conservar el resultado."},
+  "Appended {n} files. Save to keep the result.": {
+    "one": "Se añadió {n} archivo. Guarda para conservar el resultado.",
+    "other": "Se añadieron {n} archivos. Guarda para conservar el resultado."
+  },
   "Pages per file": "Páginas por archivo",
   "Choose folder…": "Elegir carpeta…",
   "Enter a whole number of pages.": "Escribe un número entero de páginas.",
   "Save the parts in": "Guardar las partes en",
   "Splitting PDF": "Dividiendo el PDF",
   "Split failed": "No se pudo dividir",
-  "Wrote {n} files to {folder}": {"one": "Se escribió {n} archivo en {folder}", "other": "Se escribieron {n} archivos en {folder}"},
+  "Wrote {n} files to {folder}": {
+    "one": "Se escribió {n} archivo en {folder}",
+    "other": "Se escribieron {n} archivos en {folder}"
+  },
   "Rotate page clockwise": "Girar la página a la derecha",
-  "Rotate {n} pages clockwise": {"one": "Girar {n} página a la derecha", "other": "Girar {n} páginas a la derecha"},
+  "Rotate {n} pages clockwise": {
+    "one": "Girar {n} página a la derecha",
+    "other": "Girar {n} páginas a la derecha"
+  },
   "Rotate page counter-clockwise": "Girar la página a la izquierda",
-  "Rotate {n} pages counter-clockwise": {"one": "Girar {n} página a la izquierda", "other": "Girar {n} páginas a la izquierda"},
+  "Rotate {n} pages counter-clockwise": {
+    "one": "Girar {n} página a la izquierda",
+    "other": "Girar {n} páginas a la izquierda"
+  },
   "Extract page to new PDF…": "Extraer la página a un PDF nuevo…",
-  "Extract {n} pages to new PDF…": {"one": "Extraer {n} página a un PDF nuevo…", "other": "Extraer {n} páginas a un PDF nuevo…"},
+  "Extract {n} pages to new PDF…": {
+    "one": "Extraer {n} página a un PDF nuevo…",
+    "other": "Extraer {n} páginas a un PDF nuevo…"
+  },
   "Delete page": "Eliminar la página",
-  "Delete {n} pages": {"one": "Eliminar {n} página", "other": "Eliminar {n} páginas"},
+  "Delete {n} pages": {
+    "one": "Eliminar {n} página",
+    "other": "Eliminar {n} páginas"
+  },
   "Rotate page {page} clockwise": "Girar la página {page} a la derecha",
-  "Rotate {n} selected pages clockwise": {"one": "Girar {n} página seleccionada a la derecha", "other": "Girar {n} páginas seleccionadas a la derecha"},
+  "Rotate {n} selected pages clockwise": {
+    "one": "Girar {n} página seleccionada a la derecha",
+    "other": "Girar {n} páginas seleccionadas a la derecha"
+  },
   "Rotate page {page} counter-clockwise": "Girar la página {page} a la izquierda",
-  "Rotate {n} selected pages counter-clockwise": {"one": "Girar {n} página seleccionada a la izquierda", "other": "Girar {n} páginas seleccionadas a la izquierda"},
+  "Rotate {n} selected pages counter-clockwise": {
+    "one": "Girar {n} página seleccionada a la izquierda",
+    "other": "Girar {n} páginas seleccionadas a la izquierda"
+  },
   "Delete page {page}": "Eliminar la página {page}",
-  "Delete {n} selected pages": {"one": "Eliminar {n} página seleccionada", "other": "Eliminar {n} páginas seleccionadas"},
+  "Delete {n} selected pages": {
+    "one": "Eliminar {n} página seleccionada",
+    "other": "Eliminar {n} páginas seleccionadas"
+  },
   "Extract page {page} to new PDF…": "Extraer la página {page} a un PDF nuevo…",
-  "Extract {n} selected pages to new PDF…": {"one": "Extraer {n} página seleccionada a un PDF nuevo…", "other": "Extraer {n} páginas seleccionadas a un PDF nuevo…"},
+  "Extract {n} selected pages to new PDF…": {
+    "one": "Extraer {n} página seleccionada a un PDF nuevo…",
+    "other": "Extraer {n} páginas seleccionadas a un PDF nuevo…"
+  },
   "Extract page range…": "Extraer un intervalo de páginas…",
   "Pages to extract (e.g. 1-3, 7) of {pages}": "Páginas que extraer (p. ej., 1-3, 7) de {pages}",
   "That page range is not valid.": "Ese intervalo de páginas no es válido.",
@@ -481,8 +577,14 @@
   "Redact all matches": "Censurar todas las coincidencias",
   "{marks} not applied yet — move or resize them, then Apply (Save applies them too).": "Aún sin aplicar: {marks}. Muévelos o cambia su tamaño y luego pulsa Aplicar (Guardar también los aplica).",
   "{a} and {b}": "{a} y {b}",
-  "{n} signatures": {"one": "{n} firma", "other": "{n} firmas"},
-  "{n} redactions": {"one": "{n} censura", "other": "{n} censuras"},
+  "{n} signatures": {
+    "one": "{n} firma",
+    "other": "{n} firmas"
+  },
+  "{n} redactions": {
+    "one": "{n} censura",
+    "other": "{n} censuras"
+  },
   "Discard": "Descartar",
   "Apply": "Aplicar",
   "Drag boxes over what to remove. Find ({shortcut}) can mark every match at once.": "Arrastra recuadros sobre lo que quieras quitar. Buscar ({shortcut}) puede marcar todas las coincidencias a la vez.",
@@ -499,5 +601,9 @@
   "All pages": "Todas las páginas",
   "Add an invisible text layer to the pages that have none, so the PDF can be searched and copied from": "Añadir una capa de texto invisible a las páginas que no la tienen, para poder buscar y copiar en el PDF",
   "Save as": "Guardar como",
-  "Remote image not loaded: {url}": "Imagen remota no cargada: {url}"
+  "Remote image not loaded: {url}": "Imagen remota no cargada: {url}",
+  "Bulleted list ({shortcut})": "Lista con viñetas ({shortcut})",
+  "Numbered list ({shortcut})": "Lista numerada ({shortcut})",
+  "Decrease list level (Shift+Tab)": "Reducir nivel de lista (Mayús+Tab)",
+  "Increase list level (Tab)": "Aumentar nivel de lista (Tab)"
 }

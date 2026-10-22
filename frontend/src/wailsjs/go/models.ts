@@ -222,6 +222,8 @@ export namespace app {
 	    document: string;
 	    styles: Record<string, string>;
 	    rels: office.Relationship[];
+	    stylesXml: string;
+	    numbering: string;
 	    saveAs: string;
 	    note: string;
 	    template: boolean;
@@ -237,6 +239,8 @@ export namespace app {
 	        this.document = source["document"];
 	        this.styles = source["styles"];
 	        this.rels = this.convertValues(source["rels"], office.Relationship);
+	        this.stylesXml = source["stylesXml"];
+	        this.numbering = source["numbering"];
 	        this.saveAs = source["saveAs"];
 	        this.note = source["note"];
 	        this.template = source["template"];
@@ -1409,6 +1413,24 @@ export namespace office {
 	        this.c0 = source["c0"];
 	        this.r1 = source["r1"];
 	        this.c1 = source["c1"];
+	    }
+	}
+	export class Part {
+	    name: string;
+	    data: string;
+	    relId: string;
+	    relType: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Part(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.data = source["data"];
+	        this.relId = source["relId"];
+	        this.relType = source["relType"];
 	    }
 	}
 	export class Relationship {
