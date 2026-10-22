@@ -1,4 +1,5 @@
 name: Clean up workflow runs
+run-name: "Clean up runs (keep the newest ${{ inputs.keep }} of each workflow)"
 
 # Deletes old workflow runs (their logs and artifacts) so the Actions list
 # stays short. Runs that are still queued or in progress are never touched,
