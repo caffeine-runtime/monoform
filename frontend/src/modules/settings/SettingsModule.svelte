@@ -69,6 +69,8 @@
 
 <div class="wrap">
   <h2>{t('Settings')}</h2>
+  <!-- Tiles side by side, as many columns as the window fits. -->
+  <div class="tiles">
 
   <section class="card">
     <h3>{t('Appearance')}</h3>
@@ -251,6 +253,7 @@
     </div>
     <p class="muted small">{t('Monoform works offline, sends no telemetry and needs no account.')}</p>
   </section>
+  </div>
 </div>
 
 <style>
@@ -261,9 +264,21 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
-    max-width: 720px;
+    max-width: 1680px;
     width: 100%;
     margin: 0 auto;
+  }
+  .tiles {
+    columns: 22rem auto;
+    column-gap: 14px;
+  }
+  /* Inline boxes: a block's margin would carry over to the next column's top. */
+  .tiles > .card {
+    break-inside: avoid;
+    display: inline-flex;
+    width: 100%;
+    vertical-align: top;
+    margin-bottom: 14px;
   }
   h2 {
     margin: 0 0 4px;
