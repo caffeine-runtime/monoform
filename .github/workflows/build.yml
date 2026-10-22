@@ -67,6 +67,8 @@ jobs:
   selftest:
     name: In-app self-tests (Linux, Xvfb)
     runs-on: ubuntu-24.04
+    # A hung test must not hold a release for hours (the whole run takes ~5 minutes).
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

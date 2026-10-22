@@ -53,12 +53,10 @@ export default async function m56(dir: string) {
   h.setSel(['box']);
   await sleep(50);
   button('Thin')!.click();
-  await sleep(30);
   assertEq(box.strokeWidth, 1, 'Thin: width 1 in the file');
-  assert(Math.max(...widthsDrawn(h, 'box')) <= 1, `Thin: drawn thin (${widthsDrawn(h, 'box')})`);
+  await waitFor(() => (Math.max(...widthsDrawn(h, 'box')) <= 1 ? true : null), 'Thin: drawn thin');
   button('Extra')!.click();
-  await sleep(30);
-  assert(Math.max(...widthsDrawn(h, 'box')) >= 4, `Extra: drawn thick (${widthsDrawn(h, 'box')})`);
+  await waitFor(() => (Math.max(...widthsDrawn(h, 'box')) >= 4 ? true : null), 'Extra: drawn thick');
   button('Thin')!.click();
   assert(box.roundness, 'the box starts rounded');
   button('Sharp')!.click();
@@ -74,8 +72,10 @@ export default async function m56(dir: string) {
   assert(button('Thin')!.classList.contains('on') && button('Sharp')!.classList.contains('on'), 'it shows the last choices (thin, sharp)');
   button('Stroke #e03131')!.click();
   await sleep(30);
+  // (Other tests may have saved shapes into this drawing: the new one is the one that wasn't there.)
+  const before = new Set(els(h).map((e) => e.id));
   await dragWorld(h, { x: 120, y: 420 }, { x: 260, y: 500 });
-  const made = els(h).find((e) => e.type === 'rectangle' && e.id !== 'box')!;
+  const made = els(h).find((e) => e.type === 'rectangle' && !before.has(e.id))!;
   assert(made, 'a rectangle drawn');
   assertEq(`${made.strokeWidth} ${made.roundness} ${made.strokeColor}`, '1 null #e03131', 'drawn thin, sharp and red');
   assertEq(JSON.stringify(settings.value.boardStyle), JSON.stringify({ width: 1, edges: 'sharp', stroke: '#e03131' }), 'the choice is kept in the settings');
@@ -99,8 +99,9 @@ export default async function m56(dir: string) {
   // ---- a drawing opened later starts with the same style ----
   ({ h } = await open(join(dir, 'drawings', 'photo.excalidraw')));
   h.setTool('ellipse');
+  const had = new Set(els(h).map((e) => e.id));
   await dragWorld(h, { x: 50, y: 50 }, { x: 150, y: 120 });
-  const ell = els(h).find((e) => e.type === 'ellipse' && Math.round(e.width) === 100);
+  const ell = els(h).find((e) => e.type === 'ellipse' && !had.has(e.id));
   assertEq(`${ell?.strokeWidth} ${ell?.strokeColor}`, '1 #e03131', 'the new drawing uses the kept style');
 
   // ---- draw.io corners ----

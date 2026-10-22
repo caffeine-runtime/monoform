@@ -21,7 +21,7 @@ if [ -z "${DISPLAY:-}" ]; then
 fi
 LOG=$(mktemp)
 set +e
-MF_SCREENSHOTS="${MF_SCREENSHOTS:-${TMPDIR:-/tmp}/mf-screenshots}" MF_TEST="$SCENARIO" MF_TEST_ARG="$ARG" MF_SETTINGS="$SETTINGS" timeout "${MF_TIMEOUT:-120}" "$BIN" "$@" >"$LOG" 2>&1
+MF_SCREENSHOTS="${MF_SCREENSHOTS:-${TMPDIR:-/tmp}/mf-screenshots}" MF_TEST="$SCENARIO" MF_TEST_ARG="$ARG" MF_SETTINGS="$SETTINGS" timeout -k 10 "${MF_TIMEOUT:-120}" "$BIN" "$@" >"$LOG" 2>&1
 CODE=$?
 set -e
 grep -E "selftest|startup:" "$LOG" || true
