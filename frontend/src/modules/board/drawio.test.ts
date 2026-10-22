@@ -83,7 +83,7 @@ describe('draw.io board', () => {
     expect(b.items().filter((i) => i.box.w === 100 && i.box.h === 60)).toHaveLength(2); // inner copied with its lane
     expect(b.item(copy)!.box.x).toBe(50);
     b.setStyle([r], { stroke: '#ff0000', fill: '', dash: 'dotted', width: 3 });
-    expect(b.style([r])).toEqual({ stroke: '#ff0000', fill: '', width: 3, dash: 'dotted' });
+    expect(b.style([r])).toEqual({ stroke: '#ff0000', fill: '', width: 3, dash: 'dotted', edges: 'sharp' });
     b.reorder(['a'], 'front');
     expect(b.items().map((i) => i.id).pop()).toBe('a');
     b.reorder(['a'], 'back');
