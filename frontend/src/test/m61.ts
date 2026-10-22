@@ -4,7 +4,8 @@
 // turned 90° and applied (Enter), it is one layer again, the block now
 // 20 × 40 about the same middle, and one undo puts it back; Esc instead of
 // Enter leaves the picture as it was. A layer turned 90° keeps its middle.
-// The view turned with Alt+→ (15°, the picture untouched), a rectangle
+// The view turned with Alt+→ (15°, the picture untouched, its canvas
+// backdrop turned with it), a rectangle
 // drawn there lands where the pointer was, and Alt+0 straightens it.
 import { commands } from '../core/commands';
 import { join } from '../core/paths';
@@ -99,6 +100,28 @@ export default async function m61(dir: string) {
   assertEq(ed.viewRotation, 15, 'Alt+→ turns the view 15°');
   assertEq(ed.composite().toDataURL(), before, 'the picture is untouched');
   assert(ed.composite().width === 200 && ed.composite().height === 100, 'and keeps its size');
+  // The whole canvas turns, not only its layers: with the layers hidden, a
+  // point near the turned bottom-left corner shows the canvas backdrop, and
+  // just outside the turned left edge there is none.
+  {
+    ed.docGroup.visible(false);
+    ed.klayer.draw();
+    const cv = ed.klayer.getCanvas();
+    const pr = cv.getPixelRatio();
+    const g2 = cv.getContext()._context as CanvasRenderingContext2D;
+    const T = ed.docGroup.getAbsoluteTransform();
+    const alpha = (p: { x: number; y: number }) => g2.getImageData(Math.round(p.x * pr), Math.round(p.y * pr), 1, 1).data[3];
+    const corner = T.point({ x: 3, y: 97 });
+    const o = T.point({ x: 0, y: 50 });
+    const e = T.point({ x: 1, y: 50 });
+    const len = Math.hypot(e.x - o.x, e.y - o.y);
+    const outside = { x: o.x - ((e.x - o.x) / len) * 20, y: o.y - ((e.y - o.y) / len) * 20 };
+    const [inA, outA] = [alpha(corner), alpha(outside)];
+    ed.docGroup.visible(true);
+    ed.klayer.draw();
+    assert(inA > 200, `the canvas backdrop turns with the view (alpha ${inA} inside)`);
+    assert(outA < 60, `nothing just outside its turned edge (alpha ${outA})`);
+  }
   // A document point and where it is on screen agree both ways.
   const r = ed.stage.container().getBoundingClientRect();
   const sp = ed.docGroup.getAbsoluteTransform().point({ x: 150, y: 70 });

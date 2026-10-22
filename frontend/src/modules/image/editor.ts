@@ -25,7 +25,7 @@ import { Arrow } from 'konva/lib/shapes/Arrow';
 import { Text as KText } from 'konva/lib/shapes/Text';
 import { Transformer } from 'konva/lib/shapes/Transformer';
 import type { Node as KNode } from 'konva/lib/Node';
-import { centered, clampZoom, fitZoom, normRect, stepZoom, zoomAt, type Rect, type View } from './geometry';
+import { centered, clampZoom, fitZoom, normRect, stepZoom, viewWith, wheelIntent, zoomAt, type Rect, type View } from './geometry';
 import * as raster from './raster';
 import * as sel from './selection';
 import type { Selection, SelectMode } from './selection';
@@ -55,6 +55,8 @@ export type Tool =
   | 'picker';
 export const REGION_TOOLS: Tool[] = ['crop', 'blur', 'pixelate'];
 export const SELECT_TOOLS: Tool[] = ['select', 'ellipse', 'lasso', 'selbrush', 'wand', 'object'];
+/** Tools whose selection gets handles: the outline itself moved, scaled and turned (not the pixels). */
+const FRAMED_TOOLS: Tool[] = ['select', 'ellipse', 'lasso'];
 
 export type Blend = 'source-over' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten' | 'difference' | 'color-dodge' | 'color-burn' | 'soft-light' | 'hard-light';
 
@@ -169,6 +171,8 @@ interface LiveLayer {
 const MAX_HISTORY = 40;
 const MAX_HISTORY_PIXELS = 160e6;
 const ACCENT = '#d97757';
+/** Transformer handle size: bigger where the pointer is a finger. */
+const ANCHOR = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? 18 : 9;
 
 let layerSeq = 0;
 const newId = () => `L${Date.now().toString(36)}${(++layerSeq).toString(36)}`;
@@ -179,6 +183,13 @@ function plainLayer(name: string, canvas: HTMLCanvasElement): LayerModel {
 }
 
 /** c with the mask's alpha applied (a new canvas). */
+/** A path carried by a matrix. */
+function moved(p: Path2D, m: DOMMatrix): Path2D {
+  const q = new Path2D();
+  q.addPath(p, m);
+  return q;
+}
+
 function applyMask(c: HTMLCanvasElement, mask: HTMLCanvasElement): HTMLCanvasElement {
   const out = raster.clone(c);
   const g = out.getContext('2d')!;
@@ -197,6 +208,13 @@ export class ImageEditor {
   private checker: { key: string; fill: CanvasPattern | string; base: string; edge: string } | null = null;
   private region: KRect;
   private regionTr: Transformer;
+  /** Handles round the selection: they move, scale and turn the outline, never the pixels. */
+  private selFrame: KRect;
+  private selTr: Transformer;
+  /** The selection the handles were put round and its box then; the frame's transform makes `result` from it. */
+  private selBase: { sel: Selection; rect: Rect; result: Selection } | null = null;
+  /** The frame is being dragged or turned (the outline previews). */
+  private selLive = false;
   private tr: Transformer;
   private lassoLine: KLine;
   private layers: LiveLayer[] = [];
@@ -281,9 +299,12 @@ export class ImageEditor {
     this.world.add(this.selPaintLine);
     this.region = new KRect({ visible: false, stroke: '#ffffff', dash: [6, 4], strokeScaleEnabled: false, strokeWidth: 1.5, fill: 'rgba(217,119,87,0.12)', draggable: true, name: 'region' });
     this.world.add(this.region);
-    this.regionTr = new Transformer({ rotateEnabled: false, keepRatio: false, borderStroke: ACCENT, anchorStroke: ACCENT, anchorSize: 9, anchorCornerRadius: 3, ignoreStroke: true });
-    this.tr = new Transformer({ borderStroke: ACCENT, anchorStroke: ACCENT, anchorSize: 9, anchorCornerRadius: 3, rotateEnabled: true, rotationSnaps: [0, 45, 90, 135, 180, 225, 270, 315] });
-    this.klayer.add(this.regionTr, this.tr);
+    this.regionTr = new Transformer({ rotateEnabled: false, keepRatio: false, borderStroke: ACCENT, anchorStroke: ACCENT, anchorSize: ANCHOR, anchorCornerRadius: 3, ignoreStroke: true });
+    this.selFrame = new KRect({ visible: false, fill: 'rgba(0,0,0,0)', draggable: true, name: 'selection-frame' });
+    this.world.add(this.selFrame);
+    this.selTr = new Transformer({ rotateEnabled: true, keepRatio: false, borderStroke: ACCENT, borderDash: [4, 4], anchorStroke: ACCENT, anchorSize: ANCHOR - 1, anchorCornerRadius: 2, rotationSnaps: [0, 45, 90, 135, 180, 225, 270, 315], name: 'selection-handles' });
+    this.tr = new Transformer({ borderStroke: ACCENT, anchorStroke: ACCENT, anchorSize: ANCHOR, anchorCornerRadius: 3, rotateEnabled: true, rotationSnaps: [0, 45, 90, 135, 180, 225, 270, 315] });
+    this.klayer.add(this.regionTr, this.selTr, this.tr);
     this.addLiveLayer(plainLayer(t('Background'), base));
     this.activeId = this.layers[0].id;
     this.history = [this.snapshot()];
@@ -371,9 +392,7 @@ export class ImageEditor {
 
   /** The view at zoom z with the document's centre (or a document point) in the middle of the window. */
   private centredAt(z: number, d = { x: this.docW / 2, y: this.docH / 2 }): View {
-    const a = (this.viewRotation * Math.PI) / 180;
-    const [c, s] = [Math.cos(a), Math.sin(a)];
-    return { x: this.stage.width() / 2 - z * (d.x * c - d.y * s), y: this.stage.height() / 2 - z * (d.x * s + d.y * c), zoom: z };
+    return viewWith(z, this.viewRotation, d, { x: this.stage.width() / 2, y: this.stage.height() / 2 });
   }
 
   /** Turn the view by deg (or to an angle), about the middle of the window. */
@@ -422,6 +441,100 @@ export class ImageEditor {
     }
   }
 
+  // ---- touch: two fingers pan and pinch-zoom; one finger works like the mouse ----
+
+  /** The last touchpad pan (ms), so a gesture keeps panning. */
+  private lastPan = -1e9;
+  /** A two-finger gesture: zoom and document point under the fingers' middle at its start. */
+  private pinch: { dist: number; zoom: number; at: { x: number; y: number } } | null = null;
+  /** When the last two-finger gesture ended (a lifted finger isn't a tap). */
+  private pinchEnded = -1e9;
+
+  private bindTouch() {
+    const el = this.container;
+    el.style.touchAction = 'none'; // the editor handles touch itself (no page scroll or browser zoom)
+    const local = (t: Touch) => {
+      const r = el.getBoundingClientRect();
+      return { x: t.clientX - r.left, y: t.clientY - r.top };
+    };
+    const mid = (e: TouchEvent) => {
+      const [a, b] = [local(e.touches[0]), local(e.touches[1])];
+      return { m: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, d: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)) };
+    };
+    // Capture phase: the canvas never sees a second finger, so it can't start a drag or a stroke.
+    el.addEventListener(
+      'touchstart',
+      (e) => {
+        if (e.touches.length < 2) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this.abortPointer();
+        const { m, d } = mid(e);
+        this.pinch = { dist: d, zoom: this.view.zoom, at: this.docGroup.getAbsoluteTransform().copy().invert().point(m) };
+      },
+      { capture: true, passive: false },
+    );
+    el.addEventListener(
+      'touchmove',
+      (e) => {
+        if (!this.pinch) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.touches.length < 2) return;
+        const { m, d } = mid(e);
+        this.setView(viewWith(clampZoom((this.pinch.zoom * d) / this.pinch.dist), this.viewRotation, this.pinch.at, m));
+      },
+      { capture: true, passive: false },
+    );
+    // Lifting fingers reaches the canvas, which ends any drag it had readied.
+    el.addEventListener(
+      'touchend',
+      (e) => {
+        if (!this.pinch) return;
+        if (e.touches.length === 0) this.pinch = null;
+        this.pinchEnded = performance.now();
+      },
+      { capture: true },
+    );
+    el.addEventListener('touchcancel', () => (this.pinch = null), { capture: true });
+    // Safari's touchpad pinch.
+    let g0 = 1;
+    el.addEventListener('gesturestart', (e) => {
+      e.preventDefault();
+      g0 = this.view.zoom;
+    });
+    el.addEventListener('gesturechange', (e) => {
+      e.preventDefault();
+      const ge = e as Event & { scale: number; clientX: number; clientY: number };
+      const r = el.getBoundingClientRect();
+      this.setView(zoomAt(this.view, ge.clientX - r.left, ge.clientY - r.top, clampZoom(g0 * ge.scale)));
+    });
+  }
+
+  /** Drop what a first finger began (a stroke, a shape, a selection, a drag) when a second one comes. */
+  private abortPointer() {
+    if (this.stroke) {
+      const s = this.stroke;
+      this.stroke = null;
+      if (s.onMask) this.setCanvas(this.active, this.active.canvas, s.before);
+      else this.setCanvas(this.active, s.before);
+    }
+    if (this.draft) {
+      this.draft.destroy();
+      this.draft = null;
+    }
+    if (this.start && this.region.visible() && !this.regionTr.nodes().length) this.cancelRegion();
+    this.start = null;
+    this.lasso = null;
+    this.lassoLine.points([]);
+    this.selPaint = null;
+    this.selPaintLine.points([]);
+    for (const tr of [this.tr, this.regionTr, this.selTr]) if (tr.isTransforming()) tr.stopTransform();
+    const nodes: KNode[] = [this.world, this.selFrame, this.region, ...this.layers.flatMap((L) => [L.group as KNode, ...(L.objs.getChildren() as KNode[])])];
+    for (const n of nodes) if (n.isDragging()) n.stopDrag();
+    this.klayer.batchDraw();
+  }
+
   private pointer(): { x: number; y: number } {
     const p = this.docGroup.getRelativePointerPosition() ?? { x: 0, y: 0 };
     return { x: p.x, y: p.y };
@@ -445,9 +558,19 @@ export class ImageEditor {
       e.evt.preventDefault();
       const p = this.stage.getPointerPosition();
       if (!p) return;
-      const factor = Math.exp(-e.evt.deltaY * (e.evt.ctrlKey ? 0.01 : 0.0025));
+      const w = e.evt as WheelEvent & { wheelDeltaY?: number };
+      const now = performance.now();
+      const intent = wheelIntent(w, now - this.lastPan < 200);
+      if (intent === 'pan') {
+        // Two fingers on a touchpad: the picture follows them.
+        this.lastPan = now;
+        this.setView({ ...this.view, x: this.view.x - w.deltaX, y: this.view.y - w.deltaY });
+        return;
+      }
+      const factor = Math.exp(-w.deltaY * (w.ctrlKey ? 0.01 : 0.0025));
       this.setView(zoomAt(this.view, p.x, p.y, clampZoom(this.view.zoom * factor)));
     });
+    this.bindTouch();
     const isWorld = (n: unknown) => n === (this.world as unknown);
     this.world.on('dragmove', (e) => {
       if (!isWorld(e.target)) return;
@@ -457,9 +580,25 @@ export class ImageEditor {
     this.world.on('dragstart', (e) => isWorld(e.target) && (this.container.style.cursor = 'grabbing'));
     this.world.on('dragend', (e) => isWorld(e.target) && (this.container.style.cursor = this.tool === 'hand' ? 'grab' : 'crosshair'));
 
+    this.selFrame.on('dragmove transform', () => {
+      this.selLive = true;
+      this.klayer.batchDraw();
+    });
+    this.selFrame.on('dragend transformend', () => this.commitSelFrame());
+    // A click inside (not a drag) drops it, like a click anywhere.
+    this.selFrame.on('click tap', (e) => this.modeFor(e.evt) === 'replace' && performance.now() - this.pinchEnded > 400 && this.deselect());
+    this.selFrame.on('mouseenter', () => (this.container.style.cursor = 'move'));
+    this.selFrame.on('mouseleave', () => (this.container.style.cursor = 'crosshair'));
+
     this.stage.on('mousedown touchstart', (e) => {
       const t = this.tool;
       const target = e.target;
+      if (target === this.selFrame) {
+        // Shift / Alt (or the add / subtract mode) draws another selection there instead of moving this one.
+        if (this.modeFor(e.evt) === 'replace') return;
+        this.selFrame.draggable(false);
+        this.selFrame.draggable(true);
+      }
       const onTr = !!target.getParent()?.className?.includes('Transformer');
       if (t === 'hand') {
         const owner = this.layers.find((L) => target.getParent() === L.objs);
@@ -729,21 +868,23 @@ export class ImageEditor {
     const y = Math.round(this.view.y);
     const w = Math.round(this.docW * zoom);
     const h = Math.round(this.docH * zoom);
+    // Drawn from the document's corner, turned with the view (the whole canvas turns, not just its layers).
+    c.save();
+    c.translate(x, y);
+    if (this.viewRotation) c.rotate((this.viewRotation * Math.PI) / 180);
     // A few faint rings instead of shadowBlur, which is slow on software-rendered canvases.
     c.lineWidth = 1;
     for (let i = 2; i <= 6; i += 2) {
       c.strokeStyle = `rgba(0,0,0,${0.24 / i})`;
-      c.strokeRect(x - 0.5 - i, y - 0.5 - i, w + 1 + 2 * i, h + 1 + 2 * i);
+      c.strokeRect(-0.5 - i, -0.5 - i, w + 1 + 2 * i, h + 1 + 2 * i);
     }
     c.fillStyle = look.base;
-    c.fillRect(x, y, w, h);
-    c.save();
-    c.translate(x, y); // checker squares stay put relative to the image while panning
-    c.fillStyle = look.fill;
     c.fillRect(0, 0, w, h);
-    c.restore();
+    c.fillStyle = look.fill; // checker squares stay put relative to the image while panning
+    c.fillRect(0, 0, w, h);
     c.strokeStyle = look.edge;
-    c.strokeRect(x - 0.5, y - 0.5, w + 1, h + 1);
+    c.strokeRect(-0.5, -0.5, w + 1, h + 1);
+    c.restore();
   }
 
   private backdropLook(c: CanvasRenderingContext2D) {
@@ -768,25 +909,94 @@ export class ImageEditor {
     const c = (ctx as unknown as { _context: CanvasRenderingContext2D })._context;
     const lw = 1 / this.view.zoom;
     c.save();
-    if (s.paths) {
+    // While the handles move it (and until a moved mask's outline is worked
+    // out) the outline drawn is the original one, carried by the frame.
+    const B = this.selBase;
+    const carried = B && (this.selLive || (s === B.result && s !== B.sel && !s.paths && !s.edges));
+    const m = carried ? this.selDelta() : null;
+    const o = carried ? B.sel : s;
+    const ants = (paths: Path2D[]) => {
       c.lineWidth = lw;
       c.strokeStyle = '#000';
-      for (const p of s.paths) c.stroke(p);
+      for (const p of paths) c.stroke(p);
       c.strokeStyle = '#fff';
       c.setLineDash([4 * lw, 4 * lw]);
-      for (const p of s.paths) c.stroke(p);
-    } else if (s.edges) {
+      for (const p of paths) c.stroke(p);
+    };
+    if (o.paths) {
+      ants(m ? o.paths.map((p) => moved(p, m)) : o.paths);
+    } else if (o.edges) {
       // Difference keeps the outline visible on light and dark pixels alike.
       c.imageSmoothingEnabled = false;
       c.globalCompositeOperation = 'difference';
-      c.drawImage(s.edges.canvas, 0, 0, this.docW, this.docH);
+      if (m) c.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+      c.drawImage(o.edges.canvas, 0, 0, this.docW, this.docH);
     } else {
+      const p = sel.rectPath(o.bounds);
       c.lineWidth = lw;
       c.strokeStyle = '#fff';
       c.setLineDash([4 * lw, 4 * lw]);
-      c.strokeRect(s.bounds.x, s.bounds.y, s.bounds.width, s.bounds.height);
+      c.stroke(m ? moved(p, m) : p);
     }
     c.restore();
+  }
+
+  // ---- moving, scaling and turning the selection's outline ----
+
+  /** Handles round the selection with the select, ellipse and lasso tools; kept while the selection is the one they made. */
+  private syncSelFrame() {
+    const s = this.selection;
+    if (!s || !FRAMED_TOOLS.includes(this.tool) || this.floating) {
+      if (this.selBase || this.selFrame.visible()) {
+        this.selBase = null;
+        this.selLive = false;
+        this.selFrame.visible(false);
+        this.selTr.nodes([]);
+        this.klayer.batchDraw();
+      }
+      return;
+    }
+    if (this.selBase?.result === s) return;
+    const b = s.bounds;
+    this.selBase = { sel: s, rect: { ...b }, result: s };
+    this.selFrame.setAttrs({ x: b.x, y: b.y, width: b.width, height: b.height, rotation: 0, scaleX: 1, scaleY: 1, skewX: 0, skewY: 0, visible: true });
+    this.selTr.nodes([this.selFrame]);
+    this.klayer.batchDraw();
+  }
+
+  /** Document → document: where the frame has taken the original selection. */
+  private selDelta(): DOMMatrix {
+    const b = this.selBase!.rect;
+    const [a, bb, c, d, e, f] = this.selFrame.getTransform().copy().multiply(new Konva.Transform([1, 0, 0, 1, -b.x, -b.y])).getMatrix();
+    return new DOMMatrix([a, bb, c, d, e, f]);
+  }
+
+  /** The selection moved, scaled or turned with the handles: its mask redrawn, the pixels untouched. */
+  private commitSelFrame() {
+    const B = this.selBase;
+    this.selLive = false;
+    if (!B || this.selection !== B.result) return;
+    const m = this.selDelta();
+    const base = B.sel;
+    let next: Selection = base;
+    if (!m.isIdentity) {
+      const mask = raster.makeCanvas(this.docW, this.docH);
+      const g = mask.getContext('2d')!;
+      g.setTransform(m);
+      g.drawImage(base.mask, 0, 0);
+      const r = B.rect;
+      const pts = [m.transformPoint(new DOMPoint(r.x, r.y)), m.transformPoint(new DOMPoint(r.x + r.width, r.y)), m.transformPoint(new DOMPoint(r.x, r.y + r.height)), m.transformPoint(new DOMPoint(r.x + r.width, r.y + r.height))];
+      const x0 = Math.floor(Math.min(...pts.map((p) => p.x)));
+      const y0 = Math.floor(Math.min(...pts.map((p) => p.y)));
+      const bounds = sel.clampRect({ x: x0, y: y0, width: Math.ceil(Math.max(...pts.map((p) => p.x))) - x0, height: Math.ceil(Math.max(...pts.map((p) => p.y))) - y0 }, this.docW, this.docH);
+      next = { mask, bounds, paths: base.paths ? base.paths.map((p) => moved(p, m)) : null, edges: null };
+      if (sel.isEmpty(next)) return this.deselect(); // moved off the picture
+    }
+    B.result = next;
+    this.selection = next;
+    if (!next.paths && next !== base) this.onPainted(next);
+    this.klayer.batchDraw();
+    this.emit();
   }
 
   // ---- layers ----
@@ -1086,9 +1296,11 @@ export class ImageEditor {
     const trNodes = this.tr.nodes();
     const regionVisible = this.region.visible();
     const sel0 = this.selection;
+    const selNodes = this.selTr.nodes();
     this.tr.nodes([]);
     this.region.visible(false);
     this.regionTr.nodes([]);
+    this.selTr.nodes([]);
     this.selection = null;
     this.world.position({ x: 0, y: 0 });
     this.world.scale({ x: 1, y: 1 });
@@ -1101,6 +1313,7 @@ export class ImageEditor {
       this.world.rotation(this.viewRotation);
       this.selection = sel0;
       this.tr.nodes(trNodes);
+      this.selTr.nodes(selNodes);
       if (regionVisible) {
         this.region.visible(true);
         this.regionTr.nodes([this.region]);
@@ -1934,6 +2147,7 @@ export class ImageEditor {
   }
 
   private emit() {
+    this.syncSelFrame();
     this.onChange(this.state());
   }
 

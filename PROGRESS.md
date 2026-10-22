@@ -537,12 +537,23 @@
   instances, named after their products), colours on parts and faces, drawn edges, read in the load worker with
   progress. Own reader and tessellator (no permissive STEP kernel exists). Checked on the as1 test assembly
   (AP203 and AP214). Unit tests (parser, band and pole faces, the fixture assembly), self-test `m57`.
+- **After 1.1.2 (image editor)**: **move, resize and turn a selection's outline** — with the rectangle, ellipse or
+  lasso select tool a selection gets handles: drag inside it to move it, a side or corner to resize it, the round
+  handle to turn it (snaps to 45°), so a tilted area can be selected; the pixels don't move (the earlier
+  pixel-moving command is now **Transform pixels**, Ctrl+Shift+R). Shift / Alt still draw another selection to
+  add or take away, and a click inside drops it. **Effects**: Black & white, Sepia and Invert join the looks as
+  one list of eighteen; each chosen effect gets its own strength slider, listed below all the chips, and effects
+  combine. **Turning the view** turns the whole canvas — its checkerboard and edge turned with the layers (only the
+  layers turned before). **Touchpad and touch**: two fingers on a touchpad pan, a pinch zooms (a mouse wheel still
+  zooms); on a touch screen one finger works like the mouse (draw, select, drag layers, selections and handles,
+  bigger handles), two fingers pinch-zoom and pan, and a second finger cancels what the first began. Unit tests
+  (wheelIntent, viewWith, effects), self-tests `m61` (turned canvas), `m62`, `m63`, `m64`.
 - **Image editor: fifteen looks** in Adjust › Effects besides black & white, sepia and invert — Vintage, Faded,
   Warm, Cool, Noir, Teal & orange, Cross-process, Lomo, Posterize, Solarize, Threshold, Emboss, Pencil sketch,
   Film grain, Thermal — one at a time with an Amount slider, previewed live on the GPU and limited to the
   selection like every adjustment. Settings tiles wrap long paths (the command-line path ran out of its tile).
   Unit test, self-test `m62`; `m59` checks no tile overflows.
-- **Image editor: turning things**: **rotate / scale / move a selection** (selection bar, right-click, Ctrl+Shift+R)
+- **Image editor: turning things**: **rotate / scale / move selected pixels** (selection bar, right-click, Ctrl+Shift+R)
   — the selected pixels float with the move tool's handles (rotation snaps to 45°), Enter puts them back into
   their layer as one undo step, Esc puts everything back; **rotate the active layer** 90° either way or by an
   angle (live preview) from the move tool's bar, a layer's right-click menu in the Layers panel (also rename,

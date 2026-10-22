@@ -1,14 +1,17 @@
-// M62: the image editor's looks. Each of the fifteen runs on the GPU (the
+// M62: the image editor's effects. Each of the eighteen runs on the GPU (the
 // shader compiles in the webview) and does what it says on a test picture
 // (a grey ramp with a red, a green and a blue square): every one changes it,
-// Threshold leaves only black and white, Noir and Pencil sketch only greys,
-// Posterize at most four levels per channel, Thermal is colourful where the
-// picture was grey, and half the amount lands between the picture and the
-// full look. In the Adjust panel the looks are chips: one previews, the
-// Amount slider shows with it, and clicking it again turns it off.
+// Threshold leaves only black and white, Black & white, Noir and Pencil
+// sketch only greys, Invert turns black white, Posterize at most four levels
+// per channel, Thermal is colourful where the picture was grey; half the
+// strength lands between the picture and the full effect, and two effects
+// combine (Invert then Black & white: grey). In the Adjust panel the effects
+// are chips: one clicked previews and gets its own strength slider below all
+// the chips, a second gets another, a slider changes its strength, and
+// clicking a chip again turns it off (and its slider goes).
 import { join } from '../core/paths';
 import { workspace } from '../core/tabs.svelte';
-import { Adjuster, LOOKS, NEUTRAL } from '../modules/image/adjust';
+import { Adjuster, EFFECTS, NEUTRAL } from '../modules/image/adjust';
 import { assert, assertEq, log, sleep, waitFor } from './harness';
 
 function testPicture(): HTMLCanvasElement {
@@ -41,8 +44,8 @@ export default async function m62(dir: string) {
   const adj = new Adjuster(src);
   const results: string[] = [];
   try {
-    for (const l of LOOKS) {
-      adj.render({ ...NEUTRAL, look: l.id, lookAmount: 1 });
+    for (const l of EFFECTS) {
+      adj.render({ ...NEUTRAL, effects: { [l.id]: 1 } });
       const out = px(adj.snapshot());
       const d = meanDiff(orig, out);
       assert(d > 3, `${l.id} changes the picture (mean difference ${d.toFixed(1)})`);
@@ -53,7 +56,8 @@ export default async function m62(dir: string) {
       if (l.id === 'threshold') {
         for (let i = 0; i < out.length; i += 4) assert(out[i] < 3 || out[i] > 252, 'threshold: only black and white');
       }
-      if (l.id === 'noir' || l.id === 'sketch' || l.id === 'emboss') assert(greys(), `${l.id}: only greys`);
+      if (l.id === 'noir' || l.id === 'sketch' || l.id === 'emboss' || l.id === 'bw') assert(greys(), `${l.id}: only greys`);
+      if (l.id === 'invert') assert(out[0] > 250 && out[(96 - 1) * 4] < 5, 'invert: black turns white and white black');
       if (l.id === 'posterize') {
         const levels = new Set<number>();
         for (let i = 0; i < out.length; i += 4) levels.add(out[i]);
@@ -66,16 +70,22 @@ export default async function m62(dir: string) {
       }
       results.push(`${l.id} ${d.toFixed(0)}`);
     }
-    // Half the amount: in between.
-    adj.render({ ...NEUTRAL, look: 'solarize', lookAmount: 1 });
+    // Half the strength: in between.
+    adj.render({ ...NEUTRAL, effects: { solarize: 1 } });
     const full = meanDiff(orig, px(adj.snapshot()));
-    adj.render({ ...NEUTRAL, look: 'solarize', lookAmount: 0.5 });
+    adj.render({ ...NEUTRAL, effects: { solarize: 0.5 } });
     const half = meanDiff(orig, px(adj.snapshot()));
-    assert(half > full * 0.3 && half < full * 0.7, `half the amount is in between (${half.toFixed(1)} of ${full.toFixed(1)})`);
+    assert(half > full * 0.3 && half < full * 0.7, `half the strength is in between (${half.toFixed(1)} of ${full.toFixed(1)})`);
+    // Two at once: inverted, then grey.
+    adj.render({ ...NEUTRAL, effects: { invert: 1, bw: 1 } });
+    const both = px(adj.snapshot());
+    const red = (28 * 96 + 16) * 4;
+    assert(Math.abs(both[red] - both[red + 1]) < 4 && Math.abs(both[red + 1] - both[red + 2]) < 4, 'two effects combine (grey)');
+    assert(both[0] > 250, 'inverted first (black is white)');
   } finally {
     adj.destroy();
   }
-  log(`looks on the GPU: ${results.join(', ')}`);
+  log(`effects on the GPU: ${results.join(', ')}`);
 
   // ---- the panel ----
   for (const t of [...workspace.tabs]) await workspace.close(t, { force: true });
@@ -86,16 +96,29 @@ export default async function m62(dir: string) {
   const chips = await waitFor(() => {
     const l = document.querySelectorAll<HTMLButtonElement>('.tabview.active .adjust .looks .chip');
     return l.length ? l : null;
-  }, 'the looks in the Adjust panel');
-  assertEq(chips.length, LOOKS.length, 'every look is offered');
-  const vintage = Array.from(chips).find((b) => b.textContent === 'Vintage')!;
-  vintage.click();
-  await waitFor(() => (h.editor().state().adjusting ? true : null), 'a look previews');
-  assert(vintage.classList.contains('on'), 'shown as chosen');
-  await waitFor(() => (Array.from(document.querySelectorAll('.tabview.active .adjust .lbl')).some((e) => e.textContent === 'Amount') ? true : null), 'with its Amount slider');
-  vintage.click();
-  await sleep(50);
-  assert(!vintage.classList.contains('on'), 'clicking it again turns it off');
-  log('Adjust panel: looks as chips with an amount');
+  }, 'the effects in the Adjust panel');
+  assertEq(chips.length, EFFECTS.length, 'every effect is offered');
+  const chip = (name: string) => Array.from(chips).find((b) => b.textContent === name)!;
+  const sliders = () => Array.from(document.querySelectorAll<HTMLElement>('.tabview.active .adjust .row.effect'));
+  chip('Vintage').click();
+  await waitFor(() => (h.editor().state().adjusting ? true : null), 'an effect previews');
+  assert(chip('Vintage').classList.contains('on'), 'shown as chosen');
+  await sleep(30);
+  assertEq(sliders().map((r) => r.querySelector('.lbl')!.textContent).join(','), 'Vintage', 'with its own strength slider');
+  const last = chips[chips.length - 1];
+  assert(!!(last.compareDocumentPosition(sliders()[0]) & Node.DOCUMENT_POSITION_FOLLOWING), 'below all the chips');
+  chip('Sepia').click();
+  await sleep(30);
+  assertEq(sliders().map((r) => r.querySelector('.lbl')!.textContent).join(','), 'Sepia,Vintage', 'a second effect gets its own slider');
+  const range = sliders()[1].querySelector<HTMLInputElement>('input[type=range]')!;
+  range.value = '0.4';
+  range.dispatchEvent(new Event('input', { bubbles: true }));
+  await sleep(30);
+  assertEq(sliders()[1].querySelector('.num')!.textContent, '40%', 'its slider sets its strength');
+  chip('Vintage').click();
+  await sleep(30);
+  assert(!chip('Vintage').classList.contains('on'), 'clicking it again turns it off');
+  assertEq(sliders().map((r) => r.querySelector('.lbl')!.textContent).join(','), 'Sepia', 'and its slider goes');
+  log('Adjust panel: effects as chips, a strength slider each below them');
   await workspace.close(tab, { force: true });
 }

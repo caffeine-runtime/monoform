@@ -479,16 +479,28 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   the folder of the last dialog answer while it exists, else Documents (`openDir`).
 - **Looks are one more stage of the adjustment shader**: each is a few lines of GLSL on the adjusted colour (the
   neighbourhood ones — emboss, pencil sketch — sample the source texture), mixed in by an amount, so they preview
-  in real time on large photos, combine with the sliders and stay inside the selection's mask. One look at a
-  time keeps the result predictable; B&W, sepia and invert remain separate switches.
+  in real time on large photos, combine with the sliders and stay inside the selection's mask. B&W, sepia and
+  invert are effects like the rest: every chosen effect has its own strength (a uniform array in the shader,
+  applied in list order), and the sliders sit below all the chips, not between them.
 - **Transforming a selection floats it on a layer**: the selected pixels are cut onto a layer above the one they
   came from, so the move tool's transformer (move, scale, rotate, snapping) works on them unchanged; applying
   renders that layer into the source layer's pixels and drops it, and the history in between collapses to one
   step (cancel restores the snapshot from before the lift). Changing tool, layer or saving applies it first.
+- **A selection's outline is moved with a transparent frame and a transformer** (image editor): the frame sits on
+  the selection's box; dragging and turning it previews the original outline through the frame's matrix, and on
+  release the selection is rebuilt from the original (mask drawn through the matrix, vector outlines carried by
+  it, wand edges worked out again), so turning it many times doesn't blur it. The frame stays turned while that
+  selection lasts. Only the rectangle, ellipse and lasso tools show it — the brush and the wand need clicks
+  inside a selection.
+- **Touch and touchpad in the image editor**: a wheel event with whole 120 notches (or lines) is a mouse wheel
+  and zooms; anything else is a touchpad scroll and pans, and Ctrl+wheel (a pinch) zooms. Two-finger touch is
+  handled before Konva sees it (capture phase), so a second finger can't start a drag or a stroke; it cancels
+  whatever the first finger began. Lifting fingers does reach Konva, which ends drags it readied.
 - **Turning the view rotates the stage's world group, not the document**: Konva maps the pointer through the
   rotation, so every tool keeps working; fitting uses the turned picture's bounding box, turning keeps the point
   in the middle of the window where it was, and renders for saving/merging reset the rotation like zoom and pan.
-  Arrow keys alone already step through the folder's images, so turning is on Alt+← / Alt+→.
+  Arrow keys alone already step through the folder's images, so turning is on Alt+← / Alt+→. The canvas
+  backdrop (checkerboard, edge) is drawn turned too, so the whole canvas turns, not only its layers.
 - **Moving a layer: only the active layer listens** (image editor): Konva hits an image as its whole rectangle,
   so any layer above — even an empty, transparent one — caught the pointer and the active layer's drag never
   started. With the move tool on, the other layers stop listening (`updateDraggable`, also run on every commit);
