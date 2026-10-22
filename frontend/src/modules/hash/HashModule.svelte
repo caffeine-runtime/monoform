@@ -341,7 +341,7 @@
     align-items: center;
     gap: 6px;
     padding: 4px 12px;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     background: var(--bg-hover);
     cursor: pointer;
     user-select: none;

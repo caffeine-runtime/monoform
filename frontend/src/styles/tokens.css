@@ -57,6 +57,7 @@
 }
 
 :root {
+  --radius-sm: 6px;
   --radius: 8px;
   --radius-lg: 12px;
   --font-ui: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;

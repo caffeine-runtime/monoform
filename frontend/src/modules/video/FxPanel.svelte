@@ -273,7 +273,7 @@
   .chip {
     border: none;
     padding: 3px 9px;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     background: var(--bg-hover);
     color: inherit;
     font: inherit;

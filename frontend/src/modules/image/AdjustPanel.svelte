@@ -234,7 +234,7 @@
   }
   .chip {
     padding: 3px 10px;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     background: var(--bg-hover);
     font-size: var(--fs-small);
     cursor: pointer;
