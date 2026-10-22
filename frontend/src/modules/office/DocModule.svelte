@@ -15,6 +15,19 @@
   import ListOrdered from '@lucide/svelte/icons/list-ordered';
   import IndentIncrease from '@lucide/svelte/icons/indent-increase';
   import IndentDecrease from '@lucide/svelte/icons/indent-decrease';
+  import AlignLeft from '@lucide/svelte/icons/align-left';
+  import AlignCenter from '@lucide/svelte/icons/align-center';
+  import AlignRight from '@lucide/svelte/icons/align-right';
+  import AlignJustify from '@lucide/svelte/icons/align-justify';
+  import SuperscriptIcon from '@lucide/svelte/icons/superscript';
+  import SubscriptIcon from '@lucide/svelte/icons/subscript';
+  import Baseline from '@lucide/svelte/icons/baseline';
+  import Highlighter from '@lucide/svelte/icons/highlighter';
+  import RemoveFormatting from '@lucide/svelte/icons/remove-formatting';
+  import Moon from '@lucide/svelte/icons/moon';
+  import Sun from '@lucide/svelte/icons/sun';
+  import { theme } from '../../core/theme.svelte';
+  import { availableFonts, fontLabel, GENERIC } from '../image/fonts';
   import OutlineTree from '../../shell/OutlineTree.svelte';
   import { isNarrow } from '../../core/fit';
   import { countText, formatCounts, type Counts, type OutlineItem } from '../../core/textStats';
@@ -24,7 +37,7 @@
   import { toastError, ui } from '../../core/ui.svelte';
   import { formatShortcut } from '../../core/keys';
   import { t } from '../../core/i18n';
-  import { DocModel } from './docxModel';
+  import { DocModel, HIGHLIGHT } from './docxModel';
   import { Numbering, type ListKind } from './docxNumbering';
   import { OdtModel } from './odtModel';
   import { officeControllers } from './controllers';
@@ -42,8 +55,23 @@
   let blockStyle = $state('p');
   /** The kind of list the cursor is in (the list buttons show it). */
   let listAt = $state<ListKind | null>(null);
+  /** Formatting at the cursor, shown by the toolbar. */
+  let fontAt = $state('');
+  let sizeAt = $state('');
+  let alignAt = $state('left');
+  let spacingAt = $state('');
+  let supAt = $state<'sup' | 'sub' | ''>('');
+  let lastColor = $state('C00000');
+  let lastHighlight = $state('yellow');
+  let palette = $state<'color' | 'highlight' | null>(null);
+  /** The selection in the page, kept while a toolbar menu has the focus. */
+  let lastRange: Range | null = null;
+  const fonts = $derived(['', ...availableFonts().filter((f) => !GENERIC.includes(f))]);
+  const SIZES = [8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 72];
+  const TEXT_COLORS = ['000000', '595959', '7F7F7F', 'C00000', 'FF0000', 'FFC000', 'E3B800', '92D050', '00B050', '00B0F0', '0070C0', '002060', '7030A0', 'D6336C'];
   /** numbering.xml's entry and whether document.xml already has a relationship to it. */
   let numberingPart = { name: 'word/numbering.xml', related: false };
+  let stylesPart = { name: 'word/styles.xml', related: true };
   let counts = $state<Counts>({ words: 0, chars: 0 });
   let selCounts = $state<Counts | null>(null);
   // The Navigation pane: the document's headings; click one to go to it.
@@ -93,7 +121,11 @@
       numberingPart = { name: numRel?.target ?? 'word/numbering.xml', related: !!numRel };
       model = odt
         ? new OdtModel(r.document, { styles: r.styles ?? {}, textStyles: r.textStyles ?? {}, partUrl })
-        : new DocModel(r.document, { styles: r.styles ?? {}, rels: r.rels ?? [], partUrl, numbering: new Numbering(r.numbering ?? '', r.stylesXml ?? '') });
+        : new DocModel(r.document, { styles: r.styles ?? {}, rels: r.rels ?? [], partUrl, numbering: new Numbering(r.numbering ?? '', r.stylesXml ?? ''), stylesXml: r.stylesXml ?? '' });
+      stylesPart = (() => {
+        const rel = (r.rels ?? []).find((x) => x.type === 'styles' && !x.external);
+        return { name: rel?.target ?? 'word/styles.xml', related: !!rel };
+      })();
       await tick();
       page!.replaceChildren(model.render(document));
       renumber();
@@ -175,25 +207,143 @@
     countTimer = setTimeout(count, 400);
   }
 
-  function exec(cmd: string, value?: string) {
+  /** A browser editing command on the selection; css: as inline styles (colours, fonts, alignment). */
+  function exec(cmd: string, value?: string, css = false) {
     if (tab.readOnly) return;
-    page?.focus();
-    document.execCommand('styleWithCSS', false, 'false');
+    restoreSelection();
+    document.execCommand('styleWithCSS', false, css ? 'true' : 'false');
     document.execCommand(cmd, false, value);
     input();
     syncBlock();
   }
 
-  function setStyle(tag: string) {
-    exec('formatBlock', tag === 'p' ? '<p>' : `<${tag}>`);
+  /** Put back the selection a toolbar menu took the focus from. */
+  function restoreSelection() {
+    if (!page) return;
+    const sel = window.getSelection();
+    const inPage = !!sel?.rangeCount && page.contains(sel.getRangeAt(0).commonAncestorContainer);
+    page.focus({ preventScroll: true });
+    if (!inPage && lastRange && page.contains(lastRange.commonAncestorContainer)) {
+      sel?.removeAllRanges();
+      sel?.addRange(lastRange);
+    }
   }
+
+  function setStyle(style: string) {
+    const tag = style === 'title' ? 'h1' : style;
+    exec('formatBlock', tag === 'p' ? '<p>' : `<${tag}>`);
+    for (const b of selectedBlocks()) if (b.tagName === 'H1') b.classList.toggle('title', style === 'title');
+    syncBlock();
+  }
+
+  /** Font family for the selection ('' = the document's default). */
+  function setFont(name: string) {
+    if (!name) return exec('fontName', 'inherit-mf', true), clearInline('fontFamily', 'inherit-mf');
+    exec('fontName', name, true);
+  }
+
+  /** Font size in points for the selection. */
+  function setSize(pt: number) {
+    exec('fontSize', '7', true);
+    // The browser marks size 7 as xxx-large (or a <font size>): make it the size asked for.
+    for (const el of Array.from(page?.querySelectorAll<HTMLElement>('[style*="xxx-large"], font[size="7"]') ?? [])) {
+      el.removeAttribute('size');
+      el.style.fontSize = `${pt}pt`;
+    }
+    input();
+    syncBlock();
+  }
+
+  /** Text colour (null: automatic). */
+  function setColor(hex: string | null) {
+    palette = null;
+    if (hex) {
+      lastColor = hex;
+      exec('foreColor', `#${hex}`, true);
+    } else {
+      exec('foreColor', '#010203', true);
+      clearInline('color', 'rgb(1, 2, 3)');
+    }
+  }
+
+  /** Highlight (a Word highlight colour name; null: none). */
+  function setHighlight(name: string | null) {
+    palette = null;
+    if (name) lastHighlight = name;
+    exec('hiliteColor', name ? HIGHLIGHT[name] : 'transparent', true);
+  }
+
+  /** Remove an inline style the browser just set to a placeholder value. */
+  function clearInline(prop: 'color' | 'fontFamily', placeholder: string) {
+    for (const el of Array.from(page?.querySelectorAll<HTMLElement>('[style], font') ?? [])) {
+      if (el.style[prop] === placeholder || el.style[prop] === `"${placeholder}"`) el.style[prop] = '';
+      if (el.tagName === 'FONT' && (el.getAttribute('color') === '#010203' || el.getAttribute('face') === placeholder)) {
+        el.removeAttribute(prop === 'color' ? 'color' : 'face');
+      }
+    }
+    input();
+  }
+
+  /** Paragraph alignment for the selected paragraphs. */
+  function align(how: 'left' | 'center' | 'right' | 'justify') {
+    if (tab.readOnly) return;
+    for (const b of selectedBlocks()) b.style.textAlign = how === 'left' ? '' : how;
+    input();
+    syncBlock();
+  }
+
+  /** Indent: list paragraphs change level, others move by half an inch. */
+  function indent(delta: 1 | -1) {
+    if (tab.readOnly) return;
+    const paras = selectedBlocks();
+    if (paras.some((p) => (model as DocModel | null)?.listKind?.(p))) return listLevel(delta);
+    for (const b of paras) b.style.marginLeft = `${Math.max(0, (parseFloat(b.style.marginLeft) || 0) + delta * 48)}px`;
+    input();
+  }
+
+  /** Line spacing (a multiple; '' = the style's). */
+  function setSpacing(v: string) {
+    if (tab.readOnly) return;
+    for (const b of selectedBlocks()) b.style.lineHeight = v;
+    input();
+    syncBlock();
+  }
+
+  const ALIGNS = [
+    { id: 'left', icon: AlignLeft, label: t('Align left ({shortcut})', { shortcut: formatShortcut('Mod+L') }) },
+    { id: 'center', icon: AlignCenter, label: t('Centre ({shortcut})', { shortcut: formatShortcut('Mod+E') }) },
+    { id: 'right', icon: AlignRight, label: t('Align right ({shortcut})', { shortcut: formatShortcut('Mod+R') }) },
+    { id: 'justify', icon: AlignJustify, label: t('Justify ({shortcut})', { shortcut: formatShortcut('Mod+J') }) },
+  ] as const;
+
+  /** Dark paper in the dark theme (shared with drawings and diagrams). */
+  const darkPage = $derived(theme.darkCanvas);
 
   function syncBlock() {
     const b = blockAt(window.getSelection()?.anchorNode ?? null);
     if (!b) return;
     const t = b.tagName.toLowerCase();
-    blockStyle = t === 'div' ? 'p' : t;
+    blockStyle = t === 'div' ? 'p' : t === 'h1' && b.classList.contains('title') ? 'title' : t;
     listAt = model instanceof DocModel ? model.listKind(b) : null;
+    alignAt = b.style.textAlign || 'left';
+    spacingAt = b.style.lineHeight && !b.style.lineHeight.endsWith('pt') ? String(Number(b.style.lineHeight)) : '';
+    // The run at the cursor: its own font and size (empty: the document's default).
+    const sel = window.getSelection();
+    let n: Node | null = sel?.anchorNode ?? null;
+    if (n?.nodeType === 3) n = n.parentNode;
+    let font = '';
+    let size = '';
+    let sup: 'sup' | 'sub' | '' = '';
+    for (let e = n as HTMLElement | null; e && e !== b.parentElement; e = e.parentElement) {
+      if (!font && e.style?.fontFamily && !e.style.fontFamily.startsWith('var(')) font = e.style.fontFamily.split(',')[0].replace(/["']/g, '').trim();
+      if (!font && e.tagName === 'FONT' && e.getAttribute('face')) font = e.getAttribute('face')!;
+      if (!size && e.style?.fontSize?.endsWith('pt')) size = String(parseFloat(e.style.fontSize));
+      if (!sup && (e.tagName === 'SUP' || e.tagName === 'SUB')) sup = e.tagName === 'SUP' ? 'sup' : 'sub';
+      if (e === b) break;
+    }
+    fontAt = font;
+    sizeAt = size;
+    supAt = sup;
   }
 
   const BLOCK = /^(P|H[1-6]|DIV)$/;
@@ -310,6 +460,9 @@
       if (model instanceof DocModel && model.numbering.changed) {
         parts.push({ name: numberingPart.name, data: utf8Base64(model.numbering.serialize()), relId: numberingPart.related ? '' : 'rIdMfNumbering', relType: 'numbering' });
       }
+      if (model instanceof DocModel && model.stylesChanged) {
+        parts.push({ name: stylesPart.name, data: utf8Base64(model.serializeStyles()), relId: stylesPart.related ? '' : 'rIdMfStyles', relType: 'styles' });
+      }
       await api.DocSave(path, sourcePath, xml, parts);
       tab.dirty = false;
       if (retarget && path !== tab.filePath) {
@@ -345,6 +498,20 @@
     if (k === 'b' || k === 'i' || k === 'u') {
       e.preventDefault();
       exec(k === 'b' ? 'bold' : k === 'i' ? 'italic' : 'underline');
+      return;
+    }
+    if (odt) return;
+    // Word's: Ctrl+E/L/R/J align, Ctrl+= subscript, Ctrl+Shift+= superscript, Ctrl+Space plain text.
+    const alignKey = { e: 'center', l: 'left', r: 'right', j: 'justify' }[k] as 'center' | 'left' | 'right' | 'justify' | undefined;
+    if (alignKey && !e.shiftKey) {
+      e.preventDefault();
+      align(alignKey);
+    } else if (e.code === 'Equal') {
+      e.preventDefault();
+      exec(e.shiftKey ? 'superscript' : 'subscript');
+    } else if (e.code === 'Space') {
+      e.preventDefault();
+      exec('removeFormat');
     }
   }
 
@@ -369,7 +536,7 @@
     for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode(...b.subarray(i, i + 0x8000));
     return btoa(bin);
   }
-  (tab as unknown as { docTest: unknown }).docTest = { page: () => page, model: () => model, save, writeTo, exec, toggleList, listLevel, listAt: () => listAt, headings: () => headings, active: () => active, counts: () => counts, selCounts: () => selCounts, goHeading, outlineOpen: () => outlineOpen, toggleOutline, desk: () => desk };
+  (tab as unknown as { docTest: unknown }).docTest = { page: () => page, model: () => model, save, writeTo, exec, toggleList, listLevel, listAt: () => listAt, setStyle, setFont, setSize, setColor, setHighlight, align, indent, setSpacing, darkPage: () => darkPage, headings: () => headings, active: () => active, counts: () => counts, selCounts: () => selCounts, goHeading, outlineOpen: () => outlineOpen, toggleOutline, desk: () => desk };
 
   onMount(() => {
     tab.handlers = {
@@ -386,12 +553,19 @@
     };
     void load();
     const sel = () => {
+      const s = window.getSelection();
+      if (s?.rangeCount && page?.contains(s.getRangeAt(0).commonAncestorContainer)) lastRange = s.getRangeAt(0).cloneRange();
       syncBlock();
       selectionCounts();
     };
+    const closePalette = (e: MouseEvent) => {
+      if (palette && !(e.target as HTMLElement).closest?.('.palette, .pal-btn')) palette = null;
+    };
+    window.addEventListener('mousedown', closePalette);
     document.addEventListener('selectionchange', sel);
     return () => {
       document.removeEventListener('selectionchange', sel);
+      window.removeEventListener('mousedown', closePalette);
       officeControllers.delete(tab.id);
       cancelAnimationFrame(scrollFrame);
     };
@@ -402,27 +576,85 @@
   {#if !tab.readOnly}
     <select class="input sel" value={blockStyle} onchange={(e) => setStyle((e.currentTarget as HTMLSelectElement).value)} aria-label={t('Paragraph style')}>
       <option value="p">{t('Normal text')}</option>
+      {#if !odt}<option value="title">{t('Title')}</option>{/if}
       <option value="h1">{t('Heading 1')}</option>
       <option value="h2">{t('Heading 2')}</option>
       <option value="h3">{t('Heading 3')}</option>
+      {#if !odt}
+        <option value="h4">{t('Heading 4')}</option>
+        <option value="h5">{t('Heading 5')}</option>
+        <option value="h6">{t('Heading 6')}</option>
+      {/if}
     </select>
+    {#if !odt}
+      <select class="input font" value={fontAt} onchange={(e) => setFont((e.currentTarget as HTMLSelectElement).value)} aria-label={t('Font')} title={t('Font')}>
+        {#each fonts as f (f)}<option value={f} style:font-family={f ? `"${f}"` : undefined}>{f ? fontLabel(f) : t('Default font')}</option>{/each}
+        {#if fontAt && !fonts.includes(fontAt)}<option value={fontAt}>{fontAt}</option>{/if}
+      </select>
+      <select class="input size" value={sizeAt} onchange={(e) => setSize(Number((e.currentTarget as HTMLSelectElement).value))} aria-label={t('Font size')} title={t('Font size')}>
+        <option value="" disabled>{t('Size')}</option>
+        {#each SIZES as z (z)}<option value={String(z)}>{z}</option>{/each}
+        {#if sizeAt && !SIZES.includes(Number(sizeAt))}<option value={sizeAt}>{sizeAt}</option>{/if}
+      </select>
+    {/if}
     <span class="sep"></span>
     <button class="icon-btn" title={t('Bold ({shortcut})', { shortcut: formatShortcut('Mod+B') })} onmousedown={(e) => e.preventDefault()} onclick={() => exec('bold')}><Icon icon={Bold} /></button>
     <button class="icon-btn" title={t('Italic ({shortcut})', { shortcut: formatShortcut('Mod+I') })} onmousedown={(e) => e.preventDefault()} onclick={() => exec('italic')}><Icon icon={Italic} /></button>
     <button class="icon-btn" title={t('Underline ({shortcut})', { shortcut: formatShortcut('Mod+U') })} onmousedown={(e) => e.preventDefault()} onclick={() => exec('underline')}><Icon icon={Underline} /></button>
     <button class="icon-btn" title={t('Strikethrough')} onmousedown={(e) => e.preventDefault()} onclick={() => exec('strikeThrough')}><Icon icon={Strikethrough} /></button>
+    {#if !odt}
+      <button class="icon-btn" class:on={supAt === 'sup'} title={t('Superscript ({shortcut})', { shortcut: formatShortcut('Mod+Shift+=') })} onmousedown={(e) => e.preventDefault()} onclick={() => exec('superscript')}><Icon icon={SuperscriptIcon} /></button>
+      <button class="icon-btn" class:on={supAt === 'sub'} title={t('Subscript ({shortcut})', { shortcut: formatShortcut('Mod+=') })} onmousedown={(e) => e.preventDefault()} onclick={() => exec('subscript')}><Icon icon={SubscriptIcon} /></button>
+      <span class="split">
+        <button class="icon-btn" title={t('Text colour')} onmousedown={(e) => e.preventDefault()} onclick={() => setColor(lastColor)}><Icon icon={Baseline} /><span class="bar" style:background={`#${lastColor}`}></span></button>
+        <button class="icon-btn caret pal-btn" title={t('More text colours')} aria-label={t('More text colours')} onmousedown={(e) => e.preventDefault()} onclick={() => (palette = palette === 'color' ? null : 'color')}>▾</button>
+        {#if palette === 'color'}
+          <div class="palette" role="menu">
+            <button class="auto" onmousedown={(e) => e.preventDefault()} onclick={() => setColor(null)}>{t('Automatic')}</button>
+            <div class="swatches">
+              {#each TEXT_COLORS as c (c)}<button class="sw" style:background={`#${c}`} title={`#${c}`} aria-label={t('Colour {value}', { value: `#${c}` })} onmousedown={(e) => e.preventDefault()} onclick={() => setColor(c)}></button>{/each}
+            </div>
+            <label class="more">{t('More…')} <input type="color" value={`#${lastColor}`} onchange={(e) => setColor((e.currentTarget as HTMLInputElement).value.slice(1).toUpperCase())} /></label>
+          </div>
+        {/if}
+      </span>
+      <span class="split">
+        <button class="icon-btn" title={t('Highlight')} onmousedown={(e) => e.preventDefault()} onclick={() => setHighlight(lastHighlight)}><Icon icon={Highlighter} /><span class="bar" style:background={HIGHLIGHT[lastHighlight]}></span></button>
+        <button class="icon-btn caret pal-btn" title={t('More highlight colours')} aria-label={t('More highlight colours')} onmousedown={(e) => e.preventDefault()} onclick={() => (palette = palette === 'highlight' ? null : 'highlight')}>▾</button>
+        {#if palette === 'highlight'}
+          <div class="palette" role="menu">
+            <button class="auto" onmousedown={(e) => e.preventDefault()} onclick={() => setHighlight(null)}>{t('No highlight')}</button>
+            <div class="swatches">
+              {#each Object.entries(HIGHLIGHT) as [name, c] (name)}<button class="sw" style:background={c} title={name} aria-label={t('Colour {value}', { value: name })} onmousedown={(e) => e.preventDefault()} onclick={() => setHighlight(name)}></button>{/each}
+            </div>
+          </div>
+        {/if}
+      </span>
+      <button class="icon-btn" title={t('Clear formatting ({shortcut})', { shortcut: formatShortcut('Mod+Space') })} onmousedown={(e) => e.preventDefault()} onclick={() => exec('removeFormat')}><Icon icon={RemoveFormatting} /></button>
+      <span class="sep"></span>
+      {#each ALIGNS as a (a.id)}
+        <button class="icon-btn" class:on={alignAt === a.id} aria-pressed={alignAt === a.id} title={a.label} onmousedown={(e) => e.preventDefault()} onclick={() => align(a.id)}><Icon icon={a.icon} /></button>
+      {/each}
+      <select class="input spacing" value={spacingAt} onchange={(e) => setSpacing((e.currentTarget as HTMLSelectElement).value)} aria-label={t('Line spacing')} title={t('Line spacing')}>
+        <option value="">{t('Line spacing')}</option>
+        {#each ['1', '1.15', '1.5', '2', '2.5', '3'] as v (v)}<option value={v}>{v}</option>{/each}
+      </select>
+    {/if}
     <span class="sep"></span>
     {#if !odt}
       <button class="icon-btn" class:on={listAt === 'bullet'} aria-pressed={listAt === 'bullet'} title={t('Bulleted list ({shortcut})', { shortcut: formatShortcut('Mod+Shift+8') })} onmousedown={(e) => e.preventDefault()} onclick={() => toggleList('bullet')}><Icon icon={ListIcon} /></button>
       <button class="icon-btn" class:on={listAt === 'number'} aria-pressed={listAt === 'number'} title={t('Numbered list ({shortcut})', { shortcut: formatShortcut('Mod+Shift+7') })} onmousedown={(e) => e.preventDefault()} onclick={() => toggleList('number')}><Icon icon={ListOrdered} /></button>
-      <button class="icon-btn" disabled={!listAt} title={t('Decrease list level (Shift+Tab)')} onmousedown={(e) => e.preventDefault()} onclick={() => listLevel(-1)}><Icon icon={IndentDecrease} /></button>
-      <button class="icon-btn" disabled={!listAt} title={t('Increase list level (Tab)')} onmousedown={(e) => e.preventDefault()} onclick={() => listLevel(1)}><Icon icon={IndentIncrease} /></button>
+      <button class="icon-btn" title={listAt ? t('Decrease list level (Shift+Tab)') : t('Decrease indent')} onmousedown={(e) => e.preventDefault()} onclick={() => indent(-1)}><Icon icon={IndentDecrease} /></button>
+      <button class="icon-btn" title={listAt ? t('Increase list level (Tab)') : t('Increase indent')} onmousedown={(e) => e.preventDefault()} onclick={() => indent(1)}><Icon icon={IndentIncrease} /></button>
       <span class="sep"></span>
     {/if}
     <button class="icon-btn" title={t('Undo')} onmousedown={(e) => e.preventDefault()} onclick={() => exec('undo')}><Icon icon={Undo2} /></button>
     <button class="icon-btn" title={t('Redo')} onmousedown={(e) => e.preventDefault()} onclick={() => exec('redo')}><Icon icon={Redo2} /></button>
   {/if}
   <span class="spacer"></span>
+  {#if theme.resolved === 'dark'}
+    <button class="icon-btn" title={darkPage ? t('Light page') : t('Dark page')} aria-label={darkPage ? t('Light page') : t('Dark page')} onclick={() => theme.setDarkCanvas(!darkPage)}><Icon icon={darkPage ? Sun : Moon} /></button>
+  {/if}
   <button class="btn ghost" class:on={outlineOpen} aria-pressed={outlineOpen} title={t('Headings of the document — click one to go to it')} onclick={toggleOutline}><Icon icon={ListTree} size={14} /> {t('Outline')}</button>
 </div>
 {#if note}
@@ -438,6 +670,7 @@
     class="page selectable"
     class:hidden={!!error}
     class:odt
+    class:dark={darkPage}
     bind:this={page}
     contenteditable={!tab.readOnly}
     spellcheck="true"
@@ -459,10 +692,108 @@
 </div>
 
 <style>
+  .sel,
+  .font,
+  .size,
+  .spacing,
+  .split {
+    flex: none;
+  }
   .sel {
     height: 28px;
     padding: 0 6px;
     min-width: 140px;
+  }
+  .font {
+    height: 28px;
+    padding: 0 6px;
+    width: 150px;
+  }
+  .size,
+  .spacing {
+    height: 28px;
+    padding: 0 4px;
+    width: 64px;
+  }
+  .spacing {
+    width: 110px;
+  }
+  .split {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+  .split .icon-btn {
+    position: relative;
+  }
+  .split .bar {
+    position: absolute;
+    left: 7px;
+    right: 7px;
+    bottom: 3px;
+    height: 3px;
+    border-radius: 1px;
+  }
+  .split .caret {
+    width: 16px;
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+  .palette {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 30;
+    margin-top: 4px;
+    padding: 8px;
+    background: var(--bg-elevated, var(--bg));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 168px;
+  }
+  .palette .auto {
+    text-align: left;
+    padding: 3px 6px;
+    border-radius: 4px;
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    font-size: var(--fs-small);
+    cursor: pointer;
+  }
+  .palette .auto:hover {
+    background: var(--bg-hover);
+  }
+  .swatches {
+    display: grid;
+    grid-template-columns: repeat(7, 20px);
+    gap: 4px;
+  }
+  .sw {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    padding: 0;
+  }
+  .palette .more {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--fs-small);
+  }
+  .palette .more input {
+    width: 28px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    background: none;
   }
   .body {
     flex: 1;
@@ -521,6 +852,14 @@
   }
   .page.hidden {
     display: none;
+  }
+  /* Dark paper: the page inverted (lightness only, hues kept), pictures put back. */
+  .page.dark {
+    filter: invert(0.9) hue-rotate(180deg);
+    box-shadow: 0 2px 12px rgba(255, 255, 255, 0.08);
+  }
+  .page.dark :global(img) {
+    filter: invert(1) hue-rotate(180deg);
   }
   /* ODF keeps runs of spaces as elements; show them as typed. */
   .page.odt {

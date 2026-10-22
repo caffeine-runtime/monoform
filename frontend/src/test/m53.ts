@@ -50,8 +50,8 @@ export default async function m53(dir: string) {
   const item = page.querySelector<HTMLElement>('.li')!;
   assert(parseFloat(getComputedStyle(item).paddingLeft) > 10, 'the marker sits in a hanging indent');
 
-  // The numbered-list button on "Last paragraph.".
-  const last = byText(page, 'Last paragraph.');
+  // The numbered-list button on the last paragraph (other tests may have edited its text).
+  const last = Array.from(page.children).filter((p) => p.tagName === 'P' && !p.classList.contains('li')).at(-1) as HTMLElement;
   caret(last, true);
   h.toggleList('number');
   assertEq(last.dataset.marker, '1.', 'numbered');
