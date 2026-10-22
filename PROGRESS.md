@@ -537,6 +537,11 @@
   instances, named after their products), colours on parts and faces, drawn edges, read in the load worker with
   progress. Own reader and tessellator (no permissive STEP kernel exists). Checked on the as1 test assembly
   (AP203 and AP214). Unit tests (parser, band and pole faces, the fixture assembly), self-test `m57`.
+- **Image editor: fifteen looks** in Adjust › Effects besides black & white, sepia and invert — Vintage, Faded,
+  Warm, Cool, Noir, Teal & orange, Cross-process, Lomo, Posterize, Solarize, Threshold, Emboss, Pencil sketch,
+  Film grain, Thermal — one at a time with an Amount slider, previewed live on the GPU and limited to the
+  selection like every adjustment. Settings tiles wrap long paths (the command-line path ran out of its tile).
+  Unit test, self-test `m62`; `m59` checks no tile overflows.
 - **Image editor: turning things**: **rotate / scale / move a selection** (selection bar, right-click, Ctrl+Shift+R)
   — the selected pixels float with the move tool's handles (rotation snaps to 45°), Enter puts them back into
   their layer as one undo step, Esc puts everything back; **rotate the active layer** 90° either way or by an

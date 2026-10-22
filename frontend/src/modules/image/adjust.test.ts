@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BLUR_TYPES, NEUTRAL, hexRgb, isNeutral } from './adjust';
+import { BLUR_TYPES, LOOKS, NEUTRAL, hexRgb, isNeutral } from './adjust';
 
 describe('adjustments', () => {
   it('treats blur shape settings alone as no change', () => {
@@ -11,6 +11,13 @@ describe('adjustments', () => {
     expect(isNeutral({ ...NEUTRAL, markTolerance: 0.5 })).toBe(true);
     expect(isNeutral({ ...NEUTRAL, lightMarks: 0.3 })).toBe(false);
     expect(isNeutral({ ...NEUTRAL, markColor: '#d0d0d0' })).toBe(false);
+  });
+
+  it('counts a look as a change, its amount alone not', () => {
+    expect(isNeutral({ ...NEUTRAL, lookAmount: 0.4 })).toBe(true);
+    expect(isNeutral({ ...NEUTRAL, look: 'vintage' })).toBe(false);
+    expect(new Set(LOOKS.map((l) => l.id)).size).toBe(LOOKS.length);
+    expect(LOOKS.length).toBeGreaterThanOrEqual(15);
   });
 
   it('reads colours for the clean-up', () => {
