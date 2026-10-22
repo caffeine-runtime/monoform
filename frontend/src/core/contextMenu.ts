@@ -146,7 +146,9 @@ export function commandItems(list: Entry[]): MenuItem[] {
         const c = commands.get(e);
         if (!c || !avail.has(e)) return [];
         const sc = commands.shortcutOf(e);
-        return [{ label: c.title, shortcut: sc ? formatShortcut(sc) : undefined, run: () => commands.execute(e) }];
+        // "Select line (Ctrl+L)": the keys go in the shortcut column.
+        const inTitle = sc ? null : /^(.*\S) \(([^()]+)\)$/.exec(c.title);
+        return [{ label: inTitle?.[1] ?? c.title, shortcut: sc ? formatShortcut(sc) : inTitle?.[2], run: () => commands.execute(e) }];
       }
       const items = tidy(es(e.items));
       // "Mask: invert" reads "Invert" inside Layer… only when the prefix is the submenu's name.

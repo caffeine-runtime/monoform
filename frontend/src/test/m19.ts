@@ -117,7 +117,9 @@ export default async function m19(dir: string) {
   const exported = await api.DBExportCSV(ro.id, { table: 'customers', search: 'Warsaw', offset: 0, limit: 0 } as never, '', out);
   api.DBClose(ro.id);
   const text = new TextDecoder().decode(await readFile(out));
-  assert(text.startsWith('id,name,city,balance\n') && exported === h.total(), `exported ${exported} filtered rows`);
+  // (The grid may still be applying the filter as it was typed: wait for its count to settle.)
+  await waitFor(() => (h.total() === exported ? true : null), `exported ${exported} filtered rows (the grid shows ${h.total()})`);
+  assert(text.startsWith('id,name,city,balance\n'), 'exported with the header');
 
   // ---- read-only ----
   await h.toggleReadOnly();

@@ -14,10 +14,13 @@ describe('context menu', () => {
       { id: 'a.one', title: 'One', shortcut: 'Mod+1' },
       { id: 'a.two', title: 'Two', when: () => false },
       { id: 'a.three', title: 'Three' },
+      { id: 'a.four', title: 'Four (Ctrl+4)' },
     );
     const m = commandItems(['-', 'a.one', '-', '-', 'a.two', { label: 'Sub', items: ['a.two'] }, { label: 'More', items: ['a.three', '-'] }, '-', 'a.missing', '-']);
     expect(labels(m)).toEqual(['One', '—', 'More › Three']);
     expect(m[0].shortcut).toBeTruthy();
+    // Keys written in a command's name go to the shortcut column.
+    expect(commandItems(['a.four']).map((i) => `${i.label}|${i.shortcut}`)).toEqual(['Four|Ctrl+4']);
   });
 
   it('names only commands that exist', () => {
