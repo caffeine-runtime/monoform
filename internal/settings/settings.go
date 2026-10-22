@@ -103,6 +103,9 @@ type Settings struct {
 	UpdateCheckOff bool `json:"updateCheckOff"`
 	// UpdateSkip is a version the user chose to skip (not offered again).
 	UpdateSkip string `json:"updateSkip"`
+	// BoardStyle is the drawing style new shapes get on the board (stroke,
+	// fill, width, dash, fillStyle, roughness, edges): the last one chosen.
+	BoardStyle map[string]any `json:"boardStyle,omitempty"`
 }
 
 func Defaults() Settings {

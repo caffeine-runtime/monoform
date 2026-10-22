@@ -33,6 +33,8 @@ export interface BoardStyle {
   /** Excalidraw only. */
   fillStyle?: 'hachure' | 'cross-hatch' | 'solid' | 'zigzag';
   roughness?: number;
+  /** Sharp or rounded corners (rectangles, diamonds, connectors). */
+  edges?: 'sharp' | 'round';
 }
 
 export interface TextEdit {
@@ -42,6 +44,8 @@ export interface TextEdit {
   font: string;
   align: 'left' | 'center' | 'right';
   color: string;
+  /** Elements whose drawn text the edit box replaces while it is open. */
+  hide?: string[];
 }
 
 export interface CreateOptions {

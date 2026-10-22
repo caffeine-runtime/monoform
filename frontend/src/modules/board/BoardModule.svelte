@@ -29,6 +29,7 @@
   import Moon from '@lucide/svelte/icons/moon';
   import Sun from '@lucide/svelte/icons/sun';
   import { theme } from '../../core/theme.svelte';
+  import { settings } from '../../core/settings.svelte';
   import { DARK_FILTER, IMAGE_UNDO, darkColor, isLight } from '../../core/canvas';
   import type { Tab } from '../../core/tabs.svelte';
   import { workspace } from '../../core/tabs.svelte';
@@ -203,6 +204,11 @@
     void version;
     return board && sel.length ? board.style(sel) : null;
   });
+  /** The style new shapes get: the last one chosen (kept in the settings). */
+  const BASE: BoardStyle = { stroke: '#1e1e1e', fill: '', width: 2, dash: 'solid', fillStyle: 'solid', roughness: 1, edges: 'round' };
+  const current = $derived<BoardStyle>({ ...BASE, ...(settings.value.boardStyle as Partial<BoardStyle> | undefined) });
+  /** What the style bar shows: the selection's style, or (while a drawing tool is on) the one new shapes get. */
+  const shownStyle = $derived(selStyle ?? (board && !ro && tool !== 'select' ? current : null));
 
   const toScreen = (p: Pt): Pt => ({ x: p.x * view.zoom + view.x, y: p.y * view.zoom + view.y });
   function toWorld(e: { clientX: number; clientY: number }): Pt {
@@ -336,6 +342,7 @@
     if (tool === 'text') {
       snapshot();
       const id = board.create('text', w, w);
+      styleNew(id, 'text');
       if (id) {
         sel = [id];
         bump();
@@ -442,12 +449,14 @@
         }
       }
       const id = board.create(tool, a, b, { startId: d.startId, endId: tool === 'arrow' || tool === 'line' ? shapeAt(e, d.startId) : undefined });
+      styleNew(id, tool);
       if (id) sel = [id];
       tool = 'select';
     } else if (d.kind === 'draw') {
       if (d.points.length > 1) {
         snapshot();
         const id = board.create('draw', d.points[0], d.points[d.points.length - 1], { points: d.points });
+        styleNew(id, 'draw');
         if (id) sel = [id];
       }
     }
@@ -465,6 +474,7 @@
       // As in Excalidraw: double-click on empty canvas adds text.
       snapshot();
       const nid = board.create('text', toWorld(e), toWorld(e));
+      styleNew(nid, 'text');
       if (nid) {
         sel = [nid];
         bump();
@@ -472,6 +482,16 @@
       }
     }
   }
+
+  // While a text is being edited, its drawn copy is hidden (the edit box shows it).
+  $effect(() => {
+    const ids = editing?.edit.hide ?? [];
+    if (!ids.length) return;
+    const st = document.createElement('style');
+    st.textContent = ids.map((id) => `svg.canvas [data-id="${CSS.escape(id)}"] text { visibility: hidden; }`).join('\n');
+    document.head.append(st);
+    return () => st.remove();
+  });
 
   async function startEdit(id: string, fresh: boolean) {
     const ed = board?.textEdit(id);
@@ -514,7 +534,30 @@
   const dup = () => sel.length && act(() => (sel = board!.duplicate(sel)));
   const front = () => sel.length && act(() => board!.reorder(sel, 'front'));
   const back = () => sel.length && act(() => board!.reorder(sel, 'back'));
-  const setStyle = (s: Partial<BoardStyle>) => sel.length && act(() => board!.setStyle(sel, s));
+  /** Change the selection's style; the change is also what new shapes get from now on. */
+  function setStyle(s: Partial<BoardStyle>) {
+    settings.update((x) => (x.boardStyle = { ...(x.boardStyle ?? {}), ...s }));
+    if (sel.length) act(() => board!.setStyle(sel, s));
+  }
+
+  /** A new shape in the current style (only what fits it: text takes the colour, lines no fill). */
+  function styleNew(id: string | null, kind: Tool) {
+    if (!id || !board) return;
+    const want = settings.value.boardStyle as Partial<BoardStyle> | undefined;
+    if (!want) return;
+    const s: Partial<BoardStyle> = {};
+    for (const k of board.styleKeys) if (want[k] !== undefined) (s as Record<string, unknown>)[k] = want[k];
+    if (kind === 'text') {
+      board.setStyle([id], s.stroke ? { stroke: s.stroke } : {});
+      return;
+    }
+    if (kind === 'arrow' || kind === 'line' || kind === 'draw') {
+      delete s.fill;
+      delete s.fillStyle;
+    }
+    if (kind === 'ellipse' || kind === 'draw') delete s.edges;
+    board.setStyle([id], s);
+  }
 
   function keydown(e: KeyboardEvent) {
     if (!board || editing) return;
@@ -711,30 +754,36 @@
   <button class="btn ghost" onclick={exportPng} disabled={!board}><Icon icon={ImageDown} size={14} /> {t('Export PNG…')}</button>
 </div>
 
-{#if selStyle && !ro}
+{#if shownStyle && !ro}
   <div class="stylebar" role="toolbar" aria-label={t('Style')}>
     <span class="label">{t('Stroke')}</span>
     {#each STROKES as c (c)}
-      <button class="sw" class:on={selStyle.stroke.toLowerCase() === c} style="background:{c}" title={c} aria-label={t('Stroke {colour}', { colour: c })} onclick={() => setStyle({ stroke: c })}></button>
+      <button class="sw" class:on={shownStyle.stroke.toLowerCase() === c} style="background:{c}" title={c} aria-label={t('Stroke {colour}', { colour: c })} onclick={() => setStyle({ stroke: c })}></button>
     {/each}
-    <input type="color" value={/^#[0-9a-f]{6}$/i.test(selStyle.stroke) ? selStyle.stroke : '#000000'} onchange={(e) => setStyle({ stroke: (e.currentTarget as HTMLInputElement).value })} aria-label={t('Stroke colour')} />
+    <input type="color" value={/^#[0-9a-f]{6}$/i.test(shownStyle.stroke) ? shownStyle.stroke : '#000000'} onchange={(e) => setStyle({ stroke: (e.currentTarget as HTMLInputElement).value })} aria-label={t('Stroke colour')} />
     <span class="sep"></span>
     <span class="label">{t('Fill')}</span>
     {#each FILLS as c (c)}
-      <button class="sw" class:none={!c} class:on={selStyle.fill.toLowerCase() === c} style="background:{c || 'transparent'}" title={c || t('None')} aria-label={c ? t('Fill {colour}', { colour: c }) : t('Fill none')} onclick={() => setStyle({ fill: c })}></button>
+      <button class="sw" class:none={!c} class:on={shownStyle.fill.toLowerCase() === c} style="background:{c || 'transparent'}" title={c || t('None')} aria-label={c ? t('Fill {colour}', { colour: c }) : t('Fill none')} onclick={() => setStyle({ fill: c })}></button>
     {/each}
     <span class="sep"></span>
     {#each [1, 2, 4] as w (w)}
-      <button class="btn ghost small" class:on={selStyle.width === w} onclick={() => setStyle({ width: w })} title={t('Line width {w}', { w })}>{w === 1 ? t('Thin', {}, 'width') : w === 2 ? t('Bold', {}, 'width') : t('Extra', {}, 'width')}</button>
+      <button class="btn ghost small" class:on={shownStyle.width === w} onclick={() => setStyle({ width: w })} title={t('Line width {w}', { w })}>{w === 1 ? t('Thin', {}, 'width') : w === 2 ? t('Bold', {}, 'width') : t('Extra', {}, 'width')}</button>
     {/each}
-    <select class="input small" value={selStyle.dash} onchange={(e) => setStyle({ dash: (e.currentTarget as HTMLSelectElement).value as BoardStyle['dash'] })} aria-label={t('Line style')}>
+    <select class="input small" value={shownStyle.dash} onchange={(e) => setStyle({ dash: (e.currentTarget as HTMLSelectElement).value as BoardStyle['dash'] })} aria-label={t('Line style')}>
       <option value="solid">{t('Solid', {}, 'line')}</option><option value="dashed">{t('Dashed')}</option><option value="dotted">{t('Dotted')}</option>
     </select>
+    {#if board?.styleKeys.includes('edges')}
+      <span class="seg" role="radiogroup" aria-label={t('Edges')}>
+        <button class="btn ghost small" role="radio" aria-checked={shownStyle.edges === 'sharp'} class:on={shownStyle.edges === 'sharp'} title={t('Sharp corners')} onclick={() => setStyle({ edges: 'sharp' })}>{t('Sharp')}</button>
+        <button class="btn ghost small" role="radio" aria-checked={shownStyle.edges === 'round'} class:on={shownStyle.edges === 'round'} title={t('Rounded corners')} onclick={() => setStyle({ edges: 'round' })}>{t('Round')}</button>
+      </span>
+    {/if}
     {#if board?.styleKeys.includes('fillStyle')}
-      <select class="input small" value={selStyle.fillStyle} onchange={(e) => setStyle({ fillStyle: (e.currentTarget as HTMLSelectElement).value as BoardStyle['fillStyle'] })} aria-label={t('Fill style')}>
+      <select class="input small" value={shownStyle.fillStyle} onchange={(e) => setStyle({ fillStyle: (e.currentTarget as HTMLSelectElement).value as BoardStyle['fillStyle'] })} aria-label={t('Fill style')}>
         <option value="hachure">{t('Hatched')}</option><option value="cross-hatch">{t('Cross-hatched')}</option><option value="solid">{t('Solid', {}, 'fill')}</option><option value="zigzag">{t('Zigzag')}</option>
       </select>
-      <select class="input small" value={String(selStyle.roughness)} onchange={(e) => setStyle({ roughness: Number((e.currentTarget as HTMLSelectElement).value) })} aria-label={t('Sloppiness')}>
+      <select class="input small" value={String(shownStyle.roughness)} onchange={(e) => setStyle({ roughness: Number((e.currentTarget as HTMLSelectElement).value) })} aria-label={t('Sloppiness')}>
         <option value="0">{t('Architect')}</option><option value="1">{t('Artist')}</option><option value="2">{t('Cartoonist')}</option>
       </select>
     {/if}

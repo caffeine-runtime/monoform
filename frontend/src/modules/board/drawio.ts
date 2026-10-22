@@ -78,7 +78,7 @@ const NUM = (v: string | null | undefined, d = 0) => (v === null || v === undefi
 
 export class DrawioBoard implements BoardAdapter {
   readonly tools: Tool[] = ['select', 'rect', 'ellipse', 'diamond', 'arrow', 'line', 'text'];
-  readonly styleKeys: (keyof BoardStyle)[] = ['stroke', 'fill', 'width', 'dash'];
+  readonly styleKeys: (keyof BoardStyle)[] = ['stroke', 'fill', 'width', 'dash', 'edges'];
   xml!: XMLDocument;
   page = 0;
   private pagesEls: Element[] = [];
@@ -905,7 +905,7 @@ export class DrawioBoard implements BoardAdapter {
       const { p } = this.pointAlong(this.edgePoints(c), 0.5);
       box = { x: p.x - 60, y: p.y - f.size, w: 120, h: f.size * 2.4 };
     }
-    return { box, text: this.plainLabel(lc), fontSize: f.size, font: f.family, align: (lc.style.get('align') ?? 'center') as TextEdit['align'], color: f.color };
+    return { box, text: this.plainLabel(lc), fontSize: f.size, font: f.family, align: (lc.style.get('align') ?? 'center') as TextEdit['align'], color: f.color, hide: [c.id, lc.id] };
   }
 
   setText(id: string, text: string) {
@@ -1054,6 +1054,7 @@ export class DrawioBoard implements BoardAdapter {
       fill: c?.edge || fill === 'none' ? '' : !fill || fill === 'default' ? '#ffffff' : fill,
       width: NUM(st.get('strokeWidth'), 1),
       dash: st.get('dashed') === '1' ? (st.get('dashPattern') && /^1 /.test(st.get('dashPattern')!) ? 'dotted' : 'dashed') : 'solid',
+      edges: st.get('rounded') === '1' ? 'round' : 'sharp',
     };
   }
 
@@ -1075,6 +1076,7 @@ export class DrawioBoard implements BoardAdapter {
           else st.delete('dashPattern');
         }
       }
+      if (s.edges !== undefined) st.set('rounded', s.edges === 'round' ? '1' : '0');
       c.el.setAttribute('style', styleString(st));
     }
   }

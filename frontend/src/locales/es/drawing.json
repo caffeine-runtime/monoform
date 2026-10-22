@@ -443,5 +443,10 @@
   "{n} elements": {
     "one": "{n} elemento",
     "other": "{n} elementos"
-  }
+  },
+  "Edges": "Esquinas",
+  "Sharp corners": "Esquinas rectas",
+  "Sharp": "Rectas",
+  "Round": "Redondeadas",
+  "Rounded corners": "Esquinas redondeadas"
 }

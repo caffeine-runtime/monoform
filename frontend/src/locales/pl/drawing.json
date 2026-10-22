@@ -469,5 +469,10 @@
     "few": "{n} elementy",
     "many": "{n} elementów",
     "other": "{n} elementu"
-  }
+  },
+  "Edges": "Narożniki",
+  "Sharp corners": "Ostre narożniki",
+  "Sharp": "Ostre",
+  "Round": "Zaokrąglone",
+  "Rounded corners": "Zaokrąglone narożniki"
 }

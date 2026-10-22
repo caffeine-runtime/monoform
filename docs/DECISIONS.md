@@ -440,6 +440,10 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 - **Dark documents invert the page** (filter: invert(0.9) hue-rotate(180deg), pictures put back) instead of
   restyling text: explicit black text, highlights and table borders all stay readable without touching the saved
   colours.
+- **The board's "current style" is one setting (boardStyle), as in Excalidraw**: every style change — on a selection
+  or with nothing selected while a drawing tool is on — updates it, and new shapes take the parts that fit them (text
+  only the colour, connectors and freehand no fill, ellipses no corners). It lives in settings, not in the file, so it
+  carries over between drawings and restarts; untouched keys keep each format's own defaults.
 - **Updates from GitHub releases, no update server.** The check is one unauthenticated request to the public
   releases API (`/releases/latest`, so pre-releases are never offered); the package for the system is a release asset
   and is verified against the release's `SHA256SUMS`. Installing replaces the running copy by renaming (a running
