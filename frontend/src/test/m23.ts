@@ -2,6 +2,7 @@
 // JSON"), JSON Lines and arrays of records as a table, log files with level
 // counts, filter (text, regex, levels), next error and follow (appended bytes
 // only).
+import { num } from '../core/i18n';
 import { api, readFile, saveFile } from '../core/backend';
 import { join } from '../core/paths';
 import { workspace, type Tab } from '../core/tabs.svelte';
@@ -45,7 +46,7 @@ export default async function m23(dir: string) {
   const j = await openData(join(dir, 'data', 'events.jsonl'));
   log(`5,000-line JSONL parsed in ${Math.round(performance.now() - t0)} ms`);
   assertEq(j.h.root().size, 5000, 'one record per line');
-  await waitFor(() => (document.querySelector('.tabview.active .status.good')?.textContent?.includes(`${(5000).toLocaleString()} records`) ? true : null), 'record count shown');
+  await waitFor(() => (document.querySelector('.tabview.active .status.good')?.textContent?.includes(`${num(5000)} records`) ? true : null), 'record count shown');
   const rows = (await j.h.client.rows(0, 2)).rows;
   assertEq(JSON.stringify(rows), JSON.stringify([['0', 'open', '0', '{"n":0}'], ['1', 'save', '7', '']]), 'table rows (columns id, kind, ms, extra)');
   j.h.setView('table');
