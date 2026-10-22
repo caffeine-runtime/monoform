@@ -4,10 +4,17 @@ import '@fontsource-variable/source-serif-4/wght.css';
 import '../src/styles/tokens.css';
 import '../src/styles/base.css';
 import { mount } from 'svelte';
-import Setup from './Setup.svelte';
+import { pickLanguage, setLanguage } from '../src/core/i18n';
 
 const light = window.matchMedia('(prefers-color-scheme: light)');
 const apply = () => (document.documentElement.dataset.theme = light.matches ? 'light' : 'dark');
 apply();
 light.addEventListener('change', apply);
-mount(Setup, { target: document.getElementById('app')! });
+
+// The language first (the system's, else English), then the window, so its strings are translated.
+async function main() {
+  await setLanguage(pickLanguage('', navigator.languages), navigator.languages);
+  const { default: Setup } = await import('./Setup.svelte');
+  mount(Setup, { target: document.getElementById('app')! });
+}
+void main();

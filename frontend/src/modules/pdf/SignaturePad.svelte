@@ -8,6 +8,7 @@
   import { api, fileUrl } from '../../core/backend';
   import { settings } from '../../core/settings.svelte';
   import { toastError } from '../../core/ui.svelte';
+  import { t } from '../../core/i18n';
   import { inkBox, paperToAlpha } from './marks';
 
   let { onpick, oncancel }: { onpick: (dataUrl: string, aspect: number) => void; oncancel: () => void } = $props();
@@ -95,7 +96,7 @@
   }
 
   async function chooseImage() {
-    const files = await api.OpenFilesDialog('Signature image', [{ name: 'Images', patterns: '*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.gif' }]);
+    const files = await api.OpenFilesDialog(t('Signature image'), [{ name: t('Images'), patterns: '*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.gif' }]);
     if (!files?.length) return;
     try {
       const img = new Image();
@@ -112,7 +113,7 @@
       ctx.putImageData(d, 0, 0);
       imported = c;
     } catch (e) {
-      toastError(e, 'Couldn’t read that image');
+      toastError(e, t('Couldn’t read that image'));
     }
   }
 
@@ -192,59 +193,59 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <div class="backdrop" onclick={oncancel}>
-  <div class="dialog" role="dialog" aria-label="Signature" tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && oncancel()}>
+  <div class="dialog" role="dialog" aria-label={t('Signature')} tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && oncancel()}>
     <div class="head">
       <div class="tabs" role="tablist">
-        <button role="tab" aria-selected={mode === 'draw'} class:on={mode === 'draw'} onclick={() => (mode = 'draw')}>Draw</button>
-        <button role="tab" aria-selected={mode === 'type'} class:on={mode === 'type'} onclick={() => (mode = 'type')}>Type</button>
-        <button role="tab" aria-selected={mode === 'image'} class:on={mode === 'image'} onclick={() => (mode = 'image')}>Image</button>
+        <button role="tab" aria-selected={mode === 'draw'} class:on={mode === 'draw'} onclick={() => (mode = 'draw')}>{t('Draw')}</button>
+        <button role="tab" aria-selected={mode === 'type'} class:on={mode === 'type'} onclick={() => (mode = 'type')}>{t('Type', {}, 'signature')}</button>
+        <button role="tab" aria-selected={mode === 'image'} class:on={mode === 'image'} onclick={() => (mode = 'image')}>{t('Image')}</button>
       </div>
       <span class="spacer"></span>
-      <button class="icon-btn" title="Close (Esc)" onclick={oncancel}><Icon icon={XIcon} /></button>
+      <button class="icon-btn" title={t('Close ({shortcut})', { shortcut: 'Esc' })} onclick={oncancel}><Icon icon={XIcon} /></button>
     </div>
 
     <div class="stage" class:hidden={mode !== 'draw'}>
       <canvas bind:this={pad} class="pad" onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up}></canvas>
       <div class="line"></div>
-      <span class="hint">{empty ? 'Sign here with the mouse, trackpad or a pen' : ''}</span>
+      <span class="hint">{empty ? t('Sign here with the mouse, trackpad or a pen') : ''}</span>
     </div>
     {#if mode === 'type'}
       <div class="stage typed">
-        <input class="input" placeholder="Your name" bind:value={typed} />
-        <div class="preview" style:font-family={FONTS[font]} style:color>{typed || 'Your name'}</div>
+        <input class="input" placeholder={t('Your name')} bind:value={typed} />
+        <div class="preview" style:font-family={FONTS[font]} style:color>{typed || t('Your name')}</div>
         <div class="fonts">
-          {#each FONTS as f, i (i)}<button class="btn ghost" class:on={font === i} style:font-family={f} onclick={() => (font = i)}>Signature</button>{/each}
+          {#each FONTS as f, i (i)}<button class="btn ghost" class:on={font === i} style:font-family={f} onclick={() => (font = i)}>{t('Signature')}</button>{/each}
         </div>
       </div>
     {:else if mode === 'image'}
       <div class="stage typed">
-        <button class="btn" onclick={chooseImage}>Choose a photo or scan…</button>
-        <p class="muted">Sign on white paper; the paper becomes transparent.</p>
-        {#if imported}<img class="imported" src={imported.toDataURL()} alt="Imported signature" />{/if}
+        <button class="btn" onclick={chooseImage}>{t('Choose a photo or scan…')}</button>
+        <p class="muted">{t('Sign on white paper; the paper becomes transparent.')}</p>
+        {#if imported}<img class="imported" src={imported.toDataURL()} alt={t('Imported signature')} />{/if}
       </div>
     {/if}
 
     <div class="row">
       {#if mode !== 'image'}
-        <span class="label">Ink</span>
+        <span class="label">{t('Ink')}</span>
         {#each ['#1a1a1a', '#1f3fa8', '#0b6b3a'] as c (c)}
-          <button class="swatch" class:on={color === c} style:background={c} aria-label="Ink {c}" onclick={() => (color = c)}></button>
+          <button class="swatch" class:on={color === c} style:background={c} aria-label={t('Ink {color}', { color: c })} onclick={() => (color = c)}></button>
         {/each}
       {/if}
-      {#if mode === 'draw'}<button class="btn ghost" onclick={clearPad}>Clear</button>{/if}
+      {#if mode === 'draw'}<button class="btn ghost" onclick={clearPad}>{t('Clear')}</button>{/if}
       <span class="spacer"></span>
-      <label class="chk"><input type="checkbox" bind:checked={keep} /> Remember</label>
-      <button class="btn primary" onclick={use}>Place signature</button>
+      <label class="chk"><input type="checkbox" bind:checked={keep} /> {t('Remember')}</label>
+      <button class="btn primary" onclick={use}>{t('Place signature')}</button>
     </div>
 
     {#if saved.length}
       <div class="saved">
-        <span class="label">Saved — click one to place it</span>
+        <span class="label">{t('Saved — click one to place it')}</span>
         <div class="list">
           {#each saved as s (s)}
             <div class="item">
-              <button class="use" title="Place this signature" onclick={() => pickSaved(s)}><img src={s} alt="Saved signature" /></button>
-              <button class="forget" title="Forget this signature" onclick={() => forget(s)}><Icon icon={XIcon} size={12} /></button>
+              <button class="use" title={t('Place this signature')} onclick={() => pickSaved(s)}><img src={s} alt={t('Saved signature')} /></button>
+              <button class="forget" title={t('Forget this signature')} onclick={() => forget(s)}><Icon icon={XIcon} size={12} /></button>
             </div>
           {/each}
         </div>

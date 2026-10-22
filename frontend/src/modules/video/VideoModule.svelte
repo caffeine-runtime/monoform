@@ -23,6 +23,7 @@
   import { ui, toastError, menu } from '../../core/ui.svelte';
   import { jobs } from '../../core/jobs.svelte';
   import { formatShortcut } from '../../core/keys';
+  import { t, tn, num } from '../../core/i18n';
   import { formatTime } from '../audio/waveform';
   import * as E from './edits';
   import * as P from './project';
@@ -104,11 +105,11 @@
     if (!info) return '';
     const p: string[] = [];
     if (info.hasVideo) {
-      p.push(info.videoCodec || 'video');
+      p.push(info.videoCodec || t('video'));
       if (info.width) p.push(`${info.width}×${info.height}`);
       if (info.fps) p.push(`${+info.fps.toFixed(2)} fps`);
     }
-    if (info.hasAudio) p.push(`${info.audioCodec || 'audio'}${info.channels ? (info.channels === 1 ? ' mono' : info.channels === 2 ? ' stereo' : ` ${info.channels} ch`) : ''}`);
+    if (info.hasAudio) p.push(`${info.audioCodec || t('audio')}${info.channels ? ` ${info.channels === 1 ? t('mono') : info.channels === 2 ? t('stereo') : t('{n} ch', { n: info.channels })}` : ''}`);
     if (info.bitrate) p.push(info.bitrate >= 1000 ? `${(info.bitrate / 1000).toFixed(1)} Mbit/s` : `${info.bitrate} kbit/s`);
     if (dur) p.push(formatTime(dur, 0));
     return p.join(' · ');
@@ -127,9 +128,9 @@
     error = playError = '';
     sel = null;
     try {
-      if (!tab.filePath) throw new Error('Videos inside archives can’t be played yet — extract it first.');
+      if (!tab.filePath) throw new Error(t('Videos inside archives can’t be played yet — extract it first.'));
       const o = await api.VideoOpen(tab.filePath);
-      if (!o?.info) throw new Error('Couldn’t read this video.');
+      if (!o?.info) throw new Error(t('Couldn’t read this video.'));
       opened = o;
       edit = { keep: o.info.duration ? [[0, o.info.duration]] : [], rotate: 0, mute: false, fx: P.EMPTY };
       selId = null;
@@ -161,7 +162,7 @@
       return;
     }
     const codec = info?.videoCodec || extname(tab.name).toUpperCase();
-    playError = `This system can’t play ${codec} video.${editable ? ' You can still cut, rotate and save it.' : ''}`;
+    playError = editable ? t('This system can’t play {codec} video. You can still cut, rotate and save it.', { codec }) : t('This system can’t play {codec} video.', { codec });
   }
 
   function onMeta() {
@@ -194,8 +195,8 @@
     try {
       await new Promise<void>((res, rej) => {
         v.onloadeddata = () => res();
-        v.onerror = () => rej(new Error('no thumbnails'));
-        setTimeout(() => rej(new Error('timeout')), 8000);
+        v.onerror = () => rej(new Error('no thumbnails')); // i18n-ignore: internal, caught below
+        setTimeout(() => rej(new Error('timeout')), 8000); // i18n-ignore: internal, caught below
       });
       for (let i = 0; i < n && gen === thumbGen; i++) {
         v.currentTime = Math.min(dur - 0.05, ((i + 0.5) * dur) / n);
@@ -251,7 +252,7 @@
     if (el.paused) {
       if (kept.length && (time >= kept[kept.length - 1][1] - 0.05 || !E.rangeAt(kept, time).range)) el.currentTime = kept[0][0];
       if (loopOn && sel) el.currentTime = sel[0];
-      void el.play().catch((e) => ui.toast(`Can’t play: ${(e as Error).message}`, 'warning'));
+      void el.play().catch((e) => ui.toast(t('Can’t play: {error}', { error: (e as Error).message }), 'warning'));
     } else el.pause();
   }
 
@@ -345,7 +346,7 @@
 
   function needEditable(): boolean {
     if (editable) return true;
-    ui.toast(`${info?.reason || 'This video can be played but not edited'}.`, 'info');
+    ui.toast(!info?.reason ? t('This video can be played but not edited.') : `${info.reason}.`, 'info');
     return false;
   }
 
@@ -375,9 +376,9 @@
         return afterEdit();
       case 'cut':
       case 'keep': {
-        if (!sel) return ui.toast('Select a part of the timeline first: drag across it, or press I and O at the start and end.', 'info');
+        if (!sel) return ui.toast(t('Select a part of the timeline first: drag across it, or press I and O at the start and end.'), 'info');
         const keep = op === 'cut' ? E.cut(edit.keep, sel[0], sel[1], dur) : E.keepOnly(edit.keep, sel[0], sel[1], dur);
-        if (!keep.length) return ui.toast('That would remove everything.', 'warning');
+        if (!keep.length) return ui.toast(t('That would remove everything.'), 'warning');
         const before = E.keptLength(kept);
         const beforeGaps = gaps;
         commit({ ...edit, keep });
@@ -388,16 +389,18 @@
         clearTimeout(flashTimer);
         flashTimer = setTimeout(() => (flash = []), 1200);
         const after = E.keptLength(E.snap(keep, info?.keyframes ?? [], dur));
-        ui.toast(`${op === 'cut' ? 'Cut out' : 'Trimmed away'} ${formatTime(before - after, 1)} — the video is now ${formatTime(after, 1)} long.`, 'success', { label: 'Undo', run: () => doEdit('undo') }, 6000);
+        const vars = { removed: formatTime(before - after, 1), length: formatTime(after, 1) };
+        const isCut = op === 'cut';
+        ui.toast(isCut ? t('Cut out {removed} — the video is now {length} long.', vars) : t('Trimmed away {removed} — the video is now {length} long.', vars), 'success', { label: t('Undo'), run: () => doEdit('undo') }, 6000);
         return;
       }
       case 'restoreAll':
         return commit({ ...edit, keep: [[0, dur]] });
       case 'rotate':
-        if (info?.container !== 'mp4') return ui.toast('Rotation can be saved in MP4 and MOV files only (WebM/MKV have no standard rotation flag).', 'info');
+        if (info?.container !== 'mp4') return ui.toast(t('Rotation can be saved in MP4 and MOV files only (WebM/MKV have no standard rotation flag).'), 'info');
         return commit({ ...edit, rotate: (edit.rotate + 90) % 360 });
       case 'removeAudio':
-        if (!info?.hasAudio) return ui.toast('This video has no audio track.', 'info');
+        if (!info?.hasAudio) return ui.toast(t('This video has no audio track.'), 'info');
         return commit({ ...edit, mute: !edit.mute });
     }
   }
@@ -406,7 +409,7 @@
   function restoreGap(g: E.Range) {
     if (!needEditable()) return;
     commit({ ...edit, keep: E.restore(edit.keep, g[0], g[1], dur) });
-    ui.toast(`Restored ${formatTime(g[1] - g[0], 1)}.`, 'success', { label: 'Undo', run: () => doEdit('undo') });
+    ui.toast(t('Restored {length}.', { length: formatTime(g[1] - g[0], 1) }), 'success', { label: t('Undo'), run: () => doEdit('undo') });
   }
 
   // ---------- effects ----------
@@ -480,20 +483,20 @@
   const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'avif'];
   async function addImages(paths?: string[], at?: { x: number; y: number }) {
     if (!needEditable()) return;
-    if (!paths) paths = (await api.OpenFilesDialog('Add an image to the video', [{ name: 'Images', patterns: IMAGE_EXT.map((e) => `*.${e}`).join(';') }])) ?? [];
+    if (!paths) paths = (await api.OpenFilesDialog(t('Add an image to the video'), [{ name: t('Images'), patterns: IMAGE_EXT.map((e) => `*.${e}`).join(';') }])) ?? [];
     for (const p of paths.filter((x) => IMAGE_EXT.includes(extname(x)))) {
       try {
         const bmp = await createImageBitmap(new Blob([await readFile(p)]));
         await addImageBitmap(bmp, stem(p), at);
       } catch (e) {
-        toastError(e, `Couldn’t add ${basename(p)}`);
+        toastError(e, t('Couldn’t add {name}', { name: basename(p) }));
       }
     }
   }
 
   function addBlur(shape: 'ellipse' | 'rect' | 'path' = 'ellipse') {
     if (!needEditable() || !outW) return;
-    const l = P.newLayer('blur', { ...span(), x: outW / 2, y: outH / 2, w: Math.round(outW / 3), h: Math.round(outH / 3) }, { name: `Blur ${fx.layers.filter((l) => l.kind === 'blur').length + 1}` });
+    const l = P.newLayer('blur', { ...span(), x: outW / 2, y: outH / 2, w: Math.round(outW / 3), h: Math.round(outH / 3) }, { name: t('Blur {n}', { n: fx.layers.filter((l) => l.kind === 'blur').length + 1 }) });
     addLayer(P.withMask(l, { shape }));
     drawing = shape === 'path';
   }
@@ -501,9 +504,9 @@
   function blurMenu(e: MouseEvent) {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     menu.show({ clientX: r.left, clientY: r.bottom + 4 }, [
-      { label: 'Ellipse (faces)', run: () => addBlur('ellipse') },
-      { label: 'Rectangle (plates, screens, text)', run: () => addBlur('rect') },
-      { label: 'Draw any shape…', run: () => addBlur('path') },
+      { label: t('Ellipse (faces)'), run: () => addBlur('ellipse') },
+      { label: t('Rectangle (plates, screens, text)'), run: () => addBlur('rect') },
+      { label: t('Draw any shape…'), run: () => addBlur('path') },
     ]);
   }
 
@@ -514,10 +517,11 @@
     menu.show(
       { clientX: r.left, clientY: r.bottom + 4 },
       [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4].map((rate) => ({
-        label: `${rate === cur ? '✓ ' : ''}${rate}×${rate === 1 ? ' (normal)' : rate < 1 ? ' slower' : ' faster'}`,
+        label: `${rate === cur ? '✓ ' : ''}${rate === 1 ? t('{rate}× (normal)', { rate }) : rate < 1 ? t('{rate}× slower', { rate }) : t('{rate}× faster', { rate })}`,
         run: () => {
           setFx({ ...fx, speeds: P.setSpeed(fx.speeds, a, b, rate) }, true);
-          ui.toast(`${sel ? 'Selection' : 'Whole video'} at ${rate}×. The video is now ${formatTime(P.outputLength(P.pieces(E.normalize(edit.keep, dur), fx)), 1)} long.`, 'success', { label: 'Undo', run: () => doEdit('undo') });
+          const vars = { rate, length: formatTime(P.outputLength(P.pieces(E.normalize(edit.keep, dur), fx)), 1) };
+          ui.toast(sel ? t('Selection at {rate}×. The video is now {length} long.', vars) : t('Whole video at {rate}×. The video is now {length} long.', vars), 'success', { label: t('Undo'), run: () => doEdit('undo') });
         },
       })),
     );
@@ -530,7 +534,7 @@
     const set = (kind: P.TransitionKind | null, d = 1) =>
       setFx({ ...fx, transitions: [...fx.transitions.filter((t) => Math.abs(t.at - at) >= 0.02), ...(kind ? [{ at, kind, dur: d }] : [])] }, true);
     menu.show({ clientX: r.left, clientY: r.bottom + 4 }, [
-      { label: `${cur ? '' : '✓ '}Hard cut (no transition)`, run: () => set(null) },
+      { label: `${cur ? '' : '✓ '}${t('Hard cut (no transition)')}`, run: () => set(null) },
       { separator: true },
       ...P.TRANSITIONS.flatMap((t) => [0.5, 1, 2].map((d) => ({ label: `${cur?.kind === t.id && cur.dur === d ? '✓ ' : ''}${t.label} · ${d} s`, run: () => set(t.id, d) }))),
     ]);
@@ -543,7 +547,7 @@
       const { Compositor } = await import('./compositor');
       comp ??= new Compositor(fxCanvas);
     } catch (e) {
-      toastError(e, 'Effects preview isn’t available');
+      toastError(e, t('Effects preview isn’t available'));
       return null;
     }
     return comp;
@@ -589,13 +593,13 @@
   async function trackLayer(l: P.Layer): Promise<boolean> {
     if (!tab.filePath || !opened || tracking) return false;
     const t0 = Math.max(l.start, Math.min(time, l.end));
-    tracking = 'Preparing…';
+    tracking = t('Preparing…');
     el?.pause();
     try {
       const [{ demux, Frames }, { toGray }, { default: TrackWorker }] = await Promise.all([import('./source'), import('./track'), import('./trackWorker?worker')]);
       const streams = await demux(tab.filePath);
       const v = streams.video;
-      if (!v) throw new Error('This file has no video track.');
+      if (!v) throw new Error(t('This file has no video track.'));
       const cursor = await Frames.open(v, opened.url, fileUrl(tab.filePath));
       // Track on a small copy (≤ 320 px wide) for speed.
       const k = Math.min(1, 320 / v.width);
@@ -605,8 +609,8 @@
       cv.width = gw;
       cv.height = gh;
       const g = cv.getContext('2d', { willReadFrequently: true })!;
-      const grab = async (t: number) => {
-        const f = await cursor.frameAt(t);
+      const grab = async (at: number) => {
+        const f = await cursor.frameAt(at);
         if (!f) return null;
         g.drawImage(f.image, 0, 0, gw, gh);
         f.close();
@@ -616,39 +620,39 @@
       const [sx, sy] = P.toSource(s0.x, s0.y, edit.rotate, v.width, v.height);
       const size = Math.min(Math.max(16, Math.min(l.w, l.h) * s0.scale * k), 96);
       const first = await grab(t0);
-      if (!first) throw new Error('No picture at the playhead.');
+      if (!first) throw new Error(t('No picture at the playhead.'));
       const worker: Worker = new TrackWorker();
-      const ask = (msg: unknown, frame: { data: Float32Array }) =>
+      const askWorker = (msg: unknown, frame: { data: Float32Array }) =>
         new Promise<{ x: number; y: number } | null>((resolve, reject) => {
           worker.onmessage = (e) => resolve(e.data);
-          worker.onerror = (e) => reject(new Error(e.message || 'tracking failed'));
+          worker.onerror = (e) => reject(new Error(e.message || t('tracking failed')));
           worker.postMessage(msg, [frame.data.buffer]);
         });
-      await ask({ type: 'init', frame: first, box: { x: sx * k, y: sy * k, w: size, h: size } }, first);
-      const times = v.samples.map((x) => x[0]).filter((t) => t > t0 + 1e-3 && t <= l.end).sort((a, b) => a - b);
+      await askWorker({ type: 'init', frame: first, box: { x: sx * k, y: sy * k, w: size, h: size } }, first);
+      const times = v.samples.map((x) => x[0]).filter((s) => s > t0 + 1e-3 && s <= l.end).sort((a, b) => a - b);
       const keys: P.Key[] = [{ ...s0, t: t0, ease: 'linear' }];
       let lost = -1;
       for (let i = 0; i < times.length; i++) {
         if (!tracking) break; // cancelled
         const f = await grab(times[i]);
         if (!f) break;
-        const p = await ask({ type: 'next', frame: f }, f);
+        const p = await askWorker({ type: 'next', frame: f }, f);
         if (!p) {
           lost = times[i];
           break;
         }
         const [x, y] = P.toOutput(p.x / k, p.y / k, edit.rotate, v.width, v.height);
         keys.push({ ...s0, t: times[i], x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, ease: 'linear' });
-        tracking = `Tracking… ${Math.round(((i + 1) / times.length) * 100)}%`;
+        tracking = `${t('Tracking…')} ${Math.round(((i + 1) / times.length) * 100)}%`;
       }
       cursor.close();
       worker.terminate();
       const before = l.keys.filter((key) => key.t < t0 - 1e-3);
       updateLayer({ ...l, keys: [...before, ...keys], tracked: true, path: 'straight' }, true);
-      ui.toast(lost >= 0 ? `Tracked until ${formatTime(lost, 2)}, where the object was lost.` : `Pinned to the object: ${keys.length} positions.`, lost >= 0 ? 'warning' : 'success', { label: 'Undo', run: () => doEdit('undo') });
+      ui.toast(lost >= 0 ? t('Tracked until {time}, where the object was lost.', { time: formatTime(lost, 2) }) : tn('Pinned to the object: {n} positions.', 'Pinned to the object: {n} positions.', keys.length), lost >= 0 ? 'warning' : 'success', { label: t('Undo'), run: () => doEdit('undo') });
       return true;
     } catch (e) {
-      toastError(e, 'Tracking failed');
+      toastError(e, t('Tracking failed'));
       return false;
     } finally {
       tracking = '';
@@ -683,10 +687,11 @@
       await saveFile(dest, r.blob);
       renderedEdit = edit;
       tab.dirty = false;
-      ui.toast(`Rendered ${basename(dest)} (${formatTime(r.duration, 1)}, ${r.videoCodec.startsWith('vp09') ? 'VP9' : 'VP8'}${r.audioCodec ? ` + ${r.audioCodec === 'opus' ? 'Opus' : 'Vorbis'}` : ''})`, 'success', { label: 'Open', run: () => void workspace.openPath(dest) }, 8000);
+      const codecs = `${r.videoCodec.startsWith('vp09') ? 'VP9' : 'VP8'}${r.audioCodec ? ` + ${r.audioCodec === 'opus' ? 'Opus' : 'Vorbis'}` : ''}`;
+      ui.toast(t('Rendered {name} ({length}, {codecs})', { name: basename(dest), length: formatTime(r.duration, 1), codecs }), 'success', { label: t('Open'), run: () => void workspace.openPath(dest) }, 8000);
       return true;
     } catch (e) {
-      if ((e as Error)?.name !== 'AbortError') toastError(e, 'Rendering failed');
+      if ((e as Error)?.name !== 'AbortError') toastError(e, t('Rendering failed'));
       return false;
     } finally {
       rendering = null;
@@ -696,7 +701,7 @@
 
   async function renderAs(): Promise<boolean> {
     if (!needEditable()) return false;
-    let dest = await api.SaveFileDialog('Render video as WebM', join(dirname(tab.filePath ?? ''), `${stem(tab.title)} (edited).webm`), [{ name: 'WebM video', patterns: '*.webm' }]);
+    let dest = await api.SaveFileDialog(t('Render video as WebM'), join(dirname(tab.filePath ?? ''), `${stem(tab.title)} (edited).webm`), [{ name: t('WebM video'), patterns: '*.webm' }]);
     if (!dest) return false;
     if (extname(dest) !== 'webm') dest += '.webm';
     return renderTo(dest);
@@ -710,10 +715,10 @@
 
   async function exportTo(dest: string, audioOnly = false): Promise<boolean> {
     el?.pause();
-    const done = await jobs.run<number[][]>(`Saving ${basename(dest)}`, () => api.VideoExport(tab.filePath!, plan(audioOnly) as never, dest));
+    const done = await jobs.run<number[][]>(t('Saving {name}', { name: basename(dest) }), () => api.VideoExport(tab.filePath!, plan(audioOnly) as never, dest));
     if (done.cancelled) return false;
     if (done.error) {
-      toastError(done.error, 'Save failed');
+      toastError(done.error, t('Save failed'));
       return false;
     }
     return true;
@@ -725,7 +730,7 @@
     if (fxOn) return renderAs();
     if (!(await exportTo(tab.filePath))) return false;
     await load();
-    ui.toast(`Saved ${basename(tab.filePath)}`, 'success');
+    ui.toast(t('Saved {name}', { name: basename(tab.filePath) }), 'success');
     return true;
   }
 
@@ -735,30 +740,30 @@
     const ext = extname(tab.name) || (info?.container === 'mp4' ? 'mp4' : 'webm');
     const filters =
       info?.container === 'mp4'
-        ? [{ name: 'MP4 / MOV video', patterns: '*.mp4;*.mov;*.m4v' }]
-        : [{ name: 'WebM / Matroska video', patterns: '*.webm;*.mkv' }];
-    let dest = await api.SaveFileDialog('Save video as', join(dirname(tab.filePath ?? ''), `${stem(tab.title)} (edited).${ext}`), filters);
+        ? [{ name: t('MP4 / MOV video'), patterns: '*.mp4;*.mov;*.m4v' }]
+        : [{ name: t('WebM / Matroska video'), patterns: '*.webm;*.mkv' }];
+    let dest = await api.SaveFileDialog(t('Save video as'), join(dirname(tab.filePath ?? ''), `${stem(tab.title)} (edited).${ext}`), filters);
     if (!dest) return false;
     if (!extname(dest)) dest += `.${ext}`;
     if (!(await exportTo(dest))) return false;
     tab.retarget(dest);
     await load();
-    ui.toast(`Saved ${basename(dest)}`, 'success');
+    ui.toast(t('Saved {name}', { name: basename(dest) }), 'success');
     return true;
   }
 
   async function extractAudio(): Promise<boolean> {
     if (!needEditable()) return false;
     if (!info?.hasAudio) {
-      ui.toast('This video has no audio track.', 'info');
+      ui.toast(t('This video has no audio track.'), 'info');
       return false;
     }
     const ext = info.container === 'mp4' ? 'm4a' : extname(tab.name) === 'webm' ? 'weba' : 'mka';
-    let dest = await api.SaveFileDialog('Save the audio as', join(dirname(tab.filePath ?? ''), `${stem(tab.title)}.${ext}`), [{ name: 'Audio', patterns: `*.${ext}` }]);
+    let dest = await api.SaveFileDialog(t('Save the audio as'), join(dirname(tab.filePath ?? ''), `${stem(tab.title)}.${ext}`), [{ name: t('Audio'), patterns: `*.${ext}` }]);
     if (!dest) return false;
     if (!extname(dest)) dest += `.${ext}`;
     if (!(await exportTo(dest, true))) return false;
-    ui.toast(`Saved the audio to ${basename(dest)} (copied, no re-encoding)`, 'success');
+    ui.toast(t('Saved the audio to {name} (copied, no re-encoding)', { name: basename(dest) }), 'success');
     return true;
   }
 
@@ -780,7 +785,7 @@
   function giveFrame(): Transfer | null {
     const c = frameCanvas();
     if (!c) {
-      ui.toast('No picture at the playhead yet.', 'info');
+      ui.toast(t('No picture at the playhead yet.'), 'info');
       return null;
     }
     return { kind: 'image', image: c, name: `${stem(tab.title)} ${formatTime(time, 2).replace(/:/g, '-')}` };
@@ -825,15 +830,15 @@
   }
 
   /** From another tab: a picture or text becomes an overlay (where it was dropped), image files too. */
-  async function take(t: Transfer, at?: { x: number; y: number }): Promise<boolean> {
+  async function take(tr: Transfer, at?: { x: number; y: number }): Promise<boolean> {
     if (!needEditable() || !outW) return false;
     const p = at && stage && inside(stage.getBoundingClientRect(), at) ? dropPoint(at.x, at.y) : undefined;
-    if (t.kind === 'image') await addImageBitmap(await createImageBitmap(t.image), t.name || 'Image', p);
-    else if (t.kind === 'text') await addImageBitmap(await textBitmap(t.text), `Text: ${t.text.trim().slice(0, 24)}`, p);
+    if (tr.kind === 'image') await addImageBitmap(await createImageBitmap(tr.image), tr.name || t('Image'), p);
+    else if (tr.kind === 'text') await addImageBitmap(await textBitmap(tr.text), t('Text: {text}', { text: tr.text.trim().slice(0, 24) }), p);
     else {
-      const imgs = t.paths.filter((x) => IMAGE_EXT.includes(extname(x)));
+      const imgs = tr.paths.filter((x) => IMAGE_EXT.includes(extname(x)));
       if (!imgs.length) {
-        ui.toast('Only pictures can go on top of a video.', 'info');
+        ui.toast(t('Only pictures can go on top of a video.'), 'info');
         return false;
       }
       await addImages(imgs, p);
@@ -843,23 +848,23 @@
   const inside = (r: DOMRect, q: { x: number; y: number }) => q.x >= r.left && q.x <= r.right && q.y >= r.top && q.y <= r.bottom;
 
   async function snapshot() {
-    if (!el || !natural.w) return ui.toast('No picture to save yet.', 'info');
+    if (!el || !natural.w) return ui.toast(t('No picture to save yet.'), 'info');
     const c = frameCanvas();
-    if (!c) return ui.toast('No picture to save yet.', 'info');
+    if (!c) return ui.toast(t('No picture to save yet.'), 'info');
     let blob: Blob | null = null;
     try {
       blob = await new Promise<Blob | null>((r) => c.toBlob(r, 'image/png'));
     } catch {
       /* tainted canvas */
     }
-    if (!blob) return ui.toast('This video’s frames can’t be read here.', 'warning');
+    if (!blob) return ui.toast(t('This video’s frames can’t be read here.'), 'warning');
     const at = formatTime(time, 2).replace(/:/g, '-');
-    let dest = await api.SaveFileDialog('Save frame as PNG', join(dirname(tab.filePath ?? ''), `${stem(tab.title)} ${at}.png`), [{ name: 'PNG', patterns: '*.png' }]);
+    let dest = await api.SaveFileDialog(t('Save frame as PNG'), join(dirname(tab.filePath ?? ''), `${stem(tab.title)} ${at}.png`), [{ name: 'PNG', patterns: '*.png' }]);
     if (!dest) return;
     if (extname(dest) !== 'png') dest += '.png';
     try {
       await saveFile(dest, blob);
-      ui.toast(`Saved ${basename(dest)}`, 'success');
+      ui.toast(t('Saved {name}', { name: basename(dest) }), 'success');
     } catch (e) {
       toastError(e);
     }
@@ -874,14 +879,14 @@
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     menu.show({ clientX: r.left, clientY: r.bottom + 4 }, [
       ...(fxOn
-        ? [{ label: 'Render video with effects (.webm)…', shortcut: formatShortcut('Mod+S'), run: () => void renderAs() }]
+        ? [{ label: t('Render video with effects (.webm)…'), shortcut: formatShortcut('Mod+S'), run: () => void renderAs() }]
         : [
-            { label: 'Save', shortcut: formatShortcut('Mod+S'), run: () => void save() },
-            { label: 'Save as…', shortcut: formatShortcut('Mod+Shift+S'), run: () => void saveAs() },
+            { label: t('Save'), shortcut: formatShortcut('Mod+S'), run: () => void save() },
+            { label: t('Save as…'), shortcut: formatShortcut('Mod+Shift+S'), run: () => void saveAs() },
           ]),
       { separator: true },
-      { label: 'Extract audio…', run: () => void extractAudio() },
-      { label: 'Save current frame as PNG…', shortcut: 'P', run: () => void snapshot() },
+      { label: t('Extract audio…'), run: () => void extractAudio() },
+      { label: t('Save current frame as PNG…'), shortcut: 'P', run: () => void snapshot() },
     ]);
   }
 
@@ -893,9 +898,9 @@
       const k = E.keptLength(kept);
       tab.status = {
         ...tab.status,
-        type: `${info?.container === 'mp4' ? 'MP4' : info?.container === 'matroska' ? (extname(tab.name) === 'webm' ? 'WebM' : 'MKV') : extname(tab.name).toUpperCase()} video`,
+        type: t('{format} video', { format: info?.container === 'mp4' ? 'MP4' : info?.container === 'matroska' ? (extname(tab.name) === 'webm' ? 'WebM' : 'MKV') : extname(tab.name).toUpperCase() }),
         position: `${formatTime(time, 2)} / ${formatTime(dur, 2)}`,
-        info: changed && Math.abs(k - dur) > 0.01 ? `Edited length ${formatTime(k, 2)}` : undefined,
+        info: changed && Math.abs(k - dur) > 0.01 ? t('Edited length {length}', { length: formatTime(k, 2) }) : undefined,
       };
     }, 100);
   }
@@ -1043,25 +1048,25 @@
   {#if playError && !error}<div class="overlay note">{playError}</div>{/if}
 </div>
 
-<div class="timeline" bind:clientWidth={lineW} onpointerdown={onDown} onpointermove={onMove} onpointerup={onUp} role="slider" aria-label="Timeline" aria-valuemin={0} aria-valuemax={dur} aria-valuenow={time} tabindex="-1">
+<div class="timeline" bind:clientWidth={lineW} onpointerdown={onDown} onpointermove={onMove} onpointerup={onUp} role="slider" aria-label={t('Timeline')} aria-valuemin={0} aria-valuemax={dur} aria-valuenow={time} tabindex="-1">
   <canvas class="strip" bind:this={strip}></canvas>
   {#if info?.keyframes.length && info.keyframes.length < lineW / 3}
     {#each info.keyframes as k, i (i)}<div class="kf" style:left="{xOf(k)}px"></div>{/each}
   {/if}
   {#each gaps as g (g[0])}
     {@const w = xOf(g[1]) - xOf(g[0])}
-    <div class="gone" style:left="{xOf(g[0])}px" style:width="{w}px" title="Removed {formatTime(g[0], 2)} – {formatTime(g[1], 2)} ({formatTime(g[1] - g[0], 1)})">
-      {#if w > 70}<span class="gone-label">removed</span>{/if}
-      {#if w > 22}<button class="restore" title="Restore this part" aria-label="Restore removed part" onpointerdown={(e) => e.stopPropagation()} onclick={() => restoreGap(g)}>↺</button>{/if}
+    <div class="gone" style:left="{xOf(g[0])}px" style:width="{w}px" title={t('Removed {from} – {to} ({length})', { from: formatTime(g[0], 2), to: formatTime(g[1], 2), length: formatTime(g[1] - g[0], 1) })}>
+      {#if w > 70}<span class="gone-label">{t('removed')}</span>{/if}
+      {#if w > 22}<button class="restore" title={t('Restore this part')} aria-label={t('Restore removed part')} onpointerdown={(e) => e.stopPropagation()} onclick={() => restoreGap(g)}>↺</button>{/if}
     </div>
   {/each}
   {#each fx.speeds as sp (sp.a)}
-    <div class="speedband" class:slow={sp.rate < 1} style:left="{xOf(sp.a)}px" style:width="{xOf(sp.b) - xOf(sp.a)}px" title="{sp.rate}× from {formatTime(sp.a, 1)} to {formatTime(sp.b, 1)}"><span>{sp.rate}×</span></div>
+    <div class="speedband" class:slow={sp.rate < 1} style:left="{xOf(sp.a)}px" style:width="{xOf(sp.b) - xOf(sp.a)}px" title={t('{rate}× from {from} to {to}', { rate: sp.rate, from: formatTime(sp.a, 1), to: formatTime(sp.b, 1) })}><span>{sp.rate}×</span></div>
   {/each}
   {#if editable}
     {#each kept.slice(0, -1) as r (r[1])}
-      {@const tr = fx.transitions.find((t) => Math.abs(t.at - r[1]) < 0.02)}
-      <button class="join" class:has={!!tr} style:left="{xOf(r[1])}px" title={tr ? `${P.TRANSITIONS.find((x) => x.id === tr.kind)?.label} (${tr.dur} s) — click to change` : 'Add a transition here'} onpointerdown={(e) => e.stopPropagation()} onclick={(e) => transitionMenu(e, r[1])}>⧉</button>
+      {@const tr = fx.transitions.find((x) => Math.abs(x.at - r[1]) < 0.02)}
+      <button class="join" class:has={!!tr} style:left="{xOf(r[1])}px" title={tr ? t('{transition} ({s} s) — click to change', { transition: P.TRANSITIONS.find((x) => x.id === tr.kind)?.label ?? '', s: tr.dur }) : t('Add a transition here')} onpointerdown={(e) => e.stopPropagation()} onclick={(e) => transitionMenu(e, r[1])}>⧉</button>
     {/each}
   {/if}
   {#each flash as f (f[0])}<div class="flash" style:left="{xOf(f[0])}px" style:width="{Math.max(3, xOf(f[1]) - xOf(f[0]))}px"></div>{/each}
@@ -1069,8 +1074,8 @@
     <div class="dim" style:left="0px" style:width="{xOf(sel[0])}px"></div>
     <div class="dim" style:left="{xOf(sel[1])}px" style:right="0px"></div>
     <div class="sel" style:left="{xOf(sel[0])}px" style:width="{xOf(sel[1]) - xOf(sel[0])}px">
-      <span class="handle l" role="presentation" title="Drag to move the start" onpointerdown={(e) => edgeDown(e, 0)}></span>
-      <span class="handle r" role="presentation" title="Drag to move the end" onpointerdown={(e) => edgeDown(e, 1)}></span>
+      <span class="handle l" role="presentation" title={t('Drag to move the start')} onpointerdown={(e) => edgeDown(e, 0)}></span>
+      <span class="handle r" role="presentation" title={t('Drag to move the end')} onpointerdown={(e) => edgeDown(e, 1)}></span>
     </div>
   {/if}
   <div class="playhead" style:left="{xOf(time)}px"></div>
@@ -1078,56 +1083,56 @@
 <FxTracks layers={fx.layers} {dur} {lineW} {time} selected={selId} onselect={(id) => ((selId = id), (fxPanel = true))} onchange={(l, done) => updateLayer(l, done)} onseek={seek} />
 {#if rendering}
   <div class="renderbar">
-    <span>Rendering… {Math.round((rendering.done / Math.max(1, rendering.total)) * 100)}%</span>
+    <span>{t('Rendering…')} {Math.round((rendering.done / Math.max(1, rendering.total)) * 100)}%</span>
     <progress max={rendering.total} value={rendering.done}></progress>
-    <button class="btn ghost" onclick={() => rendering?.abort.abort()}>Cancel</button>
+    <button class="btn ghost" onclick={() => rendering?.abort.abort()}>{t('Cancel')}</button>
   </div>
 {/if}
 {#if sel}
   <div class="selbar">
-    <span class="selchip"><Icon icon={Scissors} size={13} /> Selected {formatTime(sel[1] - sel[0], 2)} <span class="muted">({formatTime(sel[0], 2)} – {formatTime(sel[1], 2)})</span></span>
+    <span class="selchip"><Icon icon={Scissors} size={13} /> {t('Selected {length}', { length: formatTime(sel[1] - sel[0], 2) })} <span class="muted">({formatTime(sel[0], 2)} – {formatTime(sel[1], 2)})</span></span>
     {#if editable}
-      <button class="btn ghost danger" title="Cut out the selected part (Del)" onclick={() => doEdit('cut')}><Icon icon={Scissors} size={14} /> Cut out</button>
-      <button class="btn ghost" title="Keep only the selected part (T)" onclick={() => doEdit('keep')}><Icon icon={Crop} size={14} /> Keep only this</button>
+      <button class="btn ghost danger" title="{t('Cut out the selected part')} (Del)" onclick={() => doEdit('cut')}><Icon icon={Scissors} size={14} /> {t('Cut out')}</button>
+      <button class="btn ghost" title="{t('Keep only the selected part')} (T)" onclick={() => doEdit('keep')}><Icon icon={Crop} size={14} /> {t('Keep only this')}</button>
     {/if}
-    <button class="btn ghost" title="Clear the selection (Esc)" onclick={() => doEdit('clearSel')}>Deselect</button>
+    <button class="btn ghost" title="{t('Clear the selection')} (Esc)" onclick={() => doEdit('clearSel')}>{t('Deselect')}</button>
   </div>
 {/if}
 
 <div class="toolbar controls" use:fitBar>
-  <button class="icon-btn play" title="{playing ? 'Pause' : 'Play'} (Space)" onclick={toggle} disabled={!!playError}><Icon icon={playing ? Pause : Play} size={16} /></button>
-  <button class="icon-btn" title="Previous frame (,)" onclick={() => frame(-1)}><Icon icon={StepBack} size={15} /></button>
-  <button class="icon-btn" title="Next frame (.)" onclick={() => frame(1)}><Icon icon={StepForward} size={15} /></button>
+  <button class="icon-btn play" title="{playing ? t('Pause') : t('Play')} (Space)" onclick={toggle} disabled={!!playError}><Icon icon={playing ? Pause : Play} size={16} /></button>
+  <button class="icon-btn" title="{t('Previous frame')} (,)" onclick={() => frame(-1)}><Icon icon={StepBack} size={15} /></button>
+  <button class="icon-btn" title="{t('Next frame')} (.)" onclick={() => frame(1)}><Icon icon={StepForward} size={15} /></button>
   <span class="time">{formatTime(time, 2)} <span class="muted">/ {formatTime(dur, 2)}</span></span>
-  {#if changed}<span class="label edited" title="Length after your edits">Edited: {formatTime(outLen, 2)}{gaps.length ? ` · ${gaps.length} part${gaps.length > 1 ? 's' : ''} removed` : ''}{edit.rotate ? ` · ↻${edit.rotate}°` : ''}{edit.mute ? ' · no audio' : ''}</span>{/if}
+  {#if changed}<span class="label edited" title={t('Length after your edits')}>{t('Edited: {length}', { length: formatTime(outLen, 2) })}{gaps.length ? ` · ${tn('{n} part removed', '{n} parts removed', gaps.length)}` : ''}{edit.rotate ? ` · ↻${edit.rotate}°` : ''}{edit.mute ? ` · ${t('no audio')}` : ''}</span>{/if}
   <span class="spacer"></span>
-  <button class="icon-btn" class:on={loopOn} title="Loop selection (L)" onclick={() => (loopOn = !loopOn)}><Icon icon={Repeat} size={14} /></button>
-  <button class="icon-btn" title={muted ? 'Unmute (M)' : 'Mute (M)'} onclick={() => el && (el.muted = muted = !muted)}><Icon icon={muted ? VolumeX : Volume2} size={15} /></button>
-  <input class="vol" type="range" min="0" max="1" step="0.01" bind:value={volume} oninput={() => el && (el.volume = volume)} aria-label="Volume" />
-  <select bind:value={speed} onchange={() => el && (el.playbackRate = speed)} title="Playback speed" aria-label="Playback speed">
+  <button class="icon-btn" class:on={loopOn} title="{t('Loop selection')} (L)" onclick={() => (loopOn = !loopOn)}><Icon icon={Repeat} size={14} /></button>
+  <button class="icon-btn" title="{muted ? t('Unmute') : t('Mute')} (M)" onclick={() => el && (el.muted = muted = !muted)}><Icon icon={muted ? VolumeX : Volume2} size={15} /></button>
+  <input class="vol" type="range" min="0" max="1" step="0.01" bind:value={volume} oninput={() => el && (el.volume = volume)} aria-label={t('Volume', {}, 'sound')} />
+  <select bind:value={speed} onchange={() => el && (el.playbackRate = speed)} title={t('Playback speed')} aria-label={t('Playback speed')}>
     {#each [0.25, 0.5, 1, 1.5, 2] as s (s)}<option value={s}>{s}×</option>{/each}
   </select>
-  <button class="icon-btn" title="Save frame as PNG (P)" onclick={() => void snapshot()}><Icon icon={Camera} size={15} /></button>
-  <button class="icon-btn" title="Full screen (F)" onclick={fullscreen}><Icon icon={Maximize} size={15} /></button>
+  <button class="icon-btn" title="{t('Save frame as PNG')} (P)" onclick={() => void snapshot()}><Icon icon={Camera} size={15} /></button>
+  <button class="icon-btn" title="{t('Full screen')} (F)" onclick={fullscreen}><Icon icon={Maximize} size={15} /></button>
   {#if editable}
     <span class="sep"></span>
-    <button class="icon-btn" title="Cut out selection (Del)" onclick={() => doEdit('cut')}><Icon icon={Scissors} size={15} /></button>
-    <button class="icon-btn" title="Keep only selection (T)" onclick={() => doEdit('keep')}><Icon icon={Crop} size={15} /></button>
-    <button class="icon-btn" class:on={edit.rotate !== 0} title="Rotate 90° (R)" onclick={() => doEdit('rotate')}><Icon icon={RotateCw} size={15} /></button>
-    <button class="btn ghost" class:on={edit.mute} title="Save without the audio track" onclick={() => doEdit('removeAudio')}><Icon icon={VolumeX} size={14} /> {edit.mute ? 'Audio removed' : 'Remove audio'}</button>
-    <button class="icon-btn" title="Undo ({formatShortcut('Mod+Z')})" disabled={!canUndo} onclick={() => doEdit('undo')}><Icon icon={Undo2} size={15} /></button>
-    <button class="icon-btn" title="Redo ({formatShortcut('Mod+Shift+Z')})" disabled={!canRedo} onclick={() => doEdit('redo')}><Icon icon={Redo2} size={15} /></button>
+    <button class="icon-btn" title="{t('Cut out selection')} (Del)" onclick={() => doEdit('cut')}><Icon icon={Scissors} size={15} /></button>
+    <button class="icon-btn" title="{t('Keep only selection')} (T)" onclick={() => doEdit('keep')}><Icon icon={Crop} size={15} /></button>
+    <button class="icon-btn" class:on={edit.rotate !== 0} title="{t('Rotate 90°')} (R)" onclick={() => doEdit('rotate')}><Icon icon={RotateCw} size={15} /></button>
+    <button class="btn ghost" class:on={edit.mute} title={t('Save without the audio track')} onclick={() => doEdit('removeAudio')}><Icon icon={VolumeX} size={14} /> {edit.mute ? t('Audio removed') : t('Remove audio')}</button>
+    <button class="icon-btn" title="{t('Undo')} ({formatShortcut('Mod+Z')})" disabled={!canUndo} onclick={() => doEdit('undo')}><Icon icon={Undo2} size={15} /></button>
+    <button class="icon-btn" title="{t('Redo')} ({formatShortcut('Mod+Shift+Z')})" disabled={!canRedo} onclick={() => doEdit('redo')}><Icon icon={Redo2} size={15} /></button>
     <span class="sep"></span>
-    <button class="icon-btn" title="Add an image on top of the video (or drop one on the picture)" onclick={() => void addImages()}><Icon icon={ImagePlus} size={15} /></button>
-    <GiveButton {tab} get={giveFrame} what="this frame" />
-    <button class="icon-btn" title="Blur an area (faces, plates…); it can follow a moving object" onclick={blurMenu}><Icon icon={Droplet} size={15} /></button>
-    <button class="icon-btn" class:on={fx.speeds.length > 0} title="Speed up or slow down the selection (or the whole video)" onclick={speedMenu}><Icon icon={Gauge} size={15} /></button>
-    <button class="icon-btn" class:on={fxPanel} title="Effects panel: overlays, keyframes, curves, fades, transitions" onclick={() => (fxPanel = !fxPanel)}><Icon icon={Wand} size={15} /></button>
-    <button class="btn ghost" onclick={saveMenu}><Icon icon={Save} size={14} /> {fxOn ? 'Render ▾' : 'Save ▾'}</button>
+    <button class="icon-btn" title={t('Add an image on top of the video (or drop one on the picture)')} onclick={() => void addImages()}><Icon icon={ImagePlus} size={15} /></button>
+    <GiveButton {tab} get={giveFrame} what={t('this frame')} />
+    <button class="icon-btn" title={t('Blur an area (faces, plates…); it can follow a moving object')} onclick={blurMenu}><Icon icon={Droplet} size={15} /></button>
+    <button class="icon-btn" class:on={fx.speeds.length > 0} title={t('Speed up or slow down the selection (or the whole video)')} onclick={speedMenu}><Icon icon={Gauge} size={15} /></button>
+    <button class="icon-btn" class:on={fxPanel} title={t('Effects panel: overlays, keyframes, curves, fades, transitions')} onclick={() => (fxPanel = !fxPanel)}><Icon icon={Wand} size={15} /></button>
+    <button class="btn ghost" onclick={saveMenu}><Icon icon={Save} size={14} /> {fxOn ? t('Render') : t('Save')} ▾</button>
   {/if}
 </div>
 {#if snapped && changed && !fxOn}
-  <div class="hint">Cuts snap to keyframes{gop ? ` (about every ${gop.toFixed(1)} s in this file)` : ''} so the video is saved without re-encoding; the shaded parts are what will be removed.</div>
+  <div class="hint">{gop ? t('Cuts snap to keyframes (about every {s} s in this file) so the video is saved without re-encoding; the shaded parts are what will be removed.', { s: num(gop, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }) : t('Cuts snap to keyframes so the video is saved without re-encoding; the shaded parts are what will be removed.')}</div>
 {/if}
 
 </div>

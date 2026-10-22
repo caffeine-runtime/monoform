@@ -4,6 +4,7 @@
 // everything (session, panels, tools), and closes the peek.
 import { api } from './backend';
 import { toastError } from './ui.svelte';
+import { t } from './i18n';
 import { workspace } from './tabs.svelte';
 
 class Peek {
@@ -15,7 +16,7 @@ class Peek {
     try {
       await api.OpenInEditor([p]);
     } catch (e) {
-      toastError(e, 'Could not open the editor');
+      toastError(e, t('Could not open the editor'));
     }
   }
 }

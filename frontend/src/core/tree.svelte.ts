@@ -4,6 +4,7 @@ import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import { api, type Entry } from './backend';
 import { settings } from './settings.svelte';
 import { toastError } from './ui.svelte';
+import { t } from './i18n';
 
 export interface TreeItem {
   /** Unique key: the path for files on disk. */
@@ -83,7 +84,7 @@ class TreeState {
       for (const k of kids) this.items.set(k.id, k);
       this.children.set(item.id, kids);
     } catch (e) {
-      toastError(e, `Can't list ${item.name}`);
+      toastError(e, t("Can't list {name}", { name: item.name }));
       this.expanded.delete(item.id);
     } finally {
       this.loading.delete(item.id);

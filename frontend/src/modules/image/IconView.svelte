@@ -6,6 +6,7 @@
   import { dirname, extname, join, stem } from '../../core/paths';
   import { workspace, type Tab } from '../../core/tabs.svelte';
   import { toastError, ui } from '../../core/ui.svelte';
+  import { t, tn } from '../../core/i18n';
 
   interface Entry {
     width: number;
@@ -20,32 +21,32 @@
   let cur = $state(entries.length ? entries.reduce((b, e, i) => (e.width > entries[b].width ? i : b), 0) : 0);
   const e = $derived(entries[cur]);
   const isIcns = $derived(extname(tab.name) === 'icns');
-  const FORMAT: Record<string, string> = { png: 'PNG', bmp: 'Bitmap', rle: 'Legacy RLE', argb: 'ARGB', jp2: 'JPEG 2000 (not shown)' };
+  const FORMAT: Record<string, string> = { png: 'PNG', bmp: t('Bitmap'), rle: t('Legacy RLE'), argb: 'ARGB', jp2: t('JPEG 2000 (not shown)') };
 
   async function exportPng() {
     if (!e?.path) return;
     const def = join(dirname(tab.filePath ?? ''), `${stem(tab.title)}-${e.width}.png`);
-    const p = await api.SaveFileDialog('Export size as PNG', def, [{ name: 'PNG', patterns: '*.png' }]);
+    const p = await api.SaveFileDialog(t('Export size as PNG'), def, [{ name: 'PNG', patterns: '*.png' }]);
     if (!p) return;
     try {
       const out = /\.png$/i.test(p) ? p : `${p}.png`;
       await api.CopyFile(e.path, out);
-      ui.toast(`Exported ${e.width} × ${e.height}`, 'success', { label: 'Open', run: () => void workspace.openPath(out) });
+      ui.toast(t('Exported {width} × {height}', { width: String(e.width), height: String(e.height) }), 'success', { label: t('Open'), run: () => void workspace.openPath(out) });
     } catch (err) {
-      toastError(err, 'Export failed');
+      toastError(err, t('Export failed'));
     }
   }
 
   async function rebuild() {
     if (!tab.filePath || tab.readOnly) return;
-    const src = await api.OpenFilesDialog('Image to make the icon from (square, 1024 px or more is best)', [{ name: 'Images', patterns: '*.png;*.jpg;*.jpeg;*.webp;*.gif;*.bmp' }]);
+    const src = await api.OpenFilesDialog(t('Image to make the icon from (square, 1024 px or more is best)'), [{ name: t('Images'), patterns: '*.png;*.jpg;*.jpeg;*.webp;*.gif;*.bmp' }]);
     if (!src?.[0]) return;
-    if (!(await ui.confirm('Replace every size?', `All sizes in ${tab.title} are rebuilt from the chosen image.`, 'Replace'))) return;
+    if (!(await ui.confirm(t('Replace every size?'), t('All sizes in {name} are rebuilt from the chosen image.', { name: tab.title }), t('Replace')))) return;
     try {
       await api.IconWrite(src[0], tab.filePath, isIcns ? 'icns' : 'ico', []);
       onreload();
     } catch (err) {
-      toastError(err, 'Couldn’t write the icon');
+      toastError(err, t('Couldn’t write the icon'));
     }
   }
 
@@ -54,20 +55,20 @@
     if (!biggest) return;
     const to = isIcns ? 'ico' : 'icns';
     const def = join(dirname(tab.filePath ?? ''), `${stem(tab.title)}.${to}`);
-    const p = await api.SaveFileDialog(`Save as .${to}`, def, [{ name: to.toUpperCase(), patterns: `*.${to}` }]);
+    const p = await api.SaveFileDialog(t('Save as .{ext}', { ext: to }), def, [{ name: to.toUpperCase(), patterns: `*.${to}` }]);
     if (!p) return;
     const out = extname(p) === to ? p : `${p}.${to}`;
     try {
       await api.IconWrite(biggest.path, out, to, []);
-      ui.toast(`Saved ${to.toUpperCase()}`, 'success', { label: 'Open', run: () => void workspace.openPath(out) });
+      ui.toast(t('Saved {format}', { format: to.toUpperCase() }), 'success', { label: t('Open'), run: () => void workspace.openPath(out) });
     } catch (err) {
-      toastError(err, 'Couldn’t write the icon');
+      toastError(err, t('Couldn’t write the icon'));
     }
   }
 </script>
 
 <div class="icons">
-  <div class="list" role="listbox" aria-label="Sizes">
+  <div class="list" role="listbox" aria-label={t('Sizes')}>
     {#each entries as x, i (i)}
       <button class="size" class:on={i === cur} role="option" aria-selected={i === cur} onclick={() => (cur = i)}>
         {#if x.path}<img src={fileUrl(x.path)} alt="{x.width} px" style:width="{Math.min(64, x.width)}px" />{:else}<span class="na">?</span>{/if}
@@ -80,14 +81,14 @@
     {#if e?.path}
       <div class="view"><img class="checker" src={fileUrl(e.path)} alt="{e.width} px" style:width="{Math.max(e.width, Math.min(512, e.width * 4))}px" class:px={e.width < 128} /></div>
     {:else}
-      <div class="empty-state">This size is stored as JPEG 2000, which can't be shown here.</div>
+      <div class="empty-state">{t('This size is stored as JPEG 2000, which can\'t be shown here.')}</div>
     {/if}
     <div class="actions">
-      <span class="label">{entries.length} size{entries.length === 1 ? '' : 's'}</span>
+      <span class="label">{tn('{n} size', '{n} sizes', entries.length)}</span>
       <span class="spacer"></span>
-      <button class="btn ghost" disabled={!e?.path} onclick={exportPng}>Export this size as PNG…</button>
-      <button class="btn ghost" onclick={convert}>Save as .{isIcns ? 'ico' : 'icns'}…</button>
-      {#if !tab.readOnly && tab.filePath}<button class="btn" onclick={rebuild}>Rebuild from image…</button>{/if}
+      <button class="btn ghost" disabled={!e?.path} onclick={exportPng}>{t('Export this size as PNG…')}</button>
+      <button class="btn ghost" onclick={convert}>{t('Save as .{ext}…', { ext: isIcns ? 'ico' : 'icns' })}</button>
+      {#if !tab.readOnly && tab.filePath}<button class="btn" onclick={rebuild}>{t('Rebuild from image…')}</button>{/if}
     </div>
   </div>
 </div>

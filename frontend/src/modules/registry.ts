@@ -1,6 +1,7 @@
 // Built-in modules. Each entry only describes the module; its code is loaded
 // with a dynamic import() the first time a file of that type is opened.
 import { modules } from '../core/modules';
+import { t } from '../core/i18n';
 import { XML_EXT } from './data/formatExt';
 import { ARCHIVE_EXT } from '../core/archiveExt';
 
@@ -15,14 +16,14 @@ const TEXT_EXT = [
 export function registerBuiltinModules() {
   modules.register({
     id: 'text',
-    name: 'Text',
+    name: t('Text'),
     extensions: TEXT_EXT,
     mimeTypes: ['text/*', 'application/xml', 'application/javascript'],
     load: () => import('./text'),
   });
   modules.register({
     id: 'markdown',
-    name: 'Markdown',
+    name: 'Markdown', // i18n-ignore: format name
     extensions: ['md', 'markdown', 'mdown', 'mkd', 'mdx'],
     mimeTypes: ['text/markdown'],
     priority: 10,
@@ -30,7 +31,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'diagram',
-    name: 'Diagram',
+    name: t('Diagram'),
     extensions: ['dot', 'gv', 'mmd', 'mermaid'],
     mimeTypes: ['text/vnd.graphviz'],
     priority: 10,
@@ -38,7 +39,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'board',
-    name: 'Drawing',
+    name: t('Drawing'),
     extensions: ['excalidraw', 'drawio', 'dio'],
     mimeTypes: ['application/vnd.excalidraw+json', 'application/vnd.jgraph.mxfile'],
     priority: 10,
@@ -46,7 +47,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'cert',
-    name: 'Certificate',
+    name: t('Certificate'),
     extensions: ['pem', 'crt', 'cer', 'der', 'p12', 'pfx', 'p7b', 'p7c', 'csr', 'crl'],
     mimeTypes: ['application/x-x509-ca-cert', 'application/pkix-cert', 'application/x-pkcs12', 'application/pkcs10', 'application/x-pkcs7-certificates'],
     priority: 10,
@@ -54,7 +55,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'config',
-    name: 'Config',
+    name: t('Config'),
     extensions: ['ini', 'cfg', 'properties', 'env', 'desktop', 'inf', 'reg'],
     fileNames: /^\.env(\..+)?$/i,
     mimeTypes: [],
@@ -63,7 +64,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'font',
-    name: 'Font',
+    name: t('Font'),
     extensions: ['ttf', 'otf', 'ttc', 'otc', 'woff', 'woff2'],
     mimeTypes: ['font/ttf', 'font/otf', 'font/woff', 'font/woff2', 'font/collection'],
     priority: 10,
@@ -71,7 +72,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'log',
-    name: 'Log',
+    name: t('Log'),
     extensions: ['log', 'out', 'err'],
     mimeTypes: [],
     priority: 5,
@@ -79,7 +80,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'image',
-    name: 'Image',
+    name: t('Image'),
     extensions: ['png', 'jpg', 'jpeg', 'jfif', 'gif', 'webp', 'bmp', 'ora', 'heic', 'heif', 'avif', 'ico', 'cur', 'icns'],
     mimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/bmp', 'image/heic', 'image/heif', 'image/avif', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/icns'],
     load: () => import('./image'),
@@ -94,7 +95,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'html',
-    name: 'Web page',
+    name: t('Web page'),
     extensions: ['html', 'htm', 'xhtml'],
     mimeTypes: ['text/html'],
     priority: 10,
@@ -102,7 +103,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'model3d',
-    name: '3D model',
+    name: t('3D model'),
     extensions: ['glb', 'gltf', 'fbx', 'obj', 'stl', 'ply', '3mf', 'dae', '3ds', 'usdz', 'usd', 'usda', 'usdc', 'wrl', 'vrml', 'amf', 'pcd', 'xyz', 'vtk', 'vtp'],
     mimeTypes: ['model/gltf-binary', 'model/gltf+json', 'model/stl', 'model/obj'],
     priority: 10,
@@ -110,7 +111,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'audio',
-    name: 'Audio',
+    name: t('Audio'),
     extensions: ['mp3', 'wav', 'flac', 'ogg', 'oga', 'opus', 'm4a', 'aac', 'weba', 'mka', 'aif', 'aiff'],
     mimeTypes: ['audio/*'],
     priority: 10,
@@ -118,7 +119,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'database',
-    name: 'Database',
+    name: t('Database'),
     extensions: ['db', 'sqlite', 'sqlite3', 'db3', 's3db', 'sl3'],
     mimeTypes: ['application/vnd.sqlite3'],
     priority: 10,
@@ -126,7 +127,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'cad',
-    name: 'CAD drawing',
+    name: t('CAD drawing'),
     extensions: ['dxf'],
     mimeTypes: ['image/vnd.dxf'],
     priority: 10,
@@ -134,7 +135,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'video',
-    name: 'Video',
+    name: t('Video'),
     extensions: ['mp4', 'm4v', 'mov', 'webm', 'mkv', 'ogv', 'avi'],
     mimeTypes: ['video/*'],
     priority: 10,
@@ -149,7 +150,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'data',
-    name: 'Data',
+    name: t('Data'),
     extensions: ['json', 'jsonc', 'geojson', 'webmanifest', 'yaml', 'yml', 'toml', 'jsonl', 'ndjson', 'jsonlines', ...XML_EXT],
     mimeTypes: ['application/json', 'application/yaml', 'application/geo+json', 'application/manifest+json', 'application/toml', 'application/x-ndjson', 'application/xml', 'text/xml'],
     priority: 5,
@@ -157,7 +158,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'csv',
-    name: 'Table',
+    name: t('Table'),
     extensions: ['csv', 'tsv', 'tab'],
     mimeTypes: ['text/csv', 'text/tab-separated-values'],
     priority: 5,
@@ -165,28 +166,28 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'sheet',
-    name: 'Spreadsheet',
+    name: t('Spreadsheet'),
     extensions: ['xlsx', 'xlsm', 'xltx', 'xltm', 'xls', 'ods', 'ots'],
     mimeTypes: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'application/vnd.oasis.opendocument.spreadsheet'],
     load: () => import('./office/sheet'),
   });
   modules.register({
     id: 'doc',
-    name: 'Document',
+    name: t('Document'),
     extensions: ['docx', 'doc', 'odt', 'ott'],
     mimeTypes: ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword', 'application/vnd.oasis.opendocument.text'],
     load: () => import('./office/doc'),
   });
   modules.register({
     id: 'archive',
-    name: 'Archive',
+    name: t('Archive'),
     extensions: ARCHIVE_EXT,
     mimeTypes: ['application/zip', 'application/x-tar', 'application/gzip', 'application/x-7z-compressed', 'application/vnd.rar', 'application/x-bzip2', 'application/x-xz', 'application/zstd', 'application/vnd.debian.binary-package', 'application/x-rpm', 'application/x-iso9660-image', 'application/x-msi', 'application/java-archive', 'application/vnd.android.package-archive'],
     load: () => import('./archive'),
   });
   modules.register({
     id: 'hash',
-    name: 'Hash',
+    name: t('Hash'),
     extensions: [],
     mimeTypes: [],
     tool: true,
@@ -194,7 +195,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'compare',
-    name: 'Compare',
+    name: t('Compare'),
     extensions: [],
     mimeTypes: [],
     tool: true,
@@ -202,7 +203,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'history',
-    name: 'History',
+    name: t('History'),
     extensions: [],
     mimeTypes: [],
     tool: true,
@@ -210,7 +211,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'start',
-    name: 'New tab',
+    name: t('New tab'),
     extensions: [],
     mimeTypes: [],
     tool: true,
@@ -218,7 +219,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'settings',
-    name: 'Settings',
+    name: t('Settings'),
     extensions: [],
     mimeTypes: [],
     tool: true,
@@ -226,7 +227,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'semantic',
-    name: 'Search by meaning',
+    name: t('Search by meaning'),
     extensions: [],
     mimeTypes: [],
     tool: true,
@@ -234,7 +235,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'checksum',
-    name: 'Checksums',
+    name: t('Checksums'),
     extensions: ['sha256', 'sha1', 'md5', 'sha512', 'b3', 'sha256sum', 'md5sum', 'sha1sum', 'sha512sum'],
     mimeTypes: [],
     priority: 5,
@@ -242,7 +243,7 @@ export function registerBuiltinModules() {
   });
   modules.register({
     id: 'binary',
-    name: 'Binary',
+    name: t('Binary'),
     extensions: ['exe', 'dll', 'so', 'dylib', 'bin', 'o', 'a', 'class', 'pyc', 'wasm', 'dmg', 'img'],
     mimeTypes: ['application/octet-stream'],
     load: () => import('./binary'),

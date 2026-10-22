@@ -64,16 +64,27 @@ export default async function m6(dir: string) {
   commands.execute('tools.hash', join(H, 'big.bin'));
   const bt = await waitFor(() => (workspace.active?.moduleId === 'hash' && hh(workspace.active) ? workspace.active : null), 'hash tool (big)');
   const bh = hh(bt);
+  // A fast machine (CI) can finish 3 GiB inside the window: watch while it runs.
+  let p = null as { done: number } | null;
   const jank = await measureJank(async () => {
     await waitFor(() => bh.running() && bh.progress()?.done > 0, 'big hash running', 5000);
-    await sleep(2500);
+    const end = performance.now() + 2500;
+    while (performance.now() < end && bh.running()) {
+      p = bh.progress() ?? p;
+      await sleep(50);
+    }
   });
-  const p = bh.progress();
   const gaps = stamps.slice(1).map((t, i) => t - stamps[i]);
   const maxGap = Math.max(...gaps);
-  log(`3 GiB hash: ${stamps.length} progress events in 2.5 s, max interval ${Math.round(maxGap)} ms, ${Math.round(p.done / 2 ** 20)} MiB done, longest UI frame ${Math.round(jank.maxGap)} ms`);
-  assert(stamps.length >= 8 && maxGap <= 250, 'progress at least every 250 ms');
-  // Cancel from the status bar.
+  log(`3 GiB hash: ${stamps.length} progress events, max interval ${Math.round(maxGap)} ms, ${Math.round((p?.done ?? 0) / 2 ** 20)} MiB done at the last look${bh.running() ? '' : ' (finished)'}, longest UI frame ${Math.round(jank.maxGap)} ms`);
+  assert(stamps.length >= 3 && maxGap <= 250, 'progress at least every 250 ms');
+  // Cancel from the status bar (a fresh run, so it is surely still going).
+  if (!bh.running()) {
+    await waitFor(() => (Object.keys(bh.results()).length ? true : null), 'finished hash shown');
+    bh.setFile(join(H, 'big.bin')); // clears the results
+    void bh.run();
+    await waitFor(() => bh.running() && bh.progress()?.done > 0, 'big hash running again', 5000);
+  }
   const cancel = await waitFor(() => document.querySelector<HTMLButtonElement>('.status .job .icon-btn'), 'status-bar cancel button');
   cancel.click();
   await waitFor(() => !bh.running(), 'cancelled', 5000);

@@ -19,6 +19,7 @@
   import { ui } from '../core/ui.svelte';
   import { api } from '../core/backend';
   import { boot } from '../core/boot';
+  import { t } from '../core/i18n';
   import { peek } from '../core/peek.svelte';
 
   // Apply the theme whenever it changes.
@@ -79,9 +80,9 @@
     {#if peek.on}
       <div class="peekbar">
         <span class="pt">{workspace.active?.title ?? ''}</span>
-        <span class="pd">Quick view · Esc closes</span>
+        <span class="pd">{t('Quick view · {key} closes', { key: 'Esc' })}</span>
         <span class="spacer"></span>
-        <button class="btn primary edit" title="Edit in the full editor" onclick={() => void peek.expand()}><Icon icon={Pencil} size={14} /> Edit</button>
+        <button class="btn primary edit" title={t('Edit in the full editor')} onclick={() => void peek.expand()}><Icon icon={Pencil} size={14} /> {t('Edit')}</button>
       </div>
     {:else}
       <TabBar />

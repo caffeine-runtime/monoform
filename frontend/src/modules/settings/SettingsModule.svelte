@@ -1,6 +1,7 @@
 <script lang="ts">
   import { LANGUAGES, t, type Lang } from '../../core/i18n';
   import { chooseLanguage, systemLanguage } from '../../core/language';
+  import { updates } from '../../core/updates.svelte';
   import { UI_SCALES } from '../../core/appCommands';
   // Settings: appearance, files, recents (with per-item removal and
   // clearing), search by meaning, and where the app keeps its data.
@@ -24,10 +25,12 @@
 
   const s = $derived(settings.value);
   const THEMES = [
-    { id: 'system', label: 'System' },
-    { id: 'dark', label: 'Dark' },
-    { id: 'light', label: 'Light' },
+    { id: 'system', label: t('System', {}, 'theme') },
+    { id: 'dark', label: t('Dark', {}, 'theme') },
+    { id: 'light', label: t('Light', {}, 'theme') },
   ] as const;
+  /** A translated sentence split around its {placeholders}, so they can be shown with markup. */
+  const pieces = (s: string) => s.split(/(\{\w+\})/).filter(Boolean);
 
   function setFontSize(e: Event) {
     const v = Math.round(Number((e.target as HTMLInputElement).value));
@@ -35,11 +38,11 @@
   }
 
   async function clearRecents() {
-    if (await ui.confirm('Clear recent files?', 'The list of recently opened files is emptied. The files themselves are not touched.', 'Clear', true)) settings.clearRecents();
+    if (await ui.confirm(t('Clear recent files?'), t('The list of recently opened files is emptied. The files themselves are not touched.'), t('Clear'), true)) settings.clearRecents();
   }
 
   onMount(() => {
-    tab.status = { ...tab.status, type: 'Settings' };
+    tab.status = { ...tab.status, type: t('Settings') };
     tab.handlers = { ...tab.handlers, getState: () => ({}) };
     void api.DataLocations().then((l) => (locations = l));
     void semantic.refresh();
@@ -54,7 +57,7 @@
   async function installCli() {
     try {
       const p = await api.InstallCommandLine();
-      ui.toast(`Installed ${p}`, 'success');
+      ui.toast(t('Installed {path}', { path: p }), 'success');
       cliStatus = await api.CommandLineStatus();
     } catch (e) {
       toastError(e);
@@ -63,10 +66,10 @@
 </script>
 
 <div class="wrap">
-  <h2>Settings</h2>
+  <h2>{t('Settings')}</h2>
 
   <section class="card">
-    <h3>Appearance</h3>
+    <h3>{t('Appearance')}</h3>
     <div class="row">
       <label class="lbl" for="lang">{t('Language')}</label>
       <select id="lang" class="input" value={s.language ?? ''} onchange={(e) => void chooseLanguage((e.currentTarget as HTMLSelectElement).value as Lang | '')}>
@@ -75,155 +78,169 @@
       </select>
     </div>
     <div class="row">
-      <span class="lbl">Theme</span>
-      <div class="seg" role="radiogroup" aria-label="Theme">
-        {#each THEMES as t (t.id)}
-          <button role="radio" aria-checked={s.theme === t.id} class:on={s.theme === t.id} onclick={() => theme.set(t.id)}>{t.label}</button>
+      <span class="lbl">{t('Theme')}</span>
+      <div class="seg" role="radiogroup" aria-label={t('Theme')}>
+        {#each THEMES as th (th.id)}
+          <button role="radio" aria-checked={s.theme === th.id} class:on={s.theme === th.id} onclick={() => theme.set(th.id)}>{th.label}</button>
         {/each}
       </div>
     </div>
     <label class="row check">
-      <span class="lbl" title="Excalidraw and draw.io drawings, Mermaid and Graphviz diagrams. The files and exports keep their colours.">Darken drawings and diagrams in the dark theme</span>
+      <span class="lbl" title={t('Excalidraw and draw.io drawings, Mermaid and Graphviz diagrams. The files and exports keep their colours.')}>{t('Darken drawings and diagrams in the dark theme')}</span>
       <input type="checkbox" checked={!s.lightCanvases} onchange={(e) => theme.setDarkCanvas((e.target as HTMLInputElement).checked)} />
     </label>
     <div class="row">
-      <label class="lbl" for="uis" title="Makes text, buttons and icons everywhere larger or smaller (Ctrl+Alt+= / Ctrl+Alt+−)">Interface size</label>
+      <label class="lbl" for="uis" title={t('Makes text, buttons and icons everywhere larger or smaller ({shortcuts})', { shortcuts: 'Ctrl+Alt+= / Ctrl+Alt+−' })}>{t('Interface size')}</label>
       <span class="scale">
         <input id="uis" type="range" min="0" max={UI_SCALES.length - 1} step="1" value={Math.max(0, UI_SCALES.findIndex((v) => Math.abs(v - (s.uiScale || 1)) < 1e-3))} oninput={(e) => settings.update((x) => (x.uiScale = UI_SCALES[+(e.target as HTMLInputElement).value]))} />
         <span class="pct">{Math.round((s.uiScale || 1) * 100)}%</span>
       </span>
     </div>
     <div class="row">
-      <label class="lbl" for="fs">Editor font size</label>
+      <label class="lbl" for="fs">{t('Editor font size')}</label>
       <input id="fs" type="number" min="8" max="32" value={s.fontSize} onchange={setFontSize} />
     </div>
     <label class="row check">
-      <span class="lbl">Show the minimap in the code editor</span>
+      <span class="lbl">{t('Show the minimap in the code editor')}</span>
       <input type="checkbox" checked={!s.minimapOff} onchange={() => commands.execute('text.toggleMinimap')} />
     </label>
     <label class="row check">
-      <span class="lbl">Show spaces and tabs</span>
+      <span class="lbl">{t('Show spaces and tabs')}</span>
       <input type="checkbox" checked={s.showWhitespace} onchange={() => commands.execute('text.toggleWhitespace')} />
     </label>
     <label class="row check">
-      <span class="lbl">Wrap long lines in the text editor</span>
+      <span class="lbl">{t('Wrap long lines in the text editor')}</span>
       <input type="checkbox" checked={s.wordWrap} onchange={(e) => settings.update((x) => (x.wordWrap = (e.target as HTMLInputElement).checked))} />
     </label>
   </section>
 
   <section class="card">
-    <h3>Files</h3>
+    <h3>{t('Files')}</h3>
     <label class="row check">
-      <span class="lbl">Show hidden files and folders</span>
+      <span class="lbl">{t('Show hidden files and folders')}</span>
       <input type="checkbox" checked={s.showHidden} onchange={(e) => settings.update((x) => (x.showHidden = (e.target as HTMLInputElement).checked))} />
     </label>
     <label class="row check">
-      <span class="lbl">Keep originals: save edited images as a copy next to them</span>
+      <span class="lbl">{t('Keep originals: save edited images as a copy next to them')}</span>
       <input type="checkbox" checked={s.imageKeepOriginal} onchange={(e) => settings.update((x) => (x.imageKeepOriginal = (e.target as HTMLInputElement).checked))} />
     </label>
     <label class="row check">
-      <span class="lbl">Open files in preview mode (read-only until you choose Edit in the status bar, or {formatShortcut('Mod+Alt+E')})</span>
+      <span class="lbl">{t('Open files in preview mode (read-only until you choose Edit in the status bar, or {shortcut})', { shortcut: formatShortcut('Mod+Alt+E') })}</span>
       <input type="checkbox" checked={s.openInPreview} onchange={(e) => settings.update((x) => (x.openInPreview = (e.target as HTMLInputElement).checked))} />
     </label>
     <div class="row">
-      <span class="lbl">Command line: <code>monoform FILE</code> opens files, <code>monoform hash *.iso</code>, <code>verify</code>, <code>info</code> and <code>convert</code> work in scripts{cliStatus?.installed ? ` (installed: ${cliStatus.path})` : ''}</span>
-      {#if cliStatus && !cliStatus.installed && cliStatus.bundled}<button class="btn" onclick={installCli}>Install the monoform command</button>{/if}
+      <span class="lbl">{#each pieces(t('Command line: {open} opens files, {hash}, {verify}, {info} and {convert} work in scripts')) as p}{#if p === '{open}'}<code>monoform FILE</code>{:else if p === '{hash}'}<code>monoform hash *.iso</code>{:else if p === '{verify}'}<code>verify</code>{:else if p === '{info}'}<code>info</code>{:else if p === '{convert}'}<code>convert</code>{:else}{p}{/if}{/each}{cliStatus?.installed ? ` (${t('installed: {path}', { path: cliStatus.path })})` : ''}</span> <!-- i18n-ignore -->
+      {#if cliStatus && !cliStatus.installed && cliStatus.bundled}<button class="btn" onclick={installCli}>{t('Install the monoform command')}</button>{/if}
     </div>
     <div class="row">
-      <span class="lbl">New files</span>
-      <button class="btn" onclick={() => commands.execute('file.newOf')}>New document, spreadsheet, image… <span class="kbd">{formatShortcut('Mod+Alt+N')}</span></button>
+      <span class="lbl">{t('New files')}</span>
+      <button class="btn" onclick={() => commands.execute('file.newOf')}>{t('New document, spreadsheet, image…')} <span class="kbd">{formatShortcut('Mod+Alt+N')}</span></button>
     </div>
   </section>
 
   <section class="card">
-    <h3>File history</h3>
+    <h3>{t('File history')}</h3>
     <label class="row check">
-      <span class="lbl">Keep earlier versions of files saved in Monoform, to compare or restore ({formatShortcut('Mod+Alt+Y')} shows a file's history)</span>
+      <span class="lbl">{t("Keep earlier versions of files saved in Monoform, to compare or restore ({shortcut} shows a file's history)", { shortcut: formatShortcut('Mod+Alt+Y') })}</span>
       <input type="checkbox" checked={!s.historyOff} onchange={(e) => settings.update((x) => (x.historyOff = !(e.target as HTMLInputElement).checked))} />
     </label>
     <div class="row">
-      <label class="lbl" for="hmax">Space for kept versions (oldest go first)</label>
+      <label class="lbl" for="hmax">{t('Space for kept versions (oldest go first)')}</label>
       <select id="hmax" class="input" value={String(s.historyMaxMB || 2048)} onchange={(e) => settings.update((x) => (x.historyMaxMB = +(e.target as HTMLSelectElement).value))}>
         {#each [512, 1024, 2048, 5120, 10240] as mb (mb)}<option value={String(mb)}>{mb < 1024 ? `${mb} MB` : `${mb / 1024} GB`}</option>{/each}
       </select>
     </div>
     <div class="row">
-      <label class="lbl" for="hkeep">Versions kept per file</label>
+      <label class="lbl" for="hkeep">{t('Versions kept per file')}</label>
       <select id="hkeep" class="input" value={String(s.historyKeep || 100)} onchange={(e) => settings.update((x) => (x.historyKeep = +(e.target as HTMLSelectElement).value))}>
         {#each [20, 50, 100, 250, 1000] as n (n)}<option value={String(n)}>{n}</option>{/each}
       </select>
     </div>
     <div class="row buttons">
-      <span class="lbl muted">{historyUsage === null ? '' : `In use: ${formatBytes(historyUsage)}.`} Files over 256 MB aren't versioned.</span>
-      <button class="btn" onclick={() => commands.execute('history.all')}>Show all files</button>
+      <span class="lbl muted">{historyUsage === null ? '' : t('In use: {size}.', { size: formatBytes(historyUsage) })} {t("Files over 256 MB aren't versioned.")}</span>
+      <button class="btn" onclick={() => commands.execute('history.all')}>{t('Show all files')}</button>
     </div>
   </section>
 
   <section class="card">
-    <h3>Recent files</h3>
+    <h3>{t('Recent files')}</h3>
     <label class="row check">
-      <span class="lbl">Remember recently opened files and folders</span>
+      <span class="lbl">{t('Remember recently opened files and folders')}</span>
       <input type="checkbox" checked={!s.recentsOff} onchange={(e) => settings.setRecentsOff(!(e.target as HTMLInputElement).checked)} />
     </label>
     {#if s.recents.length}
-      <ul class="recents" aria-label="Recent files">
+      <ul class="recents" aria-label={t('Recent files')}>
         {#each s.recents as p (p)}
           <li>
             <button class="open" title={p} onclick={() => workspace.openPath(p)}>
               <span class="rn">{basename(p)}</span>
               <span class="rd">{tildify(dirname(p), boot.home)}</span>
             </button>
-            <button class="icon-btn xs" title="Remove from recents" aria-label="Remove {basename(p)} from recents" onclick={() => settings.removeRecent(p)}><Icon icon={X} size={12} /></button>
+            <button class="icon-btn xs" title={t('Remove from recents')} aria-label={t('Remove {name} from recents', { name: basename(p) })} onclick={() => settings.removeRecent(p)}><Icon icon={X} size={12} /></button>
           </li>
         {/each}
       </ul>
     {:else}
-      <p class="muted">{s.recentsOff ? 'Recent files are not being recorded.' : 'No recent files.'}</p>
+      <p class="muted">{s.recentsOff ? t('Recent files are not being recorded.') : t('No recent files.')}</p>
     {/if}
     <div class="row buttons">
-      <button class="btn" disabled={!s.recents.length} onclick={clearRecents}>Clear recent files ({s.recents.length})</button>
-      <button class="btn" disabled={!s.recentFolders.length} onclick={() => settings.clearRecentFolders()}>Clear recent folders ({s.recentFolders.length})</button>
+      <button class="btn" disabled={!s.recents.length} onclick={clearRecents}>{t('Clear recent files ({n})', { n: s.recents.length })}</button>
+      <button class="btn" disabled={!s.recentFolders.length} onclick={() => settings.clearRecentFolders()}>{t('Clear recent folders ({n})', { n: s.recentFolders.length })}</button>
     </div>
   </section>
 
   <section class="card">
-    <h3>Search by meaning</h3>
+    <h3>{t('Search by meaning')}</h3>
     <div class="row">
-      <span class="lbl">{semantic.enabled ? 'On' : 'Off'}{semantic.info?.installed ? ' · model downloaded' : ''}</span>
-      <button class="btn" onclick={() => workspace.openTool('semantic')}>Open settings…</button>
+      <span class="lbl">{semantic.enabled ? t('On', {}, 'search') : t('Off', {}, 'search')}{semantic.info?.installed ? ` · ${t('model downloaded')}` : ''}</span>
+      <button class="btn" onclick={() => workspace.openTool('semantic')}>{t('Open settings…')}</button>
     </div>
   </section>
 
   <section class="card ai">
-    <h3>AI models</h3>
-    <p class="muted small">Optional downloads for the image editor. They run on this computer only, and only while you use them.</p>
+    <h3>{t('AI models')}</h3>
+    <p class="muted small">{t('Optional downloads for the image editor. They run on this computer only, and only while you use them.')}</p>
     {#each aiModels.packs as p (p.id)}
       <div class="row pack" data-pack={p.id}>
         <div class="lbl">
-          <div><b>{p.name}</b>{#if p.installed}<span class="tag">Installed</span>{/if}</div>
+          <div><b>{p.name}</b>{#if p.installed}<span class="tag">{t('Installed')}</span>{/if}</div>
           <div class="muted small">{p.purpose}</div>
-          <div class="muted small">{p.model} ({p.license}) · {p.installed ? formatBytes(p.disk) : `${formatBytes(p.download)} download`}</div>
+          <div class="muted small">{p.model} ({p.license}) · {p.installed ? formatBytes(p.disk) : t('{size} download', { size: formatBytes(p.download) })}</div>
         </div>
         {#if p.installed}
-          <button class="btn" onclick={() => aiModels.remove(p.id)}>Remove</button>
+          <button class="btn" onclick={() => aiModels.remove(p.id)}>{t('Remove')}</button>
         {:else if !p.supported}
-          <span class="muted small">Not available on this system</span>
+          <span class="muted small">{t('Not available on this system')}</span>
         {:else}
-          <button class="btn primary" disabled={aiModels.busy === p.id} onclick={() => aiModels.install(p.id)}>{aiModels.busy === p.id ? 'Downloading…' : 'Install'}</button>
+          <button class="btn primary" disabled={aiModels.busy === p.id} onclick={() => aiModels.install(p.id)}>{aiModels.busy === p.id ? t('Downloading…') : t('Install')}</button>
         {/if}
       </div>
     {/each}
   </section>
 
   <section class="card">
-    <h3>About</h3>
-    <div class="grid">
-      <span class="muted">Version</span><span class="selectable">{boot.version}</span>
-      <span class="muted">Settings file</span><span class="selectable mono">{locations ? tildify(locations.settings, boot.home) : '…'}</span>
-      <span class="muted">Cache</span><span class="selectable mono">{locations ? tildify(locations.cache, boot.home) : '…'}</span>
-      <span class="muted">File history</span><span class="selectable mono">{locations ? tildify(locations.history, boot.home) : '…'}</span>
+    <h3>{t('About')}</h3>
+    <label class="row check">
+      <span class="lbl" title={t('One request to GitHub when Monoform starts; nothing about you or this computer is sent.')}>{t('Look for a new version when Monoform starts')}</span>
+      <input type="checkbox" checked={!s.updateCheckOff} onchange={(e) => settings.update((x) => (x.updateCheckOff = !(e.target as HTMLInputElement).checked))} />
+    </label>
+    <div class="row">
+      <span class="lbl">
+        {#if updates.checking}{t('Checking…')}{:else if updates.info?.available}{t('Version {version} is available.', { version: updates.info.version })}{:else if updates.info}{t('Monoform is up to date.')}{:else if updates.error}{t('Couldn’t check: {error}', { error: updates.error })}{/if}
+      </span>
+      {#if updates.info?.available}
+        <button class="btn primary" onclick={() => updates.offer(updates.info!)}>{t('Update…')}</button>
+      {:else}
+        <button class="btn" disabled={updates.checking} onclick={() => updates.check(false)}>{t('Check now')}</button>
+      {/if}
     </div>
-    <p class="muted small">Monoform works offline, sends no telemetry and needs no account.</p>
+    <div class="grid">
+      <span class="muted">{t('Version')}</span><span class="selectable">{boot.version}</span>
+      <span class="muted">{t('Settings file')}</span><span class="selectable mono">{locations ? tildify(locations.settings, boot.home) : '…'}</span>
+      <span class="muted">{t('Cache')}</span><span class="selectable mono">{locations ? tildify(locations.cache, boot.home) : '…'}</span>
+      <span class="muted">{t('File history')}</span><span class="selectable mono">{locations ? tildify(locations.history, boot.home) : '…'}</span>
+    </div>
+    <p class="muted small">{t('Monoform works offline, sends no telemetry and needs no account.')}</p>
   </section>
 </div>
 

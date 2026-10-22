@@ -17,6 +17,7 @@
   import { workspace, type Tab } from '../../core/tabs.svelte';
   import { menu, toastError, ui } from '../../core/ui.svelte';
   import { csvControllers } from './controllers';
+  import { t, tn } from '../../core/i18n';
 
   let { tab }: { tab: Tab } = $props();
 
@@ -30,14 +31,18 @@
   let grid = $state<Grid>();
   let filterTimer: ReturnType<typeof setTimeout> | undefined;
   const DELIMS: [string, string][] = [
-    [',', 'Comma'],
-    [';', 'Semicolon'],
-    ['\t', 'Tab'],
-    ['|', 'Pipe'],
+    [',', t('Comma')],
+    [';', t('Semicolon')],
+    ['\t', t('Tab', {}, 'character')],
+    ['|', t('Pipe')],
   ];
+  /** Progress phases reported by the worker, and the edit labels from the grid, as busy text. */
+  const PHASES: Record<string, string> = { Reading: t('Reading…'), Indexing: t('Indexing…'), Saving: t('Saving…') };
+  const EDITS: Record<string, string> = { Move: t('Move…', {}, 'progress'), Paste: t('Paste…', {}, 'progress'), Clear: t('Clear…', {}, 'progress'), Fill: t('Fill…', {}, 'progress'), Copy: t('Copy…', {}, 'progress') };
 
   client.onProgress = (phase, done, total) => {
-    busy = total ? `${phase}… ${Math.round((done / total) * 100)}%` : `${phase}…`;
+    const p = PHASES[phase] ?? `${phase}…`;
+    busy = total ? `${p} ${Math.round((done / total) * 100)}%` : p;
   };
 
   const source = { rows: async (s: number, e: number) => (await client.call<{ rows: string[][] }>({ type: 'rows', start: s, end: e })).rows };
@@ -70,8 +75,8 @@
     tab.status = {
       ...tab.status,
       type: info.delimiter === '\t' ? 'TSV' : 'CSV',
-      position: selStats || `Row ${lastPos.row + 1}, ${columns[lastPos.col]?.name ?? ''}`,
-      info: `${info.rows.toLocaleString()}${info.rows !== info.totalRows ? ` of ${info.totalRows.toLocaleString()}` : ''} rows · ${info.columns.length} columns`,
+      position: selStats || t('Row {row}, {column}', { row: String(lastPos.row + 1), column: columns[lastPos.col]?.name ?? '' }),
+      info: `${info.rows !== info.totalRows ? tn('{shown} of {n} row', '{shown} of {n} rows', info.totalRows, { shown: info.rows }) : tn('{n} row', '{n} rows', info.rows)} · ${tn('{n} column', '{n} columns', info.columns.length)}`,
       encoding: info.encoding.toUpperCase(),
       eol: info.eol,
     };
@@ -79,7 +84,7 @@
 
   async function load() {
     error = '';
-    busy = 'Reading…';
+    busy = t('Reading…');
     try {
       const r = await client.call<{ info: CsvInfo }>({ type: 'load', url: new URL(tab.url(), location.href).href, ext: extname(tab.name) });
       apply(r.info, true);
@@ -90,8 +95,8 @@
     }
   }
 
-  async function run(msg: Record<string, unknown>, label = 'Working…') {
-    const t = setTimeout(() => (busy = label), 300);
+  async function run(msg: Record<string, unknown>, label = t('Working…')) {
+    const timer = setTimeout(() => (busy = label), 300);
     try {
       const r = await client.call<{ info: CsvInfo; row?: number }>(msg);
       apply(r.info);
@@ -99,7 +104,7 @@
     } catch (e) {
       toastError(e);
     } finally {
-      clearTimeout(t);
+      clearTimeout(timer);
       busy = '';
     }
   }
@@ -107,26 +112,26 @@
   function sort(col: number) {
     if (!info) return;
     const [c, d] = info.sortCol !== col ? [col, 1] : info.sortDir === 1 ? [col, -1] : [-1, 1];
-    void run({ type: 'sort', col: c, dir: d }, 'Sorting…');
+    void run({ type: 'sort', col: c, dir: d }, t('Sorting…'));
   }
 
   function onFilter() {
     clearTimeout(filterTimer);
-    filterTimer = setTimeout(() => void run({ type: 'filter', query: filter }, 'Filtering…'), 200);
+    filterTimer = setTimeout(() => void run({ type: 'filter', query: filter }, t('Filtering…')), 200);
   }
 
   async function edit(row: number, col: number, value: string) {
-    if (tab.readOnly) return ui.toast('This file is read-only here. Use Save as to edit a copy.', 'info');
+    if (tab.readOnly) return ui.toast(t('This file is read-only here. Use Save as to edit a copy.'), 'info');
     await run({ type: 'edit', row, col, value });
   }
 
   /** Paste, clear, move and fill arrive here as one undoable batch. */
   async function applyEdit(e: GridEdit, label: string): Promise<boolean> {
     if (tab.readOnly) {
-      ui.toast('This file is read-only here. Use Save as to edit a copy.', 'info');
+      ui.toast(t('This file is read-only here. Use Save as to edit a copy.'), 'info');
       return false;
     }
-    return !!(await run({ type: 'apply', cells: e.cells, clear: e.clear }, `${label}…`));
+    return !!(await run({ type: 'apply', cells: e.cells, clear: e.clear }, EDITS[label] ?? `${label}…`));
   }
 
   async function undoRedo(redo: boolean) {
@@ -161,7 +166,7 @@
 
   async function renameColumn(col: number) {
     if (!info?.header || tab.readOnly) return;
-    const v = await ui.prompt('Column name', info.columns[col], 'Rename');
+    const v = await ui.prompt(t('Column name'), info.columns[col], t('Rename'));
     if (v !== null) await run({ type: 'renameColumn', col, value: v });
   }
 
@@ -175,7 +180,7 @@
     const s = grid?.selection();
     if (!s || !info?.rows) return;
     const rows = Array.from({ length: Math.min(rangeRows(s), info.rows - s.r0) }, (_, i) => s.r0 + i);
-    await run({ type: 'deleteRows', rows }, 'Deleting…');
+    await run({ type: 'deleteRows', rows }, t('Deleting…'));
     grid?.moveTo(s.r0, s.c0);
   }
 
@@ -185,7 +190,7 @@
   }
 
   async function saveAs(): Promise<boolean> {
-    const p = await api.SaveFileDialog('Save as', tab.filePath ?? tab.title, [{ name: 'CSV / TSV', patterns: '*.csv;*.tsv;*.txt' }]);
+    const p = await api.SaveFileDialog(t('Save as'), tab.filePath ?? tab.title, [{ name: 'CSV / TSV', patterns: '*.csv;*.tsv;*.txt' }]);
     if (!p) return false;
     const ok = await writeTo(p);
     if (ok) tab.retarget(p);
@@ -194,7 +199,7 @@
 
   async function writeTo(path: string): Promise<boolean> {
     const view = { sortCol: info?.sortCol ?? -1, sortDir: info?.sortDir ?? 1, filter, delimiter: info?.delimiter };
-    busy = 'Saving…';
+    busy = t('Saving…');
     try {
       const r = await client.call<{ entry: { size: number } }>({ type: 'save', path, token: sessionToken() });
       tab.size = r.entry.size;
@@ -215,7 +220,7 @@
   }
 
   async function setDelimiter(d: string) {
-    if (info?.dirty && !(await ui.confirm('Discard edits?', 'Changing the delimiter re-reads the rows.', 'Change', true))) return;
+    if (info?.dirty && !(await ui.confirm(t('Discard edits?'), t('Changing the delimiter re-reads the rows.'), t('Change'), true))) return;
     const r = await run({ type: 'setDelimiter', delimiter: d });
     if (r?.info) await sizeColumns(r.info);
   }
@@ -225,16 +230,16 @@
     const n = s ? Math.min(rangeRows(s), (info?.rows ?? 0) - s.r0) : 1;
     const ro = tab.readOnly;
     menu.show(e, [
-      { label: 'Cut', shortcut: formatShortcut('Mod+X'), run: () => void grid?.copy(true), disabled: ro },
-      { label: 'Copy', shortcut: formatShortcut('Mod+C'), run: () => void grid?.copy() },
-      { label: 'Paste', shortcut: formatShortcut('Mod+V'), run: async () => grid?.pasteText(await navigator.clipboard.readText()), disabled: ro },
-      { label: 'Clear contents', shortcut: 'Del', run: () => void grid?.clearSelection(), disabled: ro },
+      { label: t('Cut'), shortcut: formatShortcut('Mod+X'), run: () => void grid?.copy(true), disabled: ro },
+      { label: t('Copy'), shortcut: formatShortcut('Mod+C'), run: () => void grid?.copy() },
+      { label: t('Paste'), shortcut: formatShortcut('Mod+V'), run: async () => grid?.pasteText(await navigator.clipboard.readText()), disabled: ro },
+      { label: t('Clear contents'), shortcut: 'Del', run: () => void grid?.clearSelection(), disabled: ro },
       { separator: true },
-      { label: 'Insert row at end', run: addRow, disabled: ro },
-      { label: n > 1 ? `Delete ${n} rows` : 'Delete row', run: deleteRow, disabled: ro },
+      { label: t('Insert row at end'), run: addRow, disabled: ro },
+      { label: n > 1 ? tn('Delete {n} row', 'Delete {n} rows', n) : t('Delete row'), run: deleteRow, disabled: ro },
       { separator: true },
-      { label: `Sort “${columns[col]?.name}” A → Z`, run: () => run({ type: 'sort', col, dir: 1 }, 'Sorting…') },
-      { label: `Sort “${columns[col]?.name}” Z → A`, run: () => run({ type: 'sort', col, dir: -1 }, 'Sorting…') },
+      { label: t('Sort “{column}” A → Z', { column: columns[col]?.name ?? '' }), run: () => run({ type: 'sort', col, dir: 1 }, t('Sorting…')) },
+      { label: t('Sort “{column}” Z → A', { column: columns[col]?.name ?? '' }), run: () => run({ type: 'sort', col, dir: -1 }, t('Sorting…')) },
     ]);
   }
 
@@ -268,25 +273,25 @@
 <div class="toolbar" use:fitBar>
   <div class="filter">
     <Icon icon={Search} size={14} />
-    <input class="input" data-tab-filter={tab.id} placeholder="Filter rows" bind:value={filter} oninput={onFilter} onkeydown={(e) => e.key === 'Escape' && ((filter = ''), onFilter())} />
+    <input class="input" data-tab-filter={tab.id} placeholder={t('Filter rows')} bind:value={filter} oninput={onFilter} onkeydown={(e) => e.key === 'Escape' && ((filter = ''), onFilter())} />
   </div>
   <span class="sep"></span>
-  <label class="chk"><input type="checkbox" checked={info?.header ?? true} onchange={(e) => setHeader((e.currentTarget as HTMLInputElement).checked)} /> Header row</label>
-  <select class="input sel" value={info?.delimiter ?? ','} onchange={(e) => setDelimiter((e.currentTarget as HTMLSelectElement).value)} aria-label="Delimiter">
+  <label class="chk"><input type="checkbox" checked={info?.header ?? true} onchange={(e) => setHeader((e.currentTarget as HTMLInputElement).checked)} /> {t('Header row')}</label>
+  <select class="input sel" value={info?.delimiter ?? ','} onchange={(e) => setDelimiter((e.currentTarget as HTMLSelectElement).value)} aria-label={t('Delimiter')}>
     {#each DELIMS as [d, label] (d)}<option value={d}>{label}</option>{/each}
   </select>
   {#if !tab.readOnly}
     <span class="sep"></span>
-    <button class="icon-btn" title="Undo ({formatShortcut('Mod+Z')})" disabled={!info?.canUndo} onclick={async () => { const at = await undoRedo(false); if (at) grid?.moveTo(at.row, at.col); }}><Icon icon={Undo2} /></button>
-    <button class="icon-btn" title="Redo ({formatShortcut('Mod+Shift+Z')})" disabled={!info?.canRedo} onclick={async () => { const at = await undoRedo(true); if (at) grid?.moveTo(at.row, at.col); }}><Icon icon={Redo2} /></button>
+    <button class="icon-btn" title={t('Undo ({shortcut})', { shortcut: formatShortcut('Mod+Z') })} disabled={!info?.canUndo} onclick={async () => { const at = await undoRedo(false); if (at) grid?.moveTo(at.row, at.col); }}><Icon icon={Undo2} /></button>
+    <button class="icon-btn" title={t('Redo ({shortcut})', { shortcut: formatShortcut('Mod+Shift+Z') })} disabled={!info?.canRedo} onclick={async () => { const at = await undoRedo(true); if (at) grid?.moveTo(at.row, at.col); }}><Icon icon={Redo2} /></button>
     <span class="sep"></span>
-    <button class="icon-btn" title="Add row" onclick={addRow}><Icon icon={Plus} /></button>
-    <button class="icon-btn" title="Delete selected rows" onclick={deleteRow}><Icon icon={Trash} /></button>
+    <button class="icon-btn" title={t('Add row')} onclick={addRow}><Icon icon={Plus} /></button>
+    <button class="icon-btn" title={t('Delete selected rows')} onclick={deleteRow}><Icon icon={Trash} /></button>
   {/if}
   <span class="spacer"></span>
   {#if busy}<span class="label"><span class="spinner inline"></span> {busy}</span>{/if}
-  {#if info}<span class="label">{info.rows.toLocaleString()} rows</span>{/if}
-  <button class="icon-btn" title="Open as text" onclick={() => ((tab.moduleId = 'text'), workspace.touch())}><Icon icon={FileText} /></button>
+  {#if info}<span class="label">{tn('{n} row', '{n} rows', info.rows)}</span>{/if}
+  <button class="icon-btn" title={t('Open as text')} onclick={() => ((tab.moduleId = 'text'), workspace.touch())}><Icon icon={FileText} /></button>
 </div>
 
 <div class="body">

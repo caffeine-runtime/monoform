@@ -30,6 +30,9 @@
   import Layers from '@lucide/svelte/icons/layers';
   import Sliders from '@lucide/svelte/icons/sliders-horizontal';
   import Sparkles from '@lucide/svelte/icons/sparkles';
+  import UserRoundSearch from '@lucide/svelte/icons/user-round-search';
+  import Download from '@lucide/svelte/icons/download';
+  import { openSettingsAt } from '../../core/settingsLink';
   import Copy from '@lucide/svelte/icons/copy';
   import Scissors from '@lucide/svelte/icons/scissors';
   import Trash from '@lucide/svelte/icons/trash-2';
@@ -45,6 +48,7 @@
   import { settings } from '../../core/settings.svelte';
   import { ui, toastError, menu } from '../../core/ui.svelte';
   import { formatShortcut } from '../../core/keys';
+  import { num, t, tn } from '../../core/i18n';
   import { ImageEditor, SELECT_TOOLS, type EditorState, type Tool, type ToolOptions } from './editor';
   import { centered, fitZoom, keepAspect, stepZoom, zoomAt, clampZoom, type View } from './geometry';
   import { imageControllers, type MaskOp } from './editors';
@@ -131,7 +135,7 @@
     editor.setPixelSelection(selection.fromPath(path, bounds, editor.width, editor.height), 'replace');
     editor.pixelateSelection();
     editor.deselect();
-    ui.toast(`Pixelated ${ocrWords.length} word${ocrWords.length === 1 ? '' : 's'}. Undo with ${formatShortcut('Mod+Z')}.`, 'success');
+    ui.toast(tn('Pixelated {n} word. Undo with {shortcut}.', 'Pixelated {n} words. Undo with {shortcut}.', ocrWords.length, { shortcut: formatShortcut('Mod+Z') }), 'success');
   }
 
   function openOcr() {
@@ -222,7 +226,7 @@
 
   async function decode(url: string): Promise<HTMLCanvasElement> {
     const res = await fetch(url);
-    if (!res.ok) throw new Error(`could not read image (${res.status})`);
+    if (!res.ok) throw new Error(t('could not read image ({status})', { status: String(res.status) }));
     return decodeBlob(await res.blob());
   }
 
@@ -251,13 +255,13 @@
         try {
           imgMode = false;
           anim = await api.AnimOpen(tab.filePath);
-          tab.status = { ...tab.status, type: `Animated ${ext.toUpperCase()}`, position: `${anim.width} × ${anim.height} px`, info: `${anim.frames.length} frames` };
+          tab.status = { ...tab.status, type: t('Animated {format}', { format: ext.toUpperCase() }), position: `${anim.width} × ${anim.height} px`, info: tn('{n} frame', '{n} frames', anim.frames.length) };
           return;
         } catch (e) {
           // Damaged frames that browsers still play: show it animating, without frame editing.
           imgMode = true;
           src = url;
-          ui.toast(`Frames can't be edited: ${String((e as Error)?.message ?? e)}`, 'warning');
+          ui.toast(t("Frames can't be edited: {error}", { error: String((e as Error)?.message ?? e) }), 'warning');
           return;
         }
       }
@@ -330,7 +334,7 @@
 
   function createEditor(canvas: HTMLCanvasElement) {
     editor = new ImageEditor(stageHost!, canvas);
-    editor.askText = (initial) => ui.prompt(initial ? 'Edit text' : 'Add text', initial, initial ? 'Update' : 'Add');
+    editor.askText = (initial) => ui.prompt(initial ? t('Edit text') : t('Add text'), initial, initial ? t('Update') : t('Add'));
     editor.onChange = (s) => {
       es = s;
       if (opts && opts.maskHide !== editor!.opts.maskHide) opts.maskHide = editor!.opts.maskHide;
@@ -375,12 +379,14 @@
   function updateStatus() {
     const w = imgMode ? natural.w : (es?.width ?? 0);
     const h = imgMode ? natural.h : (es?.height ?? 0);
-    const selInfo = es?.pixelSelection ? ` · selection ${es.pixelSelection.width} × ${es.pixelSelection.height}` : '';
+    const ps = es?.pixelSelection;
+    const format = ext.toUpperCase();
+    const pct = `${Math.round(zoom * 100)}`;
     tab.status = {
       ...tab.status,
-      type: isSvg ? 'SVG image (view-only)' : ext === 'ora' ? 'OpenRaster image' : `${ext.toUpperCase()} image${viaSystem ? ` (decoded by ${viaSystem})` : ''}`,
-      position: w ? `${w} × ${h} px${selInfo}` : undefined,
-      info: `${Math.round(zoom * 100)}%${es && es.layers.length > 1 ? ` · ${es.layers.length} layers` : ''}`,
+      type: isSvg ? t('SVG image (view-only)') : ext === 'ora' ? t('OpenRaster image') : viaSystem ? t('{format} image (decoded by {tool})', { format, tool: viaSystem }) : t('{format} image', { format }),
+      position: !w ? undefined : ps ? t('{w} × {h} px · selection {sw} × {sh}', { w: String(w), h: String(h), sw: String(ps.width), sh: String(ps.height) }) : `${w} × ${h} px`,
+      info: es && es.layers.length > 1 ? tn('{zoom}% · {n} layer', '{zoom}% · {n} layers', es.layers.length, { zoom: pct }) : `${pct}%`,
     };
   }
 
@@ -421,7 +427,7 @@
       const r = await vision.wand(editor.base, x, y, opts!.wandTolerance, opts!.wandContiguous);
       editor.setPixelSelection(selection.fromMask(maskCanvas(r), r.bounds, { canvas: r.edges, scale: r.edgeScale }), mode);
     } catch (e) {
-      toastError(e, 'Magic wand failed');
+      toastError(e, t('Magic wand failed'));
     }
   }
 
@@ -431,12 +437,12 @@
     const key = `${tab.id}:${editor.state().version}`;
     if (vision.samKey === key) return key;
     objectPoints = [];
-    busy = 'Analysing the image to find objects… (once per image, may take ~15 s)';
+    busy = t('Analysing the image to find objects… (once per image, may take ~15 s)');
     try {
       await vision.analyse(editor.composite(), key);
       return key;
     } catch (e) {
-      toastError(e, 'Object selection failed');
+      toastError(e, t('Object selection failed'));
       return null;
     } finally {
       busy = '';
@@ -449,12 +455,12 @@
     if (!key) return;
     if (mode === 'replace') objectPoints = [];
     objectPoints.push({ x, y, positive: mode !== 'subtract' });
-    const slow = setTimeout(() => (busy = 'Finding the object’s edges…'), 300);
+    const slow = setTimeout(() => (busy = t('Finding the object’s edges…')), 300);
     try {
       const r = await vision.selectObject(key, objectPoints);
       editor.setPixelSelection(selection.fromMask(maskCanvas(r), r.bounds, { canvas: r.edges, scale: r.edgeScale }), 'replace');
     } catch (e) {
-      toastError(e, 'Object selection failed');
+      toastError(e, t('Object selection failed'));
     } finally {
       clearTimeout(slow);
       busy = '';
@@ -462,19 +468,22 @@
   }
 
   let subjectTipShown = false;
-  async function subjectMask(): Promise<MaskResult | null> {
+  /**
+   * The main subject's mask: with the optional BiRefNet model (much better on
+   * people and hair) when `precise`, else the bundled U²-Netp.
+   */
+  async function subjectMask(precise = !!aiModels.pack('subject')?.installed): Promise<MaskResult | null> {
     if (!editor) return null;
-    busy = 'Finding the subject…';
+    busy = t('Finding the subject…');
     try {
-      // The optional BiRefNet model when installed (much better on people and hair), else the bundled U²-Netp.
-      if (await aiModels.installed('subject')) return await vision.subjectAI(editor.base, endpoint('ai'));
-      if (!subjectTipShown && aiModels.pack('subject')?.supported) {
+      if (precise && (await aiModels.installed('subject'))) return await vision.subjectAI(editor.base, endpoint('ai'));
+      if (!subjectTipShown && aiModels.pack('subject')?.supported && !aiModels.pack('subject')?.installed) {
         subjectTipShown = true;
-        ui.toast('Not precise enough? A better subject finder is an optional download.', 'info', { label: 'Get it', run: () => void aiModels.install('subject') }, 8000);
+        ui.toast(t('Not precise enough? A better subject finder is an optional download.'), 'info', { label: t('Get it'), run: () => void openSettingsAt('.pack[data-pack="subject"]') }, 8000);
       }
       return await vision.removeBackground(editor.base);
     } catch (e) {
-      toastError(e, 'Background removal failed');
+      toastError(e, t('Background removal failed'));
       return null;
     } finally {
       busy = '';
@@ -486,11 +495,12 @@
     if (!r || !editor) return;
     r.edges.close();
     editor.applyMaskToLayer(maskCanvas(r));
-    ui.toast('Background removed — save as PNG or WebP to keep the transparency.', 'success');
+    ui.toast(t('Background removed — save as PNG or WebP to keep the transparency.'), 'success');
   }
 
-  async function selectSubject() {
-    const r = await subjectMask();
+  /** Select subject (Select object's toolbar): the bundled model; the AI tool below Select object uses the downloaded one. */
+  async function selectSubject(precise = false) {
+    const r = await subjectMask(precise);
     if (!r || !editor) return;
     editor.setPixelSelection(selection.fromMask(maskCanvas(r), r.bounds, { canvas: r.edges, scale: r.edgeScale }), editor.selectMode);
   }
@@ -500,24 +510,24 @@
     if (!editor || busy) return;
     const s = editor.selection;
     if (!s) {
-      ui.toast('Select what to remove first — lasso around it, or click it with Select object.', 'info');
+      ui.toast(t('Select what to remove first — lasso around it, or click it with Select object.'), 'info');
       return;
     }
     if (!(await aiModels.installed('eraser')) && !(await aiModels.install('eraser'))) return;
     const rect = eraseRect(s.bounds, editor.width, editor.height);
-    busy = 'Removing the object…';
+    busy = t('Removing the object…');
     try {
       const started = await vision.eraseBegin(editor.composite(), s.mask, rect, endpoint('ai'), Math.floor(Math.random() * 2 ** 31));
-      const done = await jobs.run('Removing the object', () => Promise.resolve(started.job));
+      const done = await jobs.run(t('Removing the object'), () => Promise.resolve(started.job));
       if (done.cancelled) return;
       if (done.error) throw new Error(done.error);
       const { patch } = await vision.eraseFinish(started, endpoint('ai'));
       editor.paintPatch(patch, rect.x, rect.y);
       patch.close();
       editor.deselect();
-      ui.toast('Removed. Not right? Undo and run it again for a different fill.', 'success');
+      ui.toast(t('Removed. Not right? Undo and run it again for a different fill.'), 'success');
     } catch (e) {
-      toastError(e, 'Object removal failed');
+      toastError(e, t('Object removal failed'));
     } finally {
       busy = '';
     }
@@ -541,20 +551,20 @@
     const { canvas, x, y } = editor.copySelection(merged);
     clip = { canvas, x, y, at: Date.now() };
     // Also on the system clipboard and for any other tab (Ctrl+V in a video, a note…).
-    void copyTransfer({ kind: 'image', image: canvas, name: `${stem(tab.title)}${editor.selection ? ' (part)' : ''}` });
+    void copyTransfer({ kind: 'image', image: canvas, name: editor.selection ? t('{name} (part)', { name: stem(tab.title) }) : stem(tab.title) });
     if (cut) editor.clearSelectionPixels();
-    ui.toast(`${cut ? 'Cut' : 'Copied'} ${canvas.width} × ${canvas.height} px`, 'success');
+    ui.toast(cut ? t('Cut {w} × {h} px', { w: String(canvas.width), h: String(canvas.height) }) : t('Copied {w} × {h} px', { w: String(canvas.width), h: String(canvas.height) }), 'success');
   }
 
   async function paste() {
     if (!editor) return;
-    const t = await readTransfer();
-    if (!t) return ui.toast('The clipboard is empty.', 'info');
-    if (t.kind === 'image') {
+    const tr = await readTransfer();
+    if (!tr) return ui.toast(t('The clipboard is empty.'), 'info');
+    if (tr.kind === 'image') {
       // Our own copy goes back where it came from.
-      const same = clip && clip.canvas.width === t.image.width && clip.canvas.height === t.image.height && Date.now() - clip.at < 10 * 60_000;
-      editor.pasteImage(t.image, same ? { x: clip!.x, y: clip!.y } : undefined, t.name || 'Pasted');
-    } else await take(t);
+      const same = clip && clip.canvas.width === tr.image.width && clip.canvas.height === tr.image.height && Date.now() - clip.at < 10 * 60_000;
+      editor.pasteImage(tr.image, same ? { x: clip!.x, y: clip!.y } : undefined, tr.name || t('Pasted'));
+    } else await take(tr);
   }
 
   const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'avif', 'ico'];
@@ -563,20 +573,20 @@
   function giveImage(): Transfer | null {
     if (!editor) return null;
     const { canvas } = editor.copySelection(true);
-    return { kind: 'image', image: canvas, name: `${stem(tab.title)}${editor.selection ? ' (part)' : ''}` };
+    return { kind: 'image', image: canvas, name: editor.selection ? t('{name} (part)', { name: stem(tab.title) }) : stem(tab.title) };
   }
 
   /** From another tab: a picture becomes a layer, text a text object, image files layers — at the drop point. */
-  async function take(t: Transfer, at?: { x: number; y: number }): Promise<boolean> {
+  async function take(tr: Transfer, at?: { x: number; y: number }): Promise<boolean> {
     if (!editor || !editable) return false;
     const p = at ? editor.docPoint(at.x, at.y) : undefined;
     const centred = (c: HTMLCanvasElement) => (p ? { x: Math.round(p.x - c.width / 2), y: Math.round(p.y - c.height / 2) } : undefined);
-    if (t.kind === 'image') editor.pasteImage(t.image, centred(t.image), t.name || 'Pasted');
-    else if (t.kind === 'text') await editor.addText(p ?? { x: Math.round(editor.width / 8), y: Math.round(editor.height / 8) }, t.text.trim().slice(0, 2000));
+    if (tr.kind === 'image') editor.pasteImage(tr.image, centred(tr.image), tr.name || t('Pasted'));
+    else if (tr.kind === 'text') await editor.addText(p ?? { x: Math.round(editor.width / 8), y: Math.round(editor.height / 8) }, tr.text.trim().slice(0, 2000));
     else {
-      const imgs = t.paths.filter((x) => IMAGE_EXT.includes(extname(x)));
+      const imgs = tr.paths.filter((x) => IMAGE_EXT.includes(extname(x)));
       if (!imgs.length) {
-        ui.toast('Only pictures can be added as layers.', 'info');
+        ui.toast(t('Only pictures can be added as layers.'), 'info');
         return false;
       }
       for (const f of imgs) {
@@ -659,11 +669,11 @@
   };
   imageControllers.set(tab.id, ctl);
 
-  function setTool(t: Tool) {
-    if (!editable && t !== 'hand') return;
-    tool = t;
-    editor?.setTool(t);
-    if (t === 'text' && !fonts.length) fonts = availableFonts();
+  function setTool(next: Tool) {
+    if (!editable && next !== 'hand') return;
+    tool = next;
+    editor?.setTool(next);
+    if (next === 'text' && !fonts.length) fonts = availableFonts();
   }
 
   function setOpt<K extends keyof ToolOptions>(k: K, v: ToolOptions[K]) {
@@ -690,7 +700,7 @@
       await tick();
       const c = await decode(tab.url());
       createEditor(c);
-      ui.toast('Editing a GIF keeps only its first frame.', 'info');
+      ui.toast(t('Editing a GIF keeps only its first frame.'), 'info');
     } catch (e) {
       toastError(e);
     } finally {
@@ -738,7 +748,7 @@
   async function navigate(dir: 1 | -1) {
     const p = tab.filePath;
     if (!p) return;
-    if (tab.dirty && !(await ui.confirm('Discard changes?', `${tab.title} has unsaved edits.`, 'Discard', true))) return;
+    if (tab.dirty && !(await ui.confirm(t('Discard changes?'), t('{name} has unsaved edits.', { name: tab.title }), t('Discard'), true))) return;
     try {
       siblings = (await api.Siblings(p, ['image', 'svg'])) ?? [];
     } catch (e) {
@@ -801,7 +811,7 @@
     if (!editor) return false;
     let format = extname(path);
     if (!SAVE_FORMATS.includes(format)) {
-      ui.toast(`Can't save .${format}. Choose PNG, JPEG, WebP, GIF, BMP, ICO, ICNS or ORA.`, 'warning');
+      ui.toast(t("Can't save .{ext}. Choose PNG, JPEG, WebP, GIF, BMP, ICO, ICNS or ORA.", { ext: format }), 'warning');
       return false;
     }
     if (format === 'ora') return writeOraFile(path);
@@ -821,7 +831,7 @@
     if (format === 'jpeg') format = 'jpg';
     if (editor.layerCount > 1 && !mergedWarned) {
       mergedWarned = true;
-      ui.toast('Layers were merged into the saved image. Use “Save with layers (.ora)” to keep them editable.', 'info');
+      ui.toast(t('Layers were merged into the saved image. Use “Save with layers (.ora)” to keep them editable.'), 'info');
     }
     const png = await raster.toPNG(editor.composite());
     const entry = await saveFile(path, png, undefined, { transform: 'image', format, quality: '92' });
@@ -847,7 +857,7 @@
     const ok = await writeImage(target);
     if (ok) {
       tab.retarget(target);
-      ui.toast(`Saved a copy: ${basename(target)} (the original is unchanged)`, 'success');
+      ui.toast(t('Saved a copy: {name} (the original is unchanged)', { name: basename(target) }), 'success');
     }
     return ok;
   }
@@ -856,7 +866,7 @@
     if (anim) return animEd?.save() ?? false;
     if (icons) return false;
     if (isSvg) {
-      ui.toast('SVG files are view-only.', 'info');
+      ui.toast(t('SVG files are view-only.'), 'info');
       return false;
     }
     if (imgMode || !editor) return false;
@@ -871,19 +881,19 @@
   async function saveAs(): Promise<boolean> {
     if (anim) return animEd?.saveAs() ?? false;
     if (imgMode || !editor) {
-      ui.toast(isSvg ? 'SVG files are view-only.' : 'Start editing to save a copy.', 'info');
+      ui.toast(isSvg ? t('SVG files are view-only.') : t('Start editing to save a copy.'), 'info');
       return false;
     }
     const base = tab.filePath ?? join(dirname(tab.path ?? ''), tab.title);
-    const path = await api.SaveFileDialog('Save image as', base, [
+    const path = await api.SaveFileDialog(t('Save image as'), base, [
       { name: 'PNG', patterns: '*.png' },
       { name: 'JPEG', patterns: '*.jpg;*.jpeg' },
-      { name: 'WebP (lossless)', patterns: '*.webp' },
+      { name: t('WebP (lossless)'), patterns: '*.webp' },
       { name: 'GIF', patterns: '*.gif' },
       { name: 'BMP', patterns: '*.bmp' },
-      { name: 'Windows icon (all sizes)', patterns: '*.ico' },
-      { name: 'macOS icon (all sizes)', patterns: '*.icns' },
-      { name: 'OpenRaster with layers', patterns: '*.ora' },
+      { name: t('Windows icon (all sizes)'), patterns: '*.ico' },
+      { name: t('macOS icon (all sizes)'), patterns: '*.icns' },
+      { name: t('OpenRaster with layers'), patterns: '*.ora' },
     ]);
     if (!path) return false;
     const target = SAVE_FORMATS.includes(extname(path)) ? path : `${path}.png`;
@@ -895,7 +905,7 @@
   async function saveWithLayers(): Promise<boolean> {
     if (imgMode || !editor) return false;
     const base = join(dirname(tab.filePath ?? tab.path ?? ''), `${stem(tab.title)}.ora`);
-    const path = await api.SaveFileDialog('Save with layers', base, [{ name: 'OpenRaster (GIMP, Krita, MyPaint)', patterns: '*.ora' }]);
+    const path = await api.SaveFileDialog(t('Save with layers'), base, [{ name: 'OpenRaster (GIMP, Krita, MyPaint)', patterns: '*.ora' }]); // i18n-ignore: format and app names
     if (!path) return false;
     const target = extname(path) === 'ora' ? path : `${path}.ora`;
     const ok = await writeOraFile(target);
@@ -908,35 +918,36 @@
     const ed = editor;
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     menu.show({ clientX: r.left, clientY: r.bottom + 4 }, [
-      { label: 'Rotate left', shortcut: '[', run: () => ed.rotate(false) },
-      { label: 'Rotate right', shortcut: ']', run: () => ed.rotate(true) },
-      { label: 'Rotate by angle…', shortcut: formatShortcut('Mod+Alt+R'), run: () => openRotate() },
-      { label: 'Flip horizontally', shortcut: 'Shift+H', run: () => ed.flip(true) },
-      { label: 'Flip vertically', shortcut: 'Shift+V', run: () => ed.flip(false) },
-      { label: 'Resize…', shortcut: formatShortcut('Mod+Alt+I'), run: () => openResize() },
+      { label: t('Rotate left'), shortcut: '[', run: () => ed.rotate(false) },
+      { label: t('Rotate right'), shortcut: ']', run: () => ed.rotate(true) },
+      { label: t('Rotate by angle…'), shortcut: formatShortcut('Mod+Alt+R'), run: () => openRotate() },
+      { label: t('Flip horizontally'), shortcut: 'Shift+H', run: () => ed.flip(true) },
+      { label: t('Flip vertically'), shortcut: 'Shift+V', run: () => ed.flip(false) },
+      { label: t('Resize…'), shortcut: formatShortcut('Mod+Alt+I'), run: () => openResize() },
       { separator: true },
-      { label: 'Remove background', run: () => void removeBackground() },
-      { label: 'Select subject', run: () => void selectSubject() },
-      { label: 'Remove object (fill the gap)', disabled: !es?.pixelSelection, run: () => void removeObject() },
+      { label: t('Remove background'), run: () => void removeBackground() },
+      { label: t('Select subject'), run: () => void selectSubject(!!aiModels.pack('subject')?.installed) },
+      { label: t('Remove object (fill the gap)'), disabled: !es?.pixelSelection, run: () => void removeObject() },
       { separator: true },
-      { label: 'New layer', shortcut: formatShortcut('Mod+Shift+N'), run: () => ed.addLayer() },
-      { label: 'Flatten image', run: () => ed.flatten() },
+      { label: t('New layer'), shortcut: formatShortcut('Mod+Shift+N'), run: () => ed.addLayer() },
+      { label: t('Flatten image'), run: () => ed.flatten() },
     ]);
   }
 
   function saveMenu(e: MouseEvent) {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     menu.show({ clientX: r.left, clientY: r.bottom + 4 }, [
-      { label: 'Save', shortcut: formatShortcut('Mod+S'), run: () => void save() },
-      { label: 'Save a copy (keep original)', shortcut: formatShortcut('Mod+Alt+S'), run: () => void saveCopy() },
-      { label: 'Save as…', shortcut: formatShortcut('Mod+Shift+S'), run: () => void saveAs() },
-      { label: 'Save with layers (.ora)…', run: () => void saveWithLayers() },
+      { label: t('Save'), shortcut: formatShortcut('Mod+S'), run: () => void save() },
+      { label: t('Save a copy (keep original)'), shortcut: formatShortcut('Mod+Alt+S'), run: () => void saveCopy() },
+      { label: t('Save as…'), shortcut: formatShortcut('Mod+Shift+S'), run: () => void saveAs() },
+      { label: t('Save with layers (.ora)…'), run: () => void saveWithLayers() },
       { separator: true },
-      { label: settings.value.imageKeepOriginal ? '✓ Always keep originals' : 'Always keep originals', run: () => settings.update((s) => (s.imageKeepOriginal = !s.imageKeepOriginal)) },
+      { label: settings.value.imageKeepOriginal ? `✓ ${t('Always keep originals')}` : t('Always keep originals'), run: () => settings.update((s) => (s.imageKeepOriginal = !s.imageKeepOriginal)) },
     ]);
   }
 
   onMount(() => {
+    if (!aiModels.packs.length) void aiModels.refresh();
     tab.handlers = {
       ...tab.handlers,
       save,
@@ -988,33 +999,77 @@
   type ToolDef = { id: Tool; icon: any; label: string; help: string; key?: string };
   const toolGroups: ToolDef[][] = [
     [
-      { id: 'hand', icon: Hand, label: 'Hand', help: 'Drag to pan the view; click an arrow, shape or text to select and edit it. Scroll to zoom.', key: 'H' },
-      { id: 'move', icon: Move, label: 'Move layer', help: 'Drag to move the active layer; drag the handles to scale or rotate it.', key: 'V' },
+      { id: 'hand', icon: Hand, label: t('Hand'), help: t('Drag to pan the view; click an arrow, shape or text to select and edit it. Scroll to zoom.'), key: 'H' },
+      { id: 'move', icon: Move, label: t('Move layer'), help: t('Drag to move the active layer; drag the handles to scale or rotate it.'), key: 'V' },
     ],
     [
-      { id: 'select', icon: SquareDashed, label: 'Rectangle select', help: 'Drag to select a rectangle. Hold Ctrl for a square, Shift to add, Alt to subtract.', key: 'M' },
-      { id: 'ellipse', icon: CircleDashed, label: 'Ellipse select', help: 'Drag to select an ellipse. Hold Ctrl for a circle, Shift to add, Alt to subtract.' },
-      { id: 'lasso', icon: Lasso, label: 'Lasso select', help: 'Drag around an area to select it freehand. Shift adds, Alt subtracts.', key: 'L' },
-      { id: 'wand', icon: Wand, label: 'Magic wand', help: 'Click to select pixels of a similar colour. Set Tolerance in the toolbar; Shift adds, Alt subtracts.', key: 'W' },
-      { id: 'object', icon: ScanEye, label: 'Select object', help: 'Click an object to select it, with edges snapped to the pixels. Shift-click adds, Alt-click excludes a part.', key: 'O' },
+      { id: 'select', icon: SquareDashed, label: t('Rectangle select'), help: t('Drag to select a rectangle. Hold Ctrl for a square, Shift to add, Alt to subtract.'), key: 'M' },
+      { id: 'ellipse', icon: CircleDashed, label: t('Ellipse select'), help: t('Drag to select an ellipse. Hold Ctrl for a circle, Shift to add, Alt to subtract.') },
+      { id: 'lasso', icon: Lasso, label: t('Lasso select'), help: t('Drag around an area to select it freehand. Shift adds, Alt subtracts.'), key: 'L' },
+      { id: 'wand', icon: Wand, label: t('Magic wand'), help: t('Click to select pixels of a similar colour. Set Tolerance in the toolbar; Shift adds, Alt subtracts.'), key: 'W' },
+      { id: 'object', icon: ScanEye, label: t('Select object'), help: t('Click an object to select it, with edges snapped to the pixels. Shift-click adds, Alt-click excludes a part.'), key: 'O' },
     ],
-    [{ id: 'crop', icon: Crop, label: 'Crop', help: 'Drag the area to keep (Ctrl for a square), adjust the handles, then press Enter.', key: 'C' }],
+    [{ id: 'crop', icon: Crop, label: t('Crop'), help: t('Drag the area to keep (Ctrl for a square), adjust the handles, then press Enter.'), key: 'C' }],
     [
-      { id: 'brush', icon: Brush, label: 'Brush', help: 'Drag to paint on the active layer. Set size, opacity and colour in the toolbar.', key: 'B' },
-      { id: 'eraser', icon: Eraser, label: 'Eraser', help: 'Drag to erase the active layer to transparency.', key: 'E' },
-    ],
-    [
-      { id: 'picker', icon: Pipette, label: 'Colour picker', help: 'Click the image to pick a colour: see it as HEX/RGB/HSL in Colours, copy it or use it to draw.', key: 'I' },
-      { id: 'text', icon: Type, label: 'Text', help: 'Click where the text should go and type it. Double-click text later to edit it.', key: 'T' },
-      { id: 'arrow', icon: MoveUpRight, label: 'Arrow', help: 'Drag from the tail to the tip to draw an arrow.', key: 'A' },
-      { id: 'rect', icon: Square, label: 'Rectangle', help: 'Drag to draw a rectangle. Hold Ctrl (or Shift) for a square; set Corners in the toolbar for rounded or sharp corners.', key: 'R' },
-      { id: 'oval', icon: CircleIcon, label: 'Ellipse', help: 'Drag to draw an ellipse. Hold Ctrl (or Shift) for a circle.' },
+      { id: 'brush', icon: Brush, label: t('Brush'), help: t('Drag to paint on the active layer. Set size, opacity and colour in the toolbar.'), key: 'B' },
+      { id: 'eraser', icon: Eraser, label: t('Eraser'), help: t('Drag to erase the active layer to transparency.'), key: 'E' },
     ],
     [
-      { id: 'blur', icon: Droplets, label: 'Blur region', help: 'Drag over an area (faces, plates…), adjust it, then press Enter to blur it.', key: 'U' },
-      { id: 'pixelate', icon: Grid, label: 'Pixelate region', help: 'Drag over an area, adjust it, then press Enter to pixelate it.', key: 'P' },
+      { id: 'picker', icon: Pipette, label: t('Colour picker'), help: t('Click the image to pick a colour: see it as HEX/RGB/HSL in Colours, copy it or use it to draw.'), key: 'I' },
+      { id: 'text', icon: Type, label: t('Text'), help: t('Click where the text should go and type it. Double-click text later to edit it.'), key: 'T' },
+      { id: 'arrow', icon: MoveUpRight, label: t('Arrow'), help: t('Drag from the tail to the tip to draw an arrow.'), key: 'A' },
+      { id: 'rect', icon: Square, label: t('Rectangle'), help: t('Drag to draw a rectangle. Hold Ctrl (or Shift) for a square; set Corners in the toolbar for rounded or sharp corners.'), key: 'R' },
+      { id: 'oval', icon: CircleIcon, label: t('Ellipse'), help: t('Drag to draw an ellipse. Hold Ctrl (or Shift) for a circle.') },
+    ],
+    [
+      { id: 'blur', icon: Droplets, label: t('Blur region'), help: t('Drag over an area (faces, plates…), adjust it, then press Enter to blur it.'), key: 'U' },
+      { id: 'pixelate', icon: Grid, label: t('Pixelate region'), help: t('Drag over an area, adjust it, then press Enter to pixelate it.'), key: 'P' },
     ],
   ];
+  // Tools that use the optional AI models (Settings › AI models), below Select
+  // object. Until their model is downloaded they show greyed out and lead to
+  // the download in Settings.
+  type AITool = { pack: string; icon: any; label: string; help: string; run: () => void };
+  const aiTools: AITool[] = [
+    {
+      pack: 'subject',
+      icon: UserRoundSearch,
+      label: t('Select subject (AI)'),
+      help: t('Selects the main subject — people, hair, objects — precisely, with the downloaded model. Shift adds, Alt subtracts.'),
+      run: () => void selectSubjectAI(),
+    },
+    {
+      pack: 'eraser',
+      icon: Eraser2,
+      label: t('Remove object (AI)'),
+      help: t('Removes the selected object and fills the gap with what could be behind it. Select it first, e.g. by clicking it with Select object.'),
+      run: () => void removeObjectAI(),
+    },
+  ];
+  const aiReady = (pack: string) => !!aiModels.pack(pack)?.installed;
+  function aiToolTitle(a: AITool): string {
+    if (aiReady(a.pack)) return `${a.label} — ${a.help}`;
+    const p = aiModels.pack(a.pack);
+    if (p && !p.supported) return `${a.label} — ${t('Not available on this system')}`;
+    return `${a.label} — ${t('Needs an optional download: click to get it in Settings › AI models.')}`;
+  }
+  function aiToolClick(a: AITool) {
+    if (aiReady(a.pack)) a.run();
+    else void openSettingsAt(`.pack[data-pack="${a.pack}"]`);
+  }
+  async function selectSubjectAI() {
+    setTool('object'); // add or exclude parts by clicking afterwards
+    await selectSubject(true);
+  }
+  async function removeObjectAI() {
+    if (!editor?.selection) {
+      setTool('object');
+      ui.toast(t('Click the object to remove (Shift-click adds a part), then press Remove object (AI) again.'), 'info', undefined, 6000);
+      return;
+    }
+    await removeObject();
+  }
+
   const shapeTool = $derived(['arrow', 'rect', 'oval'].includes(tool));
   const obj = $derived(es?.object ?? null);
 </script>
@@ -1023,151 +1078,151 @@
   {#if editable && opts}
     <!-- Contextual options for the current tool / selected object -->
     {#if obj?.kind === 'text'}
-      <select class="font" value={obj.fontFamily} onfocus={() => (fonts = fonts.length ? fonts : availableFonts())} onchange={(e) => editor?.updateObject({ fontFamily: (e.target as HTMLSelectElement).value })} title="Font">
+      <select class="font" value={obj.fontFamily} onfocus={() => (fonts = fonts.length ? fonts : availableFonts())} onchange={(e) => editor?.updateObject({ fontFamily: (e.target as HTMLSelectElement).value })} title={t('Font')}>
         {#each fonts.length ? fonts : [obj.fontFamily ?? 'Inter Variable'] as f (f)}<option value={f} style:font-family={f}>{fontLabel(f)}</option>{/each}
       </select>
-      <input class="input num sm" type="number" min="4" max="2000" value={obj.fontSize} title="Size" onchange={(e) => editor?.updateObject({ fontSize: +(e.target as HTMLInputElement).value })} />
-      <button class="btn ghost b" class:on={obj.bold} title="Bold" onclick={() => editor?.updateObject({ bold: !obj.bold })}>B</button>
-      <button class="btn ghost i" class:on={obj.italic} title="Italic" onclick={() => editor?.updateObject({ italic: !obj.italic })}>I</button>
-      <button class="btn ghost" class:on={obj.outline} title="Outline" onclick={() => editor?.updateObject({ outline: !obj.outline })}>Outline</button>
-      <button class="btn ghost" class:on={obj.shadow} title="Shadow" onclick={() => editor?.updateObject({ shadow: !obj.shadow })}>Shadow</button>
-      <button class="btn ghost" title="Edit text" onclick={async () => {
-        const t = await ui.prompt('Edit text', obj.text ?? '', 'Update');
-        if (t) editor?.updateObject({ text: t });
+      <input class="input num sm" type="number" min="4" max="2000" value={obj.fontSize} title={t('Size')} onchange={(e) => editor?.updateObject({ fontSize: +(e.target as HTMLInputElement).value })} />
+      <button class="btn ghost b" class:on={obj.bold} title={t('Bold')} onclick={() => editor?.updateObject({ bold: !obj.bold })}>B</button>
+      <button class="btn ghost i" class:on={obj.italic} title={t('Italic')} onclick={() => editor?.updateObject({ italic: !obj.italic })}>I</button>
+      <button class="btn ghost" class:on={obj.outline} title={t('Outline', {}, 'text effect')} onclick={() => editor?.updateObject({ outline: !obj.outline })}>{t('Outline', {}, 'text effect')}</button>
+      <button class="btn ghost" class:on={obj.shadow} title={t('Shadow')} onclick={() => editor?.updateObject({ shadow: !obj.shadow })}>{t('Shadow')}</button>
+      <button class="btn ghost" title={t('Edit text')} onclick={async () => {
+        const txt = await ui.prompt(t('Edit text'), obj.text ?? '', t('Update'));
+        if (txt) editor?.updateObject({ text: txt });
       }}><Icon icon={Pencil} size={14} /></button>
       <span class="sep"></span>
     {:else if tool === 'text'}
-      <select class="font" value={opts.fontFamily} onchange={(e) => setOpt('fontFamily', (e.target as HTMLSelectElement).value)} title="Font">
+      <select class="font" value={opts.fontFamily} onchange={(e) => setOpt('fontFamily', (e.target as HTMLSelectElement).value)} title={t('Font')}>
         {#each fonts as f (f)}<option value={f} style:font-family={f}>{fontLabel(f)}</option>{/each}
       </select>
-      <input class="input num sm" type="number" min="0" max="2000" value={opts.fontSize || ''} placeholder="auto" title="Size (empty = automatic)" onchange={(e) => setOpt('fontSize', +(e.target as HTMLInputElement).value || 0)} />
-      <button class="btn ghost b" class:on={opts.bold} title="Bold" onclick={() => setOpt('bold', !opts!.bold)}>B</button>
-      <button class="btn ghost i" class:on={opts.italic} title="Italic" onclick={() => setOpt('italic', !opts!.italic)}>I</button>
-      <button class="btn ghost" class:on={opts.outline} title="Outline around the letters" onclick={() => setOpt('outline', !opts!.outline)}>Outline</button>
-      <button class="btn ghost" class:on={opts.shadow} title="Soft shadow behind the text" onclick={() => setOpt('shadow', !opts!.shadow)}>Shadow</button>
+      <input class="input num sm" type="number" min="0" max="2000" value={opts.fontSize || ''} placeholder={t('auto')} title={t('Size (empty = automatic)')} onchange={(e) => setOpt('fontSize', +(e.target as HTMLInputElement).value || 0)} />
+      <button class="btn ghost b" class:on={opts.bold} title={t('Bold')} onclick={() => setOpt('bold', !opts!.bold)}>B</button>
+      <button class="btn ghost i" class:on={opts.italic} title={t('Italic')} onclick={() => setOpt('italic', !opts!.italic)}>I</button>
+      <button class="btn ghost" class:on={opts.outline} title={t('Outline around the letters')} onclick={() => setOpt('outline', !opts!.outline)}>{t('Outline', {}, 'text effect')}</button>
+      <button class="btn ghost" class:on={opts.shadow} title={t('Soft shadow behind the text')} onclick={() => setOpt('shadow', !opts!.shadow)}>{t('Shadow')}</button>
       <span class="sep"></span>
     {:else if SELECT_TOOLS.includes(tool)}
-      <div class="seg" role="radiogroup" aria-label="Selection mode">
-        {#each [['replace', 'New', 'New selection'], ['add', 'Add', 'Add to the selection (or hold Shift)'], ['subtract', 'Subtract', 'Subtract from the selection (or hold Alt)']] as [m, l, t] (m)}
-          <button role="radio" aria-checked={selMode === m} class:on={selMode === m} title={t} onclick={() => setSelMode(m as SelectMode)}>{l}</button>
+      <div class="seg" role="radiogroup" aria-label={t('Selection mode')}>
+        {#each [['replace', t('New', {}, 'selection'), t('New selection')], ['add', t('Add', {}, 'selection'), t('Add to the selection (or hold Shift)')], ['subtract', t('Subtract'), t('Subtract from the selection (or hold Alt)')]] as [m, l, h] (m)}
+          <button role="radio" aria-checked={selMode === m} class:on={selMode === m} title={h} onclick={() => setSelMode(m as SelectMode)}>{l}</button>
         {/each}
       </div>
       {#if tool === 'wand'}
-        <label class="opt">Tolerance <input type="range" min="0" max="128" value={opts.wandTolerance} oninput={(e) => setOpt('wandTolerance', +(e.target as HTMLInputElement).value)} /><span class="v">{opts.wandTolerance}</span></label>
-        <label class="opt chk"><input type="checkbox" checked={opts.wandContiguous} onchange={(e) => setOpt('wandContiguous', (e.target as HTMLInputElement).checked)} /> Contiguous</label>
+        <label class="opt">{t('Tolerance')} <input type="range" min="0" max="128" value={opts.wandTolerance} oninput={(e) => setOpt('wandTolerance', +(e.target as HTMLInputElement).value)} /><span class="v">{opts.wandTolerance}</span></label>
+        <label class="opt chk"><input type="checkbox" checked={opts.wandContiguous} onchange={(e) => setOpt('wandContiguous', (e.target as HTMLInputElement).checked)} /> {t('Contiguous')}</label>
       {:else if tool === 'object'}
-        <span class="hint">Click an object · Shift-click to add · Alt-click to exclude</span>
-        <button class="btn ghost" title="Select the main subject of the image automatically" onclick={selectSubject}><Icon icon={Sparkles} size={14} /> Select subject</button>
+        <span class="hint">{t('Click an object · Shift-click to add · Alt-click to exclude')}</span>
+        <button class="btn ghost" title={t('Select the main subject of the image automatically')} onclick={() => void selectSubject()}><Icon icon={Sparkles} size={14} /> {t('Select subject')}</button>
       {/if}
       <span class="sep"></span>
     {:else if tool === 'brush' || tool === 'eraser'}
-      <label class="opt">Size <input type="range" min="1" max="300" value={opts.brushSize || 12} oninput={(e) => setOpt('brushSize', +(e.target as HTMLInputElement).value)} /><span class="v">{opts.brushSize || 'auto'}</span></label>
-      {#if tool === 'brush'}<label class="opt">Opacity <input type="range" min="5" max="100" value={Math.round(opts.brushOpacity * 100)} oninput={(e) => setOpt('brushOpacity', +(e.target as HTMLInputElement).value / 100)} /></label>{/if}
+      <label class="opt">{t('Size')} <input type="range" min="1" max="300" value={opts.brushSize || 12} oninput={(e) => setOpt('brushSize', +(e.target as HTMLInputElement).value)} /><span class="v">{opts.brushSize || t('auto')}</span></label>
+      {#if tool === 'brush'}<label class="opt">{t('Opacity')} <input type="range" min="5" max="100" value={Math.round(opts.brushOpacity * 100)} oninput={(e) => setOpt('brushOpacity', +(e.target as HTMLInputElement).value / 100)} /></label>{/if}
       {#if es?.editMask}
-        <span class="chips" role="radiogroup" aria-label="On the mask the brush">
-          <button class="chip" role="radio" aria-checked={opts.maskHide} class:on={opts.maskHide} title="The brush hides, the eraser shows (X swaps)" onclick={() => editor?.setMaskHide(true)}>Hide</button>
-          <button class="chip" role="radio" aria-checked={!opts.maskHide} class:on={!opts.maskHide} title="The brush shows, the eraser hides (X swaps)" onclick={() => editor?.setMaskHide(false)}>Show</button>
+        <span class="chips" role="radiogroup" aria-label={t('On the mask the brush')}>
+          <button class="chip" role="radio" aria-checked={opts.maskHide} class:on={opts.maskHide} title={t('The brush hides, the eraser shows (X swaps)')} onclick={() => editor?.setMaskHide(true)}>{t('Hide')}</button>
+          <button class="chip" role="radio" aria-checked={!opts.maskHide} class:on={!opts.maskHide} title={t('The brush shows, the eraser hides (X swaps)')} onclick={() => editor?.setMaskHide(false)}>{t('Show')}</button>
         </span>
-        <button class="btn ghost" title="Paint on the layer's pixels again" onclick={() => editor?.setEditMask(false)}>Done with mask</button>
+        <button class="btn ghost" title={t("Paint on the layer's pixels again")} onclick={() => editor?.setEditMask(false)}>{t('Done with mask')}</button>
       {/if}
       <span class="sep"></span>
     {:else if shapeTool || obj}
-      <label class="opt" title="Line width">Width <input type="range" min="1" max="60" value={obj?.strokeWidth ?? (opts.strokeWidth || 6)} oninput={(e) => (obj ? editor?.updateObject({ strokeWidth: +(e.target as HTMLInputElement).value }) : setOpt('strokeWidth', +(e.target as HTMLInputElement).value))} /></label>
+      <label class="opt" title={t('Line width')}>{t('Width', {}, 'line')} <input type="range" min="1" max="60" value={obj?.strokeWidth ?? (opts.strokeWidth || 6)} oninput={(e) => (obj ? editor?.updateObject({ strokeWidth: +(e.target as HTMLInputElement).value }) : setOpt('strokeWidth', +(e.target as HTMLInputElement).value))} /></label>
       {#if tool === 'rect' || tool === 'oval' || obj?.kind === 'rect' || obj?.kind === 'oval'}
-        <label class="opt chk" title="Fill the shape with the colour"><input type="checkbox" checked={obj ? !!obj.filled : opts.filled} onchange={(e) => (obj ? editor?.updateObject({ filled: (e.target as HTMLInputElement).checked }) : setOpt('filled', (e.target as HTMLInputElement).checked))} /> Filled</label>
+        <label class="opt chk" title={t('Fill the shape with the colour')}><input type="checkbox" checked={obj ? !!obj.filled : opts.filled} onchange={(e) => (obj ? editor?.updateObject({ filled: (e.target as HTMLInputElement).checked }) : setOpt('filled', (e.target as HTMLInputElement).checked))} /> {t('Filled')}</label>
       {/if}
       {#if tool === 'rect' || obj?.kind === 'rect'}
         {@const radius = obj ? (obj.cornerRadius ?? 0) : opts.cornerRadius}
-        <label class="opt" title="Corner radius: 0 = sharp corners, higher = rounder">Corners <input type="range" min="0" max="200" value={radius} oninput={(e) => (obj ? editor?.updateObject({ cornerRadius: +(e.target as HTMLInputElement).value }) : setOpt('cornerRadius', +(e.target as HTMLInputElement).value))} /><span class="v">{radius}</span></label>
+        <label class="opt" title={t('Corner radius: 0 = sharp corners, higher = rounder')}>{t('Corners')} <input type="range" min="0" max="200" value={radius} oninput={(e) => (obj ? editor?.updateObject({ cornerRadius: +(e.target as HTMLInputElement).value }) : setOpt('cornerRadius', +(e.target as HTMLInputElement).value))} /><span class="v">{radius}</span></label>
       {/if}
       <span class="sep"></span>
     {/if}
     {#if tool !== 'eraser' && !SELECT_TOOLS.includes(tool) && tool !== 'crop' && tool !== 'blur' && tool !== 'pixelate'}
       {#each COLORS as c (c)}
-        <button class="swatch" class:on={(obj?.color ?? opts.color) === c} style:background={c} title="Colour" aria-label="Colour {c}" onclick={() => pickColor(c)}></button>
+        <button class="swatch" class:on={(obj?.color ?? opts.color) === c} style:background={c} title={t('Colour')} aria-label={t('Colour {value}', { value: c })} onclick={() => pickColor(c)}></button>
       {/each}
-      <input class="custom" type="color" value={obj?.color ?? opts.color} title="Custom colour" oninput={(e) => pickColor((e.target as HTMLInputElement).value)} />
+      <input class="custom" type="color" value={obj?.color ?? opts.color} title={t('Custom colour')} oninput={(e) => pickColor((e.target as HTMLInputElement).value)} />
       <span class="sep"></span>
     {/if}
-    <button class="icon-btn" title="Undo ({formatShortcut('Mod+Z')})" disabled={!es?.canUndo} onclick={() => editor?.undo()}><Icon icon={Undo2} /></button>
-    <button class="icon-btn" title="Redo ({formatShortcut('Mod+Shift+Z')})" disabled={!es?.canRedo} onclick={() => editor?.redo()}><Icon icon={Redo2} /></button>
+    <button class="icon-btn" title={t('Undo ({shortcut})', { shortcut: formatShortcut('Mod+Z') })} disabled={!es?.canUndo} onclick={() => editor?.undo()}><Icon icon={Undo2} /></button>
+    <button class="icon-btn" title={t('Redo ({shortcut})', { shortcut: formatShortcut('Mod+Shift+Z') })} disabled={!es?.canRedo} onclick={() => editor?.redo()}><Icon icon={Redo2} /></button>
     <span class="sep"></span>
-    <button class="btn ghost" title="Rotate, flip, resize, remove background…" onclick={imageMenu}><Icon icon={ImageIco} size={14} /> Image ▾</button>
+    <button class="btn ghost" title={t('Rotate, flip, resize, remove background…')} onclick={imageMenu}><Icon icon={ImageIco} size={14} /> {t('Image')} ▾</button>
   {:else if isSvg}
-    <span class="label">SVG — view only here</span>
+    <span class="label">{t('SVG — view only here')}</span>
   {:else if imgMode && ext === 'gif'}
-    <button class="btn ghost" title="Open the first frame in the editor" onclick={startEditingGif}><Icon icon={Pencil} size={14} /> Edit (first frame)</button>
+    <button class="btn ghost" title={t('Open the first frame in the editor')} onclick={startEditingGif}><Icon icon={Pencil} size={14} /> {t('Edit (first frame)')}</button>
   {:else if tab.readOnly}
-    <span class="label">Read-only — use Save as to edit a copy</span>
+    <span class="label">{t('Read-only — use Save as to edit a copy')}</span>
   {/if}
   <span class="spacer"></span>
   {#if editable}
-    <GiveButton {tab} get={giveImage} what={es?.pixelSelection ? 'the selection' : 'the picture'} />
-    <button class="btn ghost" title="Save options" onclick={saveMenu}><Icon icon={Save} size={14} /> Save ▾</button>
+    <GiveButton {tab} get={giveImage} what={es?.pixelSelection ? t('the selection') : t('the picture')} />
+    <button class="btn ghost" title={t('Save options')} onclick={saveMenu}><Icon icon={Save} size={14} /> {t('Save')} ▾</button>
     <span class="sep"></span>
   {/if}
-  <button class="btn ghost" title="Zoom out" onclick={() => ctl.zoom(-1)}>−</button>
-  <button class="btn ghost zoomlabel" title="Fit (0) · Actual size (1)" onclick={() => (zoom === 1 ? ctl.fit() : ctl.actual())}>{Math.round(zoom * 100)}%</button>
-  <button class="btn ghost" title="Zoom in" onclick={() => ctl.zoom(1)}>+</button>
+  <button class="btn ghost" title={t('Zoom out')} onclick={() => ctl.zoom(-1)}>−</button>
+  <button class="btn ghost zoomlabel" title={t('Fit (0) · Actual size (1)')} onclick={() => (zoom === 1 ? ctl.fit() : ctl.actual())}>{Math.round(zoom * 100)}%</button>
+  <button class="btn ghost" title={t('Zoom in')} onclick={() => ctl.zoom(1)}>+</button>
   {#if tab.filePath}
     <span class="sep"></span>
-    <button class="icon-btn" title="Previous image (←)" onclick={() => navigate(-1)}><Icon icon={ChevronLeft} /></button>
+    <button class="icon-btn" title={t('Previous image (←)')} onclick={() => navigate(-1)}><Icon icon={ChevronLeft} /></button>
     {#if position}<span class="label">{position}</span>{/if}
-    <button class="icon-btn" title="Next image (→)" onclick={() => navigate(1)}><Icon icon={ChevronRightIcon} /></button>
+    <button class="icon-btn" title={t('Next image (→)')} onclick={() => navigate(1)}><Icon icon={ChevronRightIcon} /></button>
   {/if}
   <span class="sep"></span>
-  <button class="icon-btn" class:on={ocrOpen} title="Copy text from the image (OCR) — from the selection if there is one" aria-label="Recognise text" onclick={() => (ocrOpen ? (ocrOpen = false) : openOcr())}><Icon icon={ScanText} /></button>
+  <button class="icon-btn" class:on={ocrOpen} title={t('Copy text from the image (OCR) — from the selection if there is one')} aria-label={t('Recognise text')} onclick={() => (ocrOpen ? (ocrOpen = false) : openOcr())}><Icon icon={ScanText} /></button>
   {#if editable}
     <span class="sep"></span>
-    <button class="icon-btn" class:on={panel === 'layers'} title="Layers" onclick={() => togglePanel('layers')}><Icon icon={Layers} /></button>
-    <button class="icon-btn" class:on={panel === 'adjust'} title="Adjust colours" onclick={() => togglePanel('adjust')}><Icon icon={Sliders} /></button>
+    <button class="icon-btn" class:on={panel === 'layers'} title={t('Layers')} onclick={() => togglePanel('layers')}><Icon icon={Layers} /></button>
+    <button class="icon-btn" class:on={panel === 'adjust'} title={t('Adjust colours')} onclick={() => togglePanel('adjust')}><Icon icon={Sliders} /></button>
   {/if}
 </div>
 
 {#if resizeOpen && editor}
   <div class="banner resize">
-    <label>Width <input class="input num" type="number" min="1" bind:value={rw} oninput={changeW} /></label>
-    <label>Height <input class="input num" type="number" min="1" bind:value={rh} oninput={changeH} /></label>
-    <label class="chk"><input type="checkbox" bind:checked={lockAspect} /> Keep aspect ratio</label>
-    <span class="muted">from {editor.width} × {editor.height}</span>
+    <label>{t('Width')} <input class="input num" type="number" min="1" bind:value={rw} oninput={changeW} /></label>
+    <label>{t('Height')} <input class="input num" type="number" min="1" bind:value={rh} oninput={changeH} /></label>
+    <label class="chk"><input type="checkbox" bind:checked={lockAspect} /> {t('Keep aspect ratio')}</label>
+    <span class="muted">{t('from {w} × {h}', { w: String(editor.width), h: String(editor.height) })}</span>
     <span class="grow"></span>
-    <button class="btn" title="Close without resizing" onclick={() => (resizeOpen = false)}>Cancel</button>
-    <button class="btn primary" onclick={applyResize}>Resize</button>
+    <button class="btn" title={t('Close without resizing')} onclick={() => (resizeOpen = false)}>{t('Cancel')}</button>
+    <button class="btn primary" onclick={applyResize}>{t('Resize')}</button>
   </div>
 {/if}
 
 {#if rotateOpen && editor}
   <div class="banner resize">
-    <label class="angle">Angle <input type="range" min="-180" max="180" step="0.5" bind:value={angle} oninput={previewAngle} /> <input class="input num sm" type="number" min="-360" max="360" step="0.5" bind:value={angle} oninput={previewAngle} />°</label>
-    <label class="chk"><input type="checkbox" bind:checked={expand} /> Enlarge canvas to fit</label>
+    <label class="angle">{t('Angle')} <input type="range" min="-180" max="180" step="0.5" bind:value={angle} oninput={previewAngle} /> <input class="input num sm" type="number" min="-360" max="360" step="0.5" bind:value={angle} oninput={previewAngle} />°</label>
+    <label class="chk"><input type="checkbox" bind:checked={expand} /> {t('Enlarge canvas to fit')}</label>
     <span class="grow"></span>
-    <button class="btn" onclick={cancelRotate}>Cancel</button>
-    <button class="btn primary" onclick={applyRotate}>Rotate</button>
+    <button class="btn" onclick={cancelRotate}>{t('Cancel')}</button>
+    <button class="btn primary" onclick={applyRotate}>{t('Rotate')}</button>
   </div>
 {/if}
 
 {#if es?.hasRegion}
   <div class="banner">
-    <span class="grow">{tool === 'crop' ? 'Adjust the crop area' : tool === 'blur' ? 'Adjust the area to blur' : 'Adjust the area to pixelate'}, then apply.</span>
-    <button class="btn ghost" title="Discard the area (Esc)" onclick={() => editor?.cancelRegion()}><Icon icon={XIcon} size={14} /> Cancel</button>
-    <button class="btn primary" onclick={() => editor?.applyRegion()}><Icon icon={Check} size={14} /> Apply (Enter)</button>
+    <span class="grow">{tool === 'crop' ? t('Adjust the crop area, then apply.') : tool === 'blur' ? t('Adjust the area to blur, then apply.') : t('Adjust the area to pixelate, then apply.')}</span>
+    <button class="btn ghost" title={t('Discard the area (Esc)')} onclick={() => editor?.cancelRegion()}><Icon icon={XIcon} size={14} /> {t('Cancel')}</button>
+    <button class="btn primary" onclick={() => editor?.applyRegion()}><Icon icon={Check} size={14} /> {t('Apply (Enter)')}</button>
   </div>
 {:else if es?.pixelSelection && editable}
   <div class="banner selbar">
-    <span class="muted">Selection {es.pixelSelection.width} × {es.pixelSelection.height}</span>
+    <span class="muted">{t('Selection {w} × {h}', { w: String(es.pixelSelection.width), h: String(es.pixelSelection.height) })}</span>
     <span class="grow"></span>
-    <button class="btn ghost" title="Copy ({formatShortcut('Mod+C')})" onclick={() => copy()}><Icon icon={Copy} size={14} /> Copy</button>
-    <button class="btn ghost" title="Cut ({formatShortcut('Mod+X')})" onclick={() => copy(true)}><Icon icon={Scissors} size={14} /> Cut</button>
-    <button class="btn ghost" title="New layer from selection ({formatShortcut('Mod+J')})" onclick={() => editor?.layerFromSelection()}><Icon icon={SquaresUnite} size={14} /> To layer</button>
-    <button class="btn ghost remove-object" title="Remove the selected object and fill the gap with what could be behind it" onclick={() => void removeObject()}><Icon icon={Eraser2} size={14} /> Remove</button>
-    <button class="btn ghost" title="Delete pixels (Delete)" onclick={() => editor?.clearSelectionPixels()}><Icon icon={Trash} size={14} /></button>
-    <button class="btn ghost" title="Fill with colour" onclick={() => editor?.fillSelection()}><Icon icon={PaintBucket} size={14} /></button>
-    <button class="btn ghost" title="Blur the selection: opens Adjust → Blur (Gaussian, motion, zoom, spin, lens, tilt-shift, surface)" onclick={() => setPanel('adjust')}><Icon icon={Droplets} size={14} /></button>
-    <button class="btn ghost" title="Pixelate selection" onclick={() => editor?.pixelateSelection()}><Icon icon={Grid} size={14} /></button>
-    <button class="btn ghost" title="Crop to selection" onclick={() => editor?.cropToSelection()}><Icon icon={Crop} size={14} /></button>
-    <button class="btn ghost" title="Copy the text in the selection (OCR)" onclick={openOcr}><Icon icon={ScanText} size={14} /> Text</button>
-    <button class="btn ghost" title="Invert selection ({formatShortcut('Mod+Shift+I')})" onclick={invertSelection}>Invert</button>
-    <button class="btn ghost" title="Deselect ({formatShortcut('Mod+D')})" onclick={() => editor?.deselect()}><Icon icon={XIcon} size={14} /></button>
+    <button class="btn ghost" title={t('Copy ({shortcut})', { shortcut: formatShortcut('Mod+C') })} onclick={() => copy()}><Icon icon={Copy} size={14} /> {t('Copy')}</button>
+    <button class="btn ghost" title={t('Cut ({shortcut})', { shortcut: formatShortcut('Mod+X') })} onclick={() => copy(true)}><Icon icon={Scissors} size={14} /> {t('Cut')}</button>
+    <button class="btn ghost" title={t('New layer from selection ({shortcut})', { shortcut: formatShortcut('Mod+J') })} onclick={() => editor?.layerFromSelection()}><Icon icon={SquaresUnite} size={14} /> {t('To layer')}</button>
+    <button class="btn ghost remove-object" title={t('Remove the selected object and fill the gap with what could be behind it')} onclick={() => void removeObject()}><Icon icon={Eraser2} size={14} /> {t('Remove')}</button>
+    <button class="btn ghost" title={t('Delete pixels (Delete)')} onclick={() => editor?.clearSelectionPixels()}><Icon icon={Trash} size={14} /></button>
+    <button class="btn ghost" title={t('Fill with colour')} onclick={() => editor?.fillSelection()}><Icon icon={PaintBucket} size={14} /></button>
+    <button class="btn ghost" title={t('Blur the selection: opens Adjust → Blur (Gaussian, motion, zoom, spin, lens, tilt-shift, surface)')} onclick={() => setPanel('adjust')}><Icon icon={Droplets} size={14} /></button>
+    <button class="btn ghost" title={t('Pixelate selection')} onclick={() => editor?.pixelateSelection()}><Icon icon={Grid} size={14} /></button>
+    <button class="btn ghost" title={t('Crop to selection')} onclick={() => editor?.cropToSelection()}><Icon icon={Crop} size={14} /></button>
+    <button class="btn ghost" title={t('Copy the text in the selection (OCR)')} onclick={openOcr}><Icon icon={ScanText} size={14} /> {t('Text')}</button>
+    <button class="btn ghost" title={t('Invert selection ({shortcut})', { shortcut: formatShortcut('Mod+Shift+I') })} onclick={invertSelection}>{t('Invert')}</button>
+    <button class="btn ghost" title={t('Deselect ({shortcut})', { shortcut: formatShortcut('Mod+D') })} onclick={() => editor?.deselect()}><Icon icon={XIcon} size={14} /></button>
   </div>
 {/if}
 
@@ -1178,11 +1233,19 @@
 {:else}
 <div class="body" bind:clientWidth={bodyW}>
   {#if editable}
-    <div class="tools" role="toolbar" aria-orientation="vertical" aria-label="Tools">
+    <div class="tools" role="toolbar" aria-orientation="vertical" aria-label={t('Tools')}>
       {#each toolGroups as group, gi (gi)}
         {#if gi}<span class="hsep"></span>{/if}
-        {#each group as t (t.id)}
-          <button class="icon-btn" class:on={tool === t.id} title="{t.label}{t.key ? ` (${formatShortcut(t.key)})` : ''} — {t.help}" aria-label={t.label} onclick={() => setTool(t.id)}><Icon icon={t.icon} /></button>
+        {#each group as tl (tl.id)}
+          <button class="icon-btn" class:on={tool === tl.id} title="{tl.label}{tl.key ? ` (${formatShortcut(tl.key)})` : ''} — {tl.help}" aria-label={tl.label} onclick={() => setTool(tl.id)}><Icon icon={tl.icon} /></button>
+          {#if tl.id === 'object'}
+            {#each aiTools as a (a.pack)}
+              <button class="icon-btn ai" class:locked={!aiReady(a.pack)} data-pack={a.pack} title={aiToolTitle(a)} aria-label={a.label} aria-disabled={!aiReady(a.pack)} onclick={() => aiToolClick(a)}>
+                <Icon icon={a.icon} />
+                <span class="badge" aria-hidden="true">{#if aiReady(a.pack)}AI{:else}<Icon icon={Download} size={9} />{/if}</span><!-- i18n-ignore -->
+              </button>
+            {/each}
+          {/if}
         {/each}
       {/each}
     </div>
@@ -1213,7 +1276,7 @@
         alt={tab.title}
         draggable="false"
         onload={imgLoaded}
-        onerror={() => (error = 'This image could not be displayed.')}
+        onerror={() => (error = t('This image could not be displayed.'))}
         style:transform="translate({imgView.x}px, {imgView.y}px) scale({imgView.zoom})"
         style:width="{natural.w || undefined}px"
         style:--z={imgView.zoom}
@@ -1228,14 +1291,14 @@
   {#if editable && panel && editor && es}
     <aside data-sidepanel class="panel" class:floating={narrow} class:right={narrow}>
       <div class="ptabs">
-        <button class:on={panel === 'layers'} onclick={() => setPanel('layers')}>Layers</button>
-        <button class:on={panel === 'adjust'} onclick={() => setPanel('adjust')}>Adjust</button>
-        <button class:on={panel === 'colours'} onclick={() => setPanel('colours')}>Colours</button>
+        <button class:on={panel === 'layers'} onclick={() => setPanel('layers')}>{t('Layers')}</button>
+        <button class:on={panel === 'adjust'} onclick={() => setPanel('adjust')}>{t('Adjust')}</button>
+        <button class:on={panel === 'colours'} onclick={() => setPanel('colours')}>{t('Colours')}</button>
       </div>
       {#if panel === 'layers'}
         <LayersPanel {editor} {es} />
       {:else if panel === 'colours'}
-        <ColoursPanel {editor} {picked} title={tab.filePath ?? tab.title} onuse={(c) => (pickColor(c), ui.toast(`Using ${c}`, 'success'))} />
+        <ColoursPanel {editor} {picked} title={tab.filePath ?? tab.title} onuse={(c) => (pickColor(c), ui.toast(t('Using {colour}', { colour: c }), 'success'))} />
       {:else}
         <AdjustPanel bind:this={adjustPanel} {editor} {es} />
       {/if}
@@ -1243,9 +1306,9 @@
   {/if}
   {#if ocrOpen}
     {#key ocrKey}
-      <OcrPanel title={es?.pixelSelection ? 'Text in the selection' : 'Text in the image'} run={runOcr} onclose={() => (ocrOpen = false)}>
+      <OcrPanel title={es?.pixelSelection ? t('Text in the selection') : t('Text in the image')} run={runOcr} onclose={() => (ocrOpen = false)}>
         {#snippet actions()}
-          {#if editable && editor && ocrWords.length}<button class="btn ghost" title="Pixelate every recognised word — for passwords, names and numbers in screenshots" onclick={hideText}>Hide text</button>{/if}
+          {#if editable && editor && ocrWords.length}<button class="btn ghost" title={t('Pixelate every recognised word — for passwords, names and numbers in screenshots')} onclick={hideText}>{t('Hide text')}</button>{/if}
         {/snippet}
       </OcrPanel>
     {/key}
@@ -1269,6 +1332,36 @@
     border-right: 1px solid var(--border-soft);
     overflow-y: auto;
     flex: none;
+  }
+  .tools .ai {
+    position: relative;
+  }
+  .tools .ai .badge {
+    position: absolute;
+    right: 1px;
+    bottom: 1px;
+    min-width: 12px;
+    height: 11px;
+    padding: 0 2px;
+    border-radius: 4px;
+    display: grid;
+    place-items: center;
+    font-size: 7.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    background: var(--accent);
+    color: #fff;
+    pointer-events: none;
+  }
+  .tools .ai.locked {
+    opacity: 0.45;
+  }
+  .tools .ai.locked:hover {
+    opacity: 0.8;
+  }
+  .tools .ai.locked .badge {
+    background: var(--text-muted);
   }
   .hsep {
     height: 1px;

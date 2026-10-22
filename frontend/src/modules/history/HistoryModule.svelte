@@ -17,6 +17,7 @@
   import { settings } from '../../core/settings.svelte';
   import { workspace, type Tab } from '../../core/tabs.svelte';
   import { toastError, ui } from '../../core/ui.svelte';
+  import { t, tn } from '../../core/i18n';
   import { ago, byDay, formatWhen, kindLabel, sizeDelta, type Version } from './versions';
 
   let { tab }: { tab: Tab } = $props();
@@ -84,25 +85,26 @@
     const openTabs = workspace.tabs.filter((t) => t.filePath === p);
     const unsaved = openTabs.some((t) => t.dirty);
     const r = await ui.ask({
-      title: `Restore ${basename(p)}?`,
+      title: t('Restore {name}?', { name: basename(p) }),
       message:
-        `The file goes back to the version of ${formatWhen(v.t)}. ` +
-        (exists ? 'What it contains now is kept in history, so this can be undone.' : 'It was deleted; it is created again.') +
-        (unsaved ? ' Unsaved changes in the open tab are discarded.' : ''),
+        t('The file goes back to the version of {when}.', { when: formatWhen(v.t) }) +
+        ' ' +
+        (exists ? t('What it contains now is kept in history, so this can be undone.') : t('It was deleted; it is created again.')) +
+        (unsaved ? ' ' + t('Unsaved changes in the open tab are discarded.') : ''),
       buttons: [
-        { id: 'cancel', label: 'Cancel' },
-        { id: 'restore', label: 'Restore' },
+        { id: 'cancel', label: t('Cancel') },
+        { id: 'restore', label: t('Restore') },
       ],
     });
     if (r.button !== 'restore') return;
-    busy = 'Restoring…';
+    busy = t('Restoring…');
     try {
       await api.HistoryRestore(p, v.h);
       for (const t of openTabs) {
         t.dirty = false;
         await workspace.reloadTab(t);
       }
-      ui.toast(`${basename(p)} restored to the version of ${formatWhen(v.t)}.`, 'success');
+      ui.toast(t('{name} restored to the version of {when}.', { name: basename(p), when: formatWhen(v.t) }), 'success');
       await load();
     } catch (e) {
       toastError(e);
@@ -113,11 +115,11 @@
 
   async function forget() {
     const r = await ui.ask({
-      title: path ? `Forget the history of ${basename(path)}?` : 'Clear all file history?',
-      message: path ? 'Its kept versions are deleted. The file itself is not touched.' : 'Every kept version of every file is deleted. Your files are not touched.',
+      title: path ? t('Forget the history of {name}?', { name: basename(path) }) : t('Clear all file history?'),
+      message: path ? t('Its kept versions are deleted. The file itself is not touched.') : t('Every kept version of every file is deleted. Your files are not touched.'),
       buttons: [
-        { id: 'cancel', label: 'Cancel' },
-        { id: 'forget', label: path ? 'Forget' : 'Clear history', danger: true },
+        { id: 'cancel', label: t('Cancel') },
+        { id: 'forget', label: path ? t('Forget') : t('Clear history'), danger: true },
       ],
     });
     if (r.button !== 'forget') return;
@@ -147,11 +149,11 @@
       <Icon icon={History} size={20} />
       <div class="ttl">
         <h1>{basename(path)}</h1>
-        <div class="muted small" title={path}>{dirname(path)}{exists ? '' : ' · deleted'}</div>
+        <div class="muted small" title={path}>{dirname(path)}{exists ? '' : ' · ' + t('deleted')}</div>
       </div>
       <span class="spacer"></span>
-      {#if exists}<button class="btn ghost" onclick={() => void workspace.openPath(path)}><Icon icon={FileIcon} size={14} /> Open file</button>{/if}
-      <button class="btn ghost" onclick={() => workspace.openTool('history')}><Icon icon={FolderOpen} size={14} /> All files</button>
+      {#if exists}<button class="btn ghost" onclick={() => void workspace.openPath(path)}><Icon icon={FileIcon} size={14} /> {t('Open file')}</button>{/if}
+      <button class="btn ghost" onclick={() => workspace.openTool('history')}><Icon icon={FolderOpen} size={14} /> {t('All files')}</button>
     </header>
     {#if loading}
       <div class="empty-state"><span class="spinner"></span></div>
@@ -159,8 +161,8 @@
       <div class="empty-state">{error}</div>
     {:else if !versions.length}
       <div class="empty-state">
-        <p>No versions kept yet.</p>
-        <p class="muted small">Every time {basename(path)} is saved in Monoform, the content it had and the new one are kept here.</p>
+        <p>{t('No versions kept yet.')}</p>
+        <p class="muted small">{t('Every time {name} is saved in Monoform, the content it had and the new one are kept here.', { name: basename(path) })}</p>
       </div>
     {:else}
       {#each byDay(versions) as group (group.day)}
@@ -176,13 +178,13 @@
               </div>
               <div class="what">
                 <span>{kindLabel(v)}</span>
-                {#if isCurrent}<span class="badge">Current</span>{/if}
+                {#if isCurrent}<span class="badge">{t('Current')}</span>{/if}
                 <span class="muted small">{formatBytes(v.s)} {sizeDelta(versions, i, formatBytes) ? `· ${sizeDelta(versions, i, formatBytes)}` : ''}</span>
               </div>
               <div class="acts">
-                <button class="btn ghost" title="Open this version (read-only)" onclick={() => void open(v)}><Icon icon={Eye} size={14} /> Open</button>
-                {#if exists && !isCurrent}<button class="btn ghost" title="Show what changed between this version and the file now" onclick={() => void compare(v)}><Icon icon={Diff} size={14} /> Compare</button>{/if}
-                {#if !isCurrent}<button class="btn ghost" disabled={!!busy} title="Put this version back" onclick={() => void restore(v)}><Icon icon={RotateCcw} size={14} /> Restore</button>{/if}
+                <button class="btn ghost" title={t('Open this version (read-only)')} onclick={() => void open(v)}><Icon icon={Eye} size={14} /> {t('Open')}</button>
+                {#if exists && !isCurrent}<button class="btn ghost" title={t('Show what changed between this version and the file now')} onclick={() => void compare(v)}><Icon icon={Diff} size={14} /> {t('Compare')}</button>{/if}
+                {#if !isCurrent}<button class="btn ghost" disabled={!!busy} title={t('Put this version back')} onclick={() => void restore(v)}><Icon icon={RotateCcw} size={14} /> {t('Restore')}</button>{/if}
               </div>
             </li>
           {/each}
@@ -193,12 +195,12 @@
     <header>
       <Icon icon={History} size={20} />
       <div class="ttl">
-        <h1>File history</h1>
-        <div class="muted small">Earlier versions of files saved in Monoform</div>
+        <h1>{t('File history')}</h1>
+        <div class="muted small">{t('Earlier versions of files saved in Monoform')}</div>
       </div>
     </header>
     {#if files.length}
-      <label class="search"><Icon icon={Search} size={14} /><input class="input" placeholder="Find a file" bind:value={query} /></label>
+      <label class="search"><Icon icon={Search} size={14} /><input class="input" placeholder={t('Find a file')} bind:value={query} /></label>
     {/if}
     {#if loading}
       <div class="empty-state"><span class="spinner"></span></div>
@@ -206,17 +208,17 @@
       <div class="empty-state">{error}</div>
     {:else if !files.length}
       <div class="empty-state">
-        <p>No versions kept yet.</p>
-        <p class="muted small">{settings.value.historyOff ? 'File history is off (Settings → Files).' : 'Save a file and its earlier content is kept here.'}</p>
+        <p>{t('No versions kept yet.')}</p>
+        <p class="muted small">{settings.value.historyOff ? t('File history is off (Settings → Files).') : t('Save a file and its earlier content is kept here.')}</p>
       </div>
     {:else}
       <ul class="files">
         {#each shown as f (f.path)}
           <li>
             <button class="file" onclick={() => workspace.openTool('history', f.path)}>
-              <span class="nm">{basename(f.path)}{#if !f.exists}<span class="badge gone">Deleted</span>{/if}</span>
+              <span class="nm">{basename(f.path)}{#if !f.exists}<span class="badge gone">{t('Deleted')}</span>{/if}</span>
               <span class="muted small dir" title={f.path}>{dirname(f.path)}</span>
-              <span class="muted small">{f.versions} {f.versions === 1 ? 'version' : 'versions'} · {ago(f.last)}</span>
+              <span class="muted small">{tn('{n} version', '{n} versions', f.versions)} · {ago(f.last)}</span>
             </button>
           </li>
         {/each}
@@ -224,9 +226,9 @@
     {/if}
   {/if}
   <footer class="muted small">
-    <span>Kept versions use {formatBytes(usage)} of {formatBytes(limit)}{settings.value.historyOff ? ' · new versions are not being kept' : ''}.</span>
+    <span>{settings.value.historyOff ? t('Kept versions use {used} of {limit} · new versions are not being kept.', { used: formatBytes(usage), limit: formatBytes(limit) }) : t('Kept versions use {used} of {limit}.', { used: formatBytes(usage), limit: formatBytes(limit) })}</span>
     <span class="spacer"></span>
-    {#if path ? versions.length : files.length}<button class="btn ghost danger" onclick={() => void forget()}><Icon icon={Trash2} size={14} /> {path ? 'Forget this history' : 'Clear all history'}</button>{/if}
+    {#if path ? versions.length : files.length}<button class="btn ghost danger" onclick={() => void forget()}><Icon icon={Trash2} size={14} /> {path ? t('Forget this history') : t('Clear all history')}</button>{/if}
   </footer>
 </div>
 

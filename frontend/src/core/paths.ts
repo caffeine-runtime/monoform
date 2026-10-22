@@ -1,4 +1,5 @@
 // Path helpers that work for both POSIX and Windows paths.
+import { num } from './i18n';
 
 export function sep(p: string): string {
   return /^[A-Za-z]:\\|^\\\\/.test(p) || (p.includes('\\') && !p.includes('/')) ? '\\' : '/';
@@ -119,5 +120,5 @@ export function formatBytes(n: number): string {
     v /= 1024;
     i++;
   }
-  return `${v < 10 ? v.toFixed(1) : Math.round(v)} ${units[i]}`;
+  return `${v < 10 ? num(v, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : num(Math.round(v), { useGrouping: false })} ${units[i]}`;
 }

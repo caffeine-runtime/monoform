@@ -6,6 +6,7 @@ import type { Tab } from './tabs.svelte';
 import { workspace } from './tabs.svelte';
 import { ui } from './ui.svelte';
 import { dropHandlers } from './drop';
+import { t, tn } from './i18n';
 
 export type Transfer =
   | { kind: 'image'; image: HTMLCanvasElement; name: string }
@@ -22,14 +23,14 @@ export interface Accepts {
   claimsDrop?: (paths: string[]) => boolean;
 }
 
-export const describe = (t: Transfer) => (t.kind === 'image' ? t.name || 'image' : t.kind === 'text' ? 'text' : t.paths.length === 1 ? t.paths[0].split(/[\\/]/).pop()! : `${t.paths.length} files`);
+export const describe = (x: Transfer) => (x.kind === 'image' ? x.name || t('image') : x.kind === 'text' ? t('text') : x.paths.length === 1 ? x.paths[0].split(/[\\/]/).pop()! : tn('{n} file', '{n} files', x.paths.length));
 
 // ---- app clipboard ----
 
 let last: { t: Transfer; at: number } | null = null;
 
-async function pngOf(c: HTMLCanvasElement): Promise<Blob> {
-  return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('PNG encoding failed'))), 'image/png'));
+export async function pngOf(c: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error(t('PNG encoding failed')))), 'image/png'));
 }
 
 /** Copy to the system clipboard (PNG or text) and remember it here, with what the system can't hold (names, paths). */
@@ -63,7 +64,7 @@ export async function readTransfer(): Promise<Transfer | null> {
       const image = await decode(await it.getType(type));
       // Our own copy of the same picture keeps its name.
       if (last?.t.kind === 'image' && last.t.image.width === image.width && last.t.image.height === image.height) return { ...last.t, image };
-      return { kind: 'image', image, name: 'Pasted image' };
+      return { kind: 'image', image, name: t('Pasted image') };
     }
     for (const it of items) {
       if (!it.types.includes('text/plain')) continue;
@@ -77,26 +78,33 @@ export async function readTransfer(): Promise<Transfer | null> {
   return last?.t ?? null;
 }
 
+/** An empty tab (the start page) or no tab at all: pasting there makes a new document (core/paste.ts). */
+export const isEmptyTab = (tab: Tab | null | undefined) => !tab || (tab.source.kind === 'tool' && tab.source.tool === 'start');
+
 /** Paste into a tab (the active one by default). */
 export async function pasteInto(tab: Tab | null = workspace.active): Promise<boolean> {
   const acc = tab?.handlers.accept;
-  if (!tab || !acc) return false;
-  const t = await readTransfer();
-  if (!t) {
-    ui.toast('The clipboard is empty.', 'info');
+  if (!isEmptyTab(tab) && !acc) return false;
+  const x = await readTransfer();
+  if (!x) {
+    ui.toast(t('The clipboard is empty.'), 'info');
     return false;
   }
-  return give(tab, t);
+  if (isEmptyTab(tab)) return (await import('./paste')).pasteAsNew(x);
+  return give(tab!, x);
 }
 
 /** Hand t to a tab, saying so when it can't take that kind of thing. */
-export async function give(tab: Tab, t: Transfer, at?: { x: number; y: number }): Promise<boolean> {
+export async function give(tab: Tab, x: Transfer, at?: { x: number; y: number }): Promise<boolean> {
+  if (isEmptyTab(tab)) return (await import('./paste')).pasteAsNew(x);
   const acc = tab.handlers.accept;
-  if (!acc || !acc.kinds.includes(t.kind)) {
-    ui.toast(`${tab.title} can’t take ${t.kind === 'image' ? 'an image' : t.kind === 'text' ? 'text' : 'files'}.`, 'info');
+  if (!acc || !acc.kinds.includes(x.kind)) {
+    const name = tab.title;
+    const msg = x.kind === 'image' ? t('{name} can’t take an image.', { name }) : x.kind === 'text' ? t('{name} can’t take text.', { name }) : t('{name} can’t take files.', { name });
+    ui.toast(msg, 'info'); // i18n-ignore: message translated above
     return false;
   }
-  return Promise.resolve(acc.take(t, at)).catch((e) => {
+  return Promise.resolve(acc.take(x, at)).catch((e) => {
     ui.toast(String(e?.message ?? e), 'error');
     return false;
   });
@@ -146,7 +154,7 @@ class TransferDrag {
       this.x = m.clientX;
       this.y = m.clientY;
       const tab = tabAt(m.clientX, m.clientY);
-      this.over = tab && tab.id !== from.id ? { id: tab.id, ok: !!tab.handlers.accept?.kinds.includes(this.item?.t.kind ?? 'text') } : null;
+      this.over = tab && tab.id !== from.id ? { id: tab.id, ok: isEmptyTab(tab) || !!tab.handlers.accept?.kinds.includes(this.item?.t.kind ?? 'text') } : null;
     };
     const up = (u: PointerEvent) => {
       const item = this.item;
@@ -156,7 +164,7 @@ class TransferDrag {
       setTimeout(() => (this.justDropped = false));
       if (!item) return;
       const tab = tabAt(u.clientX, u.clientY);
-      if (tab && tab.id !== item.from) void give(tab, item.t, { x: u.clientX, y: u.clientY }).then((ok) => ok && workspace.activate(tab));
+      if (tab && tab.id !== item.from) void give(tab, item.t, { x: u.clientX, y: u.clientY }).then((ok) => ok && !isEmptyTab(tab) && workspace.activate(tab));
     };
     const stop = () => {
       window.removeEventListener('pointermove', move);

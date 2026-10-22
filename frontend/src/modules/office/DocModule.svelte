@@ -19,6 +19,7 @@
   import type { Tab } from '../../core/tabs.svelte';
   import { toastError, ui } from '../../core/ui.svelte';
   import { formatShortcut } from '../../core/keys';
+  import { t } from '../../core/i18n';
   import { DocModel } from './docxModel';
   import { OdtModel } from './odtModel';
   import { officeControllers } from './controllers';
@@ -71,7 +72,7 @@
     error = '';
     try {
       const path = tab.filePath ?? '';
-      if (!path) throw new Error('Documents inside archives can be viewed after extracting them.');
+      if (!path) throw new Error(t('Documents inside archives can be viewed after extracting them.'));
       const r = await api.DocOpen(path);
       note = r.note;
       saveAs = r.saveAs;
@@ -95,7 +96,7 @@
     counts = countText(page?.innerText ?? '');
     headingEls = page ? Array.from(page.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')) : [];
     headings = headingEls.map((h, i) => ({ level: Number(h.tagName[1]), text: (h.textContent ?? '').replace(/\s+/g, ' ').trim(), line: i }));
-    tab.status = { ...tab.status, type: odt ? 'OpenDocument text' : template ? 'Word 97–2003 document' : 'Word document' };
+    tab.status = { ...tab.status, type: odt ? t('OpenDocument text') : template ? t('Word 97–2003 document') : t('Word document') };
     findActive();
   }
 
@@ -183,7 +184,7 @@
   async function save(): Promise<boolean> {
     if (!model || !page) return false;
     if (saveAs) {
-      const ok = await ui.confirm('Save as .docx?', `Legacy .doc files can't be written. Your document will be saved as ${basename(saveAs)} next to the original, which stays unchanged.`, 'Save .docx');
+      const ok = await ui.confirm(t('Save as .docx?'), t("Legacy .doc files can't be written. Your document will be saved as {name} next to the original, which stays unchanged.", { name: basename(saveAs) }), t('Save .docx'));
       if (!ok) return false;
       return writeTo(saveAs, true);
     }
@@ -194,11 +195,11 @@
   async function doSaveAs(): Promise<boolean> {
     if (odt) {
       // The other parts of the package come from the .odt it was opened from.
-      const p = await api.SaveFileDialog('Save document as', tab.filePath || tab.title, [{ name: 'OpenDocument text', patterns: '*.odt' }]);
+      const p = await api.SaveFileDialog(t('Save document as'), tab.filePath || tab.title, [{ name: t('OpenDocument text'), patterns: '*.odt' }]);
       if (!p) return false;
       return writeTo(/\.odt$/i.test(p) ? p : `${p}.odt`, true);
     }
-    const p = await api.SaveFileDialog('Save document as', saveAs || tab.filePath || tab.title, [{ name: 'Word document', patterns: '*.docx' }]);
+    const p = await api.SaveFileDialog(t('Save document as'), saveAs || tab.filePath || tab.title, [{ name: t('Word document'), patterns: '*.docx' }]);
     if (!p) return false;
     return writeTo(/\.docx$/i.test(p) ? p : `${p}.docx`, true);
   }
@@ -222,7 +223,7 @@
       page!.parentElement!.scrollTop = scroll;
       return true;
     } catch (e) {
-      toastError(e, 'Save failed');
+      toastError(e, t('Save failed'));
       return false;
     }
   }
@@ -261,7 +262,7 @@
       reload: load,
       onShow: count,
       find: () => {
-        void ui.prompt('Find in document', '', 'Find').then((q) => {
+        void ui.prompt(t('Find in document'), '', t('Find')).then((q) => {
           if (q) (window as unknown as { find: (s: string) => boolean }).find(q);
         });
       },
@@ -282,23 +283,23 @@
 
 <div class="toolbar" use:fitBar>
   {#if !tab.readOnly}
-    <select class="input sel" value={blockStyle} onchange={(e) => setStyle((e.currentTarget as HTMLSelectElement).value)} aria-label="Paragraph style">
-      <option value="p">Normal text</option>
-      <option value="h1">Heading 1</option>
-      <option value="h2">Heading 2</option>
-      <option value="h3">Heading 3</option>
+    <select class="input sel" value={blockStyle} onchange={(e) => setStyle((e.currentTarget as HTMLSelectElement).value)} aria-label={t('Paragraph style')}>
+      <option value="p">{t('Normal text')}</option>
+      <option value="h1">{t('Heading 1')}</option>
+      <option value="h2">{t('Heading 2')}</option>
+      <option value="h3">{t('Heading 3')}</option>
     </select>
     <span class="sep"></span>
-    <button class="icon-btn" title="Bold ({formatShortcut('Mod+B')})" onmousedown={(e) => e.preventDefault()} onclick={() => exec('bold')}><Icon icon={Bold} /></button>
-    <button class="icon-btn" title="Italic ({formatShortcut('Mod+I')})" onmousedown={(e) => e.preventDefault()} onclick={() => exec('italic')}><Icon icon={Italic} /></button>
-    <button class="icon-btn" title="Underline ({formatShortcut('Mod+U')})" onmousedown={(e) => e.preventDefault()} onclick={() => exec('underline')}><Icon icon={Underline} /></button>
-    <button class="icon-btn" title="Strikethrough" onmousedown={(e) => e.preventDefault()} onclick={() => exec('strikeThrough')}><Icon icon={Strikethrough} /></button>
+    <button class="icon-btn" title={t('Bold ({shortcut})', { shortcut: formatShortcut('Mod+B') })} onmousedown={(e) => e.preventDefault()} onclick={() => exec('bold')}><Icon icon={Bold} /></button>
+    <button class="icon-btn" title={t('Italic ({shortcut})', { shortcut: formatShortcut('Mod+I') })} onmousedown={(e) => e.preventDefault()} onclick={() => exec('italic')}><Icon icon={Italic} /></button>
+    <button class="icon-btn" title={t('Underline ({shortcut})', { shortcut: formatShortcut('Mod+U') })} onmousedown={(e) => e.preventDefault()} onclick={() => exec('underline')}><Icon icon={Underline} /></button>
+    <button class="icon-btn" title={t('Strikethrough')} onmousedown={(e) => e.preventDefault()} onclick={() => exec('strikeThrough')}><Icon icon={Strikethrough} /></button>
     <span class="sep"></span>
-    <button class="icon-btn" title="Undo" onmousedown={(e) => e.preventDefault()} onclick={() => exec('undo')}><Icon icon={Undo2} /></button>
-    <button class="icon-btn" title="Redo" onmousedown={(e) => e.preventDefault()} onclick={() => exec('redo')}><Icon icon={Redo2} /></button>
+    <button class="icon-btn" title={t('Undo')} onmousedown={(e) => e.preventDefault()} onclick={() => exec('undo')}><Icon icon={Undo2} /></button>
+    <button class="icon-btn" title={t('Redo')} onmousedown={(e) => e.preventDefault()} onclick={() => exec('redo')}><Icon icon={Redo2} /></button>
   {/if}
   <span class="spacer"></span>
-  <button class="btn ghost" class:on={outlineOpen} aria-pressed={outlineOpen} title="Headings of the document — click one to go to it" onclick={toggleOutline}><Icon icon={ListTree} size={14} /> Outline</button>
+  <button class="btn ghost" class:on={outlineOpen} aria-pressed={outlineOpen} title={t('Headings of the document — click one to go to it')} onclick={toggleOutline}><Icon icon={ListTree} size={14} /> {t('Outline')}</button>
 </div>
 {#if note}
   <div class="banner"><Icon icon={InfoIcon} /><span class="grow">{note}</span></div>
@@ -326,9 +327,9 @@
   {#if loading}<div class="empty-state overlay"><span class="spinner"></span></div>{/if}
 </div>
 {#if outlineOpen}
-  <aside data-sidepanel class="outline" class:floating={narrow} class:right={narrow} aria-label="Outline">
-    <div class="head">Outline</div>
-    <div class="tree"><OutlineTree items={headings} {active} onpick={goHeading} empty="No headings. Use Heading 1–3 in the paragraph style menu to build an outline." /></div>
+  <aside data-sidepanel class="outline" class:floating={narrow} class:right={narrow} aria-label={t('Outline')}>
+    <div class="head">{t('Outline')}</div>
+    <div class="tree"><OutlineTree items={headings} {active} onpick={goHeading} empty={t('No headings. Use Heading 1–3 in the paragraph style menu to build an outline.')} /></div>
   </aside>
 {/if}
 </div>

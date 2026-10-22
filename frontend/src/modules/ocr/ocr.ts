@@ -4,6 +4,7 @@
 // minute and a half after the last job, then freed.
 import type { Worker as TessWorker } from 'tesseract.js';
 import { sessionToken } from '../../core/backend';
+import { t } from '../../core/i18n';
 
 export interface OcrBox {
   x0: number;
@@ -42,11 +43,11 @@ let idle: ReturnType<typeof setTimeout> | undefined;
 let queue: Promise<unknown> = Promise.resolve();
 
 const STATUS: Record<string, string> = {
-  'loading tesseract core': 'Starting…',
-  'initializing tesseract': 'Starting…',
-  'loading language traineddata': 'Loading language data…',
-  'initializing api': 'Starting…',
-  'recognizing text': 'Recognising text…',
+  'loading tesseract core': t('Starting…'),
+  'initializing tesseract': t('Starting…'),
+  'loading language traineddata': t('Loading language data…'),
+  'initializing api': t('Starting…'),
+  'recognizing text': t('Recognising text…'),
 };
 
 async function ensure(langs: string[]): Promise<TessWorker> {
@@ -55,7 +56,7 @@ async function ensure(langs: string[]): Promise<TessWorker> {
   if (worker) await worker.terminate().catch(() => {});
   worker = null;
   if (typeof WebAssembly !== 'object' || !WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11]))) {
-    throw new Error('Text recognition needs WebAssembly SIMD, which this system’s web view doesn’t support.');
+    throw new Error(t('Text recognition needs WebAssembly SIMD, which this system’s web view doesn’t support.'));
   }
   const { createWorker } = await import('tesseract.js');
   worker = await createWorker(langs, 1 /* LSTM only */, {
@@ -97,7 +98,7 @@ export function recognize(image: HTMLCanvasElement | Blob | ImageData, opts: Ocr
     clearTimeout(idle);
     // Tesseract never finishes on an empty picture.
     const size = image instanceof HTMLCanvasElement || image instanceof ImageData ? image.width * image.height : image.size;
-    if (!size) throw new Error('There is no picture to read yet.');
+    if (!size) throw new Error(t('There is no picture to read yet.'));
     try {
       const w = await ensure(opts.langs.length ? opts.langs : ['eng']);
       listener = onProgress ?? null;

@@ -2,6 +2,7 @@
 // inflated): names, weight, glyph count, the characters it covers (cmap) and
 // variable-font axes. Pure apart from WOFF's inflate (DecompressionStream);
 // unit-tested.
+import { t } from '../../core/i18n';
 
 export interface FontInfo {
   format: 'TrueType' | 'OpenType (CFF)' | 'WOFF' | 'WOFF2' | 'TrueType collection';
@@ -182,7 +183,7 @@ export async function fontInfo(buf: ArrayBuffer): Promise<FontInfo> {
   } else if (sig === 'OTTO' || sig === '\0\x01\0\0' || sig === 'true') {
     tables = sfntTables(v);
     format = sig === 'OTTO' ? 'OpenType (CFF)' : 'TrueType';
-  } else throw new Error('Not a font file');
+  } else throw new Error(t('Not a font file'));
   const nm = names(tables.get('name'));
   const os2 = tables.get('OS/2');
   const maxp = tables.get('maxp');
@@ -209,40 +210,40 @@ export async function fontInfo(buf: ArrayBuffer): Promise<FontInfo> {
 
 /** Unicode blocks for grouping the character grid (the common ones). */
 export const BLOCKS: [number, number, string][] = [
-  [0x0000, 0x007f, 'Basic Latin'],
-  [0x0080, 0x00ff, 'Latin-1 Supplement'],
-  [0x0100, 0x024f, 'Latin Extended'],
-  [0x0250, 0x02ff, 'IPA and modifiers'],
-  [0x0300, 0x036f, 'Combining marks'],
-  [0x0370, 0x03ff, 'Greek'],
-  [0x0400, 0x052f, 'Cyrillic'],
-  [0x0590, 0x05ff, 'Hebrew'],
-  [0x0600, 0x06ff, 'Arabic'],
-  [0x0900, 0x097f, 'Devanagari'],
-  [0x0e00, 0x0e7f, 'Thai'],
-  [0x1e00, 0x1eff, 'Latin Extended Additional'],
-  [0x2000, 0x206f, 'Punctuation'],
-  [0x2070, 0x209f, 'Super- and subscripts'],
-  [0x20a0, 0x20cf, 'Currency'],
-  [0x2100, 0x214f, 'Letterlike'],
-  [0x2150, 0x218f, 'Number forms'],
-  [0x2190, 0x21ff, 'Arrows'],
-  [0x2200, 0x22ff, 'Math operators'],
-  [0x2300, 0x23ff, 'Technical'],
-  [0x2500, 0x259f, 'Box drawing'],
-  [0x25a0, 0x25ff, 'Shapes'],
-  [0x2600, 0x27bf, 'Symbols and dingbats'],
-  [0x3000, 0x30ff, 'CJK punctuation, kana'],
-  [0x4e00, 0x9fff, 'CJK ideographs'],
-  [0xac00, 0xd7af, 'Hangul'],
-  [0xe000, 0xf8ff, 'Private use'],
-  [0xfb00, 0xfb4f, 'Ligatures'],
-  [0x1f300, 0x1faff, 'Emoji'],
+  [0x0000, 0x007f, t('Basic Latin')],
+  [0x0080, 0x00ff, t('Latin-1 Supplement')],
+  [0x0100, 0x024f, t('Latin Extended')],
+  [0x0250, 0x02ff, t('IPA and modifiers')],
+  [0x0300, 0x036f, t('Combining marks')],
+  [0x0370, 0x03ff, t('Greek')],
+  [0x0400, 0x052f, t('Cyrillic')],
+  [0x0590, 0x05ff, t('Hebrew')],
+  [0x0600, 0x06ff, t('Arabic')],
+  [0x0900, 0x097f, t('Devanagari')],
+  [0x0e00, 0x0e7f, t('Thai')],
+  [0x1e00, 0x1eff, t('Latin Extended Additional')],
+  [0x2000, 0x206f, t('Punctuation')],
+  [0x2070, 0x209f, t('Super- and subscripts')],
+  [0x20a0, 0x20cf, t('Currency')],
+  [0x2100, 0x214f, t('Letterlike')],
+  [0x2150, 0x218f, t('Number forms')],
+  [0x2190, 0x21ff, t('Arrows')],
+  [0x2200, 0x22ff, t('Math operators')],
+  [0x2300, 0x23ff, t('Technical')],
+  [0x2500, 0x259f, t('Box drawing')],
+  [0x25a0, 0x25ff, t('Shapes')],
+  [0x2600, 0x27bf, t('Symbols and dingbats')],
+  [0x3000, 0x30ff, t('CJK punctuation, kana')],
+  [0x4e00, 0x9fff, t('CJK ideographs')],
+  [0xac00, 0xd7af, t('Hangul')],
+  [0xe000, 0xf8ff, t('Private use')],
+  [0xfb00, 0xfb4f, t('Ligatures')],
+  [0x1f300, 0x1faff, t('Emoji')],
 ];
 
 export function blockOf(cp: number): string {
   for (const [a, b, n] of BLOCKS) if (cp >= a && cp <= b) return n;
-  return 'Other';
+  return t('Other');
 }
 
 export const WEIGHTS: Record<number, string> = { 100: 'Thin', 200: 'Extra Light', 300: 'Light', 400: 'Regular', 500: 'Medium', 600: 'Semi Bold', 700: 'Bold', 800: 'Extra Bold', 900: 'Black' };

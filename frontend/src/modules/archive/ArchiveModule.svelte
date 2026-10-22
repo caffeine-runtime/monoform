@@ -14,6 +14,7 @@
   import { workspace, type Tab } from '../../core/tabs.svelte';
   import { childrenOf, extractHere, extractTo, formatName, listArchive, readOnlyReason } from '../../core/archives';
   import type { archive } from '../../wailsjs/go/models';
+  import { locale, t, tn } from '../../core/i18n';
 
   let { tab }: { tab: Tab } = $props();
 
@@ -37,13 +38,31 @@
     error = '';
     try {
       info = await listArchive(tab.path!, true);
-      tab.status = { ...tab.status, type: formatName(info.format, tab.path ?? ''), info: `${totals?.files ?? 0} files · ${formatBytes(totals?.bytes ?? 0)} unpacked` };
+      tab.status = { ...tab.status, type: formatName(info.format, tab.path ?? ''), info: tn('{n} file · {size} unpacked', '{n} files · {size} unpacked', totals?.files ?? 0, { size: formatBytes(totals?.bytes ?? 0) }) };
     } catch (e) {
       error = String((e as Error)?.message ?? e);
     }
   }
 
   const META_ORDER = ['Type', 'Package', 'Volume', 'Version', 'Architecture', 'Summary', 'Manufacturer', 'Maintainer', 'Vendor', 'License'];
+  /** Names of the metadata fields the backend reports, for display. */
+  const META_LABELS: Record<string, string> = {
+    Type: t('Type'),
+    Package: t('Package'),
+    Volume: t('Volume'),
+    Version: t('Version'),
+    Architecture: t('Architecture'),
+    Summary: t('Summary'),
+    Manufacturer: t('Manufacturer'),
+    Maintainer: t('Maintainer'),
+    Vendor: t('Vendor'),
+    License: t('License'),
+    Description: t('Description'),
+    Note: t('Note'),
+    Names: t('Names'),
+    'Product code': t('Product code'),
+    Publisher: t('Publisher'),
+  };
   const metaRank = (k: string) => (META_ORDER.indexOf(k) + 1 || 50) + (k === 'Description' || k === 'Note' ? 100 : 0);
 
   function go(d: string) {
@@ -88,7 +107,7 @@
 </script>
 
 <div class="toolbar" use:fitBar>
-  <button class="icon-btn" title="Up (Backspace)" disabled={!dir} onclick={() => go(dir.includes('/') ? dir.slice(0, dir.lastIndexOf('/')) : '')}><Icon icon={ArrowUp} /></button>
+  <button class="icon-btn" title={t('Up (Backspace)')} disabled={!dir} onclick={() => go(dir.includes('/') ? dir.slice(0, dir.lastIndexOf('/')) : '')}><Icon icon={ArrowUp} /></button>
   <nav class="crumbs">
     <button class="crumb" onclick={() => go('')}>{tab.title}</button>
     {#each crumbs as c, i}
@@ -97,16 +116,16 @@
     {/each}
   </nav>
   <span class="spacer"></span>
-  <input class="input filter" placeholder="Find in archive" bind:value={filter} />
-  <button class="btn ghost" disabled={!selected.length} onclick={() => extractTo(tab.path!, selected)}><Icon icon={Download} size={14} /> Extract {selected.length ? `${selected.length} selected` : 'selected'}…</button>
-  <button class="btn ghost" onclick={() => extractTo(tab.path!)}><Icon icon={FolderOutput} size={14} /> Extract all…</button>
-  <button class="btn ghost" onclick={() => extractHere(tab.path!)}><Icon icon={FolderDown} size={14} /> Extract here</button>
+  <input class="input filter" placeholder={t('Find in archive')} bind:value={filter} />
+  <button class="btn ghost" disabled={!selected.length} onclick={() => extractTo(tab.path!, selected)}><Icon icon={Download} size={14} /> {selected.length ? t('Extract {n} selected…', { n: selected.length }) : t('Extract selected…')}</button>
+  <button class="btn ghost" onclick={() => extractTo(tab.path!)}><Icon icon={FolderOutput} size={14} /> {t('Extract all…')}</button>
+  <button class="btn ghost" onclick={() => extractHere(tab.path!)}><Icon icon={FolderDown} size={14} /> {t('Extract here')}</button>
 </div>
 
 {#if info?.meta && Object.keys(info.meta).length}
   <dl class="meta">
     {#each Object.entries(info.meta).sort(([a], [b]) => metaRank(a) - metaRank(b)) as [k, v] (k)}
-      <div class:wide={k === 'Description' || k === 'Note'}><dt>{k}</dt><dd title={v}>{v}</dd></div>
+      <div class:wide={k === 'Description' || k === 'Note'}><dt>{META_LABELS[k] ?? k}</dt><dd title={v}>{v}</dd></div>
     {/each}
   </dl>
 {/if}
@@ -121,7 +140,7 @@
     <div class="empty-state">{error}</div>
   {:else if info}
     <div class="row head">
-      <span class="name">Name</span><span class="size">Size</span><span class="date">Modified</span>
+      <span class="name">{t('Name')}</span><span class="size">{t('Size')}</span><span class="date">{t('Modified')}</span>
     </div>
     {#each entries as e, i (e.name)}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -132,10 +151,10 @@
           {#if e.link}<span class="muted">→ {e.link}</span>{/if}
         </span>
         <span class="size">{e.isDir ? '' : e.size >= 0 ? formatBytes(e.size) : '—'}</span>
-        <span class="date">{e.modTime > 0 ? new Date(e.modTime).toLocaleString() : ''}</span>
+        <span class="date">{e.modTime > 0 ? new Date(e.modTime).toLocaleString(locale()) : ''}</span>
       </div>
     {/each}
-    {#if !entries.length}<div class="empty-state">{filter ? 'No matching files' : 'This folder is empty'}</div>{/if}
+    {#if !entries.length}<div class="empty-state">{filter ? t('No matching files') : t('This folder is empty')}</div>{/if}
   {:else}
     <div class="empty-state"><span class="spinner"></span></div>
   {/if}

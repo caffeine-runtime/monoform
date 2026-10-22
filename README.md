@@ -83,6 +83,7 @@ two, three or four views and keep a note, a PDF, a picture and a model open toge
 | **Word & Excel** | Edit `.docx` and `.xlsx` in place (formulas recalculate; the same Excel-style grid as CSV). OpenDocument `.odt`/`.ods` (LibreOffice) edit and save as themselves, keeping their styles, notes, pictures and comments. Legacy `.doc`/`.xls` open too and save as `.docx`/`.xlsx`. Documents have an outline of their headings to jump around in, and word and character counts. |
 | **Screenshots** | Take a screenshot of an area (`Ctrl+Shift+X`), the whole screen or after 3 seconds; it opens ready to mark up with arrows, boxes and text, blur or pixelate faces and passwords. Pick a colour from anywhere on the screen. |
 | **Diagrams** | Graphviz `.dot` and Mermaid `.mmd` with the source beside the drawing (click a shape to find its line, export SVG/PNG); Mermaid and Graphviz blocks drawn inside Markdown previews. Excalidraw and draw.io drawings open on a canvas you can edit: move, resize, draw shapes, connect them with arrows, freehand, text, colours, pages, undo, SVG/PNG export. In the dark theme drawings and diagrams go dark too, like Excalidraw's dark mode (exports keep their colours). |
+| **Languages & updates** | English, Polish and Spanish — following your system or chosen on first start and in Settings. New versions are offered at startup and install themselves (checked against the release's checksums; off in Settings). Paste anything into an empty tab and it opens as a new document in the right editor. |
 | **Archives** | Browse ZIP, TAR(.gz/.bz2/.xz/.zst), 7z and RAR like folders, open files inside, extract safely, create ZIPs. Packages and disk images too: .deb, .rpm, .iso, .msi (with their package details), and .jar/.apk/.ipa/.whl/.nupkg/.vsix/.msix and other zip-based packages. |
 | **Hashes** | MD5, SHA-1, SHA-256, SHA-512, BLAKE3 in one pass; paste-to-compare; verify `SHA256SUMS`/`.md5` files. |
 | **Search everything** | Ctrl/Cmd+K finds commands, file names and text inside files. An optional **search by meaning** (off by default) runs the EmbeddingGemma 2 model locally on your computer. |
@@ -158,7 +159,10 @@ builds all three platforms on every push to `main` and on pull requests.
 
 ## Privacy
 
-Monoform makes no network connections. The exceptions happen only when you ask for an optional model: *search by
+Monoform makes no network connections except one: when it starts, it asks GitHub whether there is a newer version
+(a single request to the public releases API; nothing about you, your files or this computer is sent). Turn it off in
+*Settings › About*. A new version is downloaded only after you choose **Download and install**, and checked against the
+release's SHA-256 sums before it replaces the app. The other exceptions happen only when you ask for an optional model: *search by
 meaning* (about 200 MB, Apache-2.0) and, for the image editor, *Better subject selection* (BiRefNet, MIT, about 210 MB)
 and *Object removal* (Moebius, Apache-2.0, about 1.2 GB) with the ONNX Runtime library they run on (MIT, 6–13 MB,
 from Microsoft's NuGet package). Each is downloaded once after you agree, checked against fixed SHA-256 sums, and runs

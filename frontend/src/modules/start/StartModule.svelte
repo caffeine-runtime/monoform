@@ -4,10 +4,11 @@
   import { onMount } from 'svelte';
   import Welcome from '../../shell/Welcome.svelte';
   import type { ModuleProps } from '../../core/modules';
+  import { t } from '../../core/i18n';
 
   let { tab }: ModuleProps = $props();
   onMount(() => {
-    tab.status = { ...tab.status, type: 'New tab' };
+    tab.status = { ...tab.status, type: t('New tab') };
   });
 </script>
 

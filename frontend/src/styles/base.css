@@ -311,3 +311,19 @@ select {
   -webkit-user-select: text;
   cursor: text;
 }
+
+/* A row Settings was opened at (core/settingsLink.ts). */
+.flash-target {
+  animation: flash-target 2.2s var(--ease, ease);
+  border-radius: 8px;
+}
+@keyframes flash-target {
+  0%,
+  40% {
+    box-shadow: 0 0 0 2px var(--accent);
+    background: var(--accent-soft);
+  }
+  100% {
+    box-shadow: 0 0 0 2px transparent;
+  }
+}

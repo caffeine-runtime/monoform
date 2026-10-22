@@ -17,6 +17,7 @@
   import { api, saveFile } from '../../core/backend';
   import { dirname, extname, join, stem } from '../../core/paths';
   import { ui, toastError } from '../../core/ui.svelte';
+  import { t, tn } from '../../core/i18n';
   import { ModelViewer, type AnimState, type ModelStats } from './viewer';
   import { MAIN_THREAD_EXTS } from './load';
   import { modelViews } from './views';
@@ -72,7 +73,7 @@
             else if (m.ok) resolve(m);
             else reject(new Error(m.error));
           };
-          w.onerror = (e) => reject(new Error(e.message || 'could not read the model'));
+          w.onerror = (e) => reject(new Error(e.message || t('could not read the model')));
           w.postMessage({ url: new URL(tab.url(), location.href).href, ext, base, name: tab.title });
         }).finally(() => w.terminate());
         const { unpack } = await import('./transfer');
@@ -94,9 +95,9 @@
     const s = stats;
     tab.status = {
       ...tab.status,
-      type: `${ext.toUpperCase()} model`,
-      position: s ? (s.points && !s.meshes ? `${s.points.toLocaleString()} points` : `${s.triangles.toLocaleString()} triangles`) : undefined,
-      info: ms !== undefined ? `loaded in ${ms} ms` : tab.status.info,
+      type: t('{format} model', { format: ext.toUpperCase() }),
+      position: s ? (s.points && !s.meshes ? tn('{n} points', '{n} points', s.points) : tn('{n} triangles', '{n} triangles', s.triangles)) : undefined,
+      info: ms !== undefined ? t('loaded in {ms} ms', { ms }) : tab.status.info,
     };
   }
 
@@ -112,12 +113,12 @@
   async function screenshot() {
     if (!viewer) return;
     const base = join(dirname(tab.filePath ?? tab.path ?? ''), `${stem(tab.title)}.png`);
-    let path = await api.SaveFileDialog('Save view as PNG', base, [{ name: 'PNG', patterns: '*.png' }]);
+    let path = await api.SaveFileDialog(t('Save view as PNG'), base, [{ name: 'PNG', patterns: '*.png' }]);
     if (!path) return;
     if (extname(path) !== 'png') path += '.png';
     try {
       await saveFile(path, await viewer.screenshot());
-      ui.toast('View saved', 'success');
+      ui.toast(t('View saved'), 'success');
     } catch (e) {
       toastError(e);
     }
@@ -134,7 +135,7 @@
     try {
       viewer = new ModelViewer(host!);
     } catch (e) {
-      error = `3D needs WebGL, which is not available here (${(e as Error).message}).`;
+      error = t('3D needs WebGL, which is not available here ({error}).', { error: (e as Error).message });
       loading = false;
       return;
     }
@@ -151,21 +152,21 @@
 </script>
 
 <div class="toolbar" use:fitBar>
-  <button class="btn ghost" class:on={wireframe} title="Wireframe (W)" onclick={() => toggle('wireframe')}><Icon icon={Box} size={14} /> Wireframe</button>
-  <button class="btn ghost" class:on={lighting} title="Lighting on/off (L) — off shows flat, unlit colours" onclick={() => toggle('lighting')}><Icon icon={Lightbulb} size={14} /> Lighting</button>
-  <button class="btn ghost" class:on={grid} title="Floor grid (G)" onclick={() => toggle('grid')}><Icon icon={Grid3x3} size={14} /> Grid</button>
+  <button class="btn ghost" class:on={wireframe} title="{t('Wireframe')} (W)" onclick={() => toggle('wireframe')}><Icon icon={Box} size={14} /> {t('Wireframe')}</button>
+  <button class="btn ghost" class:on={lighting} title={t('Lighting on/off (L) — off shows flat, unlit colours')} onclick={() => toggle('lighting')}><Icon icon={Lightbulb} size={14} /> {t('Lighting')}</button>
+  <button class="btn ghost" class:on={grid} title="{t('Floor grid')} (G)" onclick={() => toggle('grid')}><Icon icon={Grid3x3} size={14} /> {t('Grid')}</button>
   <span class="sep"></span>
-  <div class="seg" role="group" aria-label="Background">
-    <button class="btn ghost" class:on={bg === 'dark'} title="Dark background" onclick={() => viewer?.setBackground((bg = 'dark'))}><Icon icon={Moon} size={14} /></button>
-    <button class="btn ghost" class:on={bg === 'light'} title="Light background" onclick={() => viewer?.setBackground((bg = 'light'))}><Icon icon={Sun} size={14} /></button>
+  <div class="seg" role="group" aria-label={t('Background')}>
+    <button class="btn ghost" class:on={bg === 'dark'} title={t('Dark background')} onclick={() => viewer?.setBackground((bg = 'dark'))}><Icon icon={Moon} size={14} /></button>
+    <button class="btn ghost" class:on={bg === 'light'} title={t('Light background')} onclick={() => viewer?.setBackground((bg = 'light'))}><Icon icon={Sun} size={14} /></button>
   </div>
   <span class="spacer"></span>
   {#if stats}
-    <span class="label">{stats.meshes ? `${stats.meshes} mesh${stats.meshes === 1 ? '' : 'es'} · ${stats.vertices.toLocaleString()} vertices` : ''}{stats.points ? ` · ${stats.points.toLocaleString()} points` : ''}{stats.materials ? ` · ${stats.materials} material${stats.materials === 1 ? '' : 's'}` : ''}{stats.bones ? ` · ${stats.bones} bones` : ''}</span>
+    <span class="label">{stats.meshes ? `${tn('{n} mesh', '{n} meshes', stats.meshes)} · ${tn('{n} vertices', '{n} vertices', stats.vertices)}` : ''}{stats.points ? ` · ${tn('{n} points', '{n} points', stats.points)}` : ''}{stats.materials ? ` · ${tn('{n} material', '{n} materials', stats.materials)}` : ''}{stats.bones ? ` · ${tn('{n} bones', '{n} bones', stats.bones)}` : ''}</span>
     <span class="sep"></span>
   {/if}
-  <button class="btn ghost" title="Reset view (0)" onclick={() => viewer?.frame()}><Icon icon={RotateCcw} size={14} /> Reset view</button>
-  <button class="btn ghost" title="Save the current view as PNG" onclick={screenshot}><Icon icon={Camera} size={14} /> Screenshot…</button>
+  <button class="btn ghost" title="{t('Reset view')} (0)" onclick={() => viewer?.frame()}><Icon icon={RotateCcw} size={14} /> {t('Reset view')}</button>
+  <button class="btn ghost" title={t('Save the current view as PNG')} onclick={screenshot}><Icon icon={Camera} size={14} /> {t('Screenshot…')}</button>
 </div>
 
 <div class="body">
@@ -179,11 +180,11 @@
     {#if error}<div class="empty-state overlay err">{error}</div>{/if}
   </div>
   {#if anims.length}
-    <aside data-sidepanel class="anims" aria-label="Animations">
-      <h4><Icon icon={Film} size={14} /> Animations ({anims.length})</h4>
+    <aside data-sidepanel class="anims" aria-label={t('Animations')}>
+      <h4><Icon icon={Film} size={14} /> {t('Animations ({n})', { n: anims.length })}</h4>
       <div class="list" role="listbox">
         {#each anims as a, i (i)}
-          <button class="clip" class:on={anim.index === i} role="option" aria-selected={anim.index === i} onclick={() => viewer?.play(i)} title="Play {a.name}">
+          <button class="clip" class:on={anim.index === i} role="option" aria-selected={anim.index === i} onclick={() => viewer?.play(i)} title={t('Play {name}', { name: a.name })}>
             <span class="ico"><Icon icon={anim.index === i && anim.playing ? Pause : Play} size={13} /></span>
             <span class="nm">{a.name}</span>
             <span class="dur">{a.duration.toFixed(1)} s</span>
@@ -192,12 +193,12 @@
       </div>
       {#if anim.index >= 0}
         <div class="transport">
-          <input type="range" min="0" max={anim.duration} step="0.01" value={anim.time} oninput={(e) => viewer?.seek(+(e.target as HTMLInputElement).value)} aria-label="Animation time" />
+          <input type="range" min="0" max={anim.duration} step="0.01" value={anim.time} oninput={(e) => viewer?.seek(+(e.target as HTMLInputElement).value)} aria-label={t('Animation time')} />
           <div class="row">
-            <button class="icon-btn" title={anim.playing ? 'Pause' : 'Play'} onclick={() => viewer?.togglePause()}><Icon icon={anim.playing ? Pause : Play} size={14} /></button>
-            <button class="icon-btn" title="Stop" onclick={() => viewer?.stopAnimation()}><Icon icon={Square} size={14} /></button>
+            <button class="icon-btn" title={anim.playing ? t('Pause') : t('Play')} onclick={() => viewer?.togglePause()}><Icon icon={anim.playing ? Pause : Play} size={14} /></button>
+            <button class="icon-btn" title={t('Stop')} onclick={() => viewer?.stopAnimation()}><Icon icon={Square} size={14} /></button>
             <span class="t">{fmtTime(anim.time)} / {fmtTime(anim.duration)}</span>
-            <select value={String(anim.speed)} onchange={(e) => viewer?.setSpeed(+(e.target as HTMLSelectElement).value)} title="Speed">
+            <select value={String(anim.speed)} onchange={(e) => viewer?.setSpeed(+(e.target as HTMLSelectElement).value)} title={t('Speed')}>
               {#each [0.25, 0.5, 1, 1.5, 2] as s (s)}<option value={String(s)}>{s}×</option>{/each}
             </select>
           </div>

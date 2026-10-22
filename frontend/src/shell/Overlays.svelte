@@ -5,6 +5,7 @@
   import { AlertTriangle, Check, Info, X } from '../core/icons';
   import { menu, ui } from '../core/ui.svelte';
   import { formatShortcut } from '../core/keys';
+  import { t } from '../core/i18n';
 
   let inputValue = $state('');
   let inputEl = $state<HTMLInputElement>();
@@ -73,16 +74,16 @@
 {/if}
 
 <div class="toasts" aria-live="polite">
-  {#each ui.toasts as t (t.id)}
-    <div class="toast {t.kind}">
+  {#each ui.toasts as toast (toast.id)}
+    <div class="toast {toast.kind}">
       <span class="ti">
-        {#if t.kind === 'error' || t.kind === 'warning'}<Icon icon={AlertTriangle} />{:else if t.kind === 'success'}<Icon icon={Check} />{:else}<Icon icon={Info} />{/if}
+        {#if toast.kind === 'error' || toast.kind === 'warning'}<Icon icon={AlertTriangle} />{:else if toast.kind === 'success'}<Icon icon={Check} />{:else}<Icon icon={Info} />{/if}
       </span>
-      <span class="tm selectable">{t.message}</span>
-      {#if t.action}
-        <button class="btn ghost" onclick={() => { t.action!.run(); ui.dismiss(t.id); }}>{t.action.label}</button>
+      <span class="tm selectable">{toast.message}</span>
+      {#if toast.action}
+        <button class="btn ghost" onclick={() => { toast.action!.run(); ui.dismiss(toast.id); }}>{toast.action.label}</button>
       {/if}
-      <button class="icon-btn" title="Dismiss" onclick={() => ui.dismiss(t.id)}><Icon icon={X} size={14} /></button>
+      <button class="icon-btn" title={t('Dismiss')} onclick={() => ui.dismiss(toast.id)}><Icon icon={X} size={14} /></button>
     </div>
   {/each}
 </div>

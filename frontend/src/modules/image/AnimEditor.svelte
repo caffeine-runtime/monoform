@@ -25,6 +25,7 @@
   import type { Tab } from '../../core/tabs.svelte';
   import { formatShortcut } from '../../core/keys';
   import { toastError, ui } from '../../core/ui.svelte';
+  import { num, t, tn } from '../../core/i18n';
 
   interface Frame {
     path: string;
@@ -119,7 +120,7 @@
   }
 
   export function remove() {
-    if (sel.size >= frames.length) return ui.toast('An animation needs at least one frame.', 'warning');
+    if (sel.size >= frames.length) return ui.toast(t('An animation needs at least one frame.'), 'warning');
     commit(frames.filter((_, i) => !sel.has(i)));
     sel = new Set([Math.min(cur, frames.length - 1)]);
   }
@@ -149,7 +150,7 @@
   }
   async function setDelay() {
     const s = selected();
-    const v = await ui.prompt(`Show ${s.length === 1 ? 'this frame' : `these ${s.length} frames`} for (milliseconds)`, String(frames[s[0]].delay), 'Set');
+    const v = await ui.prompt(tn('Show this frame for (milliseconds)', 'Show these {n} frames for (milliseconds)', s.length), String(frames[s[0]].delay), t('Set'));
     const ms = Math.round(Number(v));
     if (!v || !(ms >= 10 && ms <= 60000)) return;
     commit(frames.map((f, i) => (sel.has(i) ? { ...f, delay: ms } : f)));
@@ -175,7 +176,7 @@
       tab.dirty = false;
       return true;
     } catch (e) {
-      toastError(e, 'Save failed');
+      toastError(e, t('Save failed'));
       return false;
     }
   }
@@ -187,9 +188,9 @@
 
   export async function saveAs(): Promise<boolean> {
     const base = tab.filePath ?? join(dirname(tab.path ?? ''), tab.title);
-    const p = await api.SaveFileDialog('Save animation as', base, [
+    const p = await api.SaveFileDialog(t('Save animation as'), base, [
       { name: 'GIF', patterns: '*.gif' },
-      { name: 'Animated WebP (lossless)', patterns: '*.webp' },
+      { name: t('Animated WebP (lossless)'), patterns: '*.webp' },
     ]);
     if (!p) return false;
     const target = ['gif', 'webp'].includes(extname(p)) ? p : `${p}.gif`;
@@ -199,8 +200,8 @@
   }
 
   async function exportFrame() {
-    const def = join(dirname(tab.filePath ?? tab.path ?? ''), `${stem(tab.title)} frame ${cur + 1}.png`);
-    const p = await api.SaveFileDialog('Export frame as PNG', def, [{ name: 'PNG', patterns: '*.png' }]);
+    const def = join(dirname(tab.filePath ?? tab.path ?? ''), `${t('{name} frame {n}', { name: stem(tab.title), n: String(cur + 1) })}.png`);
+    const p = await api.SaveFileDialog(t('Export frame as PNG'), def, [{ name: 'PNG', patterns: '*.png' }]);
     if (p) await api.CopyFile(frames[cur].path, /\.png$/i.test(p) ? p : `${p}.png`).catch((e) => toastError(e));
   }
 
@@ -248,47 +249,47 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="anim" onkeydown={key} tabindex="-1">
   <div class="bar" use:fitBar>
-    <button class="icon-btn" title="Previous frame (←)" onclick={() => ((playing = false), (cur = (cur + frames.length - 1) % frames.length))}><Icon icon={StepBack} /></button>
-    <button class="icon-btn" title="{playing ? 'Pause' : 'Play'} (Space)" onclick={() => (playing = !playing)}><Icon icon={playing ? Pause : Play} /></button>
-    <button class="icon-btn" title="Next frame (→)" onclick={() => ((playing = false), (cur = (cur + 1) % frames.length))}><Icon icon={StepForward} /></button>
-    <span class="label">Frame {cur + 1} of {frames.length} · {(total / 1000).toFixed(2)} s</span>
-    <select class="input sm" bind:value={speed} title="Preview speed (doesn't change the file)">
-      {#each [0.25, 0.5, 1, 2, 4] as s (s)}<option value={s}>{s}×</option>{/each}
+    <button class="icon-btn" title={t('Previous frame (←)')} onclick={() => ((playing = false), (cur = (cur + frames.length - 1) % frames.length))}><Icon icon={StepBack} /></button>
+    <button class="icon-btn" title={playing ? t('Pause (Space)') : t('Play (Space)')} onclick={() => (playing = !playing)}><Icon icon={playing ? Pause : Play} /></button>
+    <button class="icon-btn" title={t('Next frame (→)')} onclick={() => ((playing = false), (cur = (cur + 1) % frames.length))}><Icon icon={StepForward} /></button>
+    <span class="label">{t('Frame {n} of {total} · {seconds} s', { n: cur + 1, total: frames.length, seconds: num(total / 1000, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) })}</span>
+    <select class="input sm" bind:value={speed} title={t("Preview speed (doesn't change the file)")}>
+      {#each [0.25, 0.5, 1, 2, 4] as s (s)}<option value={s}>{num(s)}×</option>{/each}
     </select>
     <span class="sep"></span>
-    <button class="icon-btn" title="Undo ({formatShortcut('Mod+Z')})" disabled={!past.length} onclick={undo}><Icon icon={Undo2} /></button>
-    <button class="icon-btn" title="Redo ({formatShortcut('Mod+Shift+Z')})" disabled={!future.length} onclick={redo}><Icon icon={Redo2} /></button>
-    <button class="icon-btn" title="Delete selected frames (Del)" onclick={remove}><Icon icon={Trash} /></button>
-    <button class="icon-btn" title="Duplicate selected frames" onclick={duplicate}><Icon icon={Copy} /></button>
-    <button class="btn ghost" title="Move selected frames earlier" onclick={() => move(-1)}><Icon icon={ArrowLeft} size={14} /> Move</button>
-    <button class="btn ghost" title="Move selected frames later" onclick={() => move(1)}><Icon icon={ArrowRight} size={14} /> Move</button>
-    <button class="btn ghost" title="Reverse the selected frames (or all)" onclick={reverse}><Icon icon={Repeat2} size={14} /> Reverse</button>
-    <button class="btn ghost" title="How long the selected frames show" onclick={setDelay}><Icon icon={Timer} size={14} /> Timing…</button>
-    <button class="btn ghost" title="Make the whole animation faster or slower" onclick={(e) => {
+    <button class="icon-btn" title={t('Undo ({shortcut})', { shortcut: formatShortcut('Mod+Z') })} disabled={!past.length} onclick={undo}><Icon icon={Undo2} /></button>
+    <button class="icon-btn" title={t('Redo ({shortcut})', { shortcut: formatShortcut('Mod+Shift+Z') })} disabled={!future.length} onclick={redo}><Icon icon={Redo2} /></button>
+    <button class="icon-btn" title={t('Delete selected frames (Del)')} onclick={remove}><Icon icon={Trash} /></button>
+    <button class="icon-btn" title={t('Duplicate selected frames')} onclick={duplicate}><Icon icon={Copy} /></button>
+    <button class="btn ghost" title={t('Move selected frames earlier')} onclick={() => move(-1)}><Icon icon={ArrowLeft} size={14} /> {t('Move')}</button>
+    <button class="btn ghost" title={t('Move selected frames later')} onclick={() => move(1)}><Icon icon={ArrowRight} size={14} /> {t('Move')}</button>
+    <button class="btn ghost" title={t('Reverse the selected frames (or all)')} onclick={reverse}><Icon icon={Repeat2} size={14} /> {t('Reverse')}</button>
+    <button class="btn ghost" title={t('How long the selected frames show')} onclick={setDelay}><Icon icon={Timer} size={14} /> {t('Timing…')}</button>
+    <button class="btn ghost" title={t('Make the whole animation faster or slower')} onclick={(e) => {
       const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
       import('../../core/ui.svelte').then(({ menu }) => menu.show({ clientX: r.left, clientY: r.bottom + 4 }, [
-        { label: 'Faster (2×)', run: () => retime(2) },
-        { label: 'A bit faster (1.25×)', run: () => retime(1.25) },
-        { label: 'A bit slower (0.8×)', run: () => retime(0.8) },
-        { label: 'Slower (0.5×)', run: () => retime(0.5) },
+        { label: t('Faster (2×)'), run: () => retime(2) },
+        { label: t('A bit faster (1.25×)'), run: () => retime(1.25) },
+        { label: t('A bit slower (0.8×)'), run: () => retime(0.8) },
+        { label: t('Slower (0.5×)'), run: () => retime(0.5) },
         { separator: true },
-        { label: 'Drop every other frame (smaller file)', run: dropEveryOther },
+        { label: t('Drop every other frame (smaller file)'), run: dropEveryOther },
       ]));
-    }}><Icon icon={Gauge} size={14} /> Speed…</button>
-    <label class="opt" title="How many times the animation plays">Loop
+    }}><Icon icon={Gauge} size={14} /> {t('Speed…')}</button>
+    <label class="opt" title={t('How many times the animation plays')}>{t('Loop')}
       <select class="input sm" value={loop} onchange={(e) => commit(frames, +(e.currentTarget as HTMLSelectElement).value)}>
-        <option value={0}>Forever</option>
-        {#each [1, 2, 3, 5, 10] as n (n)}<option value={n}>{n === 1 ? 'Once' : `${n} times`}</option>{/each}
-        {#if loop > 1 && ![2, 3, 5, 10].includes(loop)}<option value={loop}>{loop} times</option>{/if}
+        <option value={0}>{t('Forever')}</option>
+        {#each [1, 2, 3, 5, 10] as n (n)}<option value={n}>{n === 1 ? t('Once') : tn('{n} time', '{n} times', n)}</option>{/each}
+        {#if loop > 1 && ![2, 3, 5, 10].includes(loop)}<option value={loop}>{tn('{n} time', '{n} times', loop)}</option>{/if}
       </select>
     </label>
     <span class="spacer"></span>
-    <button class="btn ghost" title="Save the shown frame as a PNG" onclick={exportFrame}><Icon icon={ImageDown} size={14} /> Export frame…</button>
+    <button class="btn ghost" title={t('Save the shown frame as a PNG')} onclick={exportFrame}><Icon icon={ImageDown} size={14} /> {t('Export frame…')}</button>
   </div>
   <div class="stage">
-    <img class="checker" src={fileUrl(frames[cur].path)} alt="Frame {cur + 1}" style:aspect-ratio="{info.width} / {info.height}" />
+    <img class="checker" src={fileUrl(frames[cur].path)} alt={t('Frame {n}', { n: cur + 1 })} style:aspect-ratio="{info.width} / {info.height}" />
   </div>
-  <div class="strip" bind:this={strip} role="listbox" aria-label="Frames" aria-multiselectable="true">
+  <div class="strip" bind:this={strip} role="listbox" aria-label={t('Frames')} aria-multiselectable="true">
     {#each frames as f, i (i)}
       <button class="fr" class:cur={i === cur} class:sel={sel.has(i)} data-i={i} role="option" aria-selected={sel.has(i)} onclick={(e) => click(i, e)} ondblclick={setDelay}>
         <img src={fileUrl(f.path)} alt="" loading="lazy" />

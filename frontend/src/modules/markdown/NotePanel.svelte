@@ -11,6 +11,7 @@
   import { relative } from '../../core/paths';
   import { backlinks, noteName, resolveLink, type NoteLink } from './links';
   import { noteIndex } from './noteIndex.svelte';
+  import { t } from '../../core/i18n';
 
   let {
     path,
@@ -66,15 +67,15 @@
   }
 </script>
 
-<aside data-sidepanel class="notepanel" class:floating class:right={floating} aria-label="Note outline and links">
+<aside data-sidepanel class="notepanel" class:floating class:right={floating} aria-label={t('Note outline and links')}>
   <div class="seg" role="tablist">
-    <button role="tab" class:on={view === 'outline'} aria-selected={view === 'outline'} onclick={() => (view = 'outline')}>Outline</button>
-    <button role="tab" class:on={view === 'backlinks'} aria-selected={view === 'backlinks'} onclick={() => (view = 'backlinks')}>Backlinks <span class="n">{backCount}</span></button>
-    <button role="tab" class:on={view === 'links'} aria-selected={view === 'links'} onclick={() => (view = 'links')}>Links <span class="n">{out.length}</span></button>
+    <button role="tab" class:on={view === 'outline'} aria-selected={view === 'outline'} onclick={() => (view = 'outline')}>{t('Outline')}</button>
+    <button role="tab" class:on={view === 'backlinks'} aria-selected={view === 'backlinks'} onclick={() => (view = 'backlinks')}>{t('Backlinks')} <span class="n">{backCount}</span></button>
+    <button role="tab" class:on={view === 'links'} aria-selected={view === 'links'} onclick={() => (view = 'links')}>{t('Links')} <span class="n">{out.length}</span></button>
   </div>
   <div class="body">
     {#if view === 'outline'}
-      <OutlineTree items={headings} {active} onpick={onheading} empty="No headings in this note" />
+      <OutlineTree items={headings} {active} onpick={onheading} empty={t('No headings in this note')} />
     {:else if view === 'backlinks'}
       {#if back.length}
         <ul class="files">
@@ -94,9 +95,9 @@
           {/each}
         </ul>
       {:else}
-        <p class="none">No notes in {noteName(noteIndex.root || '') || 'this folder'} link here yet. Link to it with <code>[[{noteName(path)}]]</code>.</p>
+        <p class="none">{noteName(noteIndex.root || '') ? t('No notes in {folder} link here yet.', { folder: noteName(noteIndex.root || '') }) : t('No notes in this folder link here yet.')} {t('Link to it with')} <code>[[{noteName(path)}]]</code>.</p>
       {/if}
-      {#if noteIndex.truncated}<p class="none">Only the first 20,000 notes of the folder are searched.</p>{/if}
+      {#if noteIndex.truncated}<p class="none">{t('Only the first {n} notes of the folder are searched.', { n: 20000 })}</p>{/if}
     {:else if out.length}
       <ul class="files">
         {#each out as o (o.key)}
@@ -107,16 +108,16 @@
                 <span class="where">{rel(o.to)}</span>
               </button>
             {:else}
-              <button class="file missing" title="No note “{o.link.target}” yet — click to create it" onclick={() => oncreate(o.link)}>
+              <button class="file missing" title={t('No note “{name}” yet — click to create it', { name: o.link.target })} onclick={() => oncreate(o.link)}>
                 <span class="name">{o.link.target}</span>
-                <span class="where">Not created yet · click to create</span>
+                <span class="where">{t('Not created yet · click to create')}</span>
               </button>
             {/if}
           </li>
         {/each}
       </ul>
     {:else}
-      <p class="none">This note doesn't link to other notes. Type <code>[[</code> to link one.</p>
+      <p class="none">{t("This note doesn't link to other notes. Type")} <code>[[</code> {t('to link one.')}</p>
     {/if}
   </div>
 </aside>

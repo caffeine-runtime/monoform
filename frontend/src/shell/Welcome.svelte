@@ -12,6 +12,7 @@
   import { workspace } from '../core/tabs.svelte';
   import { basename, dirname, tildify } from '../core/paths';
   import { boot } from '../core/boot';
+  import { t } from '../core/i18n';
 
   // A tile per kind of new file.
   const KIND: Record<string, Component<any>> = {
@@ -28,11 +29,11 @@
   const kinds = NEW_KINDS.filter((k) => KIND[k.kind]);
 
   const tools = [
-    { id: 'tools.hash', label: 'Check a hash', icon: Hash },
-    { id: 'screenshot.region', label: 'Screenshot', icon: Camera },
-    { id: 'file.compare', label: 'Compare files', icon: Diff },
-    { id: 'history.all', label: 'File history', icon: History },
-    { id: 'app.palette', label: 'All commands', icon: Command },
+    { id: 'tools.hash', label: t('Check a hash'), icon: Hash },
+    { id: 'screenshot.region', label: t('Screenshot'), icon: Camera },
+    { id: 'file.compare', label: t('Compare files'), icon: Diff },
+    { id: 'history.all', label: t('File history'), icon: History },
+    { id: 'app.palette', label: t('All commands'), icon: Command },
   ];
   const tip = (label: string, id: string) => {
     const sc = commands.shortcutOf(id);
@@ -42,37 +43,37 @@
 
 <div class="welcome">
   <div class="inner">
-    <section class="drop" aria-label="Open">
+    <section class="drop" aria-label={t('Open')}>
       <span class="dropicon"><Icon icon={ArrowDownToLine} size={18} /></span>
       <div class="droptext">
-        <strong>Drop files here</strong>
-        <span>or open something from your computer</span>
+        <strong>{t('Drop files here')}</strong>
+        <span>{t('or open something from your computer')}</span>
       </div>
       <div class="dropbtns">
-        <button class="btn primary" title={tip('Open a file', 'file.open')} onclick={() => commands.execute('file.open')}><Icon icon={FileText} size={15} /> Open file</button>
-        <button class="btn" title={tip('Open a folder', 'file.openFolder')} onclick={() => commands.execute('file.openFolder')}><Icon icon={FolderOpen} size={15} /> Open folder</button>
+        <button class="btn primary" title={tip(t('Open a file'), 'file.open')} onclick={() => commands.execute('file.open')}><Icon icon={FileText} size={15} /> {t('Open file')}</button>
+        <button class="btn" title={tip(t('Open a folder'), 'file.openFolder')} onclick={() => commands.execute('file.openFolder')}><Icon icon={FolderOpen} size={15} /> {t('Open folder')}</button>
       </div>
     </section>
 
-    <h3>Create</h3>
+    <h3>{t('Create')}</h3>
     <div class="kinds">
       {#each kinds as k (k.kind)}
-        <button class="kind" data-kind={k.kind} title="New {k.label.toLowerCase()} — {k.detail}" onclick={() => void newFileOfKind(undefined, k.kind)}>
+        <button class="kind" data-kind={k.kind} title="{k.title} — {k.detail}" onclick={() => void newFileOfKind(undefined, k.kind)}>
           <span class="badge"><Icon icon={KIND[k.kind]} size={17} /></span>
           <span class="kn">{k.label}</span>
         </button>
       {/each}
     </div>
 
-    <h3>Tools</h3>
+    <h3>{t('Tools')}</h3>
     <div class="tools">
-      {#each tools as t (t.id)}
-        <button class="tool" title={tip(t.label, t.id)} onclick={() => commands.execute(t.id)}><Icon icon={t.icon} size={15} /> {t.label}</button>
+      {#each tools as tool (tool.id)}
+        <button class="tool" title={tip(tool.label, tool.id)} onclick={() => commands.execute(tool.id)}><Icon icon={tool.icon} size={15} /> {tool.label}</button>
       {/each}
     </div>
 
     {#if settings.value.recents.length}
-      <h3>Recent</h3>
+      <h3>{t('Recent')}</h3>
       <div class="recents">
         {#each settings.value.recents.slice(0, 8) as p (p)}
           <div class="rrow">
@@ -81,7 +82,7 @@
               <span class="rn">{basename(p)}</span>
               <span class="rd">{tildify(dirname(p), boot.home)}</span>
             </button>
-            <button class="rm icon-btn xs" title="Remove from recents" aria-label="Remove {basename(p)} from recents" onclick={() => settings.removeRecent(p)}><Icon icon={X} size={12} /></button>
+            <button class="rm icon-btn xs" title={t('Remove from recents')} aria-label={t('Remove {name} from recents', { name: basename(p) })} onclick={() => settings.removeRecent(p)}><Icon icon={X} size={12} /></button>
           </div>
         {/each}
       </div>

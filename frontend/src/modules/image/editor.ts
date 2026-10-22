@@ -31,6 +31,7 @@ import * as sel from './selection';
 import type { Selection, SelectMode } from './selection';
 import { Adjuster, type Adjustments } from './adjust';
 import { cssFamily } from './fonts';
+import { t } from '../../core/i18n';
 
 export type Tool =
   | 'hand'
@@ -271,7 +272,7 @@ export class ImageEditor {
     this.regionTr = new Transformer({ rotateEnabled: false, keepRatio: false, borderStroke: ACCENT, anchorStroke: ACCENT, anchorSize: 9, anchorCornerRadius: 3, ignoreStroke: true });
     this.tr = new Transformer({ borderStroke: ACCENT, anchorStroke: ACCENT, anchorSize: 9, anchorCornerRadius: 3, rotateEnabled: true, rotationSnaps: [0, 45, 90, 135, 180, 225, 270, 315] });
     this.klayer.add(this.regionTr, this.tr);
-    this.addLiveLayer(plainLayer('Background', base));
+    this.addLiveLayer(plainLayer(t('Background'), base));
     this.activeId = this.layers[0].id;
     this.history = [this.snapshot()];
     this.index = 0;
@@ -766,7 +767,7 @@ export class ImageEditor {
   addLayer(name?: string, canvas?: HTMLCanvasElement, at?: { x: number; y: number }): string {
     const c = canvas ?? raster.makeCanvas(this.docW, this.docH);
     const idx = this.layers.indexOf(this.active) + 1;
-    const L = this.addLiveLayer({ ...plainLayer(name ?? `Layer ${this.layers.length + 1}`, c), x: at?.x ?? 0, y: at?.y ?? 0 }, idx);
+    const L = this.addLiveLayer({ ...plainLayer(name ?? t('Layer {n}', { n: this.layers.length + 1 }), c), x: at?.x ?? 0, y: at?.y ?? 0 }, idx);
     this.activeId = L.id;
     this.updateDraggable();
     if (this.tool === 'move') this.tr.nodes([L.group]);
@@ -779,7 +780,7 @@ export class ImageEditor {
     if (!L) return;
     const m = this.modelOf(L);
     const idx = this.layers.indexOf(L) + 1;
-    const N = this.addLiveLayer({ ...m, id: newId(), name: `${L.name} copy` }, idx);
+    const N = this.addLiveLayer({ ...m, id: newId(), name: t('{name} copy', { name: L.name }) }, idx);
     this.activeId = N.id;
     this.commit();
   }
@@ -839,7 +840,7 @@ export class ImageEditor {
     const flat = this.composite();
     for (const L of this.layers) L.group.destroy();
     this.layers = [];
-    const L = this.addLiveLayer(plainLayer('Background', flat));
+    const L = this.addLiveLayer(plainLayer(t('Background'), flat));
     this.activeId = L.id;
     this.editMask = false;
     this.commit();
@@ -1163,7 +1164,7 @@ export class ImageEditor {
     return { x: (clientX - r.left - this.view.x) / this.view.zoom, y: (clientY - r.top - this.view.y) / this.view.zoom };
   }
 
-  pasteImage(c: HTMLCanvasElement, at?: { x: number; y: number }, name = 'Pasted') {
+  pasteImage(c: HTMLCanvasElement, at?: { x: number; y: number }, name = t('Pasted')) {
     const p = at ?? { x: Math.round((this.docW - c.width) / 2), y: Math.round((this.docH - c.height) / 2) };
     this.addLayer(name, c, p);
     this.deselect();
@@ -1581,7 +1582,7 @@ export class ImageEditor {
 
   /** Replace everything with a new image (navigation, reload). */
   load(base: HTMLCanvasElement) {
-    this.loadLayers(base.width, base.height, [{ name: 'Background', canvas: base }]);
+    this.loadLayers(base.width, base.height, [{ name: t('Background'), canvas: base }]);
   }
 
   /** Replace everything with a layered image (.ora). */

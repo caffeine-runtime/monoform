@@ -73,7 +73,7 @@ export function scan(text: string): El[] {
     }
     if (text[lt + 1] === '/') {
       const gt = text.indexOf('>', lt);
-      if (gt < 0) throw new Error('unterminated closing tag');
+      if (gt < 0) throw new Error('unterminated closing tag'); // i18n-ignore: internal parse error, never shown
       const el = stack.pop();
       if (el) {
         el.closeStart = lt;
@@ -94,7 +94,7 @@ export function scan(text: string): El[] {
     let selfClosing = false;
     for (;;) {
       while (j < n && /\s/.test(text[j])) j++;
-      if (j >= n) throw new Error(`unterminated <${tag}>`);
+      if (j >= n) throw new Error(`unterminated <${tag}>`); // i18n-ignore: internal parse error, never shown
       if (text[j] === '>') {
         j++;
         break;
@@ -106,7 +106,7 @@ export function scan(text: string): El[] {
       }
       NAME.lastIndex = j;
       const am = NAME.exec(text);
-      if (!am) throw new Error(`bad attribute in <${tag}>`);
+      if (!am) throw new Error(`bad attribute in <${tag}>`); // i18n-ignore: internal parse error, never shown
       const aStart = j;
       j = NAME.lastIndex;
       while (j < n && /\s/.test(text[j])) j++;
@@ -117,9 +117,9 @@ export function scan(text: string): El[] {
       j++;
       while (j < n && /\s/.test(text[j])) j++;
       const q = text[j];
-      if (q !== '"' && q !== "'") throw new Error(`unquoted attribute in <${tag}>`);
+      if (q !== '"' && q !== "'") throw new Error(`unquoted attribute in <${tag}>`); // i18n-ignore: internal parse error, never shown
       const close = text.indexOf(q, j + 1);
-      if (close < 0) throw new Error(`unterminated attribute in <${tag}>`);
+      if (close < 0) throw new Error(`unterminated attribute in <${tag}>`); // i18n-ignore: internal parse error, never shown
       attrs.push({ name: am[0], value: text.slice(j + 1, close), start: aStart, end: close + 1, valueStart: j + 1, valueEnd: close });
       j = close + 1;
     }

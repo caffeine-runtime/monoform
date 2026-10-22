@@ -478,6 +478,22 @@ export function UnwatchFile(arg1) {
   return window['go']['app']['App']['UnwatchFile'](arg1);
 }
 
+export function UpdateCheck() {
+  return window['go']['app']['App']['UpdateCheck']();
+}
+
+export function UpdateDownload() {
+  return window['go']['app']['App']['UpdateDownload']();
+}
+
+export function UpdateInstall(arg1) {
+  return window['go']['app']['App']['UpdateInstall'](arg1);
+}
+
+export function UpdateOpenRelease() {
+  return window['go']['app']['App']['UpdateOpenRelease']();
+}
+
 export function VideoDemux(arg1) {
   return window['go']['app']['App']['VideoDemux'](arg1);
 }

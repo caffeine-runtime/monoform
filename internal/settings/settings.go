@@ -99,6 +99,10 @@ type Settings struct {
 	LightCanvases bool `json:"lightCanvases"`
 	// Language of the interface: "en", "pl", "es", or "" to follow the system.
 	Language string `json:"language"`
+	// UpdateCheckOff stops looking for a new version at startup.
+	UpdateCheckOff bool `json:"updateCheckOff"`
+	// UpdateSkip is a version the user chose to skip (not offered again).
+	UpdateSkip string `json:"updateSkip"`
 }
 
 func Defaults() Settings {

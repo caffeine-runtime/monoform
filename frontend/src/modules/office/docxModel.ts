@@ -7,6 +7,8 @@
 // can't edit safely (tracked changes, fields, content controls, equations…)
 // is shown read-only and written back unchanged.
 
+import { t } from '../../core/i18n';
+
 export const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const XML_NS = 'http://www.w3.org/XML/1998/namespace';
 const R_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
@@ -38,9 +40,9 @@ export class DocModel {
   ) {
     this.xml = new DOMParser().parseFromString(documentXml, 'application/xml');
     const err = this.xml.getElementsByTagName('parsererror')[0];
-    if (err) throw new Error('document.xml could not be parsed');
+    if (err) throw new Error(t('{part} could not be parsed', { part: 'document.xml' }));
     const body = this.xml.getElementsByTagNameNS(W, 'body')[0];
-    if (!body) throw new Error('document has no body');
+    if (!body) throw new Error(t('document has no body'));
     this.body = body;
     for (const [id, name] of Object.entries(ctx.styles)) if (!this.styleIdByName.has(name)) this.styleIdByName.set(name, id);
   }
@@ -93,7 +95,7 @@ export class DocModel {
     d.contentEditable = 'false';
     d.dataset.opaque = this.ref(el);
     d.textContent = el.textContent?.trim() || `[${el.localName}]`;
-    d.title = 'This part is kept as it is';
+    d.title = t('This part is kept as it is');
     return d;
   }
 
@@ -117,7 +119,7 @@ export class DocModel {
       el.dataset.opaque = el.dataset.p;
       el.contentEditable = 'false';
       el.classList.add('locked');
-      el.title = 'Contains tracked changes, fields or content controls — kept as it is';
+      el.title = t('Contains tracked changes, fields or content controls — kept as it is');
     }
     for (const c of Array.from(p.children)) {
       if (c.namespaceURI !== W) continue;

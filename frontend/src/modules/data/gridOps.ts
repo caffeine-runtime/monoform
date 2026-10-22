@@ -2,6 +2,8 @@
 // tab-separated clipboard text (what Excel/LibreOffice/Sheets exchange),
 // fill-handle series and relative formula references.
 
+import { num, t } from '../../core/i18n';
+
 export interface Range {
   r0: number;
   c0: number;
@@ -254,7 +256,7 @@ export function addStats(s: Stats, v: string, toNumber: (v: string) => number) {
 
 /** "Average: 3 · Count: 4 · Sum: 12" like Excel's status bar. */
 export function formatStats(s: Stats): string {
-  const f = (x: number) => (Number.isInteger(x) ? x.toLocaleString() : x.toLocaleString(undefined, { maximumFractionDigits: 6 }));
-  if (s.numbers === 0) return `Count: ${s.count.toLocaleString()}`;
-  return `Average: ${f(s.sum / s.numbers)} · Count: ${s.count.toLocaleString()} · Sum: ${f(s.sum)}`;
+  const f = (x: number) => (Number.isInteger(x) ? num(x) : num(x, { maximumFractionDigits: 6 }));
+  if (s.numbers === 0) return t('Count: {count}', { count: s.count });
+  return t('Average: {average} · Count: {count} · Sum: {sum}', { average: f(s.sum / s.numbers), count: s.count, sum: f(s.sum) });
 }

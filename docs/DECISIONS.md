@@ -370,6 +370,35 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   each Chinese/Japanese character is a word, characters are everything except line breaks (an emoji is one); in
   Markdown, front matter, link targets and heading/list marks aren't counted. Shown in the status bar (`counts`),
   with "N of M" for a selection.
+- **Interface languages: English text as the key, catalogs per language** (`core/i18n.ts`, `src/locales/<lang>/*.json`,
+  docs/TRANSLATING.md). gettext-style keys keep the code readable and need no separate key names; the catalogs are
+  flat JSON per area, merged, loaded only for the chosen language (a lazy chunk; English loads none). Plurals follow
+  `Intl.PluralRules` (Polish one/few/many). The language is fixed for the life of the window: `main.ts` loads it
+  before importing the app (`app.ts`), so strings can be translated anywhere, even at module level, without making
+  every label reactive; changing the language reloads the window (the session brings the tabs back; with unsaved
+  changes it waits for the next start). The system language comes from Go (`internal/locale`: AppleLanguages on
+  macOS, the Windows display language list, LANGUAGE/LC_*/LANG elsewhere), because webviews report it unreliably.
+  Unit tests find every `t()` key statically and scan markup and code for untranslated text, so nothing new can
+  slip through untranslated; `m47` checks the running app. Self-tests run in English (`MF_SYSTEM_LANG=en`). Not
+  translated yet: error texts made in Go and in web workers (no catalog there).
+- **Pasting into an empty tab makes a scratch document**: the content goes to a temp file and opens like any file
+  of its kind, so every editor works on it unchanged; the tab carries `scratch` (its name), counts as unsaved, and
+  isn't kept in the session. Its first Save asks where, lets the editor write its temp copy the way it always saves,
+  then copies that into place and points the tab there (`Workspace.saveScratch`) — no editor needed changes. Text is
+  classified by content (`core/pasteKind.ts`) rather than asked about.
+- **AI tools always visible** in the image editor (greyed until downloaded) rather than appearing after a download:
+  people learn they exist where they'd use them, and the click leads to the one place they are installed (Settings ›
+  AI models, `core/settingsLink.ts` scrolls to and highlights the row). They are actions next to Select object, not
+  new tool modes. The standard Select subject keeps the bundled model so the two can be compared.
+- **Updates from GitHub releases, no update server.** The check is one unauthenticated request to the public
+  releases API (`/releases/latest`, so pre-releases are never offered); the package for the system is a release asset
+  and is verified against the release's `SHA256SUMS`. Installing replaces the running copy by renaming (a running
+  program can be renamed on every OS; the old file is removed by the new version), then starts the new version with
+  `--after-update=PID`, which waits for the old process to exit (it holds the single-instance lock). Windows copies
+  installed by the setup program update through it (`--update`: waits for the app to close, reinstalls with the
+  recorded folder and choices, including the elevated "for everyone" case, then starts it) so the registry,
+  uninstaller and shortcuts stay right. Not code-signed yet, so updates carry the same first-launch warnings as
+  downloads. Rejected: a third-party updater framework (licences, cgo) and a custom update server.
 - **Side panels float in narrow panes** (< 600 px, `isNarrow`): over the content with a shadow, closed when the
   pane becomes narrow, opened from the toolbar — a 260 px panel beside a 400 px pane would leave the canvas or
   table unusable.

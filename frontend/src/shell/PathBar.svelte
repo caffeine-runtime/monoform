@@ -15,6 +15,7 @@
   import { boot } from '../core/boot';
   import { ancestors, basename, dirname } from '../core/paths';
   import { copyText } from './treeActions';
+  import { t } from '../core/i18n';
 
   const tab = $derived(workspace.active);
   // The file on disk (for an archive entry: the archive, then the entry's name).
@@ -22,7 +23,7 @@
   const crumbs = $derived(file ? ancestors(file) : []);
   const entry = $derived(tab?.source.kind === 'archive-entry' ? tab.source.entry : '');
 
-  const managerName = boot.platform === 'windows' ? 'Explorer' : boot.platform === 'darwin' ? 'Finder' : 'the file manager';
+  const showIn = boot.platform === 'windows' ? t('Show in {app}', { app: 'Explorer' }) : boot.platform === 'darwin' ? t('Show in {app}', { app: 'Finder' }) : t('Show in the file manager');
 
   let strip = $state<HTMLDivElement>();
   // Keep the end of a long path (the file and its folder) in view.
@@ -146,11 +147,11 @@
   function context(e: MouseEvent) {
     if (!file) return;
     menu.show(e, [
-      { label: 'Copy path', run: () => copyText(entry ? `${file}/${entry}` : file) },
-      { label: 'Copy folder path', run: () => copyText(dirname(file), 'Folder path') },
+      { label: t('Copy path'), run: () => copyText(entry ? `${file}/${entry}` : file) },
+      { label: t('Copy folder path'), run: () => copyText(dirname(file), t('Folder path copied')) },
       { separator: true },
-      { label: `Show in ${managerName}`, run: () => reveal(file) },
-      { label: 'Hide the path bar', run: () => settings.update((s) => (s.pathBarOff = true)) },
+      { label: showIn, run: () => reveal(file) },
+      { label: t('Hide the path bar'), run: () => settings.update((s) => (s.pathBarOff = true)) },
     ]);
   }
 </script>
@@ -158,7 +159,7 @@
 <svelte:window onpointerdown={outside} onblur={close} />
 
 {#if file}
-  <div class="pathbar" role="navigation" aria-label="File location" oncontextmenu={context}>
+  <div class="pathbar" role="navigation" aria-label={t('File location')} oncontextmenu={context}>
     <div class="strip" bind:this={strip}>
       {#each crumbs as c, i (c.path)}
         {#if i > 0}<span class="sep"><Icon icon={ChevronRight} size={12} /></span>{/if}
@@ -180,25 +181,25 @@
 {/if}
 
 {#if pop}
-  <div class="folderpop" style:left="{Math.max(4, pop.x)}px" style:top="{pop.y}px" role="dialog" aria-label="Folder">
+  <div class="folderpop" style:left="{Math.max(4, pop.x)}px" style:top="{pop.y}px" role="dialog" aria-label={t('Folder')}>
     <div class="fp-head">
       <span class="fp-dir" title={pop.dir}>{pop.dir}</span>
     </div>
     <div class="fp-actions">
-      <button class="btn" onclick={asFolder} title="Show this folder in the sidebar"><Icon icon={FolderOpen} size={13} /> Open as folder</button>
-      <button class="btn" onclick={() => pop && reveal(pop.dir)}><Icon icon={ExternalLink} size={13} /> Show in {managerName}</button>
+      <button class="btn" onclick={asFolder} title={t('Show this folder in the sidebar')}><Icon icon={FolderOpen} size={13} /> {t('Open as folder')}</button>
+      <button class="btn" onclick={() => pop && reveal(pop.dir)}><Icon icon={ExternalLink} size={13} /> {showIn}</button>
     </div>
-    <input class="fp-filter" bind:this={input} bind:value={filter} placeholder="Type to filter" onkeydown={key} oninput={() => (sel = 0)} spellcheck="false" />
+    <input class="fp-filter" bind:this={input} bind:value={filter} placeholder={t('Type to filter')} onkeydown={key} oninput={() => (sel = 0)} spellcheck="false" />
     <div class="fp-list" bind:this={list} role="listbox">
       {#if !isRoot}
-        <button class="fp-item up" onclick={up} title="Up one folder (Backspace)"><Icon icon={ArrowUp} size={14} /><span>..</span></button>
+        <button class="fp-item up" onclick={up} title={t('Up one folder ({key})', { key: 'Backspace' })}><Icon icon={ArrowUp} size={14} /><span>..</span></button>
       {/if}
       {#if loading && !items.length}
         <div class="fp-note"><span class="spinner"></span></div>
       {:else if error}
         <div class="fp-note err">{error}</div>
       {:else if !shown.length}
-        <div class="fp-note">{filter ? 'Nothing matches' : 'Empty folder'}</div>
+        <div class="fp-note">{filter ? t('Nothing matches') : t('Empty folder')}</div>
       {/if}
       {#each shown.slice(0, LIMIT) as e, i (e.path)}
         <button
@@ -217,7 +218,7 @@
         </button>
       {/each}
       {#if shown.length > LIMIT}
-        <div class="fp-note">{shown.length - LIMIT} more — type to filter</div>
+        <div class="fp-note">{t('{n} more — type to filter', { n: shown.length - LIMIT })}</div>
       {/if}
     </div>
   </div>

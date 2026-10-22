@@ -2,6 +2,8 @@
 // where the value sits in the text), with problems flagged, and value edits
 // as minimal text patches so comments and layout survive. Pure; unit-tested.
 
+import { t } from '../../core/i18n';
+
 export type ConfigKind = 'ini' | 'properties' | 'env';
 
 export interface Entry {
@@ -52,19 +54,19 @@ export function parse(text: string, kind: ConfigKind): { entries: Entry[]; issue
   let section = '';
   for (let i = 0; i < ls.length; i++) {
     const { s, at, n } = ls[i];
-    const t = s.trim();
-    if (!t) continue;
+    const trimmed = s.trim();
+    if (!trimmed) continue;
     if (kind === 'ini') {
-      if (t[0] === ';' || t[0] === '#') continue;
-      if (t[0] === '[') {
-        const m = /^\[([^\]]*)\]\s*(?:[;#].*)?$/.exec(t);
+      if (trimmed[0] === ';' || trimmed[0] === '#') continue;
+      if (trimmed[0] === '[') {
+        const m = /^\[([^\]]*)\]\s*(?:[;#].*)?$/.exec(trimmed);
         if (m) section = m[1].trim();
-        else issues.push({ line: n, message: 'Unclosed [section]' });
+        else issues.push({ line: n, message: t('Unclosed [section]') });
         continue;
       }
       const eq = s.search(/[=:]/);
       if (eq < 0) {
-        issues.push({ line: n, message: 'Expected key = value' });
+        issues.push({ line: n, message: t('Expected key = value') });
         continue;
       }
       const key = s.slice(0, eq).trim();
@@ -86,10 +88,10 @@ export function parse(text: string, kind: ConfigKind): { entries: Entry[]; issue
         ve = vs + value.replace(/\s+$/, '').length;
         value = value.trim();
       }
-      if (!key) issues.push({ line: n, message: 'Missing key' });
+      if (!key) issues.push({ line: n, message: t('Missing key') });
       entries.push({ section, key, value, line: n, from: at + vs, to: at + ve, quote });
     } else if (kind === 'properties') {
-      if (t[0] === '#' || t[0] === '!') continue;
+      if (trimmed[0] === '#' || trimmed[0] === '!') continue;
       // Key ends at the first unescaped = : or whitespace.
       let k = s.search(/\S/);
       let key = '';
@@ -118,10 +120,10 @@ export function parse(text: string, kind: ConfigKind): { entries: Entry[]; issue
       }
       entries.push({ section: '', key: unescProps(key), value: unescProps(raw), line: n, from, to: end, quote: '' });
     } else {
-      if (t[0] === '#') continue;
+      if (trimmed[0] === '#') continue;
       const m = /^(\s*(?:export\s+)?)([A-Za-z_][A-Za-z0-9_.-]*)\s*=\s*/.exec(s);
       if (!m) {
-        issues.push({ line: n, message: 'Expected NAME=value' });
+        issues.push({ line: n, message: t('Expected NAME=value') });
         continue;
       }
       const vs = m[0].length;
@@ -135,7 +137,7 @@ export function parse(text: string, kind: ConfigKind): { entries: Entry[]; issue
         const qs = at + vs;
         const ce = findClose(text, quote, qs + 1);
         if (ce < 0) {
-          issues.push({ line: n, message: `Unclosed ${quote} quote` });
+          issues.push({ line: n, message: t('Unclosed {quote} quote', { quote }) });
           value = text.slice(qs + 1);
           to = text.length;
           i = ls.length;
@@ -159,7 +161,7 @@ export function parse(text: string, kind: ConfigKind): { entries: Entry[]; issue
   for (const e of entries) {
     const k = `${e.section}\u0000${kind === 'ini' ? e.key.toLowerCase() : e.key}`;
     const first = seen.get(k);
-    if (first !== undefined) issues.push({ line: e.line, message: `“${e.key}” is already set on line ${first} (this one wins${kind === 'ini' ? ' in most readers' : ''})` });
+    if (first !== undefined) issues.push({ line: e.line, message: kind === 'ini' ? t('“{key}” is already set on line {line} (this one wins in most readers)', { key: e.key, line: String(first) }) : t('“{key}” is already set on line {line} (this one wins)', { key: e.key, line: String(first) }) });
     else seen.set(k, e.line);
   }
   issues.sort((a, b) => a.line - b.line);

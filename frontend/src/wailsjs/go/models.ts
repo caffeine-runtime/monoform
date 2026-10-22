@@ -434,6 +434,30 @@ export namespace app {
 	        this.tool = source["tool"];
 	    }
 	}
+	export class UpdateInfo {
+	    available: boolean;
+	    current: string;
+	    version: string;
+	    notes: string;
+	    url: string;
+	    size: number;
+	    install: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.available = source["available"];
+	        this.current = source["current"];
+	        this.version = source["version"];
+	        this.notes = source["notes"];
+	        this.url = source["url"];
+	        this.size = source["size"];
+	        this.install = source["install"];
+	    }
+	}
 	export class VideoOpened {
 	    info?: video.Info;
 	    url: string;
@@ -1760,6 +1784,8 @@ export namespace settings {
 	    panelsHidden: boolean;
 	    lightCanvases: boolean;
 	    language: string;
+	    updateCheckOff: boolean;
+	    updateSkip: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -1795,6 +1821,8 @@ export namespace settings {
 	        this.panelsHidden = source["panelsHidden"];
 	        this.lightCanvases = source["lightCanvases"];
 	        this.language = source["language"];
+	        this.updateCheckOff = source["updateCheckOff"];
+	        this.updateSkip = source["updateSkip"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

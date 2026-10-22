@@ -4,6 +4,7 @@
   // are applied to the file. Positions are fractions of the page, so zooming
   // keeps them in place.
   import type { Mark } from './marks';
+  import { t } from '../../core/i18n';
 
   let {
     container,
@@ -168,13 +169,13 @@
         style:top="{p.y + m.y * p.h}px"
         style:width="{m.w * p.w}px"
         style:height="{m.h * p.h}px"
-        title={m.kind === 'sign' ? 'Signature — drag to move, drag the corner to resize' : 'Redaction — drag to move, drag the corner to resize'}
+        title={m.kind === 'sign' ? t('Signature — drag to move, drag the corner to resize') : t('Redaction — drag to move, drag the corner to resize')}
         onpointerdown={(e) => markDown(e, m, 'move')}
         onpointermove={markMove}
         onpointerup={() => (drag = null)}
       >
-        {#if m.src}<img src={m.src} alt="Signature" draggable="false" />{/if}
-        <button class="del" title="Remove" aria-label="Remove" onpointerdown={(e) => e.stopPropagation()} onclick={() => remove(m.id)}>×</button>
+        {#if m.src}<img src={m.src} alt={t('Signature')} draggable="false" />{/if}
+        <button class="del" title={t('Remove')} aria-label={t('Remove')} onpointerdown={(e) => e.stopPropagation()} onclick={() => remove(m.id)}>×</button>
         <span class="grip" onpointerdown={(e) => markDown(e, m, 'size')} onpointermove={markMove} onpointerup={() => (drag = null)}></span>
       </div>
     {/if}

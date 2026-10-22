@@ -14,6 +14,7 @@
   import { workspace, type Tab } from '../../core/tabs.svelte';
   import { menu, toastError, ui } from '../../core/ui.svelte';
   import { officeControllers } from './controllers';
+  import { t, tn } from '../../core/i18n';
   import type { office } from '../../wailsjs/go/models';
 
   let { tab }: { tab: Tab } = $props();
@@ -70,7 +71,7 @@
     try {
       if (book) void api.SheetClose(book.id);
       const path = tab.filePath ?? '';
-      if (!path) throw new Error('Spreadsheets inside archives open read-only after extracting them.');
+      if (!path) throw new Error(t('Spreadsheets inside archives open read-only after extracting them.'));
       book = await api.SheetOpen(path);
       saveAsTarget = book.saveAs;
       sheet = book.sheets.find((s) => s.name === (tab.restoredState as { sheet?: string })?.sheet)?.name ?? book.sheets[0]?.name ?? '';
@@ -103,7 +104,7 @@
 
   function updateStatus() {
     if (!book) return;
-    tab.status = { ...tab.status, type: book.format.startsWith('o') ? 'OpenDocument spreadsheet' : book.format.toUpperCase(), position: selStats || `${colName(cursor.col)}${cursor.row + 1}`, info: `${sheet} · ${info?.rows ?? 0} rows` };
+    tab.status = { ...tab.status, type: book.format.startsWith('o') ? t('OpenDocument spreadsheet') : book.format.toUpperCase(), position: selStats || `${colName(cursor.col)}${cursor.row + 1}`, info: `${sheet} · ${tn('{n} row', '{n} rows', info?.rows ?? 0)}` };
   }
 
   /** Write a batch (Go recalculates once) and record it for undo. */
@@ -122,7 +123,7 @@
       await updateCursor(cursor.row, cursor.col);
       return true;
     } catch (err) {
-      toastError(err, 'Could not change the cells');
+      toastError(err, t('Could not change the cells'));
       return false;
     }
   }
@@ -203,7 +204,7 @@
 
   async function addSheet() {
     if (!book) return;
-    const name = await ui.prompt('New sheet name', `Sheet${book.sheets.length + 1}`, 'Add');
+    const name = await ui.prompt(t('New sheet name'), t('Sheet{n}', { n: String(book.sheets.length + 1) }), t('Add'));
     if (!name) return;
     try {
       await api.SheetAddSheet(book.id, name);
@@ -217,7 +218,7 @@
 
   async function renameSheet(name: string) {
     if (!book) return;
-    const to = await ui.prompt('Rename sheet', name, 'Rename');
+    const to = await ui.prompt(t('Rename sheet'), name, t('Rename'));
     if (!to || to === name) return;
     try {
       await api.SheetRenameSheet(book.id, name, to);
@@ -255,7 +256,7 @@
   async function save(): Promise<boolean> {
     if (!book) return false;
     if (saveAsTarget) {
-      const ok = await ui.confirm('Save as .xlsx?', `Legacy .xls files can't be written. Your edits will be saved to ${basename(saveAsTarget)} next to the original, which stays unchanged.`, 'Save .xlsx');
+      const ok = await ui.confirm(t('Save as .xlsx?'), t("Legacy .xls files can't be written. Your edits will be saved to {name} next to the original, which stays unchanged.", { name: basename(saveAsTarget) }), t('Save .xlsx'));
       if (!ok) return false;
       return writeTo(saveAsTarget, true);
     }
@@ -267,9 +268,9 @@
     if (!book) return false;
     const def = saveAsTarget || tab.filePath || tab.title;
     const ods = book.format === 'ods' || book.format === 'ots';
-    const filters = [{ name: 'Excel workbook', patterns: '*.xlsx' }];
-    if (ods) filters.unshift({ name: 'OpenDocument spreadsheet', patterns: '*.ods' });
-    const p = await api.SaveFileDialog('Save workbook as', def, filters);
+    const filters = [{ name: t('Excel workbook'), patterns: '*.xlsx' }];
+    if (ods) filters.unshift({ name: t('OpenDocument spreadsheet'), patterns: '*.ods' });
+    const p = await api.SaveFileDialog(t('Save workbook as'), def, filters);
     if (!p) return false;
     return writeTo(/\.xls[xm]$/i.test(p) || (ods && /\.ods$/i.test(p)) ? p : `${p}.${ods ? 'ods' : 'xlsx'}`, true);
   }
@@ -292,13 +293,13 @@
     const n = s ? rangeRows(s) : 1;
     const ro = tab.readOnly;
     menu.show(e, [
-      { label: 'Cut', shortcut: formatShortcut('Mod+X'), run: () => void grid?.copy(true), disabled: ro },
-      { label: 'Copy', shortcut: formatShortcut('Mod+C'), run: () => void grid?.copy() },
-      { label: 'Paste', shortcut: formatShortcut('Mod+V'), run: async () => grid?.pasteText(await navigator.clipboard.readText()), disabled: ro },
-      { label: 'Clear contents', shortcut: 'Del', run: () => void grid?.clearSelection(), disabled: ro },
+      { label: t('Cut'), shortcut: formatShortcut('Mod+X'), run: () => void grid?.copy(true), disabled: ro },
+      { label: t('Copy'), shortcut: formatShortcut('Mod+C'), run: () => void grid?.copy() },
+      { label: t('Paste'), shortcut: formatShortcut('Mod+V'), run: async () => grid?.pasteText(await navigator.clipboard.readText()), disabled: ro },
+      { label: t('Clear contents'), shortcut: 'Del', run: () => void grid?.clearSelection(), disabled: ro },
       { separator: true },
-      { label: 'Insert row above', run: insertRow, disabled: ro },
-      { label: n > 1 ? `Delete ${n} rows` : 'Delete row', run: deleteRow, disabled: ro },
+      { label: t('Insert row above'), run: insertRow, disabled: ro },
+      { label: n > 1 ? tn('Delete {n} row', 'Delete {n} rows', n) : t('Delete row'), run: deleteRow, disabled: ro },
     ]);
   }
 
@@ -328,7 +329,7 @@
 {/if}
 <div class="formula">
   <span class="ref">{colName(cursor.col)}{cursor.row + 1}</span>
-  <span class="fx">fx</span>
+  <span class="fx">fx</span><!-- i18n-ignore -->
   <input
     class="input"
     bind:this={formulaEl}
@@ -378,7 +379,7 @@
     {#each book.sheets as s (s.name)}
       <button class="sheet" class:on={s.name === sheet} role="tab" aria-selected={s.name === sheet} onclick={() => switchSheet(s.name)} ondblclick={() => !tab.readOnly && renameSheet(s.name)}>{s.name}</button>
     {/each}
-    {#if !tab.readOnly}<button class="icon-btn add" title="Add sheet" onclick={addSheet}><Icon icon={Plus} size={14} /></button>{/if}
+    {#if !tab.readOnly}<button class="icon-btn add" title={t('Add sheet')} onclick={addSheet}><Icon icon={Plus} size={14} /></button>{/if}
   </div>
 {/if}
 

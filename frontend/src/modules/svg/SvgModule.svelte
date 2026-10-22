@@ -13,6 +13,7 @@
   import { api, saveFile } from '../../core/backend';
   import { dirname, join, stem, extname } from '../../core/paths';
   import { ui, toastError } from '../../core/ui.svelte';
+  import { t, tn } from '../../core/i18n';
   import TextEditor from '../text/TextEditor.svelte';
   import type { TextController } from '../text/controller';
   import { centered, clampZoom, fitZoom, stepZoom, zoomAt, type View } from '../image/geometry';
@@ -143,7 +144,7 @@
     const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
     const err = doc.querySelector('parsererror');
     if (err || doc.documentElement.localName !== 'svg') {
-      const msg = err?.textContent?.replace(/\s+/g, ' ').trim() ?? 'The root element must be <svg>.';
+      const msg = err?.textContent?.replace(/\s+/g, ' ').trim() ?? t('The root element must be <svg>.');
       error = msg.length > 200 ? msg.slice(0, 200) + '…' : msg;
       return; // keep showing the last good render
     }
@@ -155,7 +156,7 @@
     if (src) URL.revokeObjectURL(src);
     src = url;
     const count = doc.getElementsByTagName('*').length;
-    tab.status = { ...tab.status, type: 'SVG image', position: `${Math.round(size.w)} × ${Math.round(size.h)}`, info: `${count} elements` };
+    tab.status = { ...tab.status, type: t('SVG image'), position: `${Math.round(size.w)} × ${Math.round(size.h)}`, info: tn('{n} element', '{n} elements', count) };
     if (first || fitted) queueMicrotask(fit);
   }
 
@@ -182,35 +183,35 @@
   /** Rasterise the current SVG at a scale and save it as PNG. */
   async function exportPng() {
     if (!src || error) {
-      ui.toast('Fix the SVG errors first.', 'warning');
+      ui.toast(t('Fix the SVG errors first.'), 'warning');
       return;
     }
-    const choice = await ui.pick('Export PNG', [
+    const choice = await ui.pick(t('Export PNG'), [
       { id: '1', label: `1× — ${Math.round(natural.w)} × ${Math.round(natural.h)}` },
       { id: '2', label: `2× — ${Math.round(natural.w * 2)} × ${Math.round(natural.h * 2)}` },
       { id: '4', label: `4× — ${Math.round(natural.w * 4)} × ${Math.round(natural.h * 4)}` },
-      { id: 'w', label: 'Custom width…' },
+      { id: 'w', label: t('Custom width…') },
     ]);
     if (!choice) return;
     let scale = Number(choice);
     if (choice === 'w') {
-      const v = await ui.prompt('Width in pixels', String(Math.round(natural.w * 2)), 'Export');
+      const v = await ui.prompt(t('Width in pixels'), String(Math.round(natural.w * 2)), t('Export'));
       if (!v || !(+v > 0)) return;
       scale = +v / natural.w;
     }
     const w = Math.max(1, Math.round(natural.w * scale));
     const h = Math.max(1, Math.round(natural.h * scale));
     if (w * h > 16384 * 16384 || w > 16384 || h > 16384) {
-      ui.toast('That is too large (16384 px per side at most).', 'warning');
+      ui.toast(t('That is too large ({max} px per side at most).', { max: '16384' }), 'warning');
       return;
     }
     const base = join(dirname(tab.filePath ?? tab.path ?? ''), `${stem(tab.title)}.png`);
-    let path = await api.SaveFileDialog('Export PNG', base, [{ name: 'PNG', patterns: '*.png' }]);
+    let path = await api.SaveFileDialog(t('Export PNG'), base, [{ name: 'PNG', patterns: '*.png' }]);
     if (!path) return;
     if (extname(path) !== 'png') path += '.png';
     if (await exportTo(path, w, h)) {
       const p = path;
-      ui.toast(`Exported ${w} × ${h} PNG`, 'success', { label: 'Open', run: () => void workspace.openPath(p) });
+      ui.toast(t('Exported {w} × {h} PNG', { w: String(w), h: String(h) }), 'success', { label: t('Open'), run: () => void workspace.openPath(p) });
     }
   }
 
@@ -223,11 +224,11 @@
       c.width = w;
       c.height = h;
       c.getContext('2d')!.drawImage(img, 0, 0, w, h);
-      const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('encoding failed'))), 'image/png'));
+      const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error(t('encoding failed')))), 'image/png'));
       await saveFile(path, blob);
       return true;
     } catch (e) {
-      toastError(e, 'Export failed');
+      toastError(e, t('Export failed'));
       return false;
     }
   }
@@ -284,42 +285,42 @@
 </script>
 
 <div class="toolbar" use:fitBar>
-  <div class="seg" role="group" aria-label="View">
-    <button class="btn ghost" class:on={view === 'design'} title="Edit visually: select, move, scale, rotate, draw shapes, change colours" onclick={() => svgViews.get(tab.id)?.set('design')}>Design</button>
-    <button class="btn ghost" class:on={view === 'source'} onclick={() => svgViews.get(tab.id)?.set('source')}>Source</button>
-    <button class="btn ghost" class:on={view === 'split'} onclick={() => svgViews.get(tab.id)?.set('split')}>Split</button>
-    <button class="btn ghost" class:on={view === 'preview'} onclick={() => svgViews.get(tab.id)?.set('preview')}>Preview</button>
+  <div class="seg" role="group" aria-label={t('View')}>
+    <button class="btn ghost" class:on={view === 'design'} title={t('Edit visually: select, move, scale, rotate, draw shapes, change colours')} onclick={() => svgViews.get(tab.id)?.set('design')}>{t('Design')}</button>
+    <button class="btn ghost" class:on={view === 'source'} onclick={() => svgViews.get(tab.id)?.set('source')}>{t('Source')}</button>
+    <button class="btn ghost" class:on={view === 'split'} onclick={() => svgViews.get(tab.id)?.set('split')}>{t('Split', {}, 'view')}</button>
+    <button class="btn ghost" class:on={view === 'preview'} onclick={() => svgViews.get(tab.id)?.set('preview')}>{t('Preview')}</button>
   </div>
   <span class="spacer"></span>
   {#if view === 'design'}
-    <div class="seg" role="group" aria-label="Background">
-      <button class="btn ghost" class:on={bg === 'checker'} title="Transparent" onclick={() => (bg = 'checker')}>▦</button>
-      <button class="btn ghost" class:on={bg === 'light'} title="Light background" onclick={() => (bg = 'light')}>☀</button>
-      <button class="btn ghost" class:on={bg === 'dark'} title="Dark background" onclick={() => (bg = 'dark')}>☾</button>
+    <div class="seg" role="group" aria-label={t('Background')}>
+      <button class="btn ghost" class:on={bg === 'checker'} title={t('Transparent')} onclick={() => (bg = 'checker')}>▦</button>
+      <button class="btn ghost" class:on={bg === 'light'} title={t('Light background')} onclick={() => (bg = 'light')}>☀</button>
+      <button class="btn ghost" class:on={bg === 'dark'} title={t('Dark background')} onclick={() => (bg = 'dark')}>☾</button>
     </div>
     <span class="sep"></span>
-    <button class="btn ghost" title="Zoom out" onclick={() => design?.zoomBy(-1)}>−</button>
-    <button class="btn ghost" title="Fit" onclick={() => design?.fit()}>Fit</button>
-    <button class="btn ghost" title="Zoom in" onclick={() => design?.zoomBy(1)}>+</button>
-    <button class="btn ghost" title="Undo ({'Ctrl+Z'})" onclick={() => designOp('undo')}>↶</button>
-    <button class="btn ghost" title="Redo ({'Ctrl+Shift+Z'})" onclick={() => designOp('redo')}>↷</button>
+    <button class="btn ghost" title={t('Zoom out')} onclick={() => design?.zoomBy(-1)}>−</button>
+    <button class="btn ghost" title={t('Fit')} onclick={() => design?.fit()}>{t('Fit')}</button>
+    <button class="btn ghost" title={t('Zoom in')} onclick={() => design?.zoomBy(1)}>+</button>
+    <button class="btn ghost" title={t('Undo ({key})', { key: 'Ctrl+Z' })} onclick={() => designOp('undo')}>↶</button>
+    <button class="btn ghost" title={t('Redo ({key})', { key: 'Ctrl+Shift+Z' })} onclick={() => designOp('redo')}>↷</button>
     <span class="sep"></span>
   {:else if view !== 'source'}
-    <div class="seg" role="group" aria-label="Background">
-      <button class="btn ghost" class:on={bg === 'checker'} title="Transparent" onclick={() => (bg = 'checker')}>▦</button>
-      <button class="btn ghost" class:on={bg === 'light'} title="Light background" onclick={() => (bg = 'light')}>☀</button>
-      <button class="btn ghost" class:on={bg === 'dark'} title="Dark background" onclick={() => (bg = 'dark')}>☾</button>
+    <div class="seg" role="group" aria-label={t('Background')}>
+      <button class="btn ghost" class:on={bg === 'checker'} title={t('Transparent')} onclick={() => (bg = 'checker')}>▦</button>
+      <button class="btn ghost" class:on={bg === 'light'} title={t('Light background')} onclick={() => (bg = 'light')}>☀</button>
+      <button class="btn ghost" class:on={bg === 'dark'} title={t('Dark background')} onclick={() => (bg = 'dark')}>☾</button>
     </div>
     <span class="sep"></span>
-    <button class="btn ghost" title="Zoom out" onclick={() => zoom(-1)}>−</button>
-    <button class="btn ghost zoomlabel" title="Fit" onclick={fit}>{Math.round(pv.zoom * 100)}%</button>
-    <button class="btn ghost" title="Zoom in" onclick={() => zoom(1)}>+</button>
+    <button class="btn ghost" title={t('Zoom out')} onclick={() => zoom(-1)}>−</button>
+    <button class="btn ghost zoomlabel" title={t('Fit')} onclick={fit}>{Math.round(pv.zoom * 100)}%</button>
+    <button class="btn ghost" title={t('Zoom in')} onclick={() => zoom(1)}>+</button>
     <span class="sep"></span>
   {/if}
-  <button class="btn ghost" onclick={exportPng}>Export PNG…</button>
-  {#if tab.filePath}<button class="btn ghost" title="Open in your web browser" onclick={() => api.OpenInBrowser(tab.filePath!).catch((e) => toastError(e))}>Open in browser</button>{/if}
+  <button class="btn ghost" onclick={exportPng}>{t('Export PNG…')}</button>
+  {#if tab.filePath}<button class="btn ghost" title={t('Open in your web browser')} onclick={() => api.OpenInBrowser(tab.filePath!).catch((e) => toastError(e))}>{t('Open in browser')}</button>{/if}
 </div>
-{#if error}<div class="banner err">SVG error: {error}</div>{/if}
+{#if error}<div class="banner err">{t('SVG error: {error}', { error })}</div>{/if}
 <div class="panes" data-view={view}>
   <div class="src" style:flex={view === 'split' ? `0 0 ${ratio * 100}%` : null}><TextEditor {tab} {options} onready={ready} /></div>
   {#if view === 'split'}<PaneDivider bind:ratio key="svg" />{/if}

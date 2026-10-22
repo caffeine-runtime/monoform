@@ -17,6 +17,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab, copyLineDown, cur
 import { autocompletion, closeBrackets, closeBracketsKeymap, completeAnyWord, completionKeymap, type CompletionContext } from '@codemirror/autocomplete';
 import { addCursorVertical, expandToLine, insertLineAbove, joinLines, sortLines, splitIntoLines, transformCase } from './editing';
 import { indentGuides, minimap } from './minimap';
+import { editorPhrases } from './phrases';
 import { indentOnInput, bracketMatching, foldGutter, foldKeymap, syntaxHighlighting, HighlightStyle, LanguageDescription } from '@codemirror/language';
 import { search, searchKeymap, highlightSelectionMatches, selectSelectionMatches } from '@codemirror/search';
 import { tags as t } from '@lezer/highlight';
@@ -175,6 +176,7 @@ export function readOnlyExt(on: boolean): Extension {
 export function baseExtensions(c: Compartments, opts: { large: boolean; wrap: boolean; readOnly: boolean; lineSep?: string; minimap?: boolean; whitespace?: boolean }): Extension[] {
   return [
     sublimeKeymap,
+    editorPhrases(),
     lineNumbers(),
     highlightActiveLineGutter(),
     highlightSpecialChars(),

@@ -6,19 +6,20 @@
   import type { Tab } from '../core/tabs.svelte';
   import { copyTransfer, describe, transferDrag, type Transfer } from '../core/transfer.svelte';
   import { ui } from '../core/ui.svelte';
+  import { t } from '../core/i18n';
 
   let { tab, get, what }: { tab: Tab; get: () => Transfer | null | Promise<Transfer | null>; what: string } = $props();
 
   async function copy() {
     if (transferDrag.justDropped) return;
-    const t = await get();
-    if (!t) return;
-    await copyTransfer(t);
-    ui.toast(`Copied ${describe(t)} — paste it into another tab with Ctrl+V, or drag this button there.`, 'success');
+    const x = await get();
+    if (!x) return;
+    await copyTransfer(x);
+    ui.toast(t('Copied {what} — paste it into another tab with {keys}, or drag this button there.', { what: describe(x), keys: 'Ctrl+V' }), 'success');
   }
 </script>
 
-<button class="icon-btn give" title="Copy {what}, or drag it into another tab" aria-label="Copy or drag {what}" onclick={copy} onpointerdown={(e) => transferDrag.start(e, tab, get)}>
+<button class="icon-btn give" title={t('Copy {what}, or drag it into another tab', { what })} aria-label={t('Copy or drag {what}', { what })} onclick={copy} onpointerdown={(e) => transferDrag.start(e, tab, get)}>
   <Icon icon={Grip} size={15} />
 </button>
 

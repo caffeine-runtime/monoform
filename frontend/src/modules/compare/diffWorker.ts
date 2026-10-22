@@ -35,7 +35,7 @@ function parseData(text: string, ext: string): unknown {
     return list.length === 1 ? list[0] : list;
   }
   const r = parseJson(text, true);
-  if (!r.ok) throw new Error(`${r.error.message} (line ${r.error.line})`);
+  if (!r.ok) throw new Error(`${r.error.message} (line ${r.error.line})`); // i18n-ignore: the worker has no catalog; the parser's message is English too
   return r.value;
 }
 

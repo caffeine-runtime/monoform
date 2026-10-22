@@ -5,6 +5,7 @@
   // a tab that isn't showing can still be the target.
   import { describe, transferDrag } from '../core/transfer.svelte';
   import { workspace } from '../core/tabs.svelte';
+  import { t } from '../core/i18n';
 
   const item = $derived(transferDrag.item);
   // A small picture of an image being dragged (made once per drag).
@@ -49,8 +50,8 @@
   <div class="xfer-chip" style:left="{Math.min(transferDrag.x + 14, innerWidth - 280)}px" style:top="{Math.min(transferDrag.y + 16, innerHeight - 60)}px" aria-hidden="true">
     {#if thumb}<span class="thumb" style:background-image="url({thumb})"></span>{/if}
     <span class="what">{describe(item.t)}</span>
-    {#if target}<span class="hint">{transferDrag.over?.ok ? `Drop into ${target.title}` : `${target.title} can’t take this`}</span>
-    {:else}<span class="hint muted">Drop on another tab’s view, or hover a tab to bring it up</span>{/if}
+    {#if target}<span class="hint">{transferDrag.over?.ok ? t('Drop into {name}', { name: target.title }) : t('{name} can’t take this', { name: target.title })}</span>
+    {:else}<span class="hint muted">{t('Drop on another tab’s view, or hover a tab to bring it up')}</span>{/if}
   </div>
 {/if}
 

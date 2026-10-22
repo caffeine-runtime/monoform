@@ -3,19 +3,21 @@
 // overlay stays attached to the moment (and object) it was placed on even
 // when other parts are cut. Pure functions; unit-tested.
 
+import { t } from '../../core/i18n';
+
 export type Range = [number, number];
 
 /** Timing curve from one keyframe to the next. */
 export type Easing = 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'hold' | 'bounce' | { bezier: [number, number, number, number] };
 
 export const EASINGS: { id: Exclude<Easing, object> | 'custom'; label: string }[] = [
-  { id: 'linear', label: 'Linear' },
-  { id: 'easeIn', label: 'Ease in' },
-  { id: 'easeOut', label: 'Ease out' },
-  { id: 'easeInOut', label: 'Ease in-out' },
-  { id: 'bounce', label: 'Bounce' },
-  { id: 'hold', label: 'Hold (jump)' },
-  { id: 'custom', label: 'Custom curve' },
+  { id: 'linear', label: t('Linear', {}, 'easing') },
+  { id: 'easeIn', label: t('Ease in', {}, 'easing') },
+  { id: 'easeOut', label: t('Ease out', {}, 'easing') },
+  { id: 'easeInOut', label: t('Ease in-out', {}, 'easing') },
+  { id: 'bounce', label: t('Bounce', {}, 'easing') },
+  { id: 'hold', label: t('Hold (jump)', {}, 'easing') },
+  { id: 'custom', label: t('Custom curve', {}, 'easing') },
 ];
 
 export interface Key {
@@ -30,11 +32,11 @@ export interface Key {
 
 export type BlurKind = 'gaussian' | 'pixelate' | 'motion' | 'zoom' | 'lens';
 export const BLUR_KINDS: { id: BlurKind; label: string }[] = [
-  { id: 'gaussian', label: 'Gaussian' },
-  { id: 'pixelate', label: 'Pixelate' },
-  { id: 'motion', label: 'Motion' },
-  { id: 'zoom', label: 'Zoom' },
-  { id: 'lens', label: 'Lens' },
+  { id: 'gaussian', label: t('Gaussian', {}, 'blur') },
+  { id: 'pixelate', label: t('Pixelate', {}, 'blur') },
+  { id: 'motion', label: t('Motion', {}, 'blur') },
+  { id: 'zoom', label: t('Zoom', {}, 'blur') },
+  { id: 'lens', label: t('Lens', {}, 'blur') },
 ];
 
 export interface Layer {
@@ -176,11 +178,11 @@ export interface Speed {
 
 export type TransitionKind = 'crossfade' | 'dip' | 'wipe' | 'slide' | 'zoom';
 export const TRANSITIONS: { id: TransitionKind; label: string; overlap: boolean }[] = [
-  { id: 'crossfade', label: 'Crossfade', overlap: true },
-  { id: 'dip', label: 'Dip to black', overlap: false },
-  { id: 'wipe', label: 'Wipe', overlap: true },
-  { id: 'slide', label: 'Slide', overlap: true },
-  { id: 'zoom', label: 'Zoom through', overlap: true },
+  { id: 'crossfade', label: t('Crossfade', {}, 'transition'), overlap: true },
+  { id: 'dip', label: t('Dip to black', {}, 'transition'), overlap: false },
+  { id: 'wipe', label: t('Wipe', {}, 'transition'), overlap: true },
+  { id: 'slide', label: t('Slide', {}, 'transition'), overlap: true },
+  { id: 'zoom', label: t('Zoom through', {}, 'transition'), overlap: true },
 ];
 
 export interface Transition {
@@ -467,7 +469,7 @@ export function newLayer(kind: Layer['kind'], at: { start: number; end: number; 
   return {
     id: `${kind}-${Date.now().toString(36)}-${++seq}`,
     kind,
-    name: kind === 'image' ? 'Image' : 'Blur',
+    name: kind === 'image' ? t('Image') : t('Blur'),
     start: at.start,
     end: at.end,
     keys: [{ t: at.start, x: at.x, y: at.y, scale: 1, rotation: 0, opacity: 1, ease: 'easeInOut' }],

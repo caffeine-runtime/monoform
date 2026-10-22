@@ -7,6 +7,7 @@
   import ExternalChangeBanner from './ExternalChangeBanner.svelte';
   import { paneRect } from '../core/split';
   import { give, type Transfer } from '../core/transfer.svelte';
+  import { t } from '../core/i18n';
 
   let { tab }: { tab: Tab } = $props();
   const active = $derived(workspace.activeId === tab.id);
@@ -59,18 +60,18 @@
     const id = tab.moduleId;
     mod = null;
     error = '';
-    const t = setTimeout(() => (slow = true), 150);
+    const timer = setTimeout(() => (slow = true), 150);
     modules
       .load(id)
       .then((m) => {
         if (tab.moduleId === id) mod = m;
       })
-      .catch((e) => (error = `Couldn't load the ${id} module: ${e?.message ?? e}`))
+      .catch((e) => (error = t("Couldn't load the {module} module: {error}", { module: id, error: String(e?.message ?? e) })))
       .finally(() => {
-        clearTimeout(t);
+        clearTimeout(timer);
         slow = false;
       });
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   });
 </script>
 

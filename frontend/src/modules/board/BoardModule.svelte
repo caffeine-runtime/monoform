@@ -36,6 +36,7 @@
   import { dirname, extname, join, stem } from '../../core/paths';
   import { formatShortcut } from '../../core/keys';
   import { toastError, ui } from '../../core/ui.svelte';
+  import { t, tn } from '../../core/i18n';
   import type { BoardAdapter, BoardItem, BoardStyle, Box, Pt, TextEdit, Tool } from './types';
   import { union } from './types';
   import { ExcalidrawBoard } from './excalidraw';
@@ -102,7 +103,7 @@
   async function load() {
     error = '';
     try {
-      if (!tab.filePath) throw new Error('Drawings inside archives can be viewed after extracting them.');
+      if (!tab.filePath) throw new Error(t('Drawings inside archives can be viewed after extracting them.'));
       const text = new TextDecoder().decode(await readFile(tab.filePath));
       if (isDrawio) {
         const ex = await expandFile(text);
@@ -132,7 +133,7 @@
   function status() {
     if (!board) return;
     const n = board.items().length;
-    tab.status = { ...tab.status, type: isDrawio ? 'draw.io diagram' : 'Excalidraw drawing', info: `${n} object${n === 1 ? '' : 's'}${sel.length ? ` · ${sel.length} selected` : ''}${isDrawio && pageNames.length > 1 ? ` · ${pageNames[page]}` : ''}` };
+    tab.status = { ...tab.status, type: isDrawio ? t('draw.io diagram') : t('Excalidraw drawing'), info: `${tn('{n} object', '{n} objects', n)}${sel.length ? ` · ${tn('{n} selected', '{n} selected', sel.length)}` : ''}${isDrawio && pageNames.length > 1 ? ` · ${pageNames[page]}` : ''}` };
   }
 
   async function save(): Promise<boolean> {
@@ -143,8 +144,8 @@
 
   async function saveAs(): Promise<boolean> {
     if (!board) return false;
-    const filter = isDrawio ? { name: 'draw.io diagram', patterns: '*.drawio' } : { name: 'Excalidraw drawing', patterns: '*.excalidraw' };
-    let p = await api.SaveFileDialog('Save drawing as', tab.filePath ?? tab.title, [filter]);
+    const filter = isDrawio ? { name: t('draw.io diagram'), patterns: '*.drawio' } : { name: t('Excalidraw drawing'), patterns: '*.excalidraw' };
+    let p = await api.SaveFileDialog(t('Save drawing as'), tab.filePath ?? tab.title, [filter]);
     if (!p) return false;
     const ext = isDrawio ? 'drawio' : 'excalidraw';
     if (extname(p) !== ext && !(isDrawio && extname(p) === 'dio')) p += `.${ext}`;
@@ -161,11 +162,11 @@
       tab.dirty = false;
       if (wasCompressed) {
         wasCompressed = false;
-        ui.toast('Saved (pages are now stored uncompressed, which draw.io reads as well)', 'info');
+        ui.toast(t('Saved (pages are now stored uncompressed, which draw.io reads as well)'), 'info');
       }
       return true;
     } catch (e) {
-      toastError(e, 'Save failed');
+      toastError(e, t('Save failed'));
       return false;
     }
   }
@@ -463,11 +464,11 @@
     if (!id && !isDrawio) {
       // As in Excalidraw: double-click on empty canvas adds text.
       snapshot();
-      const t = board.create('text', toWorld(e), toWorld(e));
-      if (t) {
-        sel = [t];
+      const nid = board.create('text', toWorld(e), toWorld(e));
+      if (nid) {
+        sel = [nid];
         bump();
-        await startEdit(t, true);
+        await startEdit(nid, true);
       }
     }
   }
@@ -584,15 +585,15 @@
 
   async function exportSvg() {
     if (!board) return;
-    let p = await api.SaveFileDialog('Export SVG', join(dirname(tab.filePath ?? ''), `${stem(tab.title)}.svg`), [{ name: 'SVG', patterns: '*.svg' }]);
+    let p = await api.SaveFileDialog(t('Export SVG'), join(dirname(tab.filePath ?? ''), `${stem(tab.title)}.svg`), [{ name: 'SVG', patterns: '*.svg' }]);
     if (!p) return;
     if (extname(p) !== 'svg') p += '.svg';
     try {
       await saveFile(p, (await exportSvgText()).svg);
       const path = p;
-      ui.toast('Exported SVG', 'success', { label: 'Open', run: () => void workspace.openPath(path) });
+      ui.toast(t('Exported SVG'), 'success', { label: t('Open'), run: () => void workspace.openPath(path) });
     } catch (e) {
-      toastError(e, 'Export failed');
+      toastError(e, t('Export failed'));
     }
   }
 
@@ -608,37 +609,37 @@
       c.height = Math.round(h * scale);
       c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
       URL.revokeObjectURL(url);
-      const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('encoding failed'))), 'image/png'));
+      const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error(t('encoding failed')))), 'image/png'));
       await saveFile(path, blob);
       return true;
     } catch (e) {
-      toastError(e, 'Export failed');
+      toastError(e, t('Export failed'));
       return false;
     }
   }
 
   async function exportPng() {
     if (!board) return;
-    let p = await api.SaveFileDialog('Export PNG', join(dirname(tab.filePath ?? ''), `${stem(tab.title)}.png`), [{ name: 'PNG', patterns: '*.png' }]);
+    let p = await api.SaveFileDialog(t('Export PNG'), join(dirname(tab.filePath ?? ''), `${stem(tab.title)}.png`), [{ name: 'PNG', patterns: '*.png' }]);
     if (!p) return;
     if (extname(p) !== 'png') p += '.png';
     if (await pngTo(p)) {
       const path = p;
-      ui.toast('Exported PNG', 'success', { label: 'Open', run: () => void workspace.openPath(path) });
+      ui.toast(t('Exported PNG'), 'success', { label: t('Open'), run: () => void workspace.openPath(path) });
     }
   }
 
   // ---------- wiring ----------
 
   const TOOL_INFO: Record<Tool, { icon: typeof Pointer; label: string; key: string }> = {
-    select: { icon: Pointer, label: 'Select', key: 'V' },
-    rect: { icon: Square, label: 'Rectangle', key: 'R' },
-    diamond: { icon: Diamond, label: 'Diamond', key: 'D' },
-    ellipse: { icon: Circle, label: 'Ellipse', key: 'O' },
-    arrow: { icon: ArrowUpRight, label: 'Arrow (drag from shape to shape to connect)', key: 'A' },
-    line: { icon: Minus, label: 'Line', key: 'L' },
-    draw: { icon: Pencil, label: 'Draw', key: 'P' },
-    text: { icon: Type, label: 'Text', key: 'T' },
+    select: { icon: Pointer, label: t('Select'), key: 'V' },
+    rect: { icon: Square, label: t('Rectangle'), key: 'R' },
+    diamond: { icon: Diamond, label: t('Diamond'), key: 'D' },
+    ellipse: { icon: Circle, label: t('Ellipse'), key: 'O' },
+    arrow: { icon: ArrowUpRight, label: t('Arrow (drag from shape to shape to connect)'), key: 'A' },
+    line: { icon: Minus, label: t('Line'), key: 'L' },
+    draw: { icon: Pencil, label: t('Draw'), key: 'P' },
+    text: { icon: Type, label: t('Text'), key: 'T' },
   };
   const STROKES = ['#1e1e1e', '#e03131', '#2f9e44', '#1971c2', '#f08c00', '#9c36b5', '#868e96', '#ffffff'];
   const FILLS = ['', '#ffc9c9', '#b2f2bb', '#a5d8ff', '#ffec99', '#eebefa', '#e9ecef', '#ffffff'];
@@ -684,57 +685,57 @@
       <button class="icon-btn" class:on={tool === t} title="{TOOL_INFO[t].label} ({TOOL_INFO[t].key})" aria-label={TOOL_INFO[t].label} onclick={() => (tool = t)}><Icon icon={TOOL_INFO[t].icon} /></button>
     {/each}
     <span class="sep"></span>
-    <button class="icon-btn" title="Undo ({formatShortcut('Mod+Z')})" disabled={!canUndo} onclick={undo}><Icon icon={Undo2} /></button>
-    <button class="icon-btn" title="Redo ({formatShortcut('Mod+Shift+Z')})" disabled={!canRedo} onclick={redo}><Icon icon={Redo2} /></button>
+    <button class="icon-btn" title={t('Undo ({key})', { key: formatShortcut('Mod+Z') })} disabled={!canUndo} onclick={undo}><Icon icon={Undo2} /></button>
+    <button class="icon-btn" title={t('Redo ({key})', { key: formatShortcut('Mod+Shift+Z') })} disabled={!canRedo} onclick={redo}><Icon icon={Redo2} /></button>
     <span class="sep"></span>
-    <button class="icon-btn" title="Duplicate ({formatShortcut('Mod+D')})" disabled={!sel.length} onclick={dup}><Icon icon={Copy} /></button>
-    <button class="icon-btn" title="Bring to front ({formatShortcut('Mod+]')})" disabled={!sel.length} onclick={front}><Icon icon={BringToFront} /></button>
-    <button class="icon-btn" title="Send to back ({formatShortcut('Mod+[')})" disabled={!sel.length} onclick={back}><Icon icon={SendToBack} /></button>
-    <button class="icon-btn" title="Delete (Del)" disabled={!sel.length} onclick={del}><Icon icon={Trash} /></button>
+    <button class="icon-btn" title={t('Duplicate ({key})', { key: formatShortcut('Mod+D') })} disabled={!sel.length} onclick={dup}><Icon icon={Copy} /></button>
+    <button class="icon-btn" title={t('Bring to front ({key})', { key: formatShortcut('Mod+]') })} disabled={!sel.length} onclick={front}><Icon icon={BringToFront} /></button>
+    <button class="icon-btn" title={t('Send to back ({key})', { key: formatShortcut('Mod+[') })} disabled={!sel.length} onclick={back}><Icon icon={SendToBack} /></button>
+    <button class="icon-btn" title={t('Delete ({key})', { key: 'Del' })} disabled={!sel.length} onclick={del}><Icon icon={Trash} /></button>
   {/if}
   {#if pageNames.length > 1}
     <span class="sep"></span>
-    <select class="input page" value={page} onchange={(e) => setPage(Number((e.currentTarget as HTMLSelectElement).value))} aria-label="Page">
+    <select class="input page" value={page} onchange={(e) => setPage(Number((e.currentTarget as HTMLSelectElement).value))} aria-label={t('Page')}>
       {#each pageNames as p, i (i)}<option value={i}>{p}</option>{/each}
     </select>
   {/if}
   <span class="spacer"></span>
-  <button class="icon-btn" title="Zoom out" onclick={() => zoomBy(1 / 1.25)}><Icon icon={ZoomOut} /></button>
+  <button class="icon-btn" title={t('Zoom out')} onclick={() => zoomBy(1 / 1.25)}><Icon icon={ZoomOut} /></button>
   <span class="label zoom">{Math.round(view.zoom * 100)}%</span>
-  <button class="icon-btn" title="Zoom in" onclick={() => zoomBy(1.25)}><Icon icon={ZoomIn} /></button>
-  <button class="icon-btn" title="Fit" onclick={fit}><Icon icon={Maximize} /></button>
+  <button class="icon-btn" title={t('Zoom in')} onclick={() => zoomBy(1.25)}><Icon icon={ZoomIn} /></button>
+  <button class="icon-btn" title={t('Fit')} onclick={fit}><Icon icon={Maximize} /></button>
   {#if theme.resolved === 'dark' && lightPaper}
-    <button class="icon-btn" class:on={dark} title={dark ? 'Show the drawing light (as in the file)' : 'Darken the drawing to match the theme'} aria-pressed={dark} onclick={() => theme.setDarkCanvas(!dark)}><Icon icon={dark ? Moon : Sun} /></button>
+    <button class="icon-btn" class:on={dark} title={dark ? t('Show the drawing light (as in the file)') : t('Darken the drawing to match the theme')} aria-pressed={dark} onclick={() => theme.setDarkCanvas(!dark)}><Icon icon={dark ? Moon : Sun} /></button>
   {/if}
-  <button class="btn ghost" onclick={exportSvg} disabled={!board}><Icon icon={FileDown} size={14} /> Export SVG…</button>
-  <button class="btn ghost" onclick={exportPng} disabled={!board}><Icon icon={ImageDown} size={14} /> Export PNG…</button>
+  <button class="btn ghost" onclick={exportSvg} disabled={!board}><Icon icon={FileDown} size={14} /> {t('Export SVG…')}</button>
+  <button class="btn ghost" onclick={exportPng} disabled={!board}><Icon icon={ImageDown} size={14} /> {t('Export PNG…')}</button>
 </div>
 
 {#if selStyle && !ro}
-  <div class="stylebar" role="toolbar" aria-label="Style">
-    <span class="label">Stroke</span>
+  <div class="stylebar" role="toolbar" aria-label={t('Style')}>
+    <span class="label">{t('Stroke')}</span>
     {#each STROKES as c (c)}
-      <button class="sw" class:on={selStyle.stroke.toLowerCase() === c} style="background:{c}" title={c} aria-label="Stroke {c}" onclick={() => setStyle({ stroke: c })}></button>
+      <button class="sw" class:on={selStyle.stroke.toLowerCase() === c} style="background:{c}" title={c} aria-label={t('Stroke {colour}', { colour: c })} onclick={() => setStyle({ stroke: c })}></button>
     {/each}
-    <input type="color" value={/^#[0-9a-f]{6}$/i.test(selStyle.stroke) ? selStyle.stroke : '#000000'} onchange={(e) => setStyle({ stroke: (e.currentTarget as HTMLInputElement).value })} aria-label="Stroke colour" />
+    <input type="color" value={/^#[0-9a-f]{6}$/i.test(selStyle.stroke) ? selStyle.stroke : '#000000'} onchange={(e) => setStyle({ stroke: (e.currentTarget as HTMLInputElement).value })} aria-label={t('Stroke colour')} />
     <span class="sep"></span>
-    <span class="label">Fill</span>
+    <span class="label">{t('Fill')}</span>
     {#each FILLS as c (c)}
-      <button class="sw" class:none={!c} class:on={selStyle.fill.toLowerCase() === c} style="background:{c || 'transparent'}" title={c || 'None'} aria-label="Fill {c || 'none'}" onclick={() => setStyle({ fill: c })}></button>
+      <button class="sw" class:none={!c} class:on={selStyle.fill.toLowerCase() === c} style="background:{c || 'transparent'}" title={c || t('None')} aria-label={c ? t('Fill {colour}', { colour: c }) : t('Fill none')} onclick={() => setStyle({ fill: c })}></button>
     {/each}
     <span class="sep"></span>
     {#each [1, 2, 4] as w (w)}
-      <button class="btn ghost small" class:on={selStyle.width === w} onclick={() => setStyle({ width: w })} title="Line width {w}">{w === 1 ? 'Thin' : w === 2 ? 'Bold' : 'Extra'}</button>
+      <button class="btn ghost small" class:on={selStyle.width === w} onclick={() => setStyle({ width: w })} title={t('Line width {w}', { w })}>{w === 1 ? t('Thin', {}, 'width') : w === 2 ? t('Bold', {}, 'width') : t('Extra', {}, 'width')}</button>
     {/each}
-    <select class="input small" value={selStyle.dash} onchange={(e) => setStyle({ dash: (e.currentTarget as HTMLSelectElement).value as BoardStyle['dash'] })} aria-label="Line style">
-      <option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option>
+    <select class="input small" value={selStyle.dash} onchange={(e) => setStyle({ dash: (e.currentTarget as HTMLSelectElement).value as BoardStyle['dash'] })} aria-label={t('Line style')}>
+      <option value="solid">{t('Solid', {}, 'line')}</option><option value="dashed">{t('Dashed')}</option><option value="dotted">{t('Dotted')}</option>
     </select>
     {#if board?.styleKeys.includes('fillStyle')}
-      <select class="input small" value={selStyle.fillStyle} onchange={(e) => setStyle({ fillStyle: (e.currentTarget as HTMLSelectElement).value as BoardStyle['fillStyle'] })} aria-label="Fill style">
-        <option value="hachure">Hatched</option><option value="cross-hatch">Cross-hatched</option><option value="solid">Solid</option><option value="zigzag">Zigzag</option>
+      <select class="input small" value={selStyle.fillStyle} onchange={(e) => setStyle({ fillStyle: (e.currentTarget as HTMLSelectElement).value as BoardStyle['fillStyle'] })} aria-label={t('Fill style')}>
+        <option value="hachure">{t('Hatched')}</option><option value="cross-hatch">{t('Cross-hatched')}</option><option value="solid">{t('Solid', {}, 'fill')}</option><option value="zigzag">{t('Zigzag')}</option>
       </select>
-      <select class="input small" value={String(selStyle.roughness)} onchange={(e) => setStyle({ roughness: Number((e.currentTarget as HTMLSelectElement).value) })} aria-label="Sloppiness">
-        <option value="0">Architect</option><option value="1">Artist</option><option value="2">Cartoonist</option>
+      <select class="input small" value={String(selStyle.roughness)} onchange={(e) => setStyle({ roughness: Number((e.currentTarget as HTMLSelectElement).value) })} aria-label={t('Sloppiness')}>
+        <option value="0">{t('Architect')}</option><option value="1">{t('Artist')}</option><option value="2">{t('Cartoonist')}</option>
       </select>
     {/if}
   </div>
@@ -807,7 +808,7 @@
       onkeydown={textKey}
       onblur={commitText}
       spellcheck="true"
-      aria-label="Text"
+      aria-label={t('Text')}
     ></textarea>
   {/if}
 </div>

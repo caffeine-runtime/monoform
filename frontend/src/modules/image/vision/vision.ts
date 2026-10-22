@@ -2,8 +2,16 @@
 // after a minute idle so the models' memory is returned.
 import type { ErasePatch, EraseStarted, MaskResult, VisionIn, VisionOut } from './visionWorker';
 import type { Rect } from './erase';
+import { t } from '../../../core/i18n';
 
 const IDLE_MS = 60_000;
+
+// The worker has no catalog: its messages are translated here.
+const WORKER_ERRORS: Record<string, string> = {
+  'image not analysed': t('image not analysed'),
+  'unexpected answer from the subject model': t('unexpected answer from the subject model'),
+  'unexpected answer from the removal model': t('unexpected answer from the removal model'),
+};
 
 type Omit2<T> = T extends unknown ? Omit<T, 'id'> : never;
 
@@ -25,11 +33,11 @@ class Vision {
       this.pending.delete(m.id);
       if (!p) return;
       if (m.ok) p.resolve(m.result);
-      else p.reject(new Error(m.error));
+      else p.reject(new Error(WORKER_ERRORS[m.error] ?? m.error));
       this.armIdle();
     };
     w.onerror = (e) => {
-      for (const p of this.pending.values()) p.reject(new Error(e.message || 'image analysis failed'));
+      for (const p of this.pending.values()) p.reject(new Error(e.message || t('image analysis failed')));
       this.pending.clear();
       this.stop();
     };
@@ -103,7 +111,7 @@ class Vision {
     this.worker?.terminate();
     this.worker = null;
     this.samKey = '';
-    for (const p of this.pending.values()) p.reject(new Error('stopped'));
+    for (const p of this.pending.values()) p.reject(new Error(t('stopped')));
     this.pending.clear();
   }
 }

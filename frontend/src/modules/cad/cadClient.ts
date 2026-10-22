@@ -29,7 +29,7 @@ export class CadClient {
 
   destroy() {
     this.w.terminate();
-    for (const p of this.waiting.values()) p.reject(new Error('closed'));
+    for (const p of this.waiting.values()) p.reject(new Error('closed')); // i18n-ignore: internal, the view is gone
     this.waiting.clear();
   }
 }

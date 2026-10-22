@@ -19,13 +19,24 @@ function englishWithTranslation(lang: string): Map<string, string> {
   for (const [path, cat] of Object.entries(catalogs)) {
     if (path.split('/').at(-2) !== lang) continue;
     for (const [k, v] of Object.entries(cat)) {
-      const key = k.replace(/^\[[^\]]+\] /, '');
+      if (k.startsWith('[')) continue; // the same English in another meaning (e.g. a font's "Bold" style vs a line width)
+      const key = k;
       if (/\{\w+\}/.test(key)) continue; // filled in at runtime
       const tr = typeof v === 'string' ? v : '';
       if (tr && tr !== key && /[a-z]{3}/i.test(key)) out.set(key, tr);
     }
   }
   return out;
+}
+
+/** The file's own content (text, drawings, document headings in an outline): not interface text. */
+const CONTENT = '.cm-content, .md, .page, .pdfViewer, textarea, pre, code, [contenteditable], .paper, .stage svg, .canvas, aside.outline, .notepanel .item, .pathbar .crumb, .row .item .hint, header .meta, .rows .td';
+
+/** A short description of where an element is, for the report. */
+function where(el: Element): string {
+  const parts: string[] = [];
+  for (let e: Element | null = el; e && parts.length < 3; e = e.parentElement) parts.push(`${e.tagName.toLowerCase()}${e.className && typeof e.className === 'string' ? '.' + e.className.trim().split(/\s+/).filter((c) => !c.startsWith('svelte-')).join('.') : ''}`);
+  return parts.join(' < ');
 }
 
 /** English text left on screen: text nodes and labelling attributes that equal a key with a different translation. */
@@ -36,14 +47,14 @@ function leaks(root: Element, english: Map<string, string>): string[] {
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
     const s = n.textContent?.trim() ?? '';
     const el = n.parentElement;
-    if (!s || !el || el.closest('.cm-content, .md, .page, .pdfViewer, textarea, pre, code, [contenteditable]') || !visible(el)) continue;
-    if (english.has(s)) found.add(s);
+    if (!s || !el || el.closest(CONTENT) || !visible(el)) continue;
+    if (english.has(s)) found.add(`${s} (in ${where(el)})`);
   }
   for (const el of root.querySelectorAll('[title], [aria-label], [placeholder]')) {
-    if (el.closest('.cm-content, .md, .page, .pdfViewer') || !visible(el)) continue;
+    if (el.closest(CONTENT) || !visible(el)) continue;
     for (const a of ['title', 'aria-label', 'placeholder']) {
       const s = el.getAttribute(a)?.trim();
-      if (s && english.has(s)) found.add(`${a}="${s}"`);
+      if (s && english.has(s)) found.add(`${a}="${s}" (in ${where(el)})`);
     }
   }
   return [...found];
@@ -95,7 +106,7 @@ export default async function m47(dir: string) {
   const opts = [...pick.options].map((o) => o.textContent?.trim());
   assertEq(opts[0], t('Like my computer ({language})', { language: lang === 'pl' ? 'Polski' : 'Español' }), 'first option follows the system');
   assertEq(opts.slice(1).join(','), 'English,Polski,Español', 'each language by its own name');
-  assertEq(leaks(document.querySelector('.firstrun')!, english), [], 'welcome screen translated');
+  assertEq(leaks(document.querySelector('.firstrun')!, english).join(' | '), '', 'welcome screen translated');
   ui.firstRun = false;
   await sleep(50);
 
@@ -121,5 +132,5 @@ export default async function m47(dir: string) {
   const row = [...document.querySelectorAll('select')].find((s) => [...s.options].some((o) => o.value === 'pl') && [...s.options].some((o) => o.value === ''));
   assert(row, 'Settings has the language choice');
   log(`checked ${FILES.length} files, the start page and Settings`);
-  assertEq(bad, [], 'no English text with a translation left on screen');
+  assertEq(bad.join('\n'), '', 'no English text with a translation left on screen');
 }

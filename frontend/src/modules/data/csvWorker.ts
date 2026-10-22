@@ -393,7 +393,7 @@ self.onmessage = async (ev: MessageEvent) => {
         rebuildView();
         return post({ id: m.id, ok: true, info: info() });
       case 'edit': {
-        if (view[m.row] === undefined) throw new Error('row out of range');
+        if (view[m.row] === undefined) throw new Error('row out of range'); // i18n-ignore: internal (workers have no catalog)
         applyEdit([{ row: m.row, col: m.col, value: m.value }], []);
         return post({ id: m.id, ok: true, info: info() });
       }
@@ -411,7 +411,7 @@ self.onmessage = async (ev: MessageEvent) => {
       case 'complete':
         return post({ id: m.id, ok: true, value: complete(m.col, m.typed) });
       case 'renameColumn': {
-        if (!header || count === 0) throw new Error('no header row');
+        if (!header || count === 0) throw new Error('no header row'); // i18n-ignore: internal (workers have no catalog)
         const h = [...record(0)];
         while (h.length <= m.col) h.push('');
         h[m.col] = m.value;

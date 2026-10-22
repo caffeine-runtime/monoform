@@ -6,6 +6,7 @@ import { commands } from './commands';
 import { formatShortcut } from './keys';
 import { settings } from './settings.svelte';
 import type { MenuControl, MenuItem } from './ui.svelte';
+import { t } from './i18n';
 
 // A control row stands for the commands it covers (they stay in the palette).
 // `always`: shown even when none of them is available now (a setting, not an action on the open file).
@@ -13,14 +14,14 @@ type Entry = string | '-' | { label: string; items: Entry[] } | { control: MenuC
 
 /** On/off options: shown as the thing's name with a check mark when it's on. */
 const CHECKS: Record<string, [string, () => boolean]> = {
-  'view.toggleSidebar': ['Sidebar', () => settings.value.sidebarVisible],
-  'view.togglePanels': ['Side panels', () => !settings.value.panelsHidden],
-  'view.togglePathBar': ['Path bar', () => !settings.value.pathBarOff],
-  'view.toggleHidden': ['Hidden files', () => settings.value.showHidden],
-  'view.previewByDefault': ['Open files in preview mode', () => !!settings.value.openInPreview],
-  'text.toggleWrap': ['Word wrap', () => settings.value.wordWrap],
-  'text.toggleMinimap': ['Minimap', () => !settings.value.minimapOff],
-  'text.toggleWhitespace': ['Spaces and tabs', () => settings.value.showWhitespace],
+  'view.toggleSidebar': [t('Sidebar'), () => settings.value.sidebarVisible],
+  'view.togglePanels': [t('Side panels'), () => !settings.value.panelsHidden],
+  'view.togglePathBar': [t('Path bar'), () => !settings.value.pathBarOff],
+  'view.toggleHidden': [t('Hidden files'), () => settings.value.showHidden],
+  'view.previewByDefault': [t('Open files in preview mode'), () => !!settings.value.openInPreview],
+  'text.toggleWrap': [t('Word wrap'), () => settings.value.wordWrap],
+  'text.toggleMinimap': [t('Minimap'), () => !settings.value.minimapOff],
+  'text.toggleWhitespace': [t('Spaces and tabs'), () => settings.value.showWhitespace],
 };
 
 const LAYOUT: Entry[] = [
@@ -29,7 +30,7 @@ const LAYOUT: Entry[] = [
   'file.open',
   'file.openFolder',
   {
-    label: 'New',
+    label: t('New'),
     items: ['file.new', 'file.newMarkdown', 'file.newDocx', 'file.newXlsx', 'file.newImage', '-', 'file.newOf', 'file.imagesToPdf', 'archive.create'],
   },
   '-',
@@ -37,7 +38,7 @@ const LAYOUT: Entry[] = [
   'file.saveAs',
   'file.saveAll',
   {
-    label: 'This file',
+    label: t('This file'),
     items: [
       'file.history',
       'file.compareWith',
@@ -54,12 +55,12 @@ const LAYOUT: Entry[] = [
       'text.lineEndings',
     ],
   },
-  { label: 'Folder', items: ['search.inFolder', 'folder.refresh', 'folder.close'] },
+  { label: t('Folder'), items: ['search.inFolder', 'folder.refresh', 'folder.close'] },
   '-',
-  { label: 'Edit', items: ['edit.find', 'text.replace', 'text.gotoLine', 'text.gotoSymbol'] },
+  { label: t('Edit'), items: ['edit.find', 'text.replace', 'text.gotoLine', 'text.gotoSymbol'] },
   // (the open file's own commands — Image, PDF, … — are added here)
   {
-    label: 'Tools',
+    label: t('Tools'),
     items: [
       'file.compare',
       'history.all',
@@ -79,7 +80,7 @@ const LAYOUT: Entry[] = [
   },
   '-',
   {
-    label: 'View',
+    label: t('View'),
     items: [
       'view.toggleSidebar',
       'view.togglePanels',
@@ -103,18 +104,20 @@ const LAYOUT: Entry[] = [
   { control: 'fontSize', covers: ['text.zoomIn', 'text.zoomOut', 'text.zoomReset'], always: true },
   'app.settings',
   '-',
-  { label: 'Tabs', items: ['tab.new', 'tab.newWindow', '-', 'tab.close', 'tab.closeOthers', 'tab.closeAll', 'tab.reopen', '-', 'tab.next', 'tab.prev'] },
-  { label: 'Help', items: ['help.welcome', 'help.shortcuts'] },
+  { label: t('Tabs'), items: ['tab.new', 'tab.newWindow', '-', 'tab.close', 'tab.closeOthers', 'tab.closeAll', 'tab.reopen', '-', 'tab.next', 'tab.prev'] },
+  { label: t('Help'), items: ['help.welcome', 'help.shortcuts', 'help.updates'] },
 ];
 
 /** How long per-file-type lists are split: editing, then viewing and moving around. */
+// The words are translated as a list of how such command names begin in the language.
+const starts = (words: string) => new RegExp(`^(${words})(?![\\p{L}\\p{N}])`, 'u');
 const SUBGROUPS: [string, RegExp][] = [
-  ['Edit', /^(Undo|Redo|Cut|Copy|Paste|Delete|Duplicate|Select|Deselect|Invert selection|Clear selection)\b/],
-  ['View', /^(Zoom|Fit|Actual size|Next|Previous|Go to|Back|Forward|Full screen|Show|Toggle)\b/],
+  [t('Edit'), starts(t('Undo|Redo|Cut|Copy|Paste|Delete|Duplicate|Select|Deselect|Invert selection|Clear selection'))],
+  [t('View'), starts(t('Zoom|Fit|Actual size|Next|Previous|Go to|Back|Forward|Full screen|Show|Toggle'))],
 ];
 
 /** Categories whose leftover commands get their own submenu at the end of the shell part. */
-const SHELL = new Set(['File', 'Edit', 'Go', 'View', 'Tabs', 'Tools', 'Search', 'Help']);
+const SHELL = new Set([t('File'), t('Edit'), t('Go'), t('View'), t('Tabs'), t('Tools'), t('Search'), t('Help')]);
 
 function placed(es: Entry[], out = new Set<string>()): Set<string> {
   for (const e of es) {
@@ -136,6 +139,9 @@ function tidy(items: MenuItem[]): MenuItem[] {
   while (out.length && out[out.length - 1].separator) out.pop();
   return out;
 }
+
+/** How a tool's command name begins ("Tool: brush"). */
+const TOOL = t('Tool: {name}', { name: '' });
 
 export function appMenuItems(): MenuItem[] {
   const avail = new Map(commands.available().map((c) => [c.id, c]));
@@ -166,17 +172,17 @@ export function appMenuItems(): MenuItem[] {
   const tools = new Map<string, MenuItem[]>();
   for (const c of avail.values()) {
     if (known.has(c.id) || c.hidden) continue;
-    const g = c.category ?? 'More';
+    const g = c.category ?? t('More');
     // "Tool: brush", "Tool: text"… of one file type: a Tools submenu of their own.
-    const into = c.title.startsWith('Tool: ') ? tools : extra;
+    const into = c.title.startsWith(TOOL) ? tools : extra;
     if (!into.has(g)) into.set(g, []);
     const it = item(c.id)!;
-    if (into === tools) it.label = c.title.slice(6).replace(/^./, (ch) => ch.toUpperCase());
+    if (into === tools) it.label = c.title.slice(TOOL.length).replace(/^./, (ch) => ch.toUpperCase());
     into.get(g)!.push(it);
   }
   for (const [g, items] of tools) {
     if (!extra.has(g)) extra.set(g, []);
-    extra.get(g)!.unshift({ label: 'Tools', items }, { separator: true });
+    extra.get(g)!.unshift({ label: t('Tools'), items }, { separator: true });
   }
   // A long list for one file type gets its editing and viewing commands
   // grouped too, so what's particular to it (rotate, resize, layers…) stands out.
@@ -189,12 +195,12 @@ export function appMenuItems(): MenuItem[] {
   }
   const fileKinds: MenuItem[] = [];
   for (const [g, items] of extra) {
-    const sub = top.find((t) => t.label === g && t.items);
+    const sub = top.find((x) => x.label === g && x.items);
     if (sub) sub.items = tidy([...sub.items!, { separator: true }, ...items]);
     else if (SHELL.has(g)) top.push({ label: g, items });
     else fileKinds.push({ label: g, items });
   }
-  const at = top.findIndex((t) => t.label === 'Tools');
+  const at = top.findIndex((x) => x.label === t('Tools'));
   top.splice(at < 0 ? top.length : at, 0, ...fileKinds);
-  return tidy(top.map((t) => (t.items ? { ...t, items: tidy(t.items.map((u) => (u.items ? { ...u, items: tidy(u.items) } : u))) } : t)));
+  return tidy(top.map((x) => (x.items ? { ...x, items: tidy(x.items.map((u) => (u.items ? { ...u, items: tidy(u.items) } : u))) } : x)));
 }

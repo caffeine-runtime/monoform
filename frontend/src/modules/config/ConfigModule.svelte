@@ -17,12 +17,14 @@
   import TextEditor from '../text/TextEditor.svelte';
   import type { TextController } from '../text/controller';
   import { kindOf, looksSecret, parse, setValue, type Entry, type Issue } from './config';
+  import { t, tn } from '../../core/i18n';
 
   let { tab }: { tab: Tab } = $props();
 
   // svelte-ignore state_referenced_locally
   const kind = kindOf(tab.name);
-  const LABEL = { ini: 'INI', properties: 'Properties', env: 'Environment' } as const;
+  const LABEL = { ini: 'INI', properties: t('Properties', {}, 'config format'), env: t('Environment') } as const;
+  const TYPE = { ini: t('INI file'), properties: t('Properties file'), env: t('Environment file') } as const;
   // svelte-ignore state_referenced_locally
   let view = $state<'table' | 'text'>((tab.restoredState as { view?: 'table' | 'text' } | undefined)?.view ?? 'table');
   let entries = $state<Entry[]>([]);
@@ -37,7 +39,7 @@
     const r = parse(ctl.view.state.doc.toString(), kind);
     entries = r.entries;
     issues = r.issues;
-    tab.status = { ...tab.status, type: `${LABEL[kind]} file`, info: `${r.entries.length} setting${r.entries.length === 1 ? '' : 's'}${r.issues.length ? ` · ${r.issues.length} problem${r.issues.length === 1 ? '' : 's'}` : ''}` };
+    tab.status = { ...tab.status, type: TYPE[kind], info: `${tn('{n} setting', '{n} settings', r.entries.length)}${r.issues.length ? ` · ${tn('{n} problem', '{n} problems', r.issues.length)}` : ''}` };
   }
 
   const sections = $derived.by(() => {
@@ -98,18 +100,18 @@
 
 <div class="toolbar" use:fitBar>
   <div class="seg">
-    <button class="btn ghost" class:on={view === 'table'} onclick={() => ((view = 'table'), workspace.touch())}><Icon icon={Table} size={14} /> Table</button>
-    <button class="btn ghost" class:on={view === 'text'} onclick={() => ((view = 'text'), workspace.touch(), queueMicrotask(() => ctl?.view.requestMeasure()))}><Icon icon={FileText} size={14} /> Text</button>
+    <button class="btn ghost" class:on={view === 'table'} onclick={() => ((view = 'table'), workspace.touch())}><Icon icon={Table} size={14} /> {t('Table')}</button>
+    <button class="btn ghost" class:on={view === 'text'} onclick={() => ((view = 'text'), workspace.touch(), queueMicrotask(() => ctl?.view.requestMeasure()))}><Icon icon={FileText} size={14} /> {t('Text')}</button>
   </div>
   {#if view === 'table'}
-    <input class="input filter" placeholder="Filter settings" bind:value={filter} aria-label="Filter settings" />
+    <input class="input filter" placeholder={t('Filter settings')} bind:value={filter} aria-label={t('Filter settings')} />
     {#if kind === 'env'}
-      <button class="btn ghost" title={reveal ? 'Hide secret-looking values' : 'Show secret-looking values'} onclick={() => (reveal = !reveal)}><Icon icon={reveal ? EyeOff : Eye} size={14} /> {reveal ? 'Hide secrets' : 'Show secrets'}</button>
+      <button class="btn ghost" title={reveal ? t('Hide secret-looking values') : t('Show secret-looking values')} onclick={() => (reveal = !reveal)}><Icon icon={reveal ? EyeOff : Eye} size={14} /> {reveal ? t('Hide secrets') : t('Show secrets')}</button>
     {/if}
   {/if}
   <span class="spacer"></span>
   {#if issues.length}
-    <button class="status bad" title="Go to the first problem" onclick={() => goto(issues[0].line)}><Icon icon={TriangleAlert} size={14} /> {issues.length} problem{issues.length === 1 ? '' : 's'}</button>
+    <button class="status bad" title={t('Go to the first problem')} onclick={() => goto(issues[0].line)}><Icon icon={TriangleAlert} size={14} /> {tn('{n} problem', '{n} problems', issues.length)}</button>
   {/if}
   <span class="label">{LABEL[kind]}</span>
 </div>
@@ -120,17 +122,17 @@
     <div class="table">
       {#if issues.length}
         <ul class="issues">
-          {#each issues as i (i.line + i.message)}<li><button onclick={() => goto(i.line)}>Line {i.line}</button> {i.message}</li>{/each}
+          {#each issues as i (i.line + i.message)}<li><button onclick={() => goto(i.line)}>{t('Line {line}', { line: String(i.line) })}</button> {i.message}</li>{/each}
         </ul>
       {/if}
       {#each sections as s (s.name + s.items[0].line)}
-        {#if kind === 'ini'}<h3>{s.name ? `[${s.name}]` : '(no section)'}</h3>{/if}
+        {#if kind === 'ini'}<h3>{s.name ? `[${s.name}]` : t('(no section)')}</h3>{/if}
         <div class="grid" role="table">
           {#each s.items as e (e.line)}
             <div class="row" class:problem={problemLines.has(e.line)} role="row">
-              <button class="key" role="cell" title="Line {e.line} — click to show it in the text" onclick={() => goto(e.line)}>{e.key}</button>
+              <button class="key" role="cell" title={t('Line {line} — click to show it in the text', { line: String(e.line) })} onclick={() => goto(e.line)}>{e.key}</button>
               {#if masked(e)}
-                <span class="val secret" role="cell" title="Hidden — use Show secrets">{'•'.repeat(Math.min(12, e.value.length))}</span>
+                <span class="val secret" role="cell" title={t('Hidden — use Show secrets')}>{'•'.repeat(Math.min(12, e.value.length))}</span>
               {:else}
                 <input class="input val" role="cell" value={e.value} readonly={tab.readOnly} spellcheck="false" aria-label={e.key} onchange={(ev) => edit(e, (ev.currentTarget as HTMLInputElement).value)} onkeydown={(ev) => ev.key === 'Enter' && (ev.currentTarget as HTMLInputElement).blur()} />
               {/if}
@@ -138,7 +140,7 @@
           {/each}
         </div>
       {/each}
-      {#if !entries.length}<div class="empty-state">No settings in this file yet.</div>{/if}
+      {#if !entries.length}<div class="empty-state">{t('No settings in this file yet.')}</div>{/if}
     </div>
   {/if}
 </div>

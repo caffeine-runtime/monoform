@@ -4,6 +4,7 @@
   // comparison runs in the worker.
   import { onMount } from 'svelte';
   import type { DiffClient } from './diffClient';
+  import { t } from '../../core/i18n';
 
   let { client, srcA, srcB, mode, tol, onresult }: { client: DiffClient; srcA: string; srcB: string; mode: 'side' | 'swipe' | 'onion' | 'diff'; tol: number; onresult: (r: { changed: number; total: number; w: number; h: number; sizes: [string, string] } | { error: string }) => void } = $props();
 
@@ -27,7 +28,7 @@
     img.src = src;
     await img.decode();
     // SVGs have no intrinsic bitmap: draw them through a canvas.
-    if (!img.naturalWidth) throw new Error('This image has no size.');
+    if (!img.naturalWidth) throw new Error(t('This image has no size.'));
     return createImageBitmap(img);
   }
 
@@ -142,15 +143,15 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="idiff {mode}" bind:this={area} onwheel={wheel} onpointerdown={down} onpointermove={move} onpointerup={() => (drag = null)} ondblclick={() => ((fitted = true), fit())}>
   {#if mode === 'side'}
-    <div class="col"><div class="layer checker" style:transform={tf} style:width="{natA.w}px" style:height="{natA.h}px"><img src={srcA} alt="Left" draggable="false" class:px={view.z >= 3} /></div><span class="tag">A</span></div>
-    <div class="col"><div class="layer checker" style:transform={tf} style:width="{natB.w}px" style:height="{natB.h}px"><img src={srcB} alt="Right" draggable="false" class:px={view.z >= 3} /></div><span class="tag">B</span></div>
+    <div class="col"><div class="layer checker" style:transform={tf} style:width="{natA.w}px" style:height="{natA.h}px"><img src={srcA} alt={t('Left', {}, 'side')} draggable="false" class:px={view.z >= 3} /></div><span class="tag">A</span></div>
+    <div class="col"><div class="layer checker" style:transform={tf} style:width="{natB.w}px" style:height="{natB.h}px"><img src={srcB} alt={t('Right', {}, 'side')} draggable="false" class:px={view.z >= 3} /></div><span class="tag">B</span></div>
   {:else}
     <div class="layer checker" style:transform={tf} style:width="{W}px" style:height="{H}px">
-      <img src={srcA} alt="Left" draggable="false" class:px={view.z >= 3} class:dim={mode === 'diff'} />
+      <img src={srcA} alt={t('Left', {}, 'side')} draggable="false" class:px={view.z >= 3} class:dim={mode === 'diff'} />
       {#if mode === 'swipe'}
-        <div class="clip" style:clip-path="inset(0 0 0 {split * 100}%)"><img src={srcB} alt="Right" draggable="false" class:px={view.z >= 3} /></div>
+        <div class="clip" style:clip-path="inset(0 0 0 {split * 100}%)"><img src={srcB} alt={t('Right', {}, 'side')} draggable="false" class:px={view.z >= 3} /></div>
       {:else if mode === 'onion'}
-        <img class="over" src={srcB} alt="Right" draggable="false" class:px={view.z >= 3} style:opacity />
+        <img class="over" src={srcB} alt={t('Right', {}, 'side')} draggable="false" class:px={view.z >= 3} style:opacity />
       {/if}
       <canvas class="mask" class:hidden={mode !== 'diff'} bind:this={maskCanvas} class:px={view.z >= 3}></canvas>
     </div>
@@ -160,7 +161,7 @@
     {/if}
   {/if}
   {#if mode === 'onion'}
-    <label class="slider">A <input type="range" min="0" max="1" step="0.01" bind:value={opacity} aria-label="Opacity of B" /> B</label>
+    <label class="slider">A <input type="range" min="0" max="1" step="0.01" bind:value={opacity} aria-label={t('Opacity of B')} /> B</label>
   {/if}
 </div>
 

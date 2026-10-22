@@ -176,7 +176,7 @@ export class CadDoc {
   private seed: bigint | null = null;
 
   constructor(text: string) {
-    if (text.startsWith('AutoCAD Binary DXF')) throw new Error('Binary DXF isn’t supported; save it as ASCII DXF.');
+    if (text.startsWith('AutoCAD Binary DXF')) throw new Error('Binary DXF isn’t supported; save it as ASCII DXF.'); // i18n-ignore: runs in the worker; CadModule translates it
     const eol = text.includes('\r\n') ? '\r\n' : '\n';
     this.lines = text.split(/\r?\n/);
     this.d = parseLines(this.lines, eol);
@@ -581,17 +581,17 @@ export class CadDoc {
         add('Rotation', 50);
         break;
       case 'LWPOLYLINE':
-        P.push({ label: 'Vertices', code: 90, occ: 0, value: String(e.groups.filter((x) => x.code === 10).length), kind: 'ro' });
-        P.push({ label: 'Closed', code: 70, occ: 0, value: num(e, 70) & 1 ? '1' : '0', kind: 'flag' });
+        P.push({ label: 'Vertices', code: 90, occ: 0, value: String(e.groups.filter((x) => x.code === 10).length), kind: 'ro' }); // i18n-ignore: translated in CadModule (PROP_LABELS)
+        P.push({ label: 'Closed', code: 70, occ: 0, value: num(e, 70) & 1 ? '1' : '0', kind: 'flag' }); // i18n-ignore: translated in CadModule (PROP_LABELS)
         add('Width', 43);
         break;
       case 'POLYLINE':
-        P.push({ label: 'Vertices', code: -1, occ: 0, value: String(e.children.filter((c) => c.type === 'VERTEX').length), kind: 'ro' });
-        P.push({ label: 'Closed', code: 70, occ: 0, value: num(e, 70) & 1 ? '1' : '0', kind: 'flag' });
+        P.push({ label: 'Vertices', code: -1, occ: 0, value: String(e.children.filter((c) => c.type === 'VERTEX').length), kind: 'ro' }); // i18n-ignore: translated in CadModule (PROP_LABELS)
+        P.push({ label: 'Closed', code: 70, occ: 0, value: num(e, 70) & 1 ? '1' : '0', kind: 'flag' }); // i18n-ignore: translated in CadModule (PROP_LABELS)
         break;
       case 'SPLINE':
         add('Degree', 71, 'ro');
-        P.push({ label: 'Control points', code: -1, occ: 0, value: String(e.groups.filter((x) => x.code === 10).length), kind: 'ro' });
+        P.push({ label: 'Control points', code: -1, occ: 0, value: String(e.groups.filter((x) => x.code === 10).length), kind: 'ro' }); // i18n-ignore: translated in CadModule (PROP_LABELS)
         break;
       case 'DIMENSION':
         add('Measurement', 42, 'ro');

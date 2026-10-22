@@ -5,6 +5,7 @@
   import { api, saveFile } from '../../core/backend';
   import { dirname, join, stem } from '../../core/paths';
   import { toastError, ui } from '../../core/ui.svelte';
+  import { t } from '../../core/i18n';
   import type { ImageEditor } from './editor';
   import { extractPalette, formats, hex, toCss, toGpl, type PaletteColor } from './palette';
 
@@ -37,17 +38,17 @@
     void analyse();
   });
 
-  async function copy(text: string, what = text) {
+  async function copy(text: string, done?: string) {
     await navigator.clipboard.writeText(text).catch(() => {});
-    ui.toast(`Copied ${what}`, 'success');
+    ui.toast(done ?? t('Copied {value}', { value: text }), 'success');
   }
 
   async function savePalette() {
-    const p = await api.SaveFileDialog('Save palette', join(dirname(title), `${stem(title)}.gpl`), [{ name: 'GIMP / Inkscape palette', patterns: '*.gpl' }]);
+    const p = await api.SaveFileDialog(t('Save palette'), join(dirname(title), `${stem(title)}.gpl`), [{ name: t('GIMP / Inkscape palette'), patterns: '*.gpl' }]);
     if (!p) return;
     try {
       await saveFile(p.endsWith('.gpl') ? p : `${p}.gpl`, toGpl(stem(title), palette));
-      ui.toast('Palette saved', 'success');
+      ui.toast(t('Palette saved'), 'success');
     } catch (e) {
       toastError(e);
     }
@@ -58,38 +59,38 @@
 
 <div class="colours">
   <section>
-    <h4>Picked colour</h4>
+    <h4>{t('Picked colour')}</h4>
     {#if picked}
       <div class="picked">
         <span class="big" style="background:{hex(picked)}"></span>
         <div class="fmts">
           {#each formats(picked) as f (f.label)}
-            <button class="fmt" title="Copy" onclick={() => copy(f.value)}><span class="muted">{f.label}</span> {f.value}</button>
+            <button class="fmt" title={t('Copy')} onclick={() => copy(f.value)}><span class="muted">{f.label}</span> {f.value}</button>
           {/each}
         </div>
       </div>
-      <button class="btn ghost small" onclick={() => onuse(hex(picked!))}>Use for brush, shapes and text</button>
+      <button class="btn ghost small" onclick={() => onuse(hex(picked!))}>{t('Use for brush, shapes and text')}</button>
     {:else}
-      <p class="muted">Choose the colour picker (I) and click the image.</p>
+      <p class="muted">{t('Choose the colour picker (I) and click the image.')}</p>
     {/if}
   </section>
   <section>
     <h4>
-      Palette
-      <select class="input small" bind:value={count} aria-label="Number of colours">
+      {t('Palette')}
+      <select class="input small" bind:value={count} aria-label={t('Number of colours')}>
         <option value={5}>5</option><option value={8}>8</option><option value={12}>12</option>
       </select>
     </h4>
     {#if busy}<span class="spinner"></span>{/if}
     <div class="swatches">
       {#each palette as c, i (i)}
-        <button class="sw" style="background:{hex(c.rgb)}" title="{hex(c.rgb)} · {Math.round(c.share * 100)}% — click to copy" aria-label={hex(c.rgb)} onclick={() => copy(hex(c.rgb))}><span>{hex(c.rgb)}</span></button>
+        <button class="sw" style="background:{hex(c.rgb)}" title={t('{colour} · {share}% — click to copy', { colour: hex(c.rgb), share: Math.round(c.share * 100) })} aria-label={hex(c.rgb)} onclick={() => copy(hex(c.rgb))}><span>{hex(c.rgb)}</span></button>
       {/each}
     </div>
     <div class="row">
-      <button class="btn ghost small" disabled={!palette.length} onclick={() => copy(palette.map((c) => hex(c.rgb)).join(', '), 'the colours')}>Copy list</button>
-      <button class="btn ghost small" disabled={!palette.length} onclick={() => copy(toCss(palette), 'CSS variables')}>Copy CSS</button>
-      <button class="btn ghost small" disabled={!palette.length} onclick={savePalette}>Save .gpl…</button>
+      <button class="btn ghost small" disabled={!palette.length} onclick={() => copy(palette.map((c) => hex(c.rgb)).join(', '), t('Copied the colours'))}>{t('Copy list')}</button>
+      <button class="btn ghost small" disabled={!palette.length} onclick={() => copy(toCss(palette), t('Copied CSS variables'))}>{t('Copy CSS')}</button>
+      <button class="btn ghost small" disabled={!palette.length} onclick={savePalette}>{t('Save .gpl…')}</button>
     </div>
   </section>
 </div>

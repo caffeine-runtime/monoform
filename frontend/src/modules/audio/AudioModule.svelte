@@ -27,6 +27,7 @@
   import { ui, toastError, menu } from '../../core/ui.svelte';
   import { jobs } from '../../core/jobs.svelte';
   import { formatShortcut } from '../../core/keys';
+  import { t } from '../../core/i18n';
   import * as E from './edits';
   import { Peaks, drawWave, formatTime, tickStep, PEAK_FRAMES, type View } from './waveform';
   import { Player } from './player';
@@ -73,8 +74,8 @@
     if (!info) return '';
     const parts = [info.codec ? info.codec.toUpperCase() : extname(tab.name).toUpperCase()];
     if (info.sampleRate) parts.push(`${+(info.sampleRate / 1000).toFixed(1)} kHz`);
-    if (info.channels) parts.push(info.channels === 1 ? 'mono' : info.channels === 2 ? 'stereo' : `${info.channels} channels`);
-    if (info.lossless && info.bitDepth) parts.push(info.float ? '32-bit float' : `${info.bitDepth}-bit`);
+    if (info.channels) parts.push(info.channels === 1 ? t('mono') : info.channels === 2 ? t('stereo') : t('{n} channels', { n: info.channels }));
+    if (info.lossless && info.bitDepth) parts.push(info.float ? t('32-bit float') : `${info.bitDepth}-bit`);
     else if (info.bitrate) parts.push(`${info.bitrate} kbit/s`);
     if (frames && rate) parts.push(formatTime(frames / rate, 0));
     return parts.join(' · ');
@@ -96,9 +97,9 @@
     sel = null;
     pos = 0;
     try {
-      if (!tab.filePath) throw new Error('Audio inside archives can’t be played yet — extract it first.');
+      if (!tab.filePath) throw new Error(t('Audio inside archives can’t be played yet — extract it first.'));
       const o = await api.AudioOpen(tab.filePath);
-      if (!o?.info) throw new Error('Couldn’t read this audio file.');
+      if (!o?.info) throw new Error(t('Couldn’t read this audio file.'));
       opened = o;
       rate = o.info!.sampleRate || 48000;
       frames = o.info!.frames;
@@ -124,7 +125,7 @@
         }
       });
       p.el.addEventListener('error', () => {
-        if (!o.info!.editable && p.el.error) error = `This system can’t play ${extname(tab.name).toUpperCase()} files.`;
+        if (!o.info!.editable && p.el.error) error = t('This system can’t play {format} files.', { format: extname(tab.name).toUpperCase() });
       });
       peaks = o.info!.editable ? new Peaks(o.lanes) : null;
       resetTimeline();
@@ -161,7 +162,7 @@
         p.done = res.headers.get('X-Done') === '1';
         p.error = res.headers.get('X-Error') ?? '';
         peakProgress = frames ? Math.min(1, (p.buckets * PEAK_FRAMES) / frames) : 0;
-        if (p.error) toastError(p.error, 'Couldn’t read all of the audio');
+        if (p.error) toastError(p.error, t('Couldn’t read all of the audio'));
       } catch {
         break;
       }
@@ -382,13 +383,14 @@
 
   function needEditable(): boolean {
     if (editable) return true;
-    ui.toast(`${info?.reason || 'This format can be played but not edited'}. Editing works with WAV, MP3, FLAC and OGG Vorbis files.`, 'info');
+    ui.toast(t('{reason}. Editing works with WAV, MP3, FLAC and OGG Vorbis files.', { reason: info?.reason || t('This format can be played but not edited') }), 'info');
     return false;
   }
 
-  function needSel(what: string): [number, number] | null {
+  /** The selection, or null after asking for one (`hint` says what to select it for). */
+  function needSel(hint: string): [number, number] | null {
     if (sel && sel[1] > sel[0]) return sel;
-    ui.toast(`Select a part of the waveform to ${what} (drag across it).`, 'info');
+    ui.toast(hint, 'info'); // i18n-ignore: callers pass translated text
     return null;
   }
 
@@ -408,12 +410,12 @@
         timeline = redoStack.pop()!;
         return afterEdit();
       case 'copy': {
-        const s = needSel('copy');
+        const s = needSel(t('Select a part of the waveform to copy (drag across it).'));
         if (s) clip = { id, segs: E.slice(timeline, s[0], s[1]) };
         return;
       }
       case 'cut': {
-        const s = needSel('cut');
+        const s = needSel(t('Select a part of the waveform to cut (drag across it).'));
         if (!s) return;
         clip = { id, segs: E.slice(timeline, s[0], s[1]) };
         commit(E.remove(timeline, s[0], s[1]));
@@ -421,8 +423,8 @@
         return seek(s[0]);
       }
       case 'paste': {
-        if (!clip) return ui.toast('Nothing copied yet.', 'info');
-        if (clip.id !== id) return ui.toast('Audio can be pasted within the file it was copied from.', 'info');
+        if (!clip) return ui.toast(t('Nothing copied yet.'), 'info');
+        if (clip.id !== id) return ui.toast(t('Audio can be pasted within the file it was copied from.'), 'info');
         const at = hasSel ? sel![0] : pos;
         const base = hasSel ? E.remove(timeline, sel![0], sel![1]) : timeline;
         commit(E.insert(base, at, clip.segs));
@@ -431,14 +433,14 @@
         return;
       }
       case 'delete': {
-        const s = needSel('delete');
+        const s = needSel(t('Select a part of the waveform to delete (drag across it).'));
         if (!s) return;
         commit(E.remove(timeline, s[0], s[1]));
         sel = null;
         return seek(s[0]);
       }
       case 'trim': {
-        const s = needSel('keep');
+        const s = needSel(t('Select a part of the waveform to keep (drag across it).'));
         if (!s) return;
         commit(E.keep(timeline, s[0], s[1]));
         sel = null;
@@ -446,7 +448,7 @@
         return seek(0);
       }
       case 'silence': {
-        const s = needSel('silence');
+        const s = needSel(t('Select a part of the waveform to silence (drag across it).'));
         if (s) commit(E.silence(timeline, s[0], s[1]));
         return;
       }
@@ -454,28 +456,29 @@
       case 'fadeOut': {
         // Without a selection: fade in from the start to the cursor, out from the cursor to the end.
         const r: [number, number] = hasSel ? sel! : op === 'fadeIn' ? [0, pos] : [pos, total];
-        if (r[1] - r[0] < rate / 100) return ui.toast(op === 'fadeIn' ? 'Select the part to fade in, or place the cursor where the fade should end.' : 'Select the part to fade out, or place the cursor where the fade should start.', 'info');
+        const fadeIn = op === 'fadeIn';
+        if (r[1] - r[0] < rate / 100) return ui.toast(fadeIn ? t('Select the part to fade in, or place the cursor where the fade should end.') : t('Select the part to fade out, or place the cursor where the fade should start.'), 'info');
         return commit(E.fade(timeline, r[0], r[1], op === 'fadeIn' ? 'in' : 'out'));
       }
       case 'gain': {
         const r: [number, number] = hasSel ? sel! : [0, total];
-        const v = await ui.prompt(`Change volume of ${hasSel ? 'the selection' : 'everything'} (dB, e.g. 3 or -6)`, '3', 'Apply');
+        const v = await ui.prompt(hasSel ? t('Change volume of the selection (dB, e.g. 3 or -6)') : t('Change volume of everything (dB, e.g. 3 or -6)'), '3', t('Apply'));
         if (v === null) return;
         const db = parseFloat(v.replace(',', '.'));
-        if (!isFinite(db) || Math.abs(db) > 60) return ui.toast('Enter a number of decibels between -60 and 60.', 'warning');
+        if (!isFinite(db) || Math.abs(db) > 60) return ui.toast(t('Enter a number of decibels between -60 and 60.'), 'warning');
         return commit(E.gain(timeline, r[0], r[1], E.dbToGain(db)));
       }
       case 'normalize': {
         const r: [number, number] = hasSel ? sel! : [0, total];
-        const v = await ui.prompt(`Normalize ${hasSel ? 'the selection' : 'everything'}: loudest peak at (dBFS)`, '-1', 'Normalize');
+        const v = await ui.prompt(hasSel ? t('Normalize the selection: loudest peak at (dBFS)') : t('Normalize everything: loudest peak at (dBFS)'), '-1', t('Normalize'));
         if (v === null) return;
         const target = parseFloat(v.replace(',', '.'));
-        if (!isFinite(target) || target > 0 || target < -40) return ui.toast('Enter a level between -40 and 0 dBFS.', 'warning');
+        if (!isFinite(target) || target > 0 || target < -40) return ui.toast(t('Enter a level between -40 and 0 dBFS.'), 'warning');
         const segs = E.slice(timeline, r[0], r[1]);
-        const done = await jobs.run<number>('Measuring level', () => api.AudioAnalyze(id, segs as never));
-        if (done.error) return toastError(done.error, 'Normalize failed');
+        const done = await jobs.run<number>(t('Measuring level'), () => api.AudioAnalyze(id, segs as never));
+        if (done.error) return toastError(done.error, t('Normalize failed'));
         if (done.cancelled) return;
-        if (!(done.result > 1e-6)) return ui.toast('The selection is silent.', 'info');
+        if (!(done.result > 1e-6)) return ui.toast(t('The selection is silent.'), 'info');
         normalizeInfo = { peak: done.result, factor: E.dbToGain(target) / done.result };
         return commit(E.gain(timeline, r[0], r[1], normalizeInfo.factor));
       }
@@ -505,8 +508,8 @@
     if (!fmt) {
       ui.toast(
         info?.codec === 'mp3'
-          ? 'MP3 files are saved without re-encoding only after cuts. Choose FLAC or WAV to keep fades and volume changes.'
-          : 'OGG files can’t be written here. Choose FLAC or WAV.',
+          ? t('MP3 files are saved without re-encoding only after cuts. Choose FLAC or WAV to keep fades and volume changes.')
+          : t('OGG files can’t be written here. Choose FLAC or WAV.'),
         'info',
       );
       return saveAs();
@@ -520,15 +523,15 @@
     const ext = info?.codec === 'wav' ? 'wav' : mp3ok ? 'mp3' : 'flac';
     const base = join(dirname(tab.filePath ?? ''), `${stem(tab.title)} (edited).${ext}`);
     const filters = [
-      { name: 'FLAC (lossless, smaller)', patterns: '*.flac' },
+      { name: t('FLAC (lossless, smaller)'), patterns: '*.flac' },
       { name: 'WAV', patterns: '*.wav' },
     ];
-    if (mp3ok) filters.unshift({ name: 'MP3 (cuts only, no re-encoding)', patterns: '*.mp3' });
-    let dest = await api.SaveFileDialog('Save audio as', base, filters);
+    if (mp3ok) filters.unshift({ name: t('MP3 (cuts only, no re-encoding)'), patterns: '*.mp3' });
+    let dest = await api.SaveFileDialog(t('Save audio as'), base, filters);
     if (!dest) return false;
     let fmt = extname(dest) as 'wav' | 'flac' | 'mp3';
     if (!['wav', 'flac', 'mp3'].includes(fmt) || (fmt === 'mp3' && !mp3ok)) {
-      if (fmt === 'mp3') ui.toast('MP3 can only be saved after cuts; saving as FLAC.', 'info');
+      if (fmt === 'mp3') ui.toast(t('MP3 can only be saved after cuts; saving as FLAC.'), 'info');
       fmt = 'flac';
       dest = `${dest.replace(/\.[^./\\]*$/, '')}.flac`;
     }
@@ -538,43 +541,43 @@
   async function exportTo(dest: string, fmt: 'wav' | 'flac' | 'mp3', retarget: boolean): Promise<boolean> {
     player?.pause();
     const segs = timeline.map((s) => ({ ...s }));
-    const done = await jobs.run<string>(`Saving ${basename(dest)}`, () => api.AudioExport(opened!.id, segs as never, dest, { format: fmt, bitDepth: 0 } as never));
+    const done = await jobs.run<string>(t('Saving {name}', { name: basename(dest) }), () => api.AudioExport(opened!.id, segs as never, dest, { format: fmt, bitDepth: 0 } as never));
     if (done.cancelled) return false;
     if (done.error) {
-      toastError(done.error, 'Save failed');
+      toastError(done.error, t('Save failed'));
       return false;
     }
     if (retarget) tab.retarget(dest);
     tab.dirty = false;
     await load(); // the saved file is the new source; edits are baked in
-    ui.toast(`Saved ${basename(dest)}`, 'success');
+    ui.toast(t('Saved {name}', { name: basename(dest) }), 'success');
     return true;
   }
 
   function editMenu(e: MouseEvent) {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     menu.show({ clientX: r.left, clientY: r.bottom + 4 }, [
-      { label: 'Cut', shortcut: formatShortcut('Mod+X'), run: () => edit('cut') },
-      { label: 'Copy', shortcut: formatShortcut('Mod+C'), run: () => edit('copy') },
-      { label: 'Paste', shortcut: formatShortcut('Mod+V'), run: () => edit('paste') },
-      { label: 'Delete selection', shortcut: 'Del', run: () => edit('delete') },
-      { label: 'Trim to selection', shortcut: 'T', run: () => edit('trim') },
+      { label: t('Cut'), shortcut: formatShortcut('Mod+X'), run: () => edit('cut') },
+      { label: t('Copy'), shortcut: formatShortcut('Mod+C'), run: () => edit('copy') },
+      { label: t('Paste'), shortcut: formatShortcut('Mod+V'), run: () => edit('paste') },
+      { label: t('Delete selection'), shortcut: 'Del', run: () => edit('delete') },
+      { label: t('Trim to selection'), shortcut: 'T', run: () => edit('trim') },
       { separator: true },
-      { label: 'Fade in', shortcut: 'I', run: () => edit('fadeIn') },
-      { label: 'Fade out', shortcut: 'O', run: () => edit('fadeOut') },
-      { label: 'Change volume…', shortcut: 'G', run: () => edit('gain') },
-      { label: 'Normalize…', shortcut: 'N', run: () => edit('normalize') },
-      { label: 'Silence', run: () => edit('silence') },
+      { label: t('Fade in'), shortcut: 'I', run: () => edit('fadeIn') },
+      { label: t('Fade out'), shortcut: 'O', run: () => edit('fadeOut') },
+      { label: t('Change volume…'), shortcut: 'G', run: () => edit('gain') },
+      { label: t('Normalize…'), shortcut: 'N', run: () => edit('normalize') },
+      { label: t('Silence'), run: () => edit('silence') },
       { separator: true },
-      { label: 'Select all', shortcut: formatShortcut('Mod+A'), run: () => edit('selectAll') },
+      { label: t('Select all'), shortcut: formatShortcut('Mod+A'), run: () => edit('selectAll') },
     ]);
   }
 
   function saveMenu(e: MouseEvent) {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     menu.show({ clientX: r.left, clientY: r.bottom + 4 }, [
-      { label: 'Save', shortcut: formatShortcut('Mod+S'), run: () => void save() },
-      { label: 'Save as…', shortcut: formatShortcut('Mod+Shift+S'), run: () => void saveAs() },
+      { label: t('Save'), shortcut: formatShortcut('Mod+S'), run: () => void save() },
+      { label: t('Save as…'), shortcut: formatShortcut('Mod+Shift+S'), run: () => void saveAs() },
     ]);
   }
 
@@ -587,9 +590,9 @@
       statusTimer = 0;
       tab.status = {
         ...tab.status,
-        type: `${(info?.codec || extname(tab.name)).toUpperCase()} audio`,
+        type: t('{format} audio', { format: (info?.codec || extname(tab.name)).toUpperCase() }),
         position: `${formatTime(pos / rate, 1)} / ${formatTime(total / rate, 1)}`,
-        info: hasSel ? `Selection ${formatTime((sel![1] - sel![0]) / rate)}` : undefined,
+        info: hasSel ? t('Selection {length}', { length: formatTime((sel![1] - sel![0]) / rate) }) : undefined,
       };
     }, 100);
   }
@@ -656,26 +659,26 @@
 </header>
 
 <div class="toolbar" use:fitBar>
-  <button class="icon-btn play" title="{playing ? 'Pause' : 'Play'} (Space)" onclick={toggle} disabled={!total}><Icon icon={playing ? Pause : Play} size={16} /></button>
-  <button class="icon-btn" title="Stop" onclick={stop} disabled={!total}><Icon icon={Square} size={14} /></button>
-  <button class="icon-btn" class:on={loopOn} title="Loop selection (L)" onclick={toggleLoop}><Icon icon={Repeat} size={14} /></button>
+  <button class="icon-btn play" title="{playing ? t('Pause') : t('Play')} (Space)" onclick={toggle} disabled={!total}><Icon icon={playing ? Pause : Play} size={16} /></button>
+  <button class="icon-btn" title={t('Stop')} onclick={stop} disabled={!total}><Icon icon={Square} size={14} /></button>
+  <button class="icon-btn" class:on={loopOn} title="{t('Loop selection')} (L)" onclick={toggleLoop}><Icon icon={Repeat} size={14} /></button>
   <span class="time">{formatTime(pos / rate)} <span class="muted">/ {formatTime(total / rate)}</span></span>
-  {#if hasSel}<span class="label selinfo">Selection {formatTime(sel![0] / rate, 2)} – {formatTime(sel![1] / rate, 2)} ({formatTime((sel![1] - sel![0]) / rate, 2)})</span>{/if}
+  {#if hasSel}<span class="label selinfo">{t('Selection {from} – {to} ({length})', { from: formatTime(sel![0] / rate, 2), to: formatTime(sel![1] / rate, 2), length: formatTime((sel![1] - sel![0]) / rate, 2) })}</span>{/if}
   <span class="spacer"></span>
-  <span class="vol" title="Volume"><Icon icon={Volume2} size={14} /><input type="range" min="0" max="1" step="0.01" bind:value={volume} oninput={() => player?.setVolume(volume)} aria-label="Volume" /></span>
-  <select bind:value={speed} onchange={() => player?.setSpeed(speed)} title="Playback speed" aria-label="Playback speed">
+  <span class="vol" title={t('Volume', {}, 'sound')}><Icon icon={Volume2} size={14} /><input type="range" min="0" max="1" step="0.01" bind:value={volume} oninput={() => player?.setVolume(volume)} aria-label={t('Volume', {}, 'sound')} /></span>
+  <select bind:value={speed} onchange={() => player?.setSpeed(speed)} title={t('Playback speed')} aria-label={t('Playback speed')}>
     {#each [0.5, 0.75, 1, 1.25, 1.5, 2] as s (s)}<option value={s}>{s}×</option>{/each}
   </select>
   <span class="sep"></span>
-  <button class="icon-btn" title="Zoom out (-)" onclick={() => zoom(-1)}><Icon icon={ZoomOut} size={15} /></button>
-  <button class="icon-btn" title="Zoom in (+)" onclick={() => zoom(1)}><Icon icon={ZoomIn} size={15} /></button>
-  <button class="btn ghost" title="Zoom to fit (0)" onclick={() => zoom(0)}><Icon icon={MoveHorizontal} size={14} /> Fit</button>
+  <button class="icon-btn" title="{t('Zoom out')} (-)" onclick={() => zoom(-1)}><Icon icon={ZoomOut} size={15} /></button>
+  <button class="icon-btn" title="{t('Zoom in')} (+)" onclick={() => zoom(1)}><Icon icon={ZoomIn} size={15} /></button>
+  <button class="btn ghost" title="{t('Zoom to fit')} (0)" onclick={() => zoom(0)}><Icon icon={MoveHorizontal} size={14} /> {t('Fit')}</button>
   {#if editable}
     <span class="sep"></span>
-    <button class="icon-btn" title="Undo ({formatShortcut('Mod+Z')})" disabled={!canUndo} onclick={() => edit('undo')}><Icon icon={Undo2} size={15} /></button>
-    <button class="icon-btn" title="Redo ({formatShortcut('Mod+Shift+Z')})" disabled={!canRedo} onclick={() => edit('redo')}><Icon icon={Redo2} size={15} /></button>
-    <button class="btn ghost" onclick={editMenu}><Icon icon={Pencil} size={14} /> Edit ▾</button>
-    <button class="btn ghost" onclick={saveMenu}><Icon icon={Save} size={14} /> Save ▾</button>
+    <button class="icon-btn" title="{t('Undo')} ({formatShortcut('Mod+Z')})" disabled={!canUndo} onclick={() => edit('undo')}><Icon icon={Undo2} size={15} /></button>
+    <button class="icon-btn" title="{t('Redo')} ({formatShortcut('Mod+Shift+Z')})" disabled={!canRedo} onclick={() => edit('redo')}><Icon icon={Redo2} size={15} /></button>
+    <button class="btn ghost" onclick={editMenu}><Icon icon={Pencil} size={14} /> {t('Edit')} ▾</button>
+    <button class="btn ghost" onclick={saveMenu}><Icon icon={Save} size={14} /> {t('Save')} ▾</button>
   {/if}
 </div>
 
@@ -688,18 +691,18 @@
       onpointerup={onUp}
       onwheel={onWheel}
       ondblclick={() => setSel(0, total)}
-      aria-label="Waveform: drag to select, click to place the cursor"
+      aria-label={t('Waveform: drag to select, click to place the cursor')}
     ></canvas>
     {#if hasSel && xOf(sel![1]) >= 0 && xOf(sel![0]) <= width}
       <div class="sel" style:left="{Math.max(0, xOf(sel![0]))}px" style:width="{Math.min(width, xOf(sel![1])) - Math.max(0, xOf(sel![0]))}px"></div>
     {/if}
     {#if xOf(pos) >= 0 && xOf(pos) <= width}<div class="playhead" style:left="{xOf(pos)}px"></div>{/if}
-    {#if peaks && peakProgress < 1}<div class="reading">Reading waveform… {Math.round(peakProgress * 100)}%</div>{/if}
+    {#if peaks && peakProgress < 1}<div class="reading">{t('Reading waveform…')} {Math.round(peakProgress * 100)}%</div>{/if}
   {:else if !loading && !error}
     <div class="empty-state">
       <div class="big"><Icon icon={Music} size={40} /></div>
-      <p class="muted">{info?.reason ? `${info.reason}.` : ''} Editing works with WAV, MP3, FLAC and OGG Vorbis files.</p>
-      <input class="scrub" type="range" min="0" max={total} step="1" value={pos} oninput={(e) => seek(+(e.target as HTMLInputElement).value)} aria-label="Position" />
+      <p class="muted">{info?.reason ? `${info.reason}.` : ''} {t('Editing works with WAV, MP3, FLAC and OGG Vorbis files.')}</p>
+      <input class="scrub" type="range" min="0" max={total} step="1" value={pos} oninput={(e) => seek(+(e.target as HTMLInputElement).value)} aria-label={t('Position')} />
     </div>
   {/if}
   {#if loading}<div class="empty-state overlay"><span class="spinner"></span></div>{/if}

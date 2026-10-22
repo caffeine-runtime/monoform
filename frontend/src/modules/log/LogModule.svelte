@@ -17,6 +17,7 @@
   import { logHighlight } from './highlight';
   import { levelCode, levelOf, LEVELS, type Level } from './levels';
   import { logViews } from './views';
+  import { num, t, tn } from '../../core/i18n';
 
   let { tab }: { tab: Tab } = $props();
 
@@ -26,11 +27,11 @@
   let scanned = 0;
   let counts = $state<number[]>([0, 0, 0, 0, 0, 0, 0]);
   let scanning = $state(false);
-  const GROUPS: { id: string; label: string; codes: number[] }[] = [
-    { id: 'error', label: 'Errors', codes: [1, 2] },
-    { id: 'warn', label: 'Warnings', codes: [3] },
-    { id: 'info', label: 'Info', codes: [4] },
-    { id: 'debug', label: 'Debug', codes: [5, 6] },
+  const GROUPS: { id: string; label: string; show: string; hide: string; codes: number[] }[] = [
+    { id: 'error', label: t('Errors'), show: t('Show errors in the filtered list'), hide: t('Hide errors in the filtered list'), codes: [1, 2] },
+    { id: 'warn', label: t('Warnings'), show: t('Show warnings in the filtered list'), hide: t('Hide warnings in the filtered list'), codes: [3] },
+    { id: 'info', label: t('Info'), show: t('Show info in the filtered list'), hide: t('Hide info in the filtered list'), codes: [4] },
+    { id: 'debug', label: t('Debug'), show: t('Show debug in the filtered list'), hide: t('Hide debug in the filtered list'), codes: [5, 6] },
   ];
   let shown = $state<Record<string, boolean>>({ error: true, warn: true, info: true, debug: true });
   let query = $state('');
@@ -267,19 +268,19 @@
 
 <div class="toolbar" use:fitBar>
   {#each GROUPS as g (g.id)}
-    <button class="chip {g.id}" class:off={!shown[g.id]} aria-pressed={shown[g.id]} title="{shown[g.id] ? 'Hide' : 'Show'} {g.label.toLowerCase()} in the filtered list" onclick={() => ((shown = { ...shown, [g.id]: !shown[g.id] }), scheduleFilter())}>
-      {g.label} <b>{groupCount(g).toLocaleString()}</b>
+    <button class="chip {g.id}" class:off={!shown[g.id]} aria-pressed={shown[g.id]} title={shown[g.id] ? g.hide : g.show} onclick={() => ((shown = { ...shown, [g.id]: !shown[g.id] }), scheduleFilter())}>
+      {g.label} <b>{num(groupCount(g))}</b>
     </button>
   {/each}
   {#if scanning}<span class="label"><span class="spinner inline"></span></span>{/if}
   <span class="sep"></span>
   <div class="filter" class:bad={badRegex}>
-    <input class="input" placeholder="Filter lines" bind:value={query} oninput={scheduleFilter} onkeydown={(e) => e.key === 'Escape' && ((query = ''), scheduleFilter())} aria-label="Filter lines" />
-    <button class="rx" class:on={regex} title="Regular expression" aria-pressed={regex} onclick={() => ((regex = !regex), scheduleFilter())}>.*</button>
+    <input class="input" placeholder={t('Filter lines')} bind:value={query} oninput={scheduleFilter} onkeydown={(e) => e.key === 'Escape' && ((query = ''), scheduleFilter())} aria-label={t('Filter lines')} />
+    <button class="rx" class:on={regex} title={t('Regular expression')} aria-pressed={regex} onclick={() => ((regex = !regex), scheduleFilter())}>.*</button>
   </div>
-  <button class="btn ghost" title="Next error ({formatShortcut('F8')}; previous: {formatShortcut('Shift+F8')})" onclick={() => nextError(1)}><Icon icon={ChevronDown} size={14} /> Next error</button>
+  <button class="btn ghost" title={t('Next error ({next}; previous: {previous})', { next: formatShortcut('F8'), previous: formatShortcut('Shift+F8') })} onclick={() => nextError(1)}><Icon icon={ChevronDown} size={14} /> {t('Next error')}</button>
   <span class="spacer"></span>
-  <button class="btn ghost" class:on={follow} title="Follow: show new lines as they are written (like tail -f)" aria-pressed={follow} onclick={() => setFollow(!follow)}><Icon icon={Radio} size={14} /> Follow</button>
+  <button class="btn ghost" class:on={follow} title={t('Follow: show new lines as they are written (like tail -f)')} aria-pressed={follow} onclick={() => setFollow(!follow)}><Icon icon={Radio} size={14} /> {t('Follow')}</button>
 </div>
 
 <div class="body">
@@ -287,9 +288,9 @@
   {#if filtering}
     <div class="results">
       <div class="rhead">
-        <span>{matching ? 'Filtering…' : `${matches.length.toLocaleString()} matching line${matches.length === 1 ? '' : 's'}`}{badRegex ? ' — invalid regular expression' : ''}</span>
+        <span>{matching ? t('Filtering…') : tn('{n} matching line', '{n} matching lines', matches.length)}{badRegex ? ` — ${t('invalid regular expression')}` : ''}</span>
         <span class="spacer"></span>
-        <button class="icon-btn" title="Clear the filter" onclick={() => ((query = ''), (shown = { error: true, warn: true, info: true, debug: true }), runFilter())}><Icon icon={XIcon} size={14} /></button>
+        <button class="icon-btn" title={t('Clear the filter')} onclick={() => ((query = ''), (shown = { error: true, warn: true, info: true, debug: true }), runFilter())}><Icon icon={XIcon} size={14} /></button>
       </div>
       <div class="list" bind:this={list} onscroll={() => (listTop = list!.scrollTop)}>
         <div style:height="{matches.length * ROW}px" style:position="relative">

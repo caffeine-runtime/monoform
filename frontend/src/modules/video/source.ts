@@ -4,6 +4,7 @@
 // AudioDecoder turn them into frames and PCM.
 
 import { api } from '../../core/backend';
+import { t } from '../../core/i18n';
 
 export type Sample = [number, number, number, number, number]; // pts, dur, offset, size, key
 
@@ -61,12 +62,12 @@ export class SampleReader {
     if (b && off >= b.start && off + size <= b.start + b.data.length) return b.data.subarray(off - b.start, off - b.start + size);
     const len = Math.max(size, 4 << 20);
     const r = await fetch(this.url, { headers: { Range: `bytes=${off}-${off + len - 1}` } });
-    if (!r.ok) throw new Error(`reading video data failed (${r.status})`);
+    if (!r.ok) throw new Error(t('reading video data failed ({status})', { status: String(r.status) }));
     const data = new Uint8Array(await r.arrayBuffer());
     // A server that ignores Range sends everything from 0.
     const start = r.status === 206 ? off : 0;
     this.block = { start, data };
-    if (off - start + size > data.length) throw new Error('video data ended early');
+    if (off - start + size > data.length) throw new Error(t('video data ended early'));
     return data.subarray(off - start, off - start + size);
   }
 }
@@ -116,7 +117,7 @@ export class FrameCursor {
         this.wake?.();
       },
       error: (e) => {
-        this.error = new Error(`video decoding failed: ${e.message}`);
+        this.error = new Error(t('video decoding failed: {error}', { error: e.message }));
         this.wake?.();
       },
     });
@@ -195,7 +196,7 @@ export async function decodeAudio(s: StreamInfo, reader: SampleReader, a: number
       }
       d.close();
     },
-    error: (e) => (failure = new Error(`audio decoding failed: ${e.message}`)),
+    error: (e) => (failure = new Error(t('audio decoding failed: {error}', { error: e.message }))),
   });
   dec.configure({ codec: s.codec, sampleRate: rate, numberOfChannels: s.channels || 2, description: s.description });
   // Start a little early: some codecs need pre-roll to settle.
@@ -236,7 +237,7 @@ export class ElementCursor {
     v.crossOrigin = 'anonymous';
     this.ready = new Promise((resolve, reject) => {
       v.addEventListener('loadeddata', () => resolve(), { once: true });
-      v.addEventListener('error', () => reject(new Error('this video can’t be decoded here')), { once: true });
+      v.addEventListener('error', () => reject(new Error(t('this video can’t be decoded here'))), { once: true });
     });
     v.src = url;
   }
@@ -327,9 +328,9 @@ export function wholeFileAudio(url: string): (a: number, b: number) => Promise<{
   let decoded: Promise<AudioBuffer> | null = null;
   return async (a, b) => {
     decoded ??= fetch(url)
-      .catch((e) => Promise.reject(new Error(`reading the audio: ${e.message}`)))
+      .catch((e) => Promise.reject(new Error(t('reading the audio: {error}', { error: e.message }))))
       .then((r) => r.arrayBuffer())
-      .then((buf) => new OfflineAudioContext(2, 1, 48000).decodeAudioData(buf).catch((e) => Promise.reject(new Error(`decoding the audio: ${e?.message ?? e}`))));
+      .then((buf) => new OfflineAudioContext(2, 1, 48000).decodeAudioData(buf).catch((e) => Promise.reject(new Error(t('decoding the audio: {error}', { error: String(e?.message ?? e) })))));
     const ab = await decoded;
     const rate = ab.sampleRate;
     const from = Math.max(0, Math.round(a * rate));

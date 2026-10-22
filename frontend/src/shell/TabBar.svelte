@@ -15,6 +15,7 @@
   import { dropInto } from '../core/split';
   import { insertionIndex, tabDrag, zoneOf } from '../core/tabdrag.svelte';
   import { moveToNewWindow } from '../core/windows';
+  import { t } from '../core/i18n';
 
   // Editors with side panels (layers, effects, properties) get a button to hide them.
   const PANELS = new Set(['image', 'video', 'svg', 'cad', 'model3d', 'database']);
@@ -106,39 +107,39 @@
     const s = workspace.split;
     const n = s?.panes.length ?? 1;
     menu.show({ clientX: r.left, clientY: r.bottom + 4 }, [
-      { label: `${!s ? '✓ ' : ''}One tab`, shortcut: '', run: () => commands.execute('view.unsplit') },
-      { label: `${s?.layout === 'columns' && n === 2 ? '✓ ' : ''}Two side by side`, run: () => commands.execute('view.splitColumns') },
-      { label: `${s?.layout === 'rows' && n === 2 ? '✓ ' : ''}Two stacked`, run: () => commands.execute('view.splitRows') },
-      { label: `${s?.layout === 'grid' && n === 3 ? '✓ ' : ''}Three`, run: () => commands.execute('view.splitThree') },
-      { label: `${n === 4 ? '✓ ' : ''}Four (grid)`, run: () => commands.execute('view.splitGrid') },
+      { label: `${!s ? '✓ ' : ''}${t('One tab')}`, shortcut: '', run: () => commands.execute('view.unsplit') },
+      { label: `${s?.layout === 'columns' && n === 2 ? '✓ ' : ''}${t('Two side by side')}`, run: () => commands.execute('view.splitColumns') },
+      { label: `${s?.layout === 'rows' && n === 2 ? '✓ ' : ''}${t('Two stacked')}`, run: () => commands.execute('view.splitRows') },
+      { label: `${s?.layout === 'grid' && n === 3 ? '✓ ' : ''}${t('Three')}`, run: () => commands.execute('view.splitThree') },
+      { label: `${n === 4 ? '✓ ' : ''}${t('Four (grid)')}`, run: () => commands.execute('view.splitGrid') },
       { separator: true },
-      { label: 'Tip: drag a tab onto the edge of a view to split', disabled: true, run: () => {} },
+      { label: t('Tip: drag a tab onto the edge of a view to split'), disabled: true, run: () => {} },
     ]);
   }
 
-  function tabMenu(e: MouseEvent, t: Tab) {
-    const inSplit = !!workspace.split?.panes.includes(t.id);
+  function tabMenu(e: MouseEvent, tab: Tab) {
+    const inSplit = !!workspace.split?.panes.includes(tab.id);
     menu.show(e, [
-      { label: 'Close', run: () => workspace.close(t) },
-      { label: 'Close others', run: () => workspace.closeAll(t) },
-      { label: 'Close all', run: () => workspace.closeAll() },
+      { label: t('Close'), run: () => workspace.close(tab) },
+      { label: t('Close others'), run: () => workspace.closeAll(tab) },
+      { label: t('Close all'), run: () => workspace.closeAll() },
       { separator: true },
-      ...(t.filePath ? [{ label: 'Move to a new window', run: () => void moveToNewWindow(t) }] : []),
+      ...(tab.filePath ? [{ label: t('Move to a new window'), run: () => void moveToNewWindow(tab) }] : []),
       ...(workspace.tabs.length > 1 && !inSplit
         ? [
-            { label: 'Open side by side (split right)', run: () => splitWith(t, 'right') },
-            { label: 'Open below (split down)', run: () => splitWith(t, 'bottom') },
+            { label: t('Open side by side (split right)'), run: () => splitWith(tab, 'right') },
+            { label: t('Open below (split down)'), run: () => splitWith(tab, 'bottom') },
           ]
         : []),
-      ...(inSplit ? [{ label: 'Remove from split view', run: () => workspace.setSplit(workspace.split!.panes.length > 2 ? { ...workspace.split!, panes: workspace.split!.panes.filter((p) => p !== t.id) } : null) }] : []),
+      ...(inSplit ? [{ label: t('Remove from split view'), run: () => workspace.setSplit(workspace.split!.panes.length > 2 ? { ...workspace.split!, panes: workspace.split!.panes.filter((p) => p !== tab.id) } : null) }] : []),
       { separator: true },
-      ...(t.filePath
+      ...(tab.filePath
         ? [
-            { label: settings.isPinned(t.filePath) ? 'Unpin' : 'Pin', run: () => settings.togglePin(t.filePath!) },
-            { label: 'Copy path', run: () => copyText(t.filePath!) },
-            { label: 'Compare with…', run: () => void import('../core/compare').then((m) => m.compareWith(t.filePath!)) },
-            { label: 'Show history', run: () => workspace.openTool('history', t.filePath!) },
-            { label: 'Reveal in sidebar', run: () => commands.execute('file.reveal') },
+            { label: settings.isPinned(tab.filePath) ? t('Unpin') : t('Pin'), run: () => settings.togglePin(tab.filePath!) },
+            { label: t('Copy path'), run: () => copyText(tab.filePath!) },
+            { label: t('Compare with…'), run: () => void import('../core/compare').then((m) => m.compareWith(tab.filePath!)) },
+            { label: t('Show history'), run: () => workspace.openTool('history', tab.filePath!) },
+            { label: t('Reveal in sidebar'), run: () => commands.execute('file.reveal') },
           ]
         : []),
     ]);
@@ -156,39 +157,39 @@
 <svelte:window onpointermove={drag} onpointerup={drop} onpointercancel={cancelDrag} onkeydown={(e) => tabDrag.id && e.key === 'Escape' && cancelDrag()} />
 <div class="tabbar" bind:this={bar} class:mac-collapsed={boot.platform === 'darwin' && !settings.value.sidebarVisible}>
   {#if !settings.value.sidebarVisible}
-    <button class="icon-btn toggle" title="Show sidebar" onclick={() => commands.execute('view.toggleSidebar')}><Icon icon={PanelLeft} /></button>
+    <button class="icon-btn toggle" title={t('Show sidebar')} onclick={() => commands.execute('view.toggleSidebar')}><Icon icon={PanelLeft} /></button>
   {/if}
   <div class="strip" bind:this={strip} role="tablist">
-    {#each workspace.tabs as t, i (t.id)}
+    {#each workspace.tabs as tab, i (tab.id)}
       <div
         class="tab"
-        class:active={workspace.activeId === t.id}
-        class:in-split={!!workspace.split?.panes.includes(t.id)}
+        class:active={workspace.activeId === tab.id}
+        class:in-split={!!workspace.split?.panes.includes(tab.id)}
         class:drop-before={markAt === i}
         class:drop-after={markAt === workspace.tabs.length && i === workspace.tabs.length - 1}
-        class:dragging={tabDrag.id === t.id}
-        data-tab={t.id}
+        class:dragging={tabDrag.id === tab.id}
+        data-tab={tab.id}
         role="tab"
         tabindex="0"
-        aria-selected={workspace.activeId === t.id}
-        title={t.subtitle || t.title}
-        onclick={() => !justDragged && workspace.activate(t)}
-        onpointerdown={(e) => down(e, t, i)}
-        onkeydown={(e) => e.key === 'Enter' && workspace.activate(t)}
-        onmouseup={(e) => mouseup(e, t)}
-        oncontextmenu={(e) => tabMenu(e, t)}
+        aria-selected={workspace.activeId === tab.id}
+        title={tab.subtitle || tab.title}
+        onclick={() => !justDragged && workspace.activate(tab)}
+        onpointerdown={(e) => down(e, tab, i)}
+        onkeydown={(e) => e.key === 'Enter' && workspace.activate(tab)}
+        onmouseup={(e) => mouseup(e, tab)}
+        oncontextmenu={(e) => tabMenu(e, tab)}
       >
-        <span class="ico"><Icon icon={iconFor(t.name, kindOf(t))} size={14} /></span>
-        <span class="name">{t.title}</span>
-        {#if workspace.split?.panes.includes(t.id)}<span class="pane-no" title="Shown in split view, pane {workspace.split.panes.indexOf(t.id) + 1}">{workspace.split.panes.indexOf(t.id) + 1}</span>{/if}
-        {#if t.readOnly}<span class="ro" title="Read-only"><Icon icon={Lock} size={11} /></span>{/if}
+        <span class="ico"><Icon icon={iconFor(tab.name, kindOf(tab))} size={14} /></span>
+        <span class="name">{tab.title}</span>
+        {#if workspace.split?.panes.includes(tab.id)}<span class="pane-no" title={t('Shown in split view, pane {n}', { n: workspace.split.panes.indexOf(tab.id) + 1 })}>{workspace.split.panes.indexOf(tab.id) + 1}</span>{/if}
+        {#if tab.readOnly}<span class="ro" title={t('Read-only')}><Icon icon={Lock} size={11} /></span>{/if}
         <button
           class="close"
-          class:dirty={t.dirty}
-          title={t.dirty ? 'Unsaved changes — close' : 'Close'}
+          class:dirty={tab.dirty}
+          title={tab.dirty ? t('Unsaved changes — close') : t('Close')}
           onclick={(e) => {
             e.stopPropagation();
-            void workspace.close(t);
+            void workspace.close(tab);
           }}
         >
           <span class="dot"></span>
@@ -196,26 +197,26 @@
         </button>
       </div>
     {/each}
-    <button class="icon-btn newtab" title="New tab ({formatShortcut('Mod+T')})" aria-label="New tab" onclick={() => commands.execute('tab.new')}><Icon icon={Plus} size={15} /></button>
+    <button class="icon-btn newtab" title={t('New tab ({shortcut})', { shortcut: formatShortcut('Mod+T') })} aria-label={t('New tab')} onclick={() => commands.execute('tab.new')}><Icon icon={Plus} size={15} /></button>
   </div>
   {#if hasPanels}
     <button
       class="icon-btn panels"
       class:off={settings.value.panelsHidden}
-      title="{settings.value.panelsHidden ? 'Show' : 'Hide'} side panels ({formatShortcut('Mod+Alt+B')})"
+      title={settings.value.panelsHidden ? t('Show side panels ({shortcut})', { shortcut: formatShortcut('Mod+Alt+B') }) : t('Hide side panels ({shortcut})', { shortcut: formatShortcut('Mod+Alt+B') })}
       aria-pressed={!settings.value.panelsHidden}
       onclick={() => commands.execute('view.togglePanels')}><Icon icon={PanelRight} size={15} /></button
     >
   {/if}
   {#if workspace.tabs.length > 1}
-    <button class="icon-btn layout" class:on={!!workspace.split} title="Split view: show 2–4 tabs side by side ({formatShortcut('Mod+\\')})" onclick={layoutMenu}><Icon icon={Columns2} size={15} /></button>
+    <button class="icon-btn layout" class:on={!!workspace.split} title={t('Split view: show 2–4 tabs side by side ({shortcut})', { shortcut: formatShortcut('Mod+\\') })} onclick={layoutMenu}><Icon icon={Columns2} size={15} /></button>
   {/if}
 </div>
 {#if dragged}
   <!-- Kept inside the window, so "release for a new window" stays readable at its edge. -->
   <div class="tab-ghost" style:left="{Math.max(8, Math.min(tabDrag.x + 12, innerWidth - 270))}px" style:top="{Math.max(8, Math.min(tabDrag.y + 14, innerHeight - 60))}px" aria-hidden="true">
     <span class="gname">{dragged.title}</span>
-    {#if tabDrag.zone === 'outside'}<span class="ghint">{dragged.filePath ? 'Release for a new window' : 'Only files can have their own window'}</span>{/if}
+    {#if tabDrag.zone === 'outside'}<span class="ghint">{dragged.filePath ? t('Release for a new window') : t('Only files can have their own window')}</span>{/if}
   </div>
 {/if}
 

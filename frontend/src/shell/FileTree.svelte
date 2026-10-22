@@ -6,6 +6,7 @@
   import { settings } from '../core/settings.svelte';
   import { workspace } from '../core/tabs.svelte';
   import { openTreeItem, treeContextMenu } from './treeActions';
+  import { t } from '../core/i18n';
 
   let { root }: { root: string } = $props();
 
@@ -106,7 +107,7 @@
   onscroll={() => (scrollTop = viewport.scrollTop)}
   tabindex="0"
   role="tree"
-  aria-label="Folder"
+  aria-label={t('Folder')}
   onkeydown={keydown}
 >
   <div class="spacer" style:height="{rows.length * ROW}px">
@@ -145,7 +146,7 @@
     {/each}
   </div>
   {#if rows.length === 0 && !tree.loading.has(root)}
-    <div class="empty muted">This folder is empty</div>
+    <div class="empty muted">{t('This folder is empty')}</div>
   {/if}
 </div>
 

@@ -12,6 +12,7 @@
   import { editorTheme, highlight } from '../text/setup';
   import Grid, { type GridColumn } from '../data/Grid.svelte';
   import { display, type Result } from './edits';
+  import { t, tn } from '../../core/i18n';
 
   let {
     tables,
@@ -96,7 +97,7 @@
 <div class="console">
   <div class="editor" bind:this={host}></div>
   <div class="bar">
-    <button class="btn primary" disabled={running} title="Run the selection, or the whole script (Ctrl+Enter)" onclick={run}>{running ? 'Running…' : '▶ Run'}</button>
+    <button class="btn primary" disabled={running} title={t('Run the selection, or the whole script ({shortcut})', { shortcut: 'Ctrl+Enter' })} onclick={run}>{running ? t('Running…') : `▶ ${t('Run')}`}</button>
     {#if results.length > 1}
       <div class="tabs" role="tablist">
         {#each results as r, i (i)}
@@ -106,8 +107,8 @@
     {/if}
     <span class="msg" class:err={!!cur?.error}>
       {#if cur?.error}{cur.error}
-      {:else if cur?.columns}{cur.rows?.length ?? 0}{cur.more ? '+' : ''} row{cur.rows?.length === 1 ? '' : 's'} · {cur.millis} ms{cur.more ? ' (first rows only)' : ''}
-      {:else if cur}{cur.affected} row{cur.affected === 1 ? '' : 's'} changed · {cur.millis} ms
+      {:else if cur?.columns}{cur.more ? tn('{n}+ row', '{n}+ rows', cur.rows?.length ?? 0) : tn('{n} row', '{n} rows', cur.rows?.length ?? 0)} · {cur.millis} ms{cur.more ? ` (${t('first rows only')})` : ''}
+      {:else if cur}{tn('{n} row changed', '{n} rows changed', cur.affected)} · {cur.millis} ms
       {/if}
     </span>
   </div>
@@ -115,7 +116,7 @@
     {#if cur?.columns?.length}
       <Grid {source} rowCount={cur.rows?.length ?? 0} bind:columns {version} />
     {:else if !results.length}
-      <div class="empty-state">Write SQL above and press Ctrl+Enter. Changes are written right away (not with Save).</div>
+      <div class="empty-state">{t('Write SQL above and press {shortcut}. Changes are written right away (not with Save).', { shortcut: 'Ctrl+Enter' })}</div>
     {/if}
   </div>
 </div>

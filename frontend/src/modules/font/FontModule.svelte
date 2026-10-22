@@ -7,6 +7,7 @@
   import { onMount } from 'svelte';
   import type { Tab } from '../../core/tabs.svelte';
   import { ui } from '../../core/ui.svelte';
+  import { t, tn } from '../../core/i18n';
   import { blockOf, fontInfo, WEIGHTS, type FontInfo } from './fontinfo';
 
   let { tab }: { tab: Tab } = $props();
@@ -25,6 +26,7 @@
   const SIZES = [12, 14, 16, 20, 24, 32, 40, 48, 64, 72, 96];
   const PARA = 'Typography is the craft of endowing human language with a durable visual form. Grumpy wizards make a toxic brew for the jovial queen; Zażółć gęślą jaźń; Съешь же ещё этих мягких французских булок.';
 
+  const formatName = (f: FontInfo['format']) => (f === 'TrueType collection' ? t('TrueType collection') : f);
   const variation = $derived(Object.entries(axisValues).map(([t, v]) => `"${t}" ${v}`).join(', ') || 'normal');
   const groups = $derived.by(() => {
     if (!info) return [];
@@ -57,16 +59,16 @@
       document.fonts.add(face);
       loaded = true;
       const name = info?.family ? `${info.family}${info.style ? ` ${info.style}` : ''}` : tab.title;
-      tab.status = { ...tab.status, type: `${info?.format ?? 'Font'}`, position: info?.glyphs ? `${info.glyphs.toLocaleString()} glyphs` : undefined, info: name };
+      tab.status = { ...tab.status, type: info ? formatName(info.format) : t('Font'), position: info?.glyphs ? tn('{n} glyph', '{n} glyphs', info.glyphs) : undefined, info: name };
     } catch (e) {
-      error = `This font can't be shown: ${e instanceof Error ? e.message : String(e)}`;
+      error = t("This font can't be shown: {error}", { error: e instanceof Error ? e.message : String(e) });
     }
   }
 
   async function copyChar(c: number) {
     picked = c;
     await navigator.clipboard.writeText(String.fromCodePoint(c)).catch(() => {});
-    ui.toast(`Copied ${String.fromCodePoint(c)} (U+${c.toString(16).toUpperCase().padStart(4, '0')})`, 'success');
+    ui.toast(t('Copied {char} ({code})', { char: String.fromCodePoint(c), code: `U+${c.toString(16).toUpperCase().padStart(4, '0')}` }), 'success');
   }
 
   (tab as unknown as { fontTest: unknown }).fontTest = { info: () => info, loaded: () => loaded, family, error: () => error };
@@ -81,8 +83,8 @@
 </script>
 
 <div class="toolbar" use:fitBar>
-  <input class="input sample" bind:value={sample} placeholder="Type to preview" aria-label="Sample text" />
-  <label class="opt">Size <input type="range" min="8" max="200" bind:value={size} /><span class="v">{size}px</span></label>
+  <input class="input sample" bind:value={sample} placeholder={t('Type to preview')} aria-label={t('Sample text')} />
+  <label class="opt">{t('Size')} <input type="range" min="8" max="200" bind:value={size} /><span class="v">{size}px</span></label>
   {#each info?.axes ?? [] as a (a.tag)}
     <label class="opt" title="{a.name} ({a.min}–{a.max})">{a.name} <input type="range" min={a.min} max={a.max} step={a.max - a.min > 20 ? 1 : 0.1} bind:value={axisValues[a.tag]} /><span class="v">{Math.round(axisValues[a.tag] * 10) / 10}</span></label>
   {/each}
@@ -97,19 +99,19 @@
       <div class="meta">
         {#if info}
           <span>{info.style || (WEIGHTS[info.weight] ?? info.weight)}{info.italic ? ' italic' : ''}</span>
-          <span>{info.format}{info.fonts > 1 ? ` (${info.fonts} fonts; showing the first)` : ''}</span>
+          <span>{formatName(info.format)}{info.fonts > 1 ? ` ${tn('({n} font; showing the first)', '({n} fonts; showing the first)', info.fonts)}` : ''}</span>
           {#if info.version}<span>{info.version}</span>{/if}
-          {#if info.glyphs}<span>{info.glyphs.toLocaleString()} glyphs · {info.chars.length.toLocaleString()} characters</span>{/if}
-          {#if info.axes.length}<span>Variable: {info.axes.map((a) => a.tag).join(', ')}</span>{/if}
+          {#if info.glyphs}<span>{tn('{n} glyph', '{n} glyphs', info.glyphs)} · {tn('{n} character', '{n} characters', info.chars.length)}</span>{/if}
+          {#if info.axes.length}<span>{t('Variable: {axes}', { axes: info.axes.map((a) => a.tag).join(', ') })}</span>{/if}
         {:else}
-          <span>{error || 'WOFF2 (names not read)'}</span>
+          <span>{error || t('WOFF2 (names not read)')}</span>
         {/if}
       </div>
       {#if info?.copyright || info?.license || info?.designer}
         <dl>
-          {#if info.designer}<dt>Designer</dt><dd>{info.designer}</dd>{/if}
-          {#if info.copyright}<dt>Copyright</dt><dd>{info.copyright}</dd>{/if}
-          {#if info.license}<dt>Licence</dt><dd class="lic">{info.license}</dd>{/if}
+          {#if info.designer}<dt>{t('Designer')}</dt><dd>{info.designer}</dd>{/if}
+          {#if info.copyright}<dt>{t('Copyright')}</dt><dd>{info.copyright}</dd>{/if}
+          {#if info.license}<dt>{t('Licence')}</dt><dd class="lic">{info.license}</dd>{/if}
         </dl>
       {/if}
     </header>
@@ -119,30 +121,30 @@
     </section>
 
     <section>
-      <h2>Sizes</h2>
+      <h2>{t('Sizes')}</h2>
       {#each SIZES as s (s)}
         <div class="row"><span class="px">{s}</span><span class="f line" style:font-size="{s}px">{sample}</span></div>
       {/each}
     </section>
 
     <section>
-      <h2>Paragraph</h2>
+      <h2>{t('Paragraph')}</h2>
       <p class="f para">{PARA}</p>
       <p class="f para upper">{PARA.toUpperCase()}</p>
     </section>
 
     {#if info?.chars.length}
       <section>
-        <h2>Characters</h2>
+        <h2>{t('Characters')}</h2>
         {#each groups as g (g.name + g.chars[0])}
           <h3>{g.name}</h3>
           <div class="grid">
             {#each g.chars as c (c)}
-              <button class="ch" class:on={picked === c} title="U+{c.toString(16).toUpperCase().padStart(4, '0')} — click to copy" onclick={() => copyChar(c)}><span class="f">{String.fromCodePoint(c)}</span></button>
+              <button class="ch" class:on={picked === c} title={t('{code} — click to copy', { code: `U+${c.toString(16).toUpperCase().padStart(4, '0')}` })} onclick={() => copyChar(c)}><span class="f">{String.fromCodePoint(c)}</span></button>
             {/each}
           </div>
         {/each}
-        {#if !showAll && info.chars.length > 1500}<button class="btn" onclick={() => (showAll = true)}>Show all {info.chars.length.toLocaleString()} characters</button>{/if}
+        {#if !showAll && info.chars.length > 1500}<button class="btn" onclick={() => (showAll = true)}>{tn('Show all {n} character', 'Show all {n} characters', info.chars.length)}</button>{/if}
       </section>
     {/if}
   {/if}

@@ -464,6 +464,33 @@
   characters (of the selection too), Obsidian-style. Word/OpenDocument documents get the same outline of their
   headings and the counts. The folder's links are indexed in Go (`internal/notes`, parallel, unchanged files
   remembered). Go tests, unit tests and self-test `m46`.
+- **Polish and Spanish.** The whole interface (about 2,400 strings, the Windows setup program included) is in English,
+  Polish and Spanish. On first start Monoform follows the system language (macOS/Windows language list, Linux
+  locale); the welcome screen's first step and *Settings › Appearance › Language* pick another ("Like my computer",
+  English, Polski, Español); changing it reloads the window with the tabs kept. Numbers and dates use the language's
+  format, Polish gets its plural forms, the code editor's own phrases (search, Go to line) are translated too. Unit
+  tests fail on any untranslated interface text or missing translation; self-test `m47` runs the app in Polish and in
+  Spanish over a file of every kind. Messages that come from the Go side (some errors) are still English. See
+  docs/TRANSLATING.md.
+- **Paste into an empty tab** makes a new document in the editor for its kind: a picture in the image editor (all
+  its tools), a table copied from a spreadsheet in the grid, JSON in the data view, SVG in the SVG editor, Excalidraw/
+  draw.io on the board, Mermaid/Graphviz as a diagram, Markdown as a note, certificates, plain text; copied files
+  open as themselves; dragging something from another tab onto an empty one works the same. It is unsaved ("Not
+  saved yet") until Save, which asks where; closing asks first. Unit tests and self-test `m48`.
+- **AI tools in the image editor's tool column**: below Select object, *Select subject (AI)* and *Remove object (AI)*
+  are always there — greyed out with a download mark until their model is installed, when a click opens *Settings ›
+  AI models* at that model (highlighted); once installed they work in place (the standard Select subject uses the
+  bundled model). Self-test `m43`.
+- **Updates.** At startup Monoform asks GitHub for the newest release (on by default; *Settings › About* turns it
+  off; Help › Check for updates asks by hand). A new version shows a popup with what's new: *Download and install*
+  downloads it with progress, checks it against the release's SHA256SUMS, saves unsaved work (after asking) and
+  restarts as the new version — Windows installs through the setup program (`--update`: same folder and choices),
+  a portable copy, the macOS app bundle and the Linux binary replace themselves; a copy in a folder it can't write
+  (a distro package) links to the download page. *Skip this version* keeps it quiet until the next one. Go tests
+  (`internal/update`: version order, checksums, replacing a running binary/bundle), self-test `m49`, and an
+  end-to-end run on Linux (1.0.0 updating itself to 1.0.1 from a local stand-in for GitHub, `m49real`).
+- **Fix: a CI self-test (`m6`) failed on a fast runner**: the 3 GiB hash finished inside the 2.5 s it watched
+  progress for. It now watches while the hash runs and tests Cancel on a fresh run.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

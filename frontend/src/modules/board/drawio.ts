@@ -4,6 +4,7 @@
 // orthogonally or curved with draw.io's arrowheads and labels — and edited
 // in place: only the cells an edit touches change. Pages are written back
 // uncompressed (draw.io's default, and it reads both).
+import { t } from '../../core/i18n';
 import { esc, randomId, union, type BoardAdapter, type BoardItem, type BoardStyle, type Box, type CreateOptions, type Measure, type Pt, type TextEdit, type Tool } from './types';
 
 export type Style = Map<string, string>;
@@ -36,7 +37,7 @@ export async function inflatePage(b64: string): Promise<string> {
 /** Expand every compressed page so the file can be edited synchronously. */
 export async function expandFile(text: string): Promise<{ text: string; compressed: boolean }> {
   const doc = new DOMParser().parseFromString(text, 'application/xml');
-  if (doc.getElementsByTagName('parsererror')[0]) throw new Error("This isn't a valid draw.io file (the XML can't be read).");
+  if (doc.getElementsByTagName('parsererror')[0]) throw new Error(t("This isn't a valid draw.io file (the XML can't be read)."));
   let compressed = false;
   for (const d of Array.from(doc.getElementsByTagName('diagram'))) {
     if (d.getElementsByTagName('mxGraphModel')[0]) continue;
@@ -45,7 +46,7 @@ export async function expandFile(text: string): Promise<{ text: string; compress
     compressed = true;
     const xml = await inflatePage(raw);
     const page = new DOMParser().parseFromString(xml, 'application/xml');
-    if (page.getElementsByTagName('parsererror')[0]) throw new Error(`Page “${d.getAttribute('name') ?? ''}” can't be read.`);
+    if (page.getElementsByTagName('parsererror')[0]) throw new Error(t("Page “{name}” can't be read.", { name: d.getAttribute('name') ?? '' }));
     d.textContent = '';
     d.append(doc.importNode(page.documentElement, true));
   }
@@ -95,25 +96,25 @@ export class DrawioBoard implements BoardAdapter {
 
   load(text: string) {
     const xml = new DOMParser().parseFromString(text, 'application/xml');
-    if (xml.getElementsByTagName('parsererror')[0]) throw new Error("This isn't a valid draw.io file (the XML can't be read).");
+    if (xml.getElementsByTagName('parsererror')[0]) throw new Error(t("This isn't a valid draw.io file (the XML can't be read)."));
     this.xml = xml;
     const root = xml.documentElement;
     if (root.localName === 'mxGraphModel') this.pagesEls = [root];
     else if (root.localName === 'mxfile') this.pagesEls = Array.from(root.getElementsByTagName('diagram'));
-    else throw new Error("This isn't a draw.io diagram.");
-    if (!this.pagesEls.length) throw new Error('This draw.io file has no pages.');
+    else throw new Error(t("This isn't a draw.io diagram."));
+    if (!this.pagesEls.length) throw new Error(t('This draw.io file has no pages.'));
     this.setPage(Math.min(this.page, this.pagesEls.length - 1));
   }
 
   pages(): string[] {
-    return this.pagesEls.map((p, i) => (p.localName === 'diagram' ? p.getAttribute('name') || `Page ${i + 1}` : 'Page 1'));
+    return this.pagesEls.map((p, i) => (p.localName === 'diagram' ? p.getAttribute('name') || t('Page {n}', { n: i + 1 }) : t('Page {n}', { n: 1 })));
   }
 
   setPage(i: number) {
     this.page = i;
     const p = this.pagesEls[i];
     const model = p.localName === 'mxGraphModel' ? p : p.getElementsByTagName('mxGraphModel')[0];
-    if (!model) throw new Error('This page is compressed and needs expanding first.');
+    if (!model) throw new Error(t('This page is compressed and needs expanding first.'));
     this.model = model;
     let root = model.getElementsByTagName('root')[0];
     if (!root) {

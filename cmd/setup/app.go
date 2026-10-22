@@ -160,6 +160,19 @@ func (s *Setup) Install(o setup.Options) error {
 	return err
 }
 
+// Update installs this version over the installed one, keeping its folder and
+// choices (for everyone, desktop shortcut, default app, command), once the
+// running app — which started this and is closing — has exited; then starts it.
+func (s *Setup) Update() error {
+	for i := 0; i < 240 && !s.demo && setup.Running(setup.Exe); i++ {
+		time.Sleep(250 * time.Millisecond)
+	}
+	if err := s.Install(s.defaultOptions()); err != nil {
+		return err
+	}
+	return s.Launch()
+}
+
 // Uninstall removes the app (and with removeData its settings, history and index).
 func (s *Setup) Uninstall(removeData bool) error {
 	in, ok := setup.Find(s.sys)

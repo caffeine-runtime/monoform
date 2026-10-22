@@ -11,6 +11,10 @@ import { baseExtensions, heavyFeatures, languageFor, LARGE_FILE, makeCompartment
 import { canWrite, EOL_LABELS, eolString, labelOf, type Encoding, type Eol } from './encoding';
 import { decodeStream, saveDoc, EncodeError } from './textio';
 import { sessionToken } from '../../core/backend';
+import { t, tn } from '../../core/i18n';
+
+/** An encoding's name for display. */
+const encodingLabel = (e: Encoding) => (e === 'utf-8-bom' ? t('UTF-8 with BOM') : labelOf(e));
 
 const loadingAnno = Annotation.define<boolean>();
 
@@ -85,7 +89,7 @@ export class TextController {
       return;
     }
     this.loading = true;
-    tab.status = { ...tab.status, info: 'Loading…' };
+    tab.status = { ...tab.status, info: t('Loading…') };
     let first = true;
     const prof = (globalThis as any).__mfProf as ((label: string, ms: number) => void) | undefined;
     const timed = <T>(label: string, fn: () => T): T => {
@@ -125,7 +129,7 @@ export class TextController {
     this.saved = this.view.state.doc;
     tab.dirty = false;
     this.updateStatus();
-    if (this.large) tab.status = { ...tab.status, info: 'Large file: highlighting off' };
+    if (this.large) tab.status = { ...tab.status, info: t('Large file: highlighting off') };
     else tab.status = { ...tab.status, info: undefined };
     void this.applyLanguage();
     this.revealPending();
@@ -208,7 +212,7 @@ export class TextController {
 
   async saveAs(): Promise<boolean> {
     const suggested = this.tab.filePath ?? (this.tab.source.kind === 'archive-entry' ? this.tab.title : `${this.tab.title}.txt`);
-    const path = await api.SaveFileDialog('Save as', suggested, []);
+    const path = await api.SaveFileDialog(t('Save as'), suggested, []);
     if (!path) return false;
     const ok = await this.writeTo(path);
     if (ok) {
@@ -221,7 +225,7 @@ export class TextController {
 
   private async writeTo(path: string): Promise<boolean> {
     if (!canWrite(this.encoding)) {
-      const ok = await ui.confirm(`Save as UTF-8?`, `${labelOf(this.encoding)} can't be written back. The file will be saved as UTF-8.`, 'Save as UTF-8');
+      const ok = await ui.confirm(t('Save as UTF-8?'), t("{encoding} can't be written back. The file will be saved as UTF-8.", { encoding: encodingLabel(this.encoding) }), t('Save as UTF-8'));
       if (!ok) return false;
       this.encoding = 'utf-8';
     }
@@ -231,20 +235,20 @@ export class TextController {
       const big = doc.length > 4 << 20;
       const t0 = performance.now();
       const entry = await saveDoc(doc, this.lineSep, this.encoding, this.bom, path, sessionToken(), (done, total) => {
-        if (big && performance.now() - t0 > 300) this.tab.status = { ...this.tab.status, info: `Saving… ${Math.round((done / total) * 100)}%` };
+        if (big && performance.now() - t0 > 300) this.tab.status = { ...this.tab.status, info: t('Saving… {pct}%', { pct: Math.round((done / total) * 100) }) };
       });
       this.tab.size = entry.size;
       this.bytes = entry.size;
-      if (big) this.tab.status = { ...this.tab.status, info: this.large ? 'Large file: highlighting off' : undefined };
+      if (big) this.tab.status = { ...this.tab.status, info: this.large ? t('Large file: highlighting off') : undefined };
     };
     try {
       await write();
     } catch (e) {
       if (e instanceof EncodeError && e.unencodable) {
         const ok = await ui.confirm(
-          'Some characters don’t fit this encoding',
-          `“${e.unencodable.char}” can't be saved as ${labelOf(this.encoding)}. Save as UTF-8 instead?`,
-          'Save as UTF-8',
+          t('Some characters don’t fit this encoding'),
+          t("“{char}” can't be saved as {encoding}. Save as UTF-8 instead?", { char: e.unencodable.char, encoding: encodingLabel(this.encoding) }),
+          t('Save as UTF-8'),
         );
         if (!ok) return false;
         this.encoding = 'utf-8';
@@ -295,7 +299,7 @@ export class TextController {
   }
 
   async reopenWith(enc: Encoding) {
-    if (this.tab.dirty && !(await ui.confirm('Discard changes?', 'Reopening with another encoding reloads the file from disk.', 'Reopen', true))) return;
+    if (this.tab.dirty && !(await ui.confirm(t('Discard changes?'), t('Reopening with another encoding reloads the file from disk.'), t('Reopen'), true))) return;
     await this.load(enc);
   }
 
@@ -311,11 +315,11 @@ export class TextController {
     const st = this.view.state;
     const sel = st.selection.main;
     const line = st.doc.lineAt(sel.head);
-    let pos = `Ln ${line.number}, Col ${sel.head - line.from + 1}`;
+    let pos = t('Ln {line}, Col {col}', { line: String(line.number), col: String(sel.head - line.from + 1) });
     const selected = st.selection.ranges.reduce((n, r) => n + r.to - r.from, 0);
-    if (selected) pos += ` (${selected} selected)`;
-    if (st.selection.ranges.length > 1) pos += ` · ${st.selection.ranges.length} cursors`;
-    this.tab.status = { ...this.tab.status, position: pos, encoding: labelOf(this.encoding), eol: EOL_LABELS[this.eol] };
+    if (selected) pos += ' ' + t('({n} selected)', { n: String(selected) });
+    if (st.selection.ranges.length > 1) pos += ' · ' + tn('{n} cursor', '{n} cursors', st.selection.ranges.length);
+    this.tab.status = { ...this.tab.status, position: pos, encoding: encodingLabel(this.encoding), eol: this.eol === 'mixed' ? t('Mixed', {}, 'line endings') : EOL_LABELS[this.eol] };
   }
 
   /** Re-enable heavy features if a large file was shrunk below the limit (or vice versa). */

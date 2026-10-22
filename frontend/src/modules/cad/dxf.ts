@@ -64,7 +64,7 @@ export const num = (e: Entity, code: number, i = 0): number => {
 export const str = (e: Entity, code: number): string => e.groups.find((x) => x.code === code)?.value ?? '';
 
 export function parse(text: string): Drawing {
-  if (text.startsWith('AutoCAD Binary DXF')) throw new Error('Binary DXF isn’t supported; save it as ASCII DXF.');
+  if (text.startsWith('AutoCAD Binary DXF')) throw new Error('Binary DXF isn’t supported; save it as ASCII DXF.'); // i18n-ignore: runs in the worker; CadModule translates it
   return parseLines(text.split(/\r?\n/), text.includes('\r\n') ? '\r\n' : '\n');
 }
 
@@ -74,7 +74,7 @@ export function parseLines(lines: string[], eol: string): Drawing {
   const groups: Group[] = [];
   for (let i = 0; i + 1 < lines.length; i += 2) {
     const code = parseInt(lines[i].trim(), 10);
-    if (Number.isNaN(code)) throw new Error(`Not a DXF file (line ${i + 1}: "${lines[i].slice(0, 30)}")`);
+    if (Number.isNaN(code)) throw new Error(`Not a DXF file (line ${i + 1}: "${lines[i].slice(0, 30)}")`); // i18n-ignore: runs in the worker; CadModule translates it
     groups.push({ code, value: lines[i + 1].trim(), line: i });
   }
   const d: Drawing = { lines, eol, version: '', units: 0, layers: new Map(), blocks: new Map(), entities: [], entitiesEnd: -1, handseed: null, modelSpaceHandle: null, bounds: null };
@@ -152,7 +152,7 @@ export function parseLines(lines: string[], eol: string): Drawing {
     }
     i++;
   }
-  if (d.entitiesEnd < 0) throw new Error('This DXF has no ENTITIES section.');
+  if (d.entitiesEnd < 0) throw new Error('This DXF has no ENTITIES section.'); // i18n-ignore: runs in the worker; CadModule translates it
   return d;
 }
 

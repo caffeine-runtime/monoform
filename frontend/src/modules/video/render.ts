@@ -8,6 +8,7 @@ import { frameAt, outputLength, pieces, type Project, type Range } from './proje
 import { decodeAudio, demux, Frames, SampleReader, wholeFileAudio } from './source';
 import { fileUrl } from '../../core/backend';
 import { muxWebM, opusHead, type MuxChunk, type MuxTrack } from './webm';
+import { t } from '../../core/i18n';
 
 export interface RenderJob {
   path: string;
@@ -42,7 +43,7 @@ async function pickVideoCodec(w: number, h: number, fps: number, bitrate: number
       /* try the next */
     }
   }
-  throw new Error('This system can’t encode WebM video (VP9/VP8), so effects can’t be rendered here.');
+  throw new Error(t('This system can’t encode WebM video (VP9/VP8), so effects can’t be rendered here.'));
 }
 
 async function pickAudioCodec(rate: number, ch: number): Promise<'opus' | 'vorbis' | null> {
@@ -57,7 +58,7 @@ async function pickAudioCodec(rate: number, ch: number): Promise<'opus' | 'vorbi
 }
 
 export async function renderVideo(job: RenderJob): Promise<RenderResult> {
-  let stage = 'reading the video';
+  let stage = t('reading the video');
   try {
     return await render(job, (s) => {
       stage = s;
@@ -72,10 +73,10 @@ export async function renderVideo(job: RenderJob): Promise<RenderResult> {
 async function render(job: RenderJob, at: (stage: string) => void): Promise<RenderResult> {
   const streams = await demux(job.path);
   const v = streams.video;
-  if (!v) throw new Error('This file has no video track.');
+  if (!v) throw new Error(t('This file has no video track.'));
   const bytes = fileUrl(job.path);
   const reader = new SampleReader(bytes);
-  at('choosing codecs');
+  at(t('choosing codecs'));
   const ps = pieces(job.keep, job.project);
   const total = outputLength(ps);
   const fps = Math.min(60, Math.max(10, Math.round(job.fps || 30)));
@@ -91,10 +92,10 @@ async function render(job: RenderJob, at: (stage: string) => void): Promise<Rend
   let encError: Error | null = null;
 
   // ---- video ----
-  at('preparing the compositor');
+  at(t('preparing the compositor'));
   const comp = new Compositor();
   comp.resize(W, H);
-  at('opening the decoders');
+  at(t('opening the decoders'));
   for (const [id, img] of job.images) comp.setImage(id, img);
   const cursors = [await Frames.open(v, job.url, bytes), await Frames.open(v, job.url, bytes)];
   const venc = new VideoEncoder({
@@ -103,11 +104,11 @@ async function render(job: RenderJob, at: (stage: string) => void): Promise<Rend
       c.copyTo(data);
       chunks.push({ track: 1, time: c.timestamp / 1e6, key: c.type === 'key', data });
     },
-    error: (e) => (encError = new Error(`video encoding failed: ${e.message}`)),
+    error: (e) => (encError = new Error(t('video encoding failed: {error}', { error: e.message }))),
   });
-  at('configuring the encoder');
+  at(t('configuring the encoder'));
   venc.configure({ codec: vc.codec, width: W, height: H, bitrate, framerate: fps, latencyMode: 'quality' });
-  at('drawing the video');
+  at(t('drawing the video'));
   const audioShare = streams.audio && !job.mute ? 0.15 : 0;
   try {
     for (let i = 0; i < frames; i++) {
@@ -137,7 +138,7 @@ async function render(job: RenderJob, at: (stage: string) => void): Promise<Rend
   const tracks: MuxTrack[] = [{ kind: 'video', codec: vc.mux, width: W, height: H }];
 
   // ---- audio ----
-  at('mixing the audio');
+  at(t('mixing the audio'));
   let audioCodec = '';
   if (streams.audio && !job.mute) {
     const a = streams.audio;
@@ -178,7 +179,7 @@ async function render(job: RenderJob, at: (stage: string) => void): Promise<Rend
           chunks.push({ track: 2, time: c.timestamp / 1e6, key: true, data });
           if (meta?.decoderConfig?.description && !desc) desc = new Uint8Array(meta.decoderConfig.description as ArrayBuffer);
         },
-        error: (e) => (encError = new Error(`audio encoding failed: ${e.message}`)),
+        error: (e) => (encError = new Error(t('audio encoding failed: {error}', { error: e.message }))),
       });
       aenc.configure({ codec, sampleRate: outRate, numberOfChannels: 2, bitrate: 128000 });
       const block = 960 * 10;
@@ -201,7 +202,7 @@ async function render(job: RenderJob, at: (stage: string) => void): Promise<Rend
     }
   }
   job.onProgress(1, 1);
-  at('writing the file');
+  at(t('writing the file'));
   const parts = muxWebM(tracks, chunks, total);
   return { decoder: cursors[0].mode, blob: new Blob(parts as BlobPart[], { type: 'video/webm' }), duration: total, frames, videoCodec: vc.codec, audioCodec };
 }
