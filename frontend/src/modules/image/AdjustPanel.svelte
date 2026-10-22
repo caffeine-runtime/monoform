@@ -1,6 +1,8 @@
 <script lang="ts">
-  // Adjustment sliders with live GPU preview. Nothing changes until Apply;
-  // with a selection, only the selected pixels are adjusted.
+  // Adjustments with live GPU preview. Nothing changes until Apply; with a
+  // selection, only the selected pixels are adjusted. The panel is a short
+  // list (Light, Colour, … Clean up); each opens a page with just its own
+  // controls. Changes on several pages add up to one preview and one Apply.
   import { BLUR_TYPES, EFFECTS, NEUTRAL, isNeutral, type Adjustments, type BlurType, type Effect } from './adjust';
   import type { EditorState, ImageEditor } from './editor';
   import { ui } from '../../core/ui.svelte';
@@ -8,6 +10,15 @@
   import Icon from '../../shell/Icon.svelte';
   import Pipette from '@lucide/svelte/icons/pipette';
   import X from '@lucide/svelte/icons/x';
+  import Sun from '@lucide/svelte/icons/sun';
+  import Palette from '@lucide/svelte/icons/palette';
+  import Aperture from '@lucide/svelte/icons/aperture';
+  import Droplets from '@lucide/svelte/icons/droplets';
+  import Grid3x3 from '@lucide/svelte/icons/grid-3x3';
+  import Sparkles from '@lucide/svelte/icons/sparkles';
+  import Eraser from '@lucide/svelte/icons/eraser';
+  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
 
   let { editor, es, pick }: { editor: ImageEditor; es: EditorState; pick?: () => Promise<string | null> } = $props();
 
@@ -44,6 +55,27 @@
       ],
     },
   ];
+
+  type Page = 'light' | 'colour' | 'detail' | 'blur' | 'pixelate' | 'effects' | 'cleanup';
+  const differs = (keys: (keyof Adjustments)[]) => keys.some((k) => a[k] !== NEUTRAL[k]);
+  const PAGES: { id: Page; title: string; help: string; icon: typeof Sun; on: () => boolean }[] = [
+    { id: 'light', title: GROUPS[0].title, help: t('Exposure, brightness, contrast, highlights, shadows'), icon: Sun, on: () => differs(GROUPS[0].sliders.map((s) => s.key)) },
+    { id: 'colour', title: GROUPS[1].title, help: t('Saturation, vibrance, temperature, tint, hue'), icon: Palette, on: () => differs(GROUPS[1].sliders.map((s) => s.key)) },
+    { id: 'detail', title: GROUPS[2].title, help: t('Sharpen, vignette'), icon: Aperture, on: () => differs(GROUPS[2].sliders.map((s) => s.key)) },
+    { id: 'blur', title: t('Blur'), help: t('Gaussian, motion, zoom, spin, lens, tilt-shift, surface'), icon: Droplets, on: () => a.blur > 0 },
+    { id: 'pixelate', title: t('Pixelate', {}, 'adjust'), help: t('Square blocks, to hide faces, plates or text'), icon: Grid3x3, on: () => a.pixelate > 0 },
+    { id: 'effects', title: t('Effects'), help: t('Black & white, sepia, vintage, noir… with a strength each'), icon: Sparkles, on: () => Object.values(a.effects).some((v) => v) },
+    { id: 'cleanup', title: t('Clean up'), help: t('Turn pale marks or one colour white (watermarks, scans)'), icon: Eraser, on: () => a.lightMarks > 0 || !!a.markColor },
+  ];
+  let page = $state<Page | null>(null);
+  const current = $derived(PAGES.find((p) => p.id === page));
+
+  /** Open a page (the selection bar's Blur and Pixelate start them at a visible strength). */
+  export function open(p: Page | null, start = false) {
+    page = p;
+    if (start && p === 'blur' && !a.blur) set('blur', 8);
+    if (start && p === 'pixelate' && !a.pixelate) set('pixelate', Math.max(6, Math.round(Math.max(editor.width, editor.height) / 80)));
+  }
 
   function changed() {
     if (!es.adjusting && !editor.startAdjust()) {
@@ -116,72 +148,93 @@
   // Leaving the panel (or the tab) discards an unapplied preview.
   $effect(() => () => editor.cancelAdjust());
   // Hooks for the self-test.
-  export const test = { set, setBlurType, toggleEffect, setEffect, apply, reset, get: () => $state.snapshot(a) as Adjustments };
+  export const test = { set, setBlurType, toggleEffect, setEffect, apply, reset, open, page: () => page, get: () => $state.snapshot(a) as Adjustments };
 </script>
 
 <div class="adjust">
+  {#if current}
+    <button class="back" onclick={() => (page = null)} title={t('Back to all adjustments')}><Icon icon={ChevronLeft} size={16} /> <Icon icon={current.icon} size={14} /> <span>{current.title}</span></button>
+  {/if}
   <div class="scroll">
     {#if es.pixelSelection}<p class="note">{t('Adjusting the selected area only.')}</p>{/if}
-    <section class="cleanup">
-      <h4>{t('Clean up')}</h4>
-      <label class="row" ondblclick={() => set('lightMarks', 0)} title={t('Turns pale marks white — a light watermark, scanner shading, a grey page. Dark lines and text stay.')}>
-        <span class="lbl">{t('Light marks')}</span>
-        <input type="range" min="0" max="1" step="0.01" value={a.lightMarks} oninput={(e) => set('lightMarks', +(e.target as HTMLInputElement).value)} />
-        <span class="num">{a.lightMarks ? `${num(Math.round(a.lightMarks * 100))}%` : t('off')}</span>
-      </label>
-      <div class="row" title={t('Turns one colour white — a coloured watermark or stamp. Pick it in the image.')}>
-        <span class="lbl">{t('A colour')}</span>
-        <span class="pickrow">
-          <input class="swatch" class:unset={!a.markColor} type="color" value={a.markColor || '#c8c8c8'} aria-label={t('Colour to remove')} oninput={(e) => set('markColor', (e.target as HTMLInputElement).value)} />
-          {#if pick}<button class="icon-btn" title={t('Pick in the image')} aria-label={t('Pick in the image')} onclick={pickMark}><Icon icon={Pipette} size={14} /></button>{/if}
-          {#if a.markColor}<button class="icon-btn" title={t('Keep this colour')} aria-label={t('Keep this colour')} onclick={() => set('markColor', '')}><Icon icon={X} size={14} /></button>{/if}
-        </span>
-        <span class="num">{a.markColor ? '' : t('off')}</span>
-      </div>
-      {#if a.markColor}
-        <label class="row" ondblclick={() => set('markTolerance', NEUTRAL.markTolerance)} title={t('How different a colour can be and still be removed')}>
-          <span class="lbl">{t('Tolerance')}</span>
-          <input type="range" min="0.02" max="0.6" step="0.01" value={a.markTolerance} oninput={(e) => set('markTolerance', +(e.target as HTMLInputElement).value)} />
-          <span class="num">{num(Math.round(a.markTolerance * 100))}%</span>
+    {#if !page}
+      <ul class="pages">
+        {#each PAGES as p (p.id)}
+          <li>
+            <button class="page" data-page={p.id} title={p.help} onclick={() => open(p.id)}>
+              <Icon icon={p.icon} size={16} />
+              <span class="txt"><span class="name">{p.title}</span><span class="help">{p.help}</span></span>
+              {#if p.on()}<span class="dot" title={t('Changed')}></span>{/if}
+              <Icon icon={ChevronRight} size={14} />
+            </button>
+          </li>
+        {/each}
+      </ul>
+    {:else if page === 'cleanup'}
+      <section class="cleanup">
+        <label class="row" ondblclick={() => set('lightMarks', 0)} title={t('Turns pale marks white — a light watermark, scanner shading, a grey page. Dark lines and text stay.')}>
+          <span class="lbl">{t('Light marks')}</span>
+          <input type="range" min="0" max="1" step="0.01" value={a.lightMarks} oninput={(e) => set('lightMarks', +(e.target as HTMLInputElement).value)} />
+          <span class="num">{a.lightMarks ? `${num(Math.round(a.lightMarks * 100))}%` : t('off')}</span>
         </label>
-      {/if}
-    </section>
-    {#each GROUPS as g (g.title)}
-      <h4>{g.title}</h4>
-      {#each g.sliders as s (s.key)}
+        <div class="row" title={t('Turns one colour white — a coloured watermark or stamp. Pick it in the image.')}>
+          <span class="lbl">{t('A colour')}</span>
+          <span class="pickrow">
+            <input class="swatch" class:unset={!a.markColor} type="color" value={a.markColor || '#c8c8c8'} aria-label={t('Colour to remove')} oninput={(e) => set('markColor', (e.target as HTMLInputElement).value)} />
+            {#if pick}<button class="icon-btn" title={t('Pick in the image')} aria-label={t('Pick in the image')} onclick={pickMark}><Icon icon={Pipette} size={14} /></button>{/if}
+            {#if a.markColor}<button class="icon-btn" title={t('Keep this colour')} aria-label={t('Keep this colour')} onclick={() => set('markColor', '')}><Icon icon={X} size={14} /></button>{/if}
+          </span>
+          <span class="num">{a.markColor ? '' : t('off')}</span>
+        </div>
+        {#if a.markColor}
+          <label class="row" ondblclick={() => set('markTolerance', NEUTRAL.markTolerance)} title={t('How different a colour can be and still be removed')}>
+            <span class="lbl">{t('Tolerance')}</span>
+            <input type="range" min="0.02" max="0.6" step="0.01" value={a.markTolerance} oninput={(e) => set('markTolerance', +(e.target as HTMLInputElement).value)} />
+            <span class="num">{num(Math.round(a.markTolerance * 100))}%</span>
+          </label>
+        {/if}
+      </section>
+    {:else if page === 'light' || page === 'colour' || page === 'detail'}
+      {#each GROUPS[page === 'light' ? 0 : page === 'colour' ? 1 : 2].sliders as s (s.key)}
         <label class="row" ondblclick={() => set(s.key, NEUTRAL[s.key] as number)} title={t('Double-click to reset')}>
           <span class="lbl">{s.label}</span>
           <input type="range" min={s.min} max={s.max} step={s.step} value={a[s.key] as number} oninput={(e) => set(s.key, +(e.target as HTMLInputElement).value)} />
           <span class="num">{fmt(s, a[s.key] as number)}</span>
         </label>
       {/each}
-    {/each}
-    <h4>{t('Blur')}</h4>
-    <div class="toggles" role="radiogroup" aria-label={t('Kind of blur')}>
-      {#each BLUR_TYPES as b (b.id)}
-        <button class="chip" role="radio" aria-checked={a.blurType === b.id} class:on={a.blurType === b.id} title={b.help} onclick={() => setBlurType(b.id)}>{b.label}</button>
+    {:else if page === 'blur'}
+      <div class="toggles" role="radiogroup" aria-label={t('Kind of blur')}>
+        {#each BLUR_TYPES as b (b.id)}
+          <button class="chip" role="radio" aria-checked={a.blurType === b.id} class:on={a.blurType === b.id} title={b.help} onclick={() => setBlurType(b.id)}>{b.label}</button>
+        {/each}
+      </div>
+      {#each blurSliders as s (s.key)}
+        <label class="row" ondblclick={() => set(s.key, NEUTRAL[s.key] as number)} title={t('Double-click to reset')}>
+          <span class="lbl">{s.label}</span>
+          <input type="range" min={s.min} max={s.max} step={s.step} value={a[s.key] as number} oninput={(e) => set(s.key, +(e.target as HTMLInputElement).value)} />
+          <span class="num">{fmt(s, a[s.key] as number)}</span>
+        </label>
       {/each}
-    </div>
-    {#each blurSliders as s (s.key)}
-      <label class="row" ondblclick={() => set(s.key, NEUTRAL[s.key] as number)} title={t('Double-click to reset')}>
-        <span class="lbl">{s.label}</span>
-        <input type="range" min={s.min} max={s.max} step={s.step} value={a[s.key] as number} oninput={(e) => set(s.key, +(e.target as HTMLInputElement).value)} />
-        <span class="num">{fmt(s, a[s.key] as number)}</span>
+    {:else if page === 'pixelate'}
+      <label class="row pixelate" ondblclick={() => set('pixelate', 0)} title={t('Double-click to turn off')}>
+        <span class="lbl">{t('Block size')}</span>
+        <input type="range" min="0" max="100" step="1" value={a.pixelate} oninput={(e) => set('pixelate', +(e.target as HTMLInputElement).value)} />
+        <span class="num">{a.pixelate > 1 ? `${num(a.pixelate)} px` : t('off')}</span>
       </label>
-    {/each}
-    <h4>{t('Effects')}</h4>
-    <div class="toggles looks">
-      {#each EFFECTS as l (l.id)}
-        <button class="chip" aria-pressed={l.id in a.effects} class:on={l.id in a.effects} title={l.help} onclick={() => toggleEffect(l.id)}>{l.label}</button>
+    {:else if page === 'effects'}
+      <div class="toggles looks">
+        {#each EFFECTS as l (l.id)}
+          <button class="chip" aria-pressed={l.id in a.effects} class:on={l.id in a.effects} title={l.help} onclick={() => toggleEffect(l.id)}>{l.label}</button>
+        {/each}
+      </div>
+      {#each EFFECTS.filter((l) => l.id in a.effects) as l (l.id)}
+        <label class="row effect" ondblclick={() => setEffect(l.id, 1)} title={t('Strength of {effect}. Double-click to reset.', { effect: l.label })}>
+          <span class="lbl">{l.label}</span>
+          <input type="range" min="0" max="1" step="0.01" value={a.effects[l.id]} oninput={(e) => setEffect(l.id, +(e.target as HTMLInputElement).value)} />
+          <span class="num">{Math.round((a.effects[l.id] ?? 0) * 100)}%</span>
+        </label>
       {/each}
-    </div>
-    {#each EFFECTS.filter((l) => l.id in a.effects) as l (l.id)}
-      <label class="row effect" ondblclick={() => setEffect(l.id, 1)} title={t('Strength of {effect}. Double-click to reset.', { effect: l.label })}>
-        <span class="lbl">{l.label}</span>
-        <input type="range" min="0" max="1" step="0.01" value={a.effects[l.id]} oninput={(e) => setEffect(l.id, +(e.target as HTMLInputElement).value)} />
-        <span class="num">{Math.round((a.effects[l.id] ?? 0) * 100)}%</span>
-      </label>
-    {/each}
+    {/if}
   </div>
   <div class="actions">
     <button class="btn ghost" disabled={!es.adjusting} onclick={reset}>{t('Reset')}</button>
@@ -201,11 +254,71 @@
     overflow: auto;
     padding: 4px 12px 12px;
   }
-  h4 {
-    margin: 12px 0 4px;
+  .back {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 8px 0;
+    padding: 4px 6px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .back:hover {
+    background: var(--bg-hover);
+  }
+  .pages {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+  }
+  .page {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 7px 6px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .page:hover {
+    background: var(--bg-hover);
+  }
+  .page .txt {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .page .help {
     font-size: var(--fs-small);
     color: var(--text-muted);
-    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex: none;
+  }
+  .toggles + .row,
+  .row + .row {
+    margin-top: 2px;
+  }
+  .toggles {
+    margin: 8px 0 6px;
   }
   .pickrow {
     display: flex;

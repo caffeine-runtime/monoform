@@ -5,8 +5,8 @@
 // sketch only greys, Invert turns black white, Posterize at most four levels
 // per channel, Thermal is colourful where the picture was grey; half the
 // strength lands between the picture and the full effect, and two effects
-// combine (Invert then Black & white: grey). In the Adjust panel the effects
-// are chips: one clicked previews and gets its own strength slider below all
+// combine (Invert then Black & white: grey). In the Adjust panel's Effects
+// page the effects are chips: one clicked previews and gets its own strength slider below all
 // the chips, a second gets another, a slider changes its strength, and
 // clicking a chip again turns it off (and its slider goes).
 import { join } from '../core/paths';
@@ -93,6 +93,8 @@ export default async function m62(dir: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const h: any = await waitFor(() => ((tab as any).imageTest?.editor() ? (tab as any).imageTest : null), 'the image editor', 10000);
   h.setPanel('adjust');
+  const effectsPage = await waitFor(() => document.querySelector<HTMLButtonElement>('.tabview.active .adjust .page[data-page="effects"]'), 'Effects in the Adjust list');
+  effectsPage.click();
   const chips = await waitFor(() => {
     const l = document.querySelectorAll<HTMLButtonElement>('.tabview.active .adjust .looks .chip');
     return l.length ? l : null;

@@ -480,10 +480,16 @@
     }
   }
 
+  /** The Adjust panel at one of its pages (Blur and Pixelate start at a visible strength). */
+  async function openAdjust(page: 'blur' | 'pixelate' | 'cleanup') {
+    if (panel !== 'adjust') setPanel('adjust');
+    await tick();
+    adjustPanel?.open(page, page !== 'cleanup');
+  }
+
   /** Image › Remove a watermark: the Adjust panel's Clean up, highlighted (on a photo, the AI removal is the better tool). */
   async function openCleanup() {
-    setPanel('adjust');
-    await tick();
+    await openAdjust('cleanup');
     await flashAt(`.tabview[data-tab-id="${tab.id}"] .adjust .cleanup`);
   }
 
@@ -1095,9 +1101,11 @@
     saveCopy,
     adjust: () => adjustPanel,
     setPanel,
+    openAdjust,
     busy: () => busy,
     fonts: () => availableFonts(),
     tool: () => tool,
+    setTool: (t: Tool) => setTool(t),
     panel: () => panel,
     picked: () => picked,
     pickAt,
@@ -1218,6 +1226,12 @@
       <button class="btn ghost" title={t('Rotate the layer 90° counter-clockwise')} onclick={() => editor?.rotateLayer(-90)}><Icon icon={RotateCcw} size={14} /> 90°</button>
       <button class="btn ghost" title={t('Rotate the layer 90° clockwise')} onclick={() => editor?.rotateLayer(90)}><Icon icon={RotateCw} size={14} /> 90°</button>
       <button class="btn ghost" title={t('Rotate the layer by an angle')} onclick={() => openRotate(true)}>{t('Angle…')}</button>
+      <span class="sep"></span>
+    {:else if tool === 'blur'}
+      <label class="opt" title={t('How strongly the area is blurred (shown in it before you apply)')}>{t('Strength')} <input class="region-strength" type="range" min="0.25" max="3" step="0.05" value={opts.regionBlur} oninput={(e) => setOpt('regionBlur', +(e.target as HTMLInputElement).value)} /><span class="v">{Math.round(opts.regionBlur * 100)}%</span></label>
+      <span class="sep"></span>
+    {:else if tool === 'pixelate'}
+      <label class="opt" title={t('Size of the squares (shown in the area before you apply)')}>{t('Block size')} <input class="region-strength" type="range" min="2" max="100" step="1" value={opts.pixelSize || Math.max(6, Math.round(Math.max(es?.width ?? 0, es?.height ?? 0) / 80))} oninput={(e) => setOpt('pixelSize', +(e.target as HTMLInputElement).value)} /><span class="v">{opts.pixelSize || Math.max(6, Math.round(Math.max(es?.width ?? 0, es?.height ?? 0) / 80))} px</span></label>
       <span class="sep"></span>
     {:else if tool === 'selbrush'}
       <label class="opt">{t('Size')} <input type="range" min="2" max="300" value={opts.brushSize || 24} oninput={(e) => setOpt('brushSize', +(e.target as HTMLInputElement).value)} /><span class="v">{opts.brushSize || 24}</span></label>
@@ -1356,8 +1370,8 @@
     <button class="btn ghost remove-object" title={t('Remove the selected object and fill the gap with what could be behind it')} onclick={() => void removeObject()}><Icon icon={Eraser2} size={14} /> {t('Remove')}</button>
     <button class="btn ghost" title={t('Delete pixels (Delete)')} onclick={() => editor?.clearSelectionPixels()}><Icon icon={Trash} size={14} /></button>
     <button class="btn ghost" title={t('Fill with colour')} onclick={() => editor?.fillSelection()}><Icon icon={PaintBucket} size={14} /></button>
-    <button class="btn ghost" title={t('Blur the selection: opens Adjust → Blur (Gaussian, motion, zoom, spin, lens, tilt-shift, surface)')} onclick={() => setPanel('adjust')}><Icon icon={Droplets} size={14} /></button>
-    <button class="btn ghost" title={t('Pixelate selection')} onclick={() => editor?.pixelateSelection()}><Icon icon={Grid} size={14} /></button>
+    <button class="btn ghost" title={t('Blur the selection: opens Adjust → Blur (Gaussian, motion, zoom, spin, lens, tilt-shift, surface)')} onclick={() => void openAdjust('blur')}><Icon icon={Droplets} size={14} /></button>
+    <button class="btn ghost" title={t('Pixelate the selection: opens Adjust → Pixelate, with the block size')} onclick={() => void openAdjust('pixelate')}><Icon icon={Grid} size={14} /></button>
     <button class="btn ghost" title={t('Crop to selection')} onclick={() => editor?.cropToSelection()}><Icon icon={Crop} size={14} /></button>
     <button class="btn ghost" title={t('Copy the text in the selection (OCR)')} onclick={openOcr}><Icon icon={ScanText} size={14} /> {t('Text')}</button>
     <button class="btn ghost" title={t('Invert selection ({shortcut})', { shortcut: formatShortcut('Mod+Shift+I') })} onclick={invertSelection}>{t('Invert')}</button>

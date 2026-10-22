@@ -1,4 +1,4 @@
-// Stages the image editor for README screenshots. Arg: "<fixtures dir>|layers|adjust"
+// Stages the image editor for README screenshots. Arg: "<fixtures dir>|layers|adjust|adjustlist"
 import { join } from '../core/paths';
 import { workspace, type Tab } from '../core/tabs.svelte';
 import type { ImageEditor } from '../modules/image/editor';
@@ -16,11 +16,12 @@ export default async function imgshot(arg: string) {
   ed.addArrow(330, 60, 265, 110);
   ed.setActive(ed.state().layers[0].id);
   await h.wandAt(200, 150, 'replace');
-  if (mode === 'adjust') {
+  if (mode === 'adjust' || mode === 'adjustlist') {
     h.setPanel('adjust');
     const a = await waitFor(() => h.adjust(), 'adjust');
     a.test.set('temperature', 0.6);
     a.test.set('saturation', 0.4);
+    if (mode === 'adjust') a.test.open('colour');
   } else h.setPanel('layers');
   ed.setTool('wand');
   await sleep(6000);
