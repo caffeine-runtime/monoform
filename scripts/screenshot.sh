@@ -2,6 +2,8 @@
 # Take a screenshot of the app in a given state (Linux/Xvfb):
 #   scripts/screenshot.sh out.png "<folder>|<file,file>|<command,ids>|<search query>|<palette query>|<wait ms>" [settings.json]
 set -euo pipefail
+# The interface in English unless a test asks otherwise (labels are looked up by their English text).
+export MF_SYSTEM_LANG=${MF_SYSTEM_LANG:-en}
 cd "$(dirname "$0")/.."
 OUT=$1; ARG=$2; SETTINGS=${3:-$(mktemp -d)/settings.json}
 export DISPLAY=${DISPLAY:-:99}

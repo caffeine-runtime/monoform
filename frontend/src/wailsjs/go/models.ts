@@ -127,6 +127,7 @@ export namespace app {
 	    pathSep: string;
 	    testScript: string;
 	    testArg: string;
+	    systemLanguages: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new BootInfo(source);
@@ -144,6 +145,7 @@ export namespace app {
 	        this.pathSep = source["pathSep"];
 	        this.testScript = source["testScript"];
 	        this.testArg = source["testArg"];
+	        this.systemLanguages = source["systemLanguages"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -1757,6 +1759,7 @@ export namespace settings {
 	    pathBarOff: boolean;
 	    panelsHidden: boolean;
 	    lightCanvases: boolean;
+	    language: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -1791,6 +1794,7 @@ export namespace settings {
 	        this.pathBarOff = source["pathBarOff"];
 	        this.panelsHidden = source["panelsHidden"];
 	        this.lightCanvases = source["lightCanvases"];
+	        this.language = source["language"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

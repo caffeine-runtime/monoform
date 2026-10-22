@@ -97,6 +97,8 @@ type Settings struct {
 	// LightCanvases keeps drawings and diagrams (Excalidraw, draw.io, Mermaid,
 	// Graphviz) on white in the dark theme instead of darkening them.
 	LightCanvases bool `json:"lightCanvases"`
+	// Language of the interface: "en", "pl", "es", or "" to follow the system.
+	Language string `json:"language"`
 }
 
 func Defaults() Settings {

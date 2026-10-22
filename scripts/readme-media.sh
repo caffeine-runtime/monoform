@@ -7,6 +7,8 @@
 # the window fills it) and records it with ffmpeg; the clips are animated
 # WebP. Needs a built app (scripts/build.sh), Xvfb and ffmpeg with libwebp.
 set -euo pipefail
+# The interface in English unless a test asks otherwise (labels are looked up by their English text).
+export MF_SYSTEM_LANG=${MF_SYSTEM_LANG:-en}
 cd "$(dirname "$0")/.."
 SCENES=("$@")
 STILLS=(pdf word spreadsheet compare svg model3d audio video json html archive settings)
