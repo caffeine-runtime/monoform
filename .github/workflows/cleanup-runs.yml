@@ -1,17 +1,9 @@
 name: Clean up workflow runs
-run-name: "Clean up runs (keep the newest ${{ inputs.keep }} of each workflow)"
 
-# Deletes old workflow runs (their logs and artifacts) so the Actions list
-# stays short. Runs that are still queued or in progress are never touched,
-# and published releases are not affected. Run it by hand:
-# Actions → Clean up workflow runs → Run workflow.
+# One-off: deletes every finished workflow run (logs and artifacts). Runs still
+# queued or in progress are left alone; published releases are not affected.
 on:
   workflow_dispatch:
-    inputs:
-      keep:
-        description: "How many of the newest finished runs to keep for each workflow"
-        required: true
-        default: "3"
 
 permissions:
   actions: write
@@ -20,21 +12,16 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-      - name: Delete old runs
+      - name: Delete finished runs
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          KEEP: ${{ inputs.keep }}
           SELF: ${{ github.run_id }}
         run: |
           set -euo pipefail
-          if [[ ! "$KEEP" =~ ^[0-9]+$ ]]; then echo "::error::keep must be a number"; exit 1; fi
           deleted=0
-          for wf in $(gh api "repos/$REPO/actions/workflows" --paginate --jq '.workflows[].id'); do
-            # Finished runs of this workflow, newest first; skip the newest $KEEP.
-            for id in $(gh api "repos/$REPO/actions/workflows/$wf/runs?status=completed&per_page=100" --paginate --jq '.workflow_runs[].id' | tail -n +$((KEEP + 1))); do
-              [ "$id" = "$SELF" ] && continue
-              gh api -X DELETE "repos/$REPO/actions/runs/$id" && deleted=$((deleted + 1))
-            done
+          for id in $(gh api "repos/$REPO/actions/runs?status=completed&per_page=100" --paginate --jq '.workflow_runs[].id'); do
+            [ "$id" = "$SELF" ] && continue
+            gh api -X DELETE "repos/$REPO/actions/runs/$id" && deleted=$((deleted + 1))
           done
-          echo "Deleted $deleted runs (kept the newest $KEEP finished runs of each workflow)."
+          echo "Deleted $deleted finished runs."
