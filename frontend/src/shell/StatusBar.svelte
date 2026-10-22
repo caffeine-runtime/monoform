@@ -42,6 +42,7 @@
   </div>
   <div class="right">
     {#if tab}
+      {#if tab.status.counts}<span class="counts">{tab.status.counts}</span>{/if}
       {#if tab.status.position}<span>{tab.status.position}</span>{/if}
       {#if tab.status.eol}<span>{tab.status.eol}</span>{/if}
       {#if tab.status.encoding}<span>{tab.status.encoding}</span>{/if}
@@ -89,6 +90,12 @@
     gap: 14px;
     align-items: center;
     min-width: 0;
+  }
+  .counts {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
   }
   .left .info {
     overflow: hidden;

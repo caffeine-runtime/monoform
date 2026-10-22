@@ -10,6 +10,7 @@ import {db} from '../models';
 import {filetype} from '../models';
 import {history} from '../models';
 import {fs} from '../models';
+import {notes} from '../models';
 import {pdf} from '../models';
 import {settings} from '../models';
 import {capture} from '../models';
@@ -125,6 +126,8 @@ export function MediaRelease(arg1:string):Promise<void>;
 export function MediaURL(arg1:string):Promise<string>;
 
 export function NewWindow(arg1:Array<string>,arg2:number,arg3:number):Promise<void>;
+
+export function NoteIndex(arg1:string):Promise<notes.Index>;
 
 export function OcrAddLanguage(arg1:string):Promise<string>;
 

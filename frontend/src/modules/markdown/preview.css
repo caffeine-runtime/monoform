@@ -137,3 +137,11 @@
   text-align: left;
   white-space: pre-wrap;
 }
+
+/* [[Wiki links]]; ones to notes that don't exist yet are dimmed (clicking creates the note). */
+.md a.wikilink.unresolved,
+.md .wikilink.unresolved {
+  color: var(--text-muted);
+  text-decoration-style: dashed;
+  opacity: 0.75;
+}

@@ -716,6 +716,32 @@ flowchart TD
 ```
 """)
 
+# ---- linked notes (M46): outline, backlinks, [[wiki links]] ----
+w("vault/Home.md", b"""# Home
+
+Welcome to the **vault**. See [[Ideas]] and the [[projects/Roadmap#Q3|roadmap]].
+
+## Plan
+Start with [[Ideas#Later]] then [[Missing note]].
+
+### Details
+More text here.
+
+## Archive
+Old [link](Ideas.md).
+""")
+w("vault/Ideas.md", b"""# Ideas
+Back to [[Home]].
+
+## Later
+Also see [Home](Home.md#Plan).
+""")
+w("vault/projects/Roadmap.md", b"""# Roadmap
+## Q1
+## Q3
+Linked from [[Home#Plan]].
+""")
+
 # ---- drawings (M29) ----
 import json as _json, zlib as _zlib, base64 as _b64, urllib.parse as _up
 _eb = {"angle": 0, "strokeColor": "#1e1e1e", "backgroundColor": "transparent", "fillStyle": "hachure", "strokeWidth": 2, "strokeStyle": "solid", "roughness": 1, "opacity": 100, "groupIds": [], "frameId": None, "seed": 11, "version": 5, "versionNonce": 99, "isDeleted": False, "boundElements": None, "updated": 1792400000000, "link": None, "locked": False}

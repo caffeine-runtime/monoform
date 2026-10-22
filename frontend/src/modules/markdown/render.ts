@@ -4,6 +4,7 @@
 import MarkdownIt from 'markdown-it';
 import { isAbsolute, resolveRelative } from '../../core/paths';
 import { kindOfFence } from '../diagram/fence';
+import { wikiLinks } from './links';
 
 export interface RenderEnv {
   /** Absolute path of the note, for resolving relative links. */
@@ -30,6 +31,17 @@ export function fileUrlFor(path: string, token: string): string {
 
 export function createRenderer() {
   const md = new MarkdownIt({ html: false, linkify: true, typographer: true, breaks: false });
+  md.use(wikiLinks);
+
+  // ![[picture.png]]: a picture next to the note.
+  md.renderer.rules.wiki_image = (tokens, idx, _options, envIn) => {
+    const env = (envIn ?? {}) as unknown as RenderEnv;
+    const t = tokens[idx];
+    const target = String(t.attrGet('data-wiki-image') ?? '');
+    const alt = md.utils.escapeHtml(String(t.attrGet('alt') ?? ''));
+    const path = env.base ? (isAbsolute(target) ? target : resolveRelative(env.base, target)) : '';
+    return path ? `<img src="${md.utils.escapeHtml(fileUrlFor(path, env.token))}" data-path="${md.utils.escapeHtml(path)}" alt="${alt}" loading="lazy">` : `<span class="wikilink unresolved">${alt}</span>`;
+  };
 
   // Source line numbers on block elements, for scroll sync.
   md.core.ruler.push('source_lines', (state) => {
