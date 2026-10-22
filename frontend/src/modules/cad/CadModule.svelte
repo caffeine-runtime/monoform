@@ -727,12 +727,12 @@
   }
 
   function onContext(e: MouseEvent) {
-    e.preventDefault();
     if (pts.length || tool !== 'select') {
+      e.preventDefault();
       void finish();
       return;
     }
-    if (!sel.length || !editable) return;
+    if (!sel.length || !editable) return; // the shared menu (undo, zoom, snap, export…)
     menu.show(e, [
       { label: t('Move', {}, 'cad'), shortcut: 'M', run: () => setTool('move') },
       { label: t('Copy'), shortcut: 'O', run: () => setTool('copy') },

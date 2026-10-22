@@ -36,7 +36,7 @@
   import { api, readFile, saveFile } from '../../core/backend';
   import { dirname, extname, join, stem } from '../../core/paths';
   import { formatShortcut } from '../../core/keys';
-  import { toastError, ui } from '../../core/ui.svelte';
+  import { toastError, ui, type MenuItem } from '../../core/ui.svelte';
   import { t, tn } from '../../core/i18n';
   import type { BoardAdapter, BoardItem, BoardStyle, Box, Pt, TextEdit, Tool } from './types';
   import { union } from './types';
@@ -589,6 +589,38 @@
     if (t && board.tools.includes(t)) tool = t;
   }
 
+  /** Right-click: on a shape it is selected (unless already part of the selection) and can be edited, copied, ordered… */
+  function contextMenu(e: MouseEvent): MenuItem[] {
+    if (!board || !stage?.contains(e.target as Node)) return [];
+    commitText();
+    const hit = hitId(e);
+    if (hit && !sel.includes(hit)) sel = [hit];
+    if (!hit && !(e.target as Element).closest('.handle, .selitem')) sel = [];
+    const sc = (s: string) => formatShortcut(s);
+    const out: MenuItem[] = [];
+    if (!ro) {
+      out.push({ label: t('Undo'), shortcut: sc('Mod+Z'), disabled: !canUndo, run: undo }, { label: t('Redo'), shortcut: sc('Mod+Shift+Z'), disabled: !canRedo, run: redo }, { separator: true });
+      if (sel.length) {
+        if (sel.length === 1) out.push({ label: t('Edit text'), shortcut: 'Enter', run: () => void startEdit(sel[0], false) });
+        out.push(
+          { label: t('Duplicate'), shortcut: sc('Mod+D'), run: dup },
+          { label: t('Bring to front'), shortcut: sc('Mod+]'), run: front },
+          { label: t('Send to back'), shortcut: sc('Mod+['), run: back },
+          { label: t('Delete'), shortcut: 'Del', run: del },
+          { separator: true },
+        );
+      }
+    }
+    out.push(
+      { label: t('Select all'), shortcut: sc('Mod+A'), run: () => (sel = items.map((i) => i.id)) },
+      { label: t('Zoom to fit'), run: fit },
+      { separator: true },
+      { label: t('Export SVG'), run: () => void exportSvg() },
+      { label: t('Export PNG'), run: () => void exportPng() },
+    );
+    return out;
+  }
+
   function keyup(e: KeyboardEvent) {
     if (e.key === ' ') spaceDown = false;
   }
@@ -711,12 +743,13 @@
     exportSvgText,
     setPage,
     canUndo: () => canUndo,
+    contextMenu,
     dark: () => dark,
     version: () => version,
   };
 
   onMount(() => {
-    tab.handlers = { ...tab.handlers, save, saveAs, reload: load, focus: () => stage?.focus(), onShow: status };
+    tab.handlers = { ...tab.handlers, save, saveAs, reload: load, focus: () => stage?.focus(), onShow: status, contextMenu };
     void load();
     return () => cancelAnimationFrame(frame);
   });

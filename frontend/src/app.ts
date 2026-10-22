@@ -21,6 +21,7 @@ import { registerTools } from './core/tools';
 import { registerCompare } from './core/compare';
 import { semantic } from './core/semantic/semantic.svelte';
 import { OnFileDrop } from './wailsjs/runtime/runtime';
+import { installContextMenu } from './core/contextMenu';
 
 function inEditable(t: EventTarget | null): boolean {
   const el = t as HTMLElement | null;
@@ -41,6 +42,7 @@ function wireEvents() {
     },
     { capture: true },
   );
+  installContextMenu();
   // Never let the webview navigate away (e.g. a dropped file or a stray link).
   window.addEventListener('dragover', (e) => e.preventDefault());
   window.addEventListener('drop', (e) => e.preventDefault());

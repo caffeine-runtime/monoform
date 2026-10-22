@@ -733,5 +733,10 @@
     "few": "Zamieniono {n} razy",
     "many": "Zamieniono {n} razy",
     "other": "Zamieniono {n} razy"
-  }
+  },
+  "Clear formatting": "Wyczyść formatowanie",
+  "Bulleted list": "Lista punktowana",
+  "Numbered list": "Lista numerowana",
+  "Edit link…": "Edytuj link…",
+  "Open link": "Otwórz link"
 }

@@ -5,7 +5,7 @@ import { api, errorMessage, fileUrl, readFile, saveFile, endpoint, type Body, ty
 import { modules } from './modules';
 import { basename, dirname, extname, join } from './paths';
 import { settings } from './settings.svelte';
-import { ui, toastError } from './ui.svelte';
+import { ui, toastError, type MenuItem } from './ui.svelte';
 import { t } from './i18n';
 import type { Accepts, Transfer } from './transfer.svelte';
 
@@ -45,6 +45,8 @@ export interface TabHandlers {
   accept?: Accepts;
   /** What Ctrl+C or a drag out of this view carries (the selection, the picture…). */
   give?: () => Transfer | null | Promise<Transfer | null>;
+  /** The view's own right-click items for what is under the pointer (a table cell, a shape…); see core/contextMenu.ts. */
+  contextMenu?: (e: MouseEvent) => MenuItem[] | null;
 }
 
 let seq = 0;

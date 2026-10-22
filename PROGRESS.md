@@ -537,6 +537,15 @@
   instances, named after their products), colours on parts and faces, drawn edges, read in the load worker with
   progress. Own reader and tessellator (no permissive STEP kernel exists). Checked on the as1 test assembly
   (AP203 and AP214). Unit tests (parser, band and pole faces, the fixture assembly), self-test `m57`.
+- **Right-click menus in every editor** (the webview's own menu is off in the app, and the Wails runtime swallowed
+  right-clicks outside text fields): in any text field, rich text or code editor Undo, Redo, Cut, Copy, Paste
+  (rich text and pictures where the editor takes them; Paste as plain text in documents), Delete, Select all;
+  Copy for selected text in previews; then the editor's own actions — code editors their line, case and search
+  commands; Word documents formatting, lists, link (edit / open), the table under the pointer and Insert;
+  drawings the shape under the pointer (edit text, duplicate, order, delete) and export; image, PDF, SVG, audio,
+  video, 3D, CAD, data, database, compare, log and archive views their main commands. A right-click while a menu
+  is open opens the menu for the new spot. Unit test (`contextMenu.test.ts`: lists name real commands), self-test
+  `m58`.
 - **Tighter corners** across the interface (cards, buttons, chips, menus, the installer) and **Settings as tiles**
   side by side that reflow with the window.
 - **Fix: the board unit tests** expected the style without the new corner setting (broke the first 1.1.0

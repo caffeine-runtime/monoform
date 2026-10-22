@@ -722,6 +722,74 @@
     ]);
   }
 
+  /** Right-click on the page: formatting, the link or table under the pointer, inserting. */
+  function contextMenu(e: MouseEvent): MenuItem[] {
+    if (tab.readOnly || !page?.contains(e.target as Node)) return [];
+    const target = e.target as HTMLElement;
+    // A right-click outside the selection puts the caret there (what the items then act on).
+    const s = window.getSelection();
+    const r = s?.rangeCount ? s.getRangeAt(0) : null;
+    const inside = r && !r.collapsed && Array.from(r.getClientRects()).some((b) => e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom);
+    if (!inside) {
+      const at = document.caretRangeFromPoint?.(e.clientX, e.clientY);
+      if (at && page.contains(at.startContainer)) {
+        s!.removeAllRanges();
+        s!.addRange(at);
+        lastRange = at.cloneRange();
+        syncBlock();
+      }
+    }
+    const sc = (s: string) => formatShortcut(s);
+    const items: MenuItem[] = [
+      {
+        label: t('Format'),
+        items: [
+          { label: t('Bold'), shortcut: sc('Mod+B'), run: () => exec('bold') },
+          { label: t('Italic'), shortcut: sc('Mod+I'), run: () => exec('italic') },
+          { label: t('Underline'), shortcut: sc('Mod+U'), run: () => exec('underline') },
+          { label: t('Strikethrough'), run: () => exec('strikeThrough') },
+          { separator: true },
+          { label: t('Clear formatting'), shortcut: sc('Mod+Space'), run: () => exec('removeFormat') },
+        ],
+      },
+    ];
+    if (!odt) {
+      items.push(
+        { label: t('Bulleted list'), shortcut: sc('Mod+Shift+8'), checked: listAt === 'bullet', run: () => toggleList('bullet') },
+        { label: t('Numbered list'), shortcut: sc('Mod+Shift+7'), checked: listAt === 'number', run: () => toggleList('number') },
+      );
+      const a = target.closest('a');
+      const href = a?.dataset.newHref ?? a?.dataset.href;
+      items.push({ separator: true }, { label: a ? t('Edit link…') : t('Link…'), shortcut: sc('Mod+K'), run: () => void editLink() });
+      if (a && href && /^(https?:|mailto:)/i.test(href)) items.push({ label: t('Open link'), run: () => void api.OpenExternal(href) });
+      if (target.closest('td')) {
+        items.push({
+          label: t('Table'),
+          items: [
+            { label: t('Insert row above'), run: () => tableOp('rowAbove') },
+            { label: t('Insert row below'), run: () => tableOp('rowBelow') },
+            { label: t('Insert column left'), run: () => tableOp('colLeft') },
+            { label: t('Insert column right'), run: () => tableOp('colRight') },
+            { separator: true },
+            { label: t('Delete row'), run: () => tableOp('delRow') },
+            { label: t('Delete column'), run: () => tableOp('delCol') },
+            { label: t('Delete table'), run: () => tableOp('delTable') },
+          ],
+        });
+      }
+      const sizes: [number, number][] = [[2, 2], [3, 2], [3, 3], [4, 3], [4, 4], [5, 5]];
+      items.push({
+        label: t('Insert'),
+        items: [
+          { label: t('Picture…'), run: () => void insertPicture() },
+          { label: t('Table'), items: [...sizes.map(([c, rw]): MenuItem => ({ label: t('{cols} × {rows}', { cols: c, rows: rw }), run: () => insertTable(rw, c) })), { separator: true }, { label: t('Other size…'), run: () => void customTable() }] },
+          { label: t('Page break'), shortcut: sc('Mod+Enter'), run: insertPageBreak },
+        ],
+      });
+    }
+    return items;
+  }
+
   // ---------- find and replace ----------
 
   function openFind(withReplace = false) {
@@ -1077,7 +1145,7 @@
     for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode(...b.subarray(i, i + 0x8000));
     return btoa(bin);
   }
-  (tab as unknown as { docTest: unknown }).docTest = { page: () => page, model: () => model, save, writeTo, exec, insertTable, hoverEdge, startResize, tableOp, insertPageBreak, addPicture, editLink, openFind, closeFind, findState: () => ({ findQ, replaceQ, matches: matches.length, matchAt }), setFind: (q: string, r = '') => ((findQ = q), (replaceQ = r), runFind()), showMatch, replaceOne, replaceEvery, paste, toggleList, listLevel, listAt: () => listAt, setStyle, setFont, setSize, setColor, setHighlight, align, indent, setSpacing, darkPage: () => darkPage, headings: () => headings, active: () => active, counts: () => counts, selCounts: () => selCounts, goHeading, outlineOpen: () => outlineOpen, toggleOutline, desk: () => desk };
+  (tab as unknown as { docTest: unknown }).docTest = { contextMenu, page: () => page, model: () => model, save, writeTo, exec, insertTable, hoverEdge, startResize, tableOp, insertPageBreak, addPicture, editLink, openFind, closeFind, findState: () => ({ findQ, replaceQ, matches: matches.length, matchAt }), setFind: (q: string, r = '') => ((findQ = q), (replaceQ = r), runFind()), showMatch, replaceOne, replaceEvery, paste, toggleList, listLevel, listAt: () => listAt, setStyle, setFont, setSize, setColor, setHighlight, align, indent, setSpacing, darkPage: () => darkPage, headings: () => headings, active: () => active, counts: () => counts, selCounts: () => selCounts, goHeading, outlineOpen: () => outlineOpen, toggleOutline, desk: () => desk };
 
   onMount(() => {
     tab.handlers = {
@@ -1087,6 +1155,7 @@
       reload: load,
       onShow: count,
       find: () => openFind(false),
+      contextMenu,
     };
     void load();
     const sel = () => {

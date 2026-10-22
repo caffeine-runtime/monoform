@@ -456,5 +456,8 @@
     "other": "{n} modelu nie pobrano jeszcze."
   },
   "Download all ({size})": "Pobierz wszystkie ({size})",
-  "Downloading… {percent}%": "Pobieranie… {percent}%"
+  "Downloading… {percent}%": "Pobieranie… {percent}%",
+  "Change case": "Zmień wielkość liter",
+  "Lines": "Wiersze",
+  "Paste as plain text": "Wklej jako zwykły tekst"
 }

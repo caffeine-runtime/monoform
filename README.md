@@ -88,7 +88,7 @@ two, three or four views and keep a note, a PDF, a picture and a model open toge
 | **Hashes** | MD5, SHA-1, SHA-256, SHA-512, BLAKE3 in one pass; paste-to-compare; verify `SHA256SUMS`/`.md5` files. |
 | **Search everything** | Ctrl/Cmd+K finds commands, file names and text inside files. An optional **search by meaning** (off by default) runs the EmbeddingGemma 2 model locally on your computer. |
 
-Everything is keyboard-reachable: press **Ctrl+K** (**⌘K** on macOS) and type.
+Everything is keyboard-reachable: press **Ctrl+K** (**⌘K** on macOS) and type. Right-click anywhere for what you can do there: cut, copy and paste in any text, and each editor's own actions (a table cell, a shape, a selection).
 
 </details>
 
