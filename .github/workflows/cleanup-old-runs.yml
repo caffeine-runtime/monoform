@@ -1,0 +1,30 @@
+name: Delete runs from before the history rewrite
+
+# One-off (removed after it has run): deletes every finished workflow run
+# created before the account rename's history rewrite, with its logs and
+# artifacts. Runs from the rewritten history are kept.
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete the old runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BEFORE: "2026-10-22T11:29:00Z"
+        run: |
+          set -euo pipefail
+          ids=$(gh api --paginate "repos/$REPO/actions/runs?per_page=100" \
+            -q ".workflow_runs[] | select(.status == \"completed\" and .created_at < \"$BEFORE\") | .id")
+          n=0
+          for id in $ids; do
+            gh api -X DELETE "repos/$REPO/actions/runs/$id" >/dev/null && n=$((n + 1))
+          done
+          echo "deleted $n runs created before $BEFORE"
+          echo "left:"; gh api --paginate "repos/$REPO/actions/runs?per_page=100" -q '.workflow_runs[] | "\(.created_at) \(.name) \(.status)"'
