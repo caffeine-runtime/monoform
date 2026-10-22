@@ -1,5 +1,4 @@
 name: Delete releases
-run-name: "Delete releases: ${{ inputs.tags }}"
 
 # Removes published releases together with their tags (the Releases page can
 # only do one at a time and leaves the tag behind). Run it by hand:
