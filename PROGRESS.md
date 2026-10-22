@@ -537,6 +537,13 @@
   instances, named after their products), colours on parts and faces, drawn edges, read in the load worker with
   progress. Own reader and tessellator (no permissive STEP kernel exists). Checked on the as1 test assembly
   (AP203 and AP214). Unit tests (parser, band and pole faces, the fixture assembly), self-test `m57`.
+- **Image editor: turning things**: **rotate / scale / move a selection** (selection bar, right-click, Ctrl+Shift+R)
+  — the selected pixels float with the move tool's handles (rotation snaps to 45°), Enter puts them back into
+  their layer as one undo step, Esc puts everything back; **rotate the active layer** 90° either way or by an
+  angle (live preview) from the move tool's bar, a layer's right-click menu in the Layers panel (also rename,
+  duplicate, merge down, delete) and the editor's right-click menu, about the layer's middle; **turn the view**
+  (not the picture) in 15° steps with the toolbar buttons or Alt+← / Alt+→, Alt+0 or the angle label
+  straightens it — every tool draws under the pointer in a turned view. Self-test `m61`.
 - **Fixes after 1.1.1**: the Ctrl+K palette's search box was squeezed (cut off at the top) while the list was
   long, as when it opens on the recent files; Open-file and Open-folder dialogs (Compare, Check a hash, Open…)
   started in `C:\Windows\System32` on Windows — they now start where the last dialog was answered, else in

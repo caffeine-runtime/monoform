@@ -18,6 +18,10 @@ export interface ImageController {
   navigate(dir: 1 | -1): void;
   resize(): void;
   rotateAngle(): void;
+  transformSelection(): void;
+  rotateLayer(deg: number): void;
+  rotateLayerAngle(): void;
+  rotateView(deg: number, reset?: boolean): void;
   copy(merged: boolean): void;
   cut(): void;
   paste(): void;
