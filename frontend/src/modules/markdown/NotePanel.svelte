@@ -146,7 +146,7 @@
     font: inherit;
     font-size: var(--fs-small);
     padding: 4px 2px;
-    border-radius: 5px;
+    border-radius: 3px;
     cursor: pointer;
     white-space: nowrap;
   }

@@ -183,12 +183,12 @@
     font-size: var(--fs-small);
     color: var(--text-muted);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 5px;
     padding: 0 8px;
   }
   .pill {
     font-size: var(--fs-small);
-    border-radius: 10px;
+    border-radius: 5px;
     padding: 1px 9px;
     background: color-mix(in srgb, var(--success) 18%, transparent);
     color: var(--success);

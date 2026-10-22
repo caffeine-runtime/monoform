@@ -311,7 +311,7 @@
     border: 1px solid var(--border);
     background: var(--bg-input);
     color: var(--text);
-    border-radius: 12px;
+    border-radius: 6px;
     padding: 2px 10px;
     font: inherit;
     font-size: var(--fs-small);

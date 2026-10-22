@@ -399,7 +399,7 @@
     gap: 6px;
     align-items: center;
     padding: 4px 10px;
-    border-radius: 12px;
+    border-radius: 6px;
     background: var(--bg);
     font-size: var(--fs-small);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);

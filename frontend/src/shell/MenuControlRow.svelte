@@ -128,7 +128,7 @@
     display: flex;
     flex: 1;
     padding: 2px;
-    border-radius: 7px;
+    border-radius: 4px;
     background: var(--bg-input);
     border: 1px solid var(--border-soft);
   }
@@ -139,7 +139,7 @@
     justify-content: center;
     padding: 3px 8px;
     border: none;
-    border-radius: 5px;
+    border-radius: 3px;
     background: none;
     color: var(--text-muted);
     font: inherit;

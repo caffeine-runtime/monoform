@@ -124,7 +124,7 @@
   .tabview.pane {
     inset: auto;
     border: 1px solid var(--border-soft);
-    border-radius: 6px;
+    border-radius: 4px;
     overflow: hidden;
   }
   .tabview.pane.active {

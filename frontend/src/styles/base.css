@@ -69,7 +69,7 @@ select {
 }
 ::-webkit-scrollbar-thumb {
   background: var(--scrollbar);
-  border-radius: 10px;
+  border-radius: 5px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
@@ -302,7 +302,7 @@ select {
   font-size: calc(11px * var(--ui-scale));
   color: var(--text-muted);
   padding: 1px 6px;
-  border-radius: 5px;
+  border-radius: 3px;
   background: var(--bg-hover);
   white-space: nowrap;
 }
@@ -315,7 +315,7 @@ select {
 /* A row Settings was opened at (core/settingsLink.ts). */
 .flash-target {
   animation: flash-target 2.2s var(--ease, ease);
-  border-radius: 8px;
+  border-radius: 4px;
 }
 @keyframes flash-target {
   0%,

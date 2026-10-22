@@ -253,7 +253,7 @@
     color: inherit;
     font: inherit;
     padding: 2px 5px;
-    border-radius: 5px;
+    border-radius: 3px;
     cursor: pointer;
     flex: none;
   }
@@ -314,7 +314,7 @@
     margin: 0 10px 6px;
     padding: 4px 8px;
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: 4px;
     background: var(--bg-input);
     color: var(--text);
     font: inherit;
@@ -332,7 +332,7 @@
     height: var(--row-h);
     padding: 0 8px;
     border: none;
-    border-radius: 5px;
+    border-radius: 3px;
     background: none;
     color: var(--text);
     font: inherit;
