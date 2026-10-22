@@ -138,8 +138,8 @@ export function DocOpen(arg1) {
   return window['go']['app']['App']['DocOpen'](arg1);
 }
 
-export function DocSave(arg1, arg2, arg3) {
-  return window['go']['app']['App']['DocSave'](arg1, arg2, arg3);
+export function DocSave(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['DocSave'](arg1, arg2, arg3, arg4);
 }
 
 export function Exists(arg1) {

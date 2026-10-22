@@ -57,10 +57,13 @@ type DocOpenResult struct {
 	Document string                `json:"document"`
 	Styles   map[string]string     `json:"styles"`
 	Rels     []office.Relationship `json:"rels"`
-	SaveAs   string                `json:"saveAs"`
-	Note     string                `json:"note"`
-	Template bool                  `json:"template"` // saving builds a new package (no source .docx)
-	Format   string                `json:"format"`   // "docx", "doc" or "odt"
+	// .docx: the raw styles.xml and numbering.xml (lists).
+	StylesXML string `json:"stylesXml"`
+	Numbering string `json:"numbering"`
+	SaveAs    string `json:"saveAs"`
+	Note      string `json:"note"`
+	Template  bool   `json:"template"` // saving builds a new package (no source .docx)
+	Format    string `json:"format"`   // "docx", "doc" or "odt"
 	// .odt: named text styles -> formatting flags ("b i").
 	TextStyles map[string]string `json:"textStyles"`
 }
@@ -86,12 +89,13 @@ func (a *App) DocOpen(path string) (DocOpenResult, error) {
 		}, nil
 	}
 	pkg, err := office.ReadDocx(path)
-	return DocOpenResult{Document: pkg.Document, Styles: pkg.Styles, Rels: pkg.Rels, Format: "docx"}, err
+	return DocOpenResult{Document: pkg.Document, Styles: pkg.Styles, Rels: pkg.Rels, StylesXML: pkg.StylesXML, Numbering: pkg.Numbering, Format: "docx"}, err
 }
 
 // DocSave writes document.xml into a .docx at dst (content.xml into an .odt).
-// src is the package to copy the other parts from ("" builds a new .docx).
-func (a *App) DocSave(dst, src, document string) error {
+// src is the package to copy the other parts from ("" builds a new .docx);
+// parts are .docx parts to add or replace (list definitions, pictures).
+func (a *App) DocSave(dst, src, document string, parts []office.Part) error {
 	if ext := strings.ToLower(filepath.Ext(dst)); ext == ".odt" || ext == ".ott" {
 		if src == "" {
 			return errors.New("an OpenDocument text can only be saved from an .odt it was opened from")
@@ -113,7 +117,7 @@ func (a *App) DocSave(dst, src, document string) error {
 		defer a.RemoveTemp(tmp)
 		src = tmp
 	}
-	if err := office.WriteDocx(dst, src, document); err != nil {
+	if err := office.WriteDocx(dst, src, document, parts...); err != nil {
 		return err
 	}
 	if a.watcher != nil {

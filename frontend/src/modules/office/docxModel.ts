@@ -8,6 +8,7 @@
 // is shown read-only and written back unchanged.
 
 import { t } from '../../core/i18n';
+import { Numbering, type ListKind } from './docxNumbering';
 
 export const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const XML_NS = 'http://www.w3.org/XML/1998/namespace';
@@ -18,7 +19,12 @@ export interface DocContext {
   rels: { id: string; type: string; target: string; external: boolean }[];
   /** URL for an internal package part (images). */
   partUrl: (entry: string) => string;
+  /** List definitions (numbering.xml) and the lists paragraph styles turn on. */
+  numbering?: Numbering;
 }
+
+/** The deepest list level Word has. */
+export const MAX_LIST_LEVEL = 8;
 
 /** Elements inside a paragraph that make it read-only. */
 const OPAQUE_INLINE = new Set(['ins', 'del', 'moveFrom', 'moveTo', 'fldSimple', 'sdt', 'customXml', 'smartTag', 'oMath', 'oMathPara', 'subDoc']);
@@ -33,6 +39,7 @@ export class DocModel {
   private nodes: Element[] = []; // id -> XML element (paragraphs, runs, tables, opaque)
   private atoms: Element[] = []; // atom id -> standalone w:r
   styleIdByName = new Map<string, string>();
+  readonly numbering: Numbering;
 
   constructor(
     documentXml: string,
@@ -44,6 +51,7 @@ export class DocModel {
     const body = this.xml.getElementsByTagNameNS(W, 'body')[0];
     if (!body) throw new Error(t('document has no body'));
     this.body = body;
+    this.numbering = ctx.numbering ?? new Numbering('');
     for (const [id, name] of Object.entries(ctx.styles)) if (!this.styleIdByName.has(name)) this.styleIdByName.set(name, id);
   }
 
@@ -113,7 +121,7 @@ export class DocModel {
     const pPr = child(p, 'pPr');
     if (pPr) applyParagraphStyle(el, pPr);
     if (style === 'title') el.classList.add('title');
-    if (child(pPr, 'numPr') || /list/.test(style)) el.classList.add('li');
+    this.renderListInfo(el, p);
     const readOnly = [...p.getElementsByTagName('*')].some((n) => n.namespaceURI === W && (OPAQUE_INLINE.has(n.localName) || FIELD_RUN_CHILDREN.has(n.localName)));
     if (readOnly) {
       el.dataset.opaque = el.dataset.p;
@@ -138,6 +146,104 @@ export class DocModel {
     }
     if (!el.textContent && !el.querySelector('img,.atom')) el.append(doc.createElement('br'));
     return el;
+  }
+
+  /** A list paragraph: its numbering instance and level, from its own numPr or its style. */
+  private renderListInfo(el: HTMLElement, p: Element) {
+    const pPr = child(p, 'pPr');
+    const numPr = child(pPr, 'numPr');
+    let numId = child(numPr, 'numId')?.getAttributeNS(W, 'val') ?? null;
+    let ilvl = Number(child(numPr, 'ilvl')?.getAttributeNS(W, 'val') ?? NaN);
+    let src = 'own';
+    if (numId === null) {
+      const styleId = child(pPr, 'pStyle')?.getAttributeNS(W, 'val') ?? '';
+      const sl = styleId ? this.numbering.styleList(styleId) : null;
+      if (sl) {
+        numId = sl.numId;
+        if (Number.isNaN(ilvl)) ilvl = sl.ilvl;
+        src = 'style';
+      }
+    }
+    if (Number.isNaN(ilvl)) ilvl = 0;
+    if (numId === null || !this.numbering.has(numId)) return;
+    el.dataset.numId = el.dataset.numIdOrig = numId;
+    el.dataset.ilvl = el.dataset.ilvlOrig = String(ilvl);
+    el.dataset.numSrc = src;
+    this.decorateList(el, child(pPr, 'ind'));
+  }
+
+  /** Class and indentation of a list paragraph (or their removal); ownInd: the paragraph's own w:ind, which wins over the level's. */
+  decorateList(el: HTMLElement, ownInd: Element | null = null) {
+    const numId = el.dataset.numId;
+    if (!numId || numId === '0') {
+      el.classList.remove('li');
+      delete el.dataset.marker;
+      if (el.dataset.listIndent) el.style.marginLeft = el.style.paddingLeft = '';
+      delete el.dataset.listIndent;
+      return;
+    }
+    el.classList.add('li');
+    const lv = this.numbering.level(numId, Number(el.dataset.ilvl ?? 0));
+    const own = (name: string) => Number(ownInd?.getAttributeNS(W, name) ?? NaN);
+    const left = (Number.isNaN(own('left')) ? own('start') : own('left')) || lv?.left || 720 * (Number(el.dataset.ilvl ?? 0) + 1);
+    const hanging = (Number.isNaN(own('hanging')) ? NaN : own('hanging')) || lv?.hanging || 360;
+    el.style.marginLeft = `${Math.max(0, twipsToPx(String(left - hanging)))}px`;
+    el.style.paddingLeft = `${Math.max(18, twipsToPx(String(hanging)))}px`;
+    el.dataset.listIndent = '1';
+  }
+
+  /** Set every list paragraph's marker (data-marker), in document order. */
+  renumber(root: HTMLElement) {
+    const items = Array.from(root.querySelectorAll<HTMLElement>('[data-num-id]')).filter((e) => e.dataset.numId !== '0');
+    const markers = this.numbering.renumber(items.map((e) => ({ numId: e.dataset.numId!, ilvl: Number(e.dataset.ilvl ?? 0) })));
+    items.forEach((e, i) => {
+      if (e.dataset.marker !== markers[i]) e.dataset.marker = markers[i];
+    });
+  }
+
+  /** The kind of list a paragraph is in (null: none). */
+  listKind(el: HTMLElement): ListKind | null {
+    const id = el.dataset.numId;
+    return id && id !== '0' && this.numbering.has(id) ? this.numbering.kind(id, Number(el.dataset.ilvl ?? 0)) : null;
+  }
+
+  /**
+   * Bulleted / numbered list on or off for these paragraphs (Word's list
+   * buttons): when all are already that kind of list it turns them off,
+   * otherwise they join the list just before them (if it is that kind) or a
+   * new one.
+   */
+  toggleList(paras: HTMLElement[], kind: ListKind) {
+    if (!paras.length) return;
+    if (paras.every((p) => this.listKind(p) === kind)) {
+      for (const p of paras) {
+        p.dataset.numId = '0';
+        p.dataset.ilvl = '0';
+        this.decorateList(p);
+      }
+      return;
+    }
+    const prev = previousBlock(paras[0]);
+    const numId = prev && this.listKind(prev) === kind && prev.dataset.ilvl === '0' ? prev.dataset.numId! : this.numbering.newList(kind);
+    for (const p of paras) {
+      const sameKind = this.listKind(p) === kind;
+      p.dataset.numId = numId;
+      if (!sameKind) p.dataset.ilvl = '0';
+      this.decorateList(p);
+    }
+  }
+
+  /** Move list paragraphs a level deeper (+1) or shallower (-1); shallower than the first level ends the list. */
+  changeLevel(paras: HTMLElement[], delta: number) {
+    for (const p of paras) {
+      if (!this.listKind(p)) continue;
+      const next = Number(p.dataset.ilvl ?? 0) + delta;
+      if (next < 0) {
+        p.dataset.numId = '0';
+        p.dataset.ilvl = '0';
+      } else p.dataset.ilvl = String(Math.min(MAX_LIST_LEVEL, next));
+      this.decorateList(p);
+    }
   }
 
   private renderRun(doc: Document, parent: HTMLElement, r: Element) {
@@ -317,6 +423,7 @@ export class DocModel {
         ps.setAttributeNS(W, 'w:val', this.styleIdByName.get(`heading ${wantLevel}`) ?? `Heading${wantLevel}`);
       } else if (ps) pPr.removeChild(ps);
     }
+    pPr = this.serializeList(el, pPr, orig);
     if (pPr) p.append(pPr);
     // Bookmarks belong to the first copy of a split paragraph.
     const first = el.dataset.p !== undefined && !used.has(el.dataset.p);
@@ -365,16 +472,46 @@ export class DocModel {
       }
       if (text) {
         const r = this.makeRun(s.run, s.fmt);
-        const t = xml.createElementNS(W, 'w:t');
-        t.setAttributeNS(XML_NS, 'xml:space', 'preserve');
-        t.textContent = text;
-        r.append(t);
+        // A typed tab is a w:tab between pieces of text.
+        text.split('\t').forEach((piece, k) => {
+          if (k > 0) r.append(xml.createElementNS(W, 'w:tab'));
+          if (!piece) return;
+          const t = xml.createElementNS(W, 'w:t');
+          t.setAttributeNS(XML_NS, 'xml:space', 'preserve');
+          t.textContent = piece;
+          r.append(t);
+        });
         append(r, s.link);
       }
       i = j;
     }
     if (orig && first) for (const b of Array.from(orig.children)) if (b.localName === 'bookmarkEnd') p.append(b.cloneNode(true));
     return p;
+  }
+
+  /** The paragraph's list (numPr) when the editor changed it; anything else stays as it was. */
+  private serializeList(el: HTMLElement, pPr: Element | null, orig: Element | undefined): Element | null {
+    const numId = el.dataset.numId;
+    const ilvl = el.dataset.ilvl ?? '0';
+    if ((numId ?? '') === (el.dataset.numIdOrig ?? '') && ilvl === (el.dataset.ilvlOrig ?? '0')) return pPr;
+    const xml = this.xml;
+    pPr ??= xml.createElementNS(W, 'w:pPr');
+    const old = child(pPr, 'numPr');
+    if (old) pPr.removeChild(old);
+    const styleId = child(pPr, 'pStyle')?.getAttributeNS(W, 'val') ?? '';
+    const styleList = styleId ? this.numbering.styleList(styleId) : null;
+    if (!numId || numId === '0') {
+      // Off: a style's own list needs an explicit "no list".
+      if (styleList) insertPPr(pPr, numPrEl(xml, '0', '0'));
+    } else {
+      insertPPr(pPr, numPrEl(xml, numId, ilvl));
+      // A new level takes that level's indentation.
+      if (ilvl !== (el.dataset.ilvlOrig ?? '') || !orig) {
+        const ind = child(pPr, 'ind');
+        if (ind) pPr.removeChild(ind);
+      }
+    }
+    return pPr.children.length ? pPr : null;
   }
 
   /** A run with the original run's properties, adjusted for b/i/u/s. */
@@ -474,6 +611,36 @@ function on(el: Element | null): boolean {
   if (!el) return false;
   const v = el.getAttributeNS(W, 'val');
   return v === null || !['0', 'false', 'off', 'none'].includes(v);
+}
+
+// pPr children must follow the schema order.
+const PPR_ORDER = ['pStyle', 'keepNext', 'keepLines', 'pageBreakBefore', 'framePr', 'widowControl', 'numPr', 'suppressLineNumbers', 'pBdr', 'shd', 'tabs', 'suppressAutoHyphens', 'kinsoku', 'wordWrap', 'overflowPunct', 'topLinePunct', 'autoSpaceDE', 'autoSpaceDN', 'bidi', 'adjustRightInd', 'snapToGrid', 'spacing', 'ind', 'contextualSpacing', 'mirrorIndents', 'suppressOverlap', 'jc', 'textDirection', 'textAlignment', 'textboxTightWrap', 'outlineLvl', 'divId', 'cnfStyle', 'rPr', 'sectPr', 'pPrChange'];
+
+export function insertPPr(pPr: Element, el: Element) {
+  const idx = PPR_ORDER.indexOf(el.localName);
+  for (const c of Array.from(pPr.children)) {
+    if (PPR_ORDER.indexOf(c.localName) > idx) {
+      pPr.insertBefore(el, c);
+      return;
+    }
+  }
+  pPr.append(el);
+}
+
+function numPrEl(xml: XMLDocument, numId: string, ilvl: string): Element {
+  const numPr = xml.createElementNS(W, 'w:numPr');
+  const l = xml.createElementNS(W, 'w:ilvl');
+  l.setAttributeNS(W, 'w:val', ilvl);
+  const n = xml.createElementNS(W, 'w:numId');
+  n.setAttributeNS(W, 'w:val', numId);
+  numPr.append(l, n);
+  return numPr;
+}
+
+/** The paragraph-like element before this one (crossing nothing but empty text). */
+function previousBlock(el: HTMLElement): HTMLElement | null {
+  const prev = el.previousElementSibling as HTMLElement | null;
+  return prev && /^(P|H[1-6])$/.test(prev.tagName) ? prev : null;
 }
 
 // rPr children must follow the schema order; this is the relevant subset.

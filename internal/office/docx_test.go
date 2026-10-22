@@ -2,6 +2,8 @@ package office
 
 import (
 	"archive/zip"
+	"encoding/base64"
+	"io"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -83,5 +85,66 @@ func TestNewDocxFromParagraphs(t *testing.T) {
 	}
 	if !strings.Contains(pkg.Document, "Hello &lt;world&gt;") || pkg.Styles["Heading1"] != "heading 1" {
 		t.Fatalf("pkg = %+v", pkg)
+	}
+}
+
+// Saving list definitions into a document that had none adds the part with
+// its content type and relationship; saving again replaces it in place.
+func TestDocxAddsParts(t *testing.T) {
+	numbering := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:abstractNum w:abstractNumId="0"/><w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num></w:numbering>`
+	part := Part{Name: "word/numbering.xml", Data: base64.StdEncoding.EncodeToString([]byte(numbering)), RelID: "rIdMfNumbering", RelType: "numbering"}
+	img := Part{Name: "word/media/mf-1.png", Data: base64.StdEncoding.EncodeToString([]byte("\x89PNG fake")), RelID: "rIdMfImg1", RelType: "image"}
+	for _, src := range []string{"testdata/doc.docx", ""} {
+		out := filepath.Join(t.TempDir(), "lists.docx")
+		doc := ParagraphsToDocument([]string{"one"})
+		if err := WriteDocx(out, src, doc, part, img); err != nil {
+			t.Fatal(err)
+		}
+		pkg, err := ReadDocx(out)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(pkg.Numbering, `w:numId="1"`) {
+			t.Fatalf("%q: numbering = %q", src, pkg.Numbering)
+		}
+		var numRel, imgRel bool
+		for _, r := range pkg.Rels {
+			numRel = numRel || (r.ID == "rIdMfNumbering" && r.Type == "numbering" && r.Target == "word/numbering.xml")
+			imgRel = imgRel || (r.ID == "rIdMfImg1" && r.Type == "image" && r.Target == "word/media/mf-1.png")
+		}
+		if !numRel || !imgRel {
+			t.Fatalf("%q: rels = %+v", src, pkg.Rels)
+		}
+		types, _ := ReadZipEntry(out, "[Content_Types].xml", 1<<20)
+		if !strings.Contains(string(types), `PartName="/word/numbering.xml"`) || !strings.Contains(string(types), `Extension="png"`) {
+			t.Fatalf("%q: content types = %s", src, types)
+		}
+		// Again over the result: replaced, not duplicated.
+		again := filepath.Join(t.TempDir(), "again.docx")
+		if err := WriteDocx(again, out, doc, part); err != nil {
+			t.Fatal(err)
+		}
+		zr, _ := zip.OpenReader(again)
+		seen := map[string]int{}
+		for _, f := range zr.File {
+			seen[f.Name]++
+			if f.Name == "word/_rels/document.xml.rels" {
+				rc, _ := f.Open()
+				b, _ := io.ReadAll(rc)
+				rc.Close()
+				if strings.Count(string(b), "rIdMfNumbering") != 1 {
+					t.Fatalf("relationship duplicated: %s", b)
+				}
+			}
+		}
+		zr.Close()
+		for name, n := range seen {
+			if n != 1 {
+				t.Fatalf("%s written %d times", name, n)
+			}
+		}
+	}
+	if err := WriteDocx(filepath.Join(t.TempDir(), "x.docx"), "", ParagraphsToDocument(nil), Part{Name: "../evil.xml", Data: ""}); err == nil {
+		t.Fatal("a part outside word/ accepted")
 	}
 }

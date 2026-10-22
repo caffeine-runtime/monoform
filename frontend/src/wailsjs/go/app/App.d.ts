@@ -8,6 +8,7 @@ import {server} from '../models';
 import {newfile} from '../models';
 import {db} from '../models';
 import {filetype} from '../models';
+import {office} from '../models';
 import {history} from '../models';
 import {fs} from '../models';
 import {notes} from '../models';
@@ -16,7 +17,6 @@ import {settings} from '../models';
 import {capture} from '../models';
 import {search} from '../models';
 import {semantic} from '../models';
-import {office} from '../models';
 import {video} from '../models';
 
 export function AIInstall(arg1:string):Promise<string>;
@@ -87,7 +87,7 @@ export function DetectType(arg1:string):Promise<filetype.Info>;
 
 export function DocOpen(arg1:string):Promise<app.DocOpenResult>;
 
-export function DocSave(arg1:string,arg2:string,arg3:string):Promise<void>;
+export function DocSave(arg1:string,arg2:string,arg3:string,arg4:Array<office.Part>):Promise<void>;
 
 export function Exists(arg1:Array<string>):Promise<Array<boolean>>;
 

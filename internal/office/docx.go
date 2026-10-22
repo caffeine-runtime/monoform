@@ -3,12 +3,14 @@ package office
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/base64"
 	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/caffeine-runtime/monoform/internal/fs"
@@ -29,6 +31,20 @@ type DocxPackage struct {
 	Document string            `json:"document"` // word/document.xml
 	Styles   map[string]string `json:"styles"`   // styleId -> style name ("heading 1")
 	Rels     []Relationship    `json:"rels"`
+	// The raw word/styles.xml and word/numbering.xml ("" when missing): list
+	// definitions, and lists a paragraph style turns on.
+	StylesXML string `json:"stylesXml"`
+	Numbering string `json:"numbering"`
+}
+
+// Part is a package part the editor adds or replaces on save (the list
+// definitions, an inserted picture). A part new to the package gets its
+// content type and, with RelID, a relationship from document.xml.
+type Part struct {
+	Name    string `json:"name"`    // zip entry, e.g. "word/numbering.xml"
+	Data    string `json:"data"`    // the bytes, base64
+	RelID   string `json:"relId"`   // relationship id document.xml refers to it by ("" for none)
+	RelType string `json:"relType"` // last element of the relationship type, e.g. "numbering", "image"
 }
 
 // ReadDocx extracts the main document part, style names and relationships.
@@ -55,6 +71,12 @@ func ReadDocx(p string) (DocxPackage, error) {
 	if f, ok := files["word/styles.xml"]; ok {
 		if b, err := readZipFile(f, 32<<20); err == nil {
 			pkg.Styles = styleNames(b)
+			pkg.StylesXML = string(b)
+		}
+	}
+	if f, ok := files["word/numbering.xml"]; ok {
+		if b, err := readZipFile(f, 32<<20); err == nil {
+			pkg.Numbering = string(b)
 		}
 	}
 	if f, ok := files["word/_rels/document.xml.rels"]; ok {
@@ -120,55 +142,185 @@ func rels(b []byte) []Relationship {
 	return out
 }
 
+const (
+	contentTypesPart = "[Content_Types].xml"
+	documentRelsPart = "word/_rels/document.xml.rels"
+	relTypeBase      = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/"
+)
+
+// Content types of the parts the editor adds.
+var partContentTypes = map[string]string{
+	"word/numbering.xml": "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml",
+}
+var extContentTypes = map[string]string{
+	"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "gif": "image/gif", "bmp": "image/bmp", "webp": "image/webp", "svg": "image/svg+xml",
+}
+
+var safePart = regexp.MustCompile(`^word/[A-Za-z0-9._/-]+$`)
+
 // WriteDocx writes a .docx to dst: every part of src is copied unchanged
-// except word/document.xml, which is replaced. With src empty a new package
+// except word/document.xml and the given parts, which are replaced or added
+// (with their content types and relationships). With src empty a new package
 // is created from a minimal template.
-func WriteDocx(dst, src, document string) error {
+func WriteDocx(dst, src, document string, parts ...Part) error {
 	if !strings.HasPrefix(strings.TrimSpace(document), "<?xml") && !strings.HasPrefix(strings.TrimSpace(document), "<w:document") {
 		return errors.New("document.xml is not XML")
 	}
 	if err := xml.Unmarshal([]byte(document), new(struct{})); err != nil {
 		return fmt.Errorf("document.xml is not well-formed: %w", err)
 	}
+	extra := map[string][]byte{}
+	for _, p := range parts {
+		if !safePart.MatchString(p.Name) || strings.Contains(p.Name, "..") || p.Name == documentPart {
+			return fmt.Errorf("can't write the part %q", p.Name)
+		}
+		b, err := base64.StdEncoding.DecodeString(p.Data)
+		if err != nil {
+			return fmt.Errorf("%s: %w", p.Name, err)
+		}
+		if strings.HasSuffix(p.Name, ".xml") {
+			if err := xml.Unmarshal(b, new(struct{})); err != nil {
+				return fmt.Errorf("%s is not well-formed: %w", p.Name, err)
+			}
+		}
+		extra[p.Name] = b
+	}
 	return fs.AtomicWrite(dst, func(w io.Writer) error {
 		zw := zip.NewWriter(w)
+		// The package's own parts, in order: from src, or the template.
+		type entry struct {
+			name string
+			body []byte    // set: write these bytes
+			file *zip.File // else: copy as it is
+		}
+		var entries []entry
 		if src == "" {
 			for _, part := range templateParts {
-				if err := writePart(zw, part.name, []byte(part.body)); err != nil {
-					return err
-				}
+				entries = append(entries, entry{name: part.name, body: []byte(part.body)})
 			}
+		} else {
+			zr, err := zip.OpenReader(src)
+			if err != nil {
+				return err
+			}
+			defer zr.Close()
+			for _, f := range zr.File {
+				entries = append(entries, entry{name: f.Name, file: f})
+			}
+		}
+		read := func(e entry) ([]byte, error) {
+			if e.body != nil {
+				return e.body, nil
+			}
+			return readZipFile(e.file, 64<<20)
+		}
+		have := map[string]bool{}
+		for _, e := range entries {
+			have[e.name] = true
+		}
+		var types, relsXML []byte
+		for _, e := range entries {
+			var err error
+			switch e.name {
+			case contentTypesPart:
+				types, err = read(e)
+			case documentRelsPart:
+				relsXML, err = read(e)
+			}
+			if err != nil {
+				return err
+			}
+		}
+		if relsXML == nil {
+			relsXML = []byte(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` + "\n" + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`)
+		}
+		for _, p := range parts {
+			if types != nil {
+				types = addContentType(types, p.Name)
+			}
+			if p.RelID != "" {
+				relsXML = addRelationship(relsXML, p.RelID, p.RelType, strings.TrimPrefix(p.Name, "word/"))
+			}
+		}
+		wrote := map[string]bool{}
+		for _, e := range entries {
+			var err error
+			switch {
+			case e.name == documentPart:
+				err = writePart(zw, e.name, []byte(document))
+			case e.name == contentTypesPart && types != nil:
+				err = writePart(zw, e.name, types)
+			case e.name == documentRelsPart:
+				err = writePart(zw, e.name, relsXML)
+			case extra[e.name] != nil:
+				err = writePart(zw, e.name, extra[e.name])
+			case e.body != nil:
+				err = writePart(zw, e.name, e.body)
+			default:
+				err = zw.Copy(e.file) // the compressed bytes as they are
+			}
+			if err != nil {
+				return err
+			}
+			wrote[e.name] = true
+		}
+		if !wrote[documentPart] {
 			if err := writePart(zw, documentPart, []byte(document)); err != nil {
 				return err
 			}
-			return zw.Close()
 		}
-		zr, err := zip.OpenReader(src)
-		if err != nil {
-			return err
+		if !wrote[documentRelsPart] && len(parts) > 0 {
+			if err := writePart(zw, documentRelsPart, relsXML); err != nil {
+				return err
+			}
 		}
-		defer zr.Close()
-		wrote := false
-		for _, f := range zr.File {
-			if f.Name == documentPart {
-				if err := writePart(zw, documentPart, []byte(document)); err != nil {
+		for _, p := range parts {
+			if !have[p.Name] {
+				if err := writePart(zw, p.Name, extra[p.Name]); err != nil {
 					return err
 				}
-				wrote = true
-				continue
-			}
-			// Copy the compressed bytes as they are.
-			if err := zw.Copy(f); err != nil {
-				return err
-			}
-		}
-		if !wrote {
-			if err := writePart(zw, documentPart, []byte(document)); err != nil {
-				return err
 			}
 		}
 		return zw.Close()
 	})
+}
+
+// addContentType registers a part's content type in [Content_Types].xml
+// (an Override for known XML parts, a Default for a new picture extension).
+func addContentType(types []byte, name string) []byte {
+	s := string(types)
+	if ct, ok := partContentTypes[name]; ok {
+		if strings.Contains(s, `PartName="/`+name+`"`) {
+			return types
+		}
+		return []byte(strings.Replace(s, "</Types>", `<Override PartName="/`+name+`" ContentType="`+ct+`"/></Types>`, 1))
+	}
+	ext := strings.ToLower(strings.TrimPrefix(path.Ext(name), "."))
+	ct, ok := extContentTypes[ext]
+	if !ok || regexp.MustCompile(`(?i)Extension="`+regexp.QuoteMeta(ext)+`"`).MatchString(s) {
+		return types
+	}
+	return []byte(strings.Replace(s, "</Types>", `<Default Extension="`+ext+`" ContentType="`+ct+`"/></Types>`, 1))
+}
+
+// addRelationship adds a relationship from document.xml unless its id is taken.
+func addRelationship(rels []byte, id, typ, target string) []byte {
+	s := string(rels)
+	if strings.Contains(s, `Id="`+id+`"`) {
+		return rels
+	}
+	var b bytes.Buffer
+	b.WriteString(`<Relationship Id="`)
+	xml.EscapeText(&b, []byte(id))
+	b.WriteString(`" Type="` + relTypeBase)
+	xml.EscapeText(&b, []byte(typ))
+	b.WriteString(`" Target="`)
+	xml.EscapeText(&b, []byte(target))
+	b.WriteString(`"/>`)
+	if i := strings.LastIndex(s, "</Relationships>"); i >= 0 {
+		return []byte(s[:i] + b.String() + s[i:])
+	}
+	return []byte(strings.Replace(s, "/>", ">"+b.String()+"</Relationships>", 1)) // <Relationships .../>
 }
 
 func writePart(zw *zip.Writer, name string, body []byte) error {
