@@ -19,6 +19,9 @@
   import Sun from '@lucide/svelte/icons/sun';
   import Moon from '@lucide/svelte/icons/moon';
   import Monitor from '@lucide/svelte/icons/monitor';
+  import Languages from '@lucide/svelte/icons/languages';
+  import { LANGUAGES, t, type Lang } from '../core/i18n';
+  import { chooseLanguage, systemLanguage } from '../core/language';
   import { formatShortcut } from '../core/keys';
   import { settings } from '../core/settings.svelte';
   import { theme } from '../core/theme.svelte';
@@ -27,18 +30,18 @@
   type Step = { title: string; text: string; icons: Component<any>[] };
   const steps: Step[] = [
     {
-      title: 'Open almost anything',
-      text: 'Documents, spreadsheets, PDFs, images, video, audio, 3D models, data and archives — each in a view made for it, all in one window.',
+      title: t('Open almost anything'),
+      text: t('Documents, spreadsheets, PDFs, images, video, audio, 3D models, data and archives — each in a view made for it, all in one window.'),
       icons: [FileText, ImageIcon, Film, Table, Box, FileArchive],
     },
     {
-      title: 'Edit it right here',
-      text: 'Fix a typo, crop a photo, sign a PDF, trim a clip — then save. Every save keeps the version before it, so nothing is ever lost.',
+      title: t('Edit it right here'),
+      text: t('Fix a typo, crop a photo, sign a PDF, trim a clip — then save. Every save keeps the version before it, so nothing is ever lost.'),
       icons: [Pencil, History, Undo2],
     },
     {
-      title: 'Free, open and offline',
-      text: 'Open source and free, built with AI. No account, no cloud, no tracking: your files stay on this computer, and the app works without the internet.',
+      title: t('Free, open and offline'),
+      text: t('Open source and free, built with AI. No account, no cloud, no tracking: your files stay on this computer, and the app works without the internet.'),
       icons: [ShieldCheck, WifiOff, HardDrive],
     },
   ];
@@ -66,13 +69,14 @@
   }
 
   const themes = [
-    { id: 'system', label: 'Like my computer', icon: Monitor },
-    { id: 'light', label: 'Light', icon: Sun },
-    { id: 'dark', label: 'Dark', icon: Moon },
+    { id: 'system', label: t('Like my computer'), icon: Monitor },
+    { id: 'light', label: t('Light', {}, 'theme'), icon: Sun },
+    { id: 'dark', label: t('Dark', {}, 'theme'), icon: Moon },
   ] as const;
+  const nameOf = (l: Lang) => LANGUAGES.find((x) => x.id === l)!.name;
 </script>
 
-<div class="firstrun" role="dialog" aria-modal="true" aria-label="Welcome" tabindex="-1" bind:this={el} onkeydown={key}>
+<div class="firstrun" role="dialog" aria-modal="true" aria-label={t('Welcome')} tabindex="-1" bind:this={el} onkeydown={key}>
   <div class="card">
     {#key step}
       <div class="body">
@@ -83,14 +87,23 @@
               <span class="ic" style:--i={i}><Icon icon={ic} size={20} /></span>
             {/each}
           </div>
-          {#if step === 0}<p class="hello">Welcome to Monoform</p>{/if}
+          {#if step === 0}
+            <label class="lang" title={t('Language of the app — you can change it later in Settings')}>
+              <Icon icon={Languages} size={14} />
+              <select value={settings.value.language ?? ''} aria-label={t('Language')} onchange={(e) => void chooseLanguage((e.currentTarget as HTMLSelectElement).value as Lang | '')}>
+                <option value="">{t('Like my computer ({language})', { language: nameOf(systemLanguage()) })}</option>
+                {#each LANGUAGES as l (l.id)}<option value={l.id}>{l.name}</option>{/each}
+              </select>
+            </label>
+            <p class="hello">{t('Welcome to Monoform')}</p>
+          {/if}
           <h1>{s.title}</h1>
           <p class="text">{s.text}</p>
         {:else}
-          <p class="hello">One last thing</p>
-          <h1>Make it yours</h1>
-          <p class="text">Pick a look — you can change it any time in Settings.</p>
-          <div class="themes" role="radiogroup" aria-label="Theme">
+          <p class="hello">{t('One last thing')}</p>
+          <h1>{t('Make it yours')}</h1>
+          <p class="text">{t('Pick a look — you can change it any time in Settings.')}</p>
+          <div class="themes" role="radiogroup" aria-label={t('Theme')}>
             {#each themes as t (t.id)}
               <button class="theme" class:on={settings.value.theme === t.id} role="radio" aria-checked={settings.value.theme === t.id} onclick={() => theme.set(t.id)}>
                 <Icon icon={t.icon} size={18} />
@@ -98,7 +111,7 @@
               </button>
             {/each}
           </div>
-          <p class="tip">Tip: <span class="kbd">{formatShortcut('Mod+K')}</span> finds any file, text or command.</p>
+          <p class="tip">{t('Tip:')} <span class="kbd">{formatShortcut('Mod+K')}</span> {t('finds any file, text or command.')}</p>
         {/if}
       </div>
     {/key}
@@ -108,11 +121,11 @@
       </div>
       <span class="spacer"></span>
       {#if step < last}
-        <button class="btn ghost" onclick={done}>Skip</button>
+        <button class="btn ghost" onclick={done}>{t('Skip')}</button>
       {:else}
-        <button class="btn ghost" onclick={() => step--}>Back</button>
+        <button class="btn ghost" onclick={() => step--}>{t('Back')}</button>
       {/if}
-      <button class="btn primary go" onclick={() => (step < last ? step++ : done())}>{step < last ? 'Next' : 'Get started'}</button>
+      <button class="btn primary go" onclick={() => (step < last ? step++ : done())}>{step < last ? t('Next') : t('Get started')}</button>
     </div>
   </div>
 </div>
@@ -129,6 +142,27 @@
     backdrop-filter: blur(6px);
     outline: none;
     animation: fade 0.2s var(--ease);
+  }
+  .lang {
+    display: flex;
+    width: fit-content;
+    align-items: center;
+    gap: 6px;
+    margin: 0 auto 14px;
+    padding: 2px 4px 2px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border-soft);
+    color: var(--text-muted);
+    font-size: var(--fs-small);
+  }
+  .lang select {
+    border: none;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    padding: 4px 2px;
+    cursor: pointer;
+    outline: none;
   }
   .card {
     width: min(460px, 100%);

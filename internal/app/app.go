@@ -22,6 +22,7 @@ import (
 	"github.com/caffeine-runtime/monoform/internal/fs"
 	"github.com/caffeine-runtime/monoform/internal/history"
 	"github.com/caffeine-runtime/monoform/internal/jobs"
+	"github.com/caffeine-runtime/monoform/internal/locale"
 	"github.com/caffeine-runtime/monoform/internal/notes"
 	"github.com/caffeine-runtime/monoform/internal/office"
 	"github.com/caffeine-runtime/monoform/internal/search"
@@ -39,6 +40,7 @@ type App struct {
 	Jobs     *jobs.Manager
 	watcher  *fs.Watcher
 	books    *office.Books
+	langs    func() []string // the system's languages, looked up once while the window starts
 	notes    *notes.Scanner
 	// History keeps earlier versions of saved files (nil if unavailable).
 	History *history.Store
@@ -59,7 +61,8 @@ type App struct {
 // New creates the app. start is the process start time used for the
 // startup-time measurement.
 func New(start time.Time, launchFiles []string, launchMode string) *App {
-	a := &App{start: start, launchFiles: launchFiles, launchMode: launchMode, books: office.NewBooks(), notes: notes.NewScanner()}
+	a := &App{start: start, launchFiles: launchFiles, launchMode: launchMode, books: office.NewBooks(), notes: notes.NewScanner(), langs: sync.OnceValue(locale.Languages)}
+	go a.langs()
 	a.Server = server.New(server.NewToken())
 	server.RecordPages = os.Getenv("MF_TEST") != ""
 	path, err := settings.DefaultPath()
@@ -167,6 +170,8 @@ type BootInfo struct {
 	PathSep     string            `json:"pathSep"`
 	TestScript  string            `json:"testScript"`
 	TestArg     string            `json:"testArg"`
+	// SystemLanguages are the system's preferred languages ("pl-PL", …), for "like my computer".
+	SystemLanguages []string `json:"systemLanguages"`
 }
 
 // Boot returns startup info. Called once by the frontend before first paint.
@@ -179,16 +184,17 @@ func (a *App) Boot() BootInfo {
 	a.mu.Unlock()
 	a.placeWindow()
 	return BootInfo{
-		Token:       a.Server.Token(),
-		Settings:    a.Settings.Get(),
-		Platform:    runtime.GOOS,
-		Version:     Version,
-		LaunchFiles: files,
-		LaunchMode:  a.launchMode,
-		Home:        home,
-		PathSep:     string(filepath.Separator),
-		TestScript:  os.Getenv("MF_TEST"),
-		TestArg:     os.Getenv("MF_TEST_ARG"),
+		Token:           a.Server.Token(),
+		Settings:        a.Settings.Get(),
+		Platform:        runtime.GOOS,
+		Version:         Version,
+		LaunchFiles:     files,
+		LaunchMode:      a.launchMode,
+		Home:            home,
+		PathSep:         string(filepath.Separator),
+		TestScript:      os.Getenv("MF_TEST"),
+		TestArg:         os.Getenv("MF_TEST_ARG"),
+		SystemLanguages: a.langs(),
 	}
 }
 

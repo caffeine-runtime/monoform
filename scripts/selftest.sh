@@ -4,6 +4,8 @@
 # Needs Xvfb + a window manager (openbox) when no display is available.
 # Exit code 0 = PASS.
 set -euo pipefail
+# The interface in English unless a test asks otherwise (labels are looked up by their English text).
+export MF_SYSTEM_LANG=${MF_SYSTEM_LANG:-en}
 cd "$(dirname "$0")/.."
 SCENARIO=$1
 ARG=${2:-}

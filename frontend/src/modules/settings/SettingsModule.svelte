@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { LANGUAGES, t, type Lang } from '../../core/i18n';
+  import { chooseLanguage, systemLanguage } from '../../core/language';
   import { UI_SCALES } from '../../core/appCommands';
   // Settings: appearance, files, recents (with per-item removal and
   // clearing), search by meaning, and where the app keeps its data.
@@ -65,6 +67,13 @@
 
   <section class="card">
     <h3>Appearance</h3>
+    <div class="row">
+      <label class="lbl" for="lang">{t('Language')}</label>
+      <select id="lang" class="input" value={s.language ?? ''} onchange={(e) => void chooseLanguage((e.currentTarget as HTMLSelectElement).value as Lang | '')}>
+        <option value="">{t('Like my computer ({language})', { language: LANGUAGES.find((l) => l.id === systemLanguage())!.name })}</option>
+        {#each LANGUAGES as l (l.id)}<option value={l.id}>{l.name}</option>{/each}
+      </select>
+    </div>
     <div class="row">
       <span class="lbl">Theme</span>
       <div class="seg" role="radiogroup" aria-label="Theme">
