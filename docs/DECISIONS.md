@@ -473,6 +473,16 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   recorded folder and choices, including the elevated "for everyone" case, then starts it) so the registry,
   uninstaller and shortcuts stay right. Not code-signed yet, so updates carry the same first-launch warnings as
   downloads. Rejected: a third-party updater framework (licences, cgo) and a custom update server.
+- **File dialogs never start in the working directory**: Windows starts the app from Explorer, a file
+  association or the installer with `C:\Windows\System32` as its working directory, and a dialog without a
+  folder opens there. Save dialogs already chose one (`saveDir`); Open-file and Open-folder dialogs now start in
+  the folder of the last dialog answer while it exists, else Documents (`openDir`).
+- **Moving a layer: only the active layer listens** (image editor): Konva hits an image as its whole rectangle,
+  so any layer above — even an empty, transparent one — caught the pointer and the active layer's drag never
+  started. With the move tool on, the other layers stop listening (`updateDraggable`, also run on every commit);
+  other tools see all layers again.
+- **The start page has no tool buttons**: a row of chips (hash, screenshot, compare, history, all commands)
+  looked out of place next to Open and Create; those tools are in the ☰ menu and Ctrl+K.
 - **One right-click menu for all editors** (`core/contextMenu.ts`): a `contextmenu` listener on the document —
   after the views' own handlers (file tree, tabs, grids keep theirs by preventing the event), before the Wails
   runtime's listener on the window, which drops right-clicks outside text fields when the default menu is off.

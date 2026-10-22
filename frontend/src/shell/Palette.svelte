@@ -279,7 +279,10 @@
     overflow: hidden;
     border: 1px solid var(--border-soft);
   }
+  /* The search box keeps its height; only the list below scrolls (a long
+     list — the recent files when it opens — used to squeeze it). */
   .q {
+    flex: none;
     height: calc(48px * var(--ui-scale));
     border: none;
     outline: none;
@@ -289,6 +292,8 @@
     border-bottom: 1px solid var(--border-soft);
   }
   .list {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding: 6px;
   }

@@ -537,6 +537,12 @@
   instances, named after their products), colours on parts and faces, drawn edges, read in the load worker with
   progress. Own reader and tessellator (no permissive STEP kernel exists). Checked on the as1 test assembly
   (AP203 and AP214). Unit tests (parser, band and pole faces, the fixture assembly), self-test `m57`.
+- **Fixes after 1.1.1**: the Ctrl+K palette's search box was squeezed (cut off at the top) while the list was
+  long, as when it opens on the recent files; Open-file and Open-folder dialogs (Compare, Check a hash, Open…)
+  started in `C:\Windows\System32` on Windows — they now start where the last dialog was answered, else in
+  Documents; the start page drops its row of tool buttons (they are in the ☰ menu and Ctrl+K); in the image
+  editor the move tool couldn't drag a (pasted) layer with another layer above it — even a transparent one
+  caught the drag. Go test `TestOpenDir`, self-tests `m59`, `m60`.
 - **Right-click menus in every editor** (the webview's own menu is off in the app, and the Wails runtime swallowed
   right-clicks outside text fields): in any text field, rich text or code editor Undo, Redo, Cut, Copy, Paste
   (rich text and pictures where the editor takes them; Paste as plain text in documents), Delete, Select all;

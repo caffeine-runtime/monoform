@@ -1,9 +1,9 @@
 <script lang="ts">
-  // The start page: drop or open something, make something new, a few
-  // handy tools, and the files you had open recently.
+  // The start page: drop or open something, make something new, and the
+  // files you had open recently. (Tools live in the ☰ menu and Ctrl+K.)
   import type { Component } from 'svelte';
   import Icon from './Icon.svelte';
-  import { ArrowDownToLine, Braces, Camera, Command, Diff, FileSpreadsheet, FileText, FolderOpen, Globe, Hash, History, ImageIcon, NotebookPen, PenTool, Table, Type, X } from '../core/icons';
+  import { ArrowDownToLine, Braces, FileSpreadsheet, FileText, FolderOpen, Globe, ImageIcon, NotebookPen, PenTool, Table, Type, X } from '../core/icons';
   import { commands } from '../core/commands';
   import { iconFor, kindOf } from '../core/fileicons';
   import { formatShortcut } from '../core/keys';
@@ -28,13 +28,6 @@
   };
   const kinds = NEW_KINDS.filter((k) => KIND[k.kind]);
 
-  const tools = [
-    { id: 'tools.hash', label: t('Check a hash'), icon: Hash },
-    { id: 'screenshot.region', label: t('Screenshot'), icon: Camera },
-    { id: 'file.compare', label: t('Compare files'), icon: Diff },
-    { id: 'history.all', label: t('File history'), icon: History },
-    { id: 'app.palette', label: t('All commands'), icon: Command },
-  ];
   const tip = (label: string, id: string) => {
     const sc = commands.shortcutOf(id);
     return sc ? `${label} (${formatShortcut(sc)})` : label;
@@ -62,13 +55,6 @@
           <span class="badge"><Icon icon={KIND[k.kind]} size={17} /></span>
           <span class="kn">{k.label}</span>
         </button>
-      {/each}
-    </div>
-
-    <h3>{t('Tools')}</h3>
-    <div class="tools">
-      {#each tools as tool (tool.id)}
-        <button class="tool" title={tip(tool.label, tool.id)} onclick={() => commands.execute(tool.id)}><Icon icon={tool.icon} size={15} /> {tool.label}</button>
       {/each}
     </div>
 
@@ -204,31 +190,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-  /* Tools: light chips, shortcuts in the tooltip. */
-  .tools {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .tool {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    height: calc(32px * var(--ui-scale));
-    padding: 0 14px;
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--text);
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .tool :global(svg) {
-    color: var(--text-muted);
-  }
-  .tool:hover {
-    background: var(--bg-hover);
   }
   .recents {
     display: flex;
