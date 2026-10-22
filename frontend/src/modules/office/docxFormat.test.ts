@@ -85,4 +85,24 @@ describe('Word formatting', () => {
     expect(styles).toContain('w:styleId="Title"');
     expect(styles.match(/w:styleId="Heading1"/g)?.length).toBe(1);
   });
+
+  it('keeps a table grid it did not touch, writes a resized one with cell widths and row heights', () => {
+    const tbl = (h = '') => `<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="5000" w:type="pct"/></w:tblPr><w:tblGrid><w:gridCol w:w="2268"/><w:gridCol w:w="6758"/></w:tblGrid><w:tr>${h}<w:tc><w:tcPr><w:tcW w:w="2268" w:type="dxa"/></w:tcPr><w:p><w:r><w:t>a</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w="6758" w:type="dxa"/></w:tcPr><w:p><w:r><w:t>b</w:t></w:r></w:p></w:tc></w:tr></w:tbl>`;
+    let { model, page } = open(doc(tbl()));
+    const out = model.serialize(page);
+    expect(out).toContain('<w:tblGrid><w:gridCol w:w="2268"/><w:gridCol w:w="6758"/></w:tblGrid>');
+    expect(out).toContain('<w:tblW w:w="5000" w:type="pct"/>');
+    ({ model, page } = open(doc(tbl('<w:trPr><w:trHeight w:val="600" w:hRule="atLeast"/></w:trPr>'))));
+    const cols = page.querySelectorAll<HTMLElement>('col');
+    expect(Array.from(cols).map((c) => c.style.width)).toEqual(['151px', '451px']);
+    expect(page.querySelector('tr')!.style.height).toBe('40px');
+    cols[0].style.width = '200px';
+    cols[1].style.width = '402px';
+    page.querySelector('tr')!.style.height = '60px';
+    const r = model.serialize(page);
+    expect(r).toContain('<w:tblGrid><w:gridCol w:w="3000"/><w:gridCol w:w="6030"/></w:tblGrid>');
+    expect(r).toContain('<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="9030" w:type="dxa"/></w:tblPr>');
+    expect(r).toContain('<w:tcPr><w:tcW w:w="3000" w:type="dxa"/></w:tcPr><w:p>');
+    expect(r).toContain('<w:trPr><w:trHeight w:val="900" w:hRule="atLeast"/></w:trPr>');
+  });
 });

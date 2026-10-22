@@ -93,7 +93,7 @@ jobs:
           M0=$RUNNER_TEMP/m0 && mkdir -p "$M0" && printf a >"$M0/a.txt" && printf b >"$M0/b.md" && printf c >"$M0/c.txt"
           scripts/selftest.sh m0-setup "$M0" "$RUNNER_TEMP/m0.json"
           scripts/selftest.sh m0-restore "$M0" "$RUNNER_TEMP/m0.json"
-          for s in m1 m2 m3 m4 m4b m5 m6 m8 m10 m11 m12 m13 m14 m15 m16 m18 m19 m20 m21 m22 m23 m24 m25 m26 m27 m28 m29 m30 m31 m32 m33 m34 m35 m36 m37 m38 m39 m40 m42 m44 m45 m46 m48 m50 m51 m52 m53 m54; do scripts/selftest.sh "$s" "$FX"; done
+          for s in m1 m2 m3 m4 m4b m5 m6 m8 m10 m11 m12 m13 m14 m15 m16 m18 m19 m20 m21 m22 m23 m24 m25 m26 m27 m28 m29 m30 m31 m32 m33 m34 m35 m36 m37 m38 m39 m40 m42 m44 m45 m46 m48 m50 m51 m52 m53 m54 m55; do scripts/selftest.sh "$s" "$FX"; done
           # The interface in Polish and Spanish, picked from the system language.
           MF_SYSTEM_LANG=pl-PL scripts/selftest.sh m47 "$FX"
           MF_SYSTEM_LANG=es-ES scripts/selftest.sh m47 "$FX"

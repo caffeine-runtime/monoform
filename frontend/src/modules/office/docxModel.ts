@@ -14,6 +14,20 @@ export const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const XML_NS = 'http://www.w3.org/XML/1998/namespace';
 const R_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
 
+/** A part (or link) the editor adds to the package on save: see office.Part in Go. */
+export interface NewPart {
+  name: string;
+  data: string; // base64
+  relId: string;
+  relType: string;
+  external: boolean;
+  target: string;
+}
+
+const WP = 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing';
+const A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
+const PIC = 'http://schemas.openxmlformats.org/drawingml/2006/picture';
+
 export interface DocContext {
   styles: Record<string, string>; // styleId -> lower-case name
   rels: { id: string; type: string; target: string; external: boolean }[];
@@ -45,6 +59,9 @@ export class DocModel {
   private stylesDoc: XMLDocument | null = null;
   /** True once the editor added a paragraph style (styles.xml must be written). */
   stylesChanged = false;
+  /** Pictures inserted in the editor (written if still in the document) and links made on save. */
+  private images: NewPart[] = [];
+  private links = new Map<string, NewPart>();
 
   constructor(
     documentXml: string,
@@ -142,7 +159,10 @@ export class DocModel {
         a.dataset.hl = this.ref(c);
         const rid = c.getAttributeNS(R_NS, 'id');
         const rel = this.ctx.rels.find((r) => r.id === rid);
-        if (rel?.external) a.title = rel.target;
+        if (rel?.external) {
+          a.title = rel.target;
+          a.dataset.href = rel.target;
+        } else if (c.getAttributeNS(W, 'anchor')) a.dataset.href = `#${c.getAttributeNS(W, 'anchor')}`;
         for (const r of Array.from(c.children)) if (r.localName === 'r') this.renderRun(doc, a, r);
         el.append(a);
       } else if (readOnly) {
@@ -292,7 +312,7 @@ export class DocModel {
   }
 
   /** An uneditable inline element standing for one run child. */
-  private atom(doc: Document, r: Element, c: Element, label?: string): HTMLElement {
+  atom(doc: Document, r: Element, c: Element, label?: string): HTMLElement {
     const single = r.cloneNode(false) as Element;
     const rPr = child(r, 'rPr');
     if (rPr) single.append(rPr.cloneNode(true));
@@ -331,10 +351,24 @@ export class DocModel {
   private renderTable(doc: Document, tbl: Element): HTMLElement {
     const t = doc.createElement('table');
     t.dataset.tbl = this.ref(tbl);
+    // Column widths from the grid (twips), as <col>s the editor can resize.
+    const grid = child(tbl, 'tblGrid');
+    const tws = grid ? Array.from(grid.children).map((g) => Number(g.getAttributeNS(W, 'w')) || 0) : [];
+    if (tws.length && tws.every((w) => w > 0)) {
+      t.append(colgroup(doc, tws));
+      fitTable(t);
+    }
     for (const tr of Array.from(tbl.children).filter((c) => c.localName === 'tr')) {
       const row = doc.createElement('tr');
+      row.dataset.tr = this.ref(tr);
+      const h = Number(child(child(tr, 'trPr'), 'trHeight')?.getAttributeNS(W, 'val') ?? '');
+      if (h > 0) {
+        row.style.height = `${twipsToPx(String(h))}px`;
+        row.dataset.h = row.style.height;
+      }
       for (const tc of Array.from(tr.children).filter((c) => c.localName === 'tc')) {
         const cell = doc.createElement('td');
+        cell.dataset.tc = this.ref(tc);
         const span = child(child(tc, 'tcPr'), 'gridSpan')?.getAttributeNS(W, 'val');
         if (span) cell.colSpan = Number(span);
         for (const b of Array.from(tc.children)) {
@@ -384,26 +418,168 @@ export class DocModel {
     return [this.serializeParagraph(el, used)];
   }
 
+  /**
+   * A table from its rows and cells as edited: rows and cells keep their
+   * original properties (trPr / tcPr), new ones copy them from the cell they
+   * were added next to (data-tc-from), and the grid follows the column count.
+   */
   private serializeTable(t: HTMLTableElement, used: Set<string>): Element {
+    const xml = this.xml;
     const orig = this.node(t.dataset.tbl);
-    const tbl = (orig ? orig.cloneNode(true) : this.xml.createElementNS(W, 'w:tbl')) as Element;
-    const xmlRows = Array.from(tbl.children).filter((c) => c.localName === 'tr');
-    const htmlRows = Array.from(t.rows);
-    htmlRows.forEach((hr, ri) => {
-      const xr = xmlRows[ri];
-      if (!xr) return;
-      const xmlCells = Array.from(xr.children).filter((c) => c.localName === 'tc');
-      Array.from(hr.cells).forEach((hc, ci) => {
-        const xc = xmlCells[ci];
-        if (!xc) return;
-        for (const n of Array.from(xc.children)) if (n.localName !== 'tcPr') xc.removeChild(n);
+    const tbl = xml.createElementNS(W, 'w:tbl');
+    const props = orig ? Array.from(orig.children).filter((c) => c.localName !== 'tr') : [];
+    const cols = Math.max(1, ...Array.from(t.rows).map((r) => Array.from(r.cells).reduce((n, c) => n + (c.colSpan || 1), 0)));
+    const grid = props.find((c) => c.localName === 'tblGrid');
+    const widths = grid ? Array.from(grid.children).map((g) => Number(g.getAttributeNS(W, 'w')) || 0) : [];
+    if (!orig) {
+      tbl.append(newTablePr(xml));
+    }
+    for (const pr of props) {
+      if (pr.localName === 'tblGrid') continue;
+      tbl.append(pr.cloneNode(true));
+    }
+    // The grid: the editor's column widths (resized ones in twips again), else
+    // the original when the columns are the same, else even columns over the same width.
+    const total = widths.reduce((a, b) => a + b, 0) || 9026;
+    const colEls = Array.from(t.querySelectorAll<HTMLElement>(':scope > colgroup > col'));
+    const resized = colEls.length === cols && colEls.some((c) => c.style.width !== c.dataset.px);
+    const gridW = colEls.length === cols ? colEls.map((c) => (c.style.width === c.dataset.px && c.dataset.tw ? Number(c.dataset.tw) : Math.round((parseFloat(c.style.width) || 0) * 15))) : widths.length === cols ? widths : Array.from({ length: cols }, () => Math.floor(total / cols));
+    const g = xml.createElementNS(W, 'w:tblGrid');
+    for (let i = 0; i < cols; i++) {
+      const c = xml.createElementNS(W, 'w:gridCol');
+      c.setAttributeNS(W, 'w:w', String(gridW[i]));
+      g.append(c);
+    }
+    if (resized) {
+      // A resized table is as wide as its columns.
+      const tblPr = child(tbl, 'tblPr');
+      if (tblPr) {
+        const old = child(tblPr, 'tblW');
+        if (old) tblPr.removeChild(old);
+        const w = xml.createElementNS(W, 'w:tblW');
+        w.setAttributeNS(W, 'w:w', String(gridW.reduce((a, b) => a + b, 0)));
+        w.setAttributeNS(W, 'w:type', 'dxa');
+        const after = Array.from(tblPr.children).find((c) => !['tblStyle', 'tblpPr', 'tblOverlap', 'bidiVisual', 'tblStyleRowBandSize', 'tblStyleColBandSize'].includes(c.localName)) ?? null;
+        tblPr.insertBefore(w, after);
+      }
+    }
+    const prIdx = Array.from(tbl.children).findIndex((c) => c.localName === 'tblPr');
+    tbl.insertBefore(g, tbl.children[prIdx + 1] ?? null);
+    for (const hr of Array.from(t.rows)) {
+      const or = this.node(hr.dataset.tr) ?? this.node((hr as HTMLElement).dataset.trFrom);
+      const xr = xml.createElementNS(W, 'w:tr');
+      let trPr = child(or, 'trPr')?.cloneNode(true) as Element | undefined;
+      // Only the row's own attributes (ids like w14:paraId must stay unique).
+      if (or && hr.dataset.tr) for (const a of Array.from(or.attributes)) if (a.namespaceURI !== XML_NS) xr.setAttributeNode(a.cloneNode() as Attr);
+      if ((hr.style.height || '') !== (hr.dataset.h || '')) {
+        trPr ??= xml.createElementNS(W, 'w:trPr');
+        const old = child(trPr, 'trHeight');
+        if (old) trPr.removeChild(old);
+        const px = parseFloat(hr.style.height);
+        if (px > 0) {
+          const th = xml.createElementNS(W, 'w:trHeight');
+          th.setAttributeNS(W, 'w:val', String(Math.round(px * 15)));
+          th.setAttributeNS(W, 'w:hRule', 'atLeast');
+          trPr.append(th);
+        }
+      }
+      if (trPr?.children.length) xr.append(trPr);
+      let colAt = 0;
+      for (const hc of Array.from(hr.cells)) {
+        const own = this.node(hc.dataset.tc);
+        const from = own ?? this.node(hc.dataset.tcFrom);
+        const xc = xml.createElementNS(W, 'w:tc');
+        let tcPr = child(from, 'tcPr')?.cloneNode(true) as Element | undefined;
+        if (tcPr && !own) {
+          // A new cell copies borders and shading, not merges.
+          for (const m of ['vMerge', 'gridSpan', 'hMerge']) {
+            const e = child(tcPr, m);
+            if (e) tcPr.removeChild(e);
+          }
+        }
+        if (!tcPr) {
+          tcPr = xml.createElementNS(W, 'w:tcPr');
+          const w = xml.createElementNS(W, 'w:tcW');
+          w.setAttributeNS(W, 'w:w', String(Math.floor(total / cols)));
+          w.setAttributeNS(W, 'w:type', 'dxa');
+          tcPr.append(w);
+        }
+        // Resized: each cell as wide as the columns it spans.
+        const span = hc.colSpan || 1;
+        if (resized) {
+          const old = child(tcPr, 'tcW');
+          if (old) tcPr.removeChild(old);
+          const w = xml.createElementNS(W, 'w:tcW');
+          w.setAttributeNS(W, 'w:w', String(gridW.slice(colAt, colAt + span).reduce((a, b) => a + b, 0)));
+          w.setAttributeNS(W, 'w:type', 'dxa');
+          tcPr.insertBefore(w, tcPr.firstChild);
+        }
+        colAt += span;
+        xc.append(tcPr);
         const blocks = Array.from(hc.children).flatMap((k) => this.serializeBlock(k as HTMLElement, used));
         // A cell must contain at least one paragraph.
-        if (!blocks.some((b) => b.localName === 'p')) blocks.push(this.xml.createElementNS(W, 'w:p'));
+        if (!blocks.some((b) => b.localName === 'p')) blocks.push(xml.createElementNS(W, 'w:p'));
         for (const b of blocks) xc.append(b);
-      });
-    });
+        xr.append(xc);
+      }
+      tbl.append(xr);
+    }
     return tbl;
+  }
+
+  // ---------- inserting ----------
+
+  /** A page break, as an uneditable inline mark (a run with a page-type break). */
+  newPageBreak(doc: Document): HTMLElement {
+    const r = this.xml.createElementNS(W, 'w:r');
+    const br = this.xml.createElementNS(W, 'w:br');
+    br.setAttributeNS(W, 'w:type', 'page');
+    r.append(br);
+    return this.atom(doc, r, br, '⤓ page break');
+  }
+
+  /** A picture (base64 bytes of a PNG/JPEG/GIF…) at a size in pixels, as an inline mark. */
+  newImage(doc: Document, data: string, ext: string, width: number, height: number, src: string): HTMLElement {
+    const taken = new Set([...this.ctx.rels.map((r) => r.id), ...this.images.map((i) => i.relId)]);
+    const names = new Set([...this.ctx.rels.map((r) => r.target), ...this.images.map((i) => i.name)]);
+    let k = 1;
+    while (taken.has(`rIdMfImg${k}`) || names.has(`word/media/mf-image-${k}.${ext}`)) k++;
+    const relId = `rIdMfImg${k}`;
+    this.images.push({ name: `word/media/mf-image-${k}.${ext}`, data, relId, relType: 'image', external: false, target: '' });
+    // Inches → EMU (914400 per inch at 96 px per inch); at most the text width (6.5").
+    const scale = Math.min(1, 624 / Math.max(1, width));
+    const cx = Math.round(width * scale * 9525);
+    const cy = Math.round(height * scale * 9525);
+    const id = 1000 + k;
+    const src2 = `<w:r xmlns:w="${W}" xmlns:wp="${WP}" xmlns:a="${A}" xmlns:pic="${PIC}" xmlns:r="${R_NS}"><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${id}" name="Picture ${k}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="${PIC}"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="mf-image-${k}.${ext}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${relId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
+    const r = this.xml.importNode(new DOMParser().parseFromString(src2, 'application/xml').documentElement, true) as Element;
+    const span = this.atom(doc, r, child(r, 'drawing')!, '');
+    span.textContent = '';
+    const img = doc.createElement('img');
+    img.src = src;
+    img.alt = '';
+    img.style.width = `${Math.round(width * scale)}px`;
+    img.style.maxWidth = '100%';
+    span.append(img);
+    return span;
+  }
+
+  /** The relationship id for a new link to url (one per URL). */
+  private linkRel(url: string): string {
+    const had = this.links.get(url);
+    if (had) return had.relId;
+    const taken = new Set([...this.ctx.rels.map((r) => r.id), ...[...this.links.values()].map((l) => l.relId)]);
+    let k = 1;
+    while (taken.has(`rIdMfLink${k}`)) k++;
+    const part = { name: '', data: '', relId: `rIdMfLink${k}`, relType: 'hyperlink', external: true, target: url };
+    this.links.set(url, part);
+    return part.relId;
+  }
+
+  /** What the last serialize() needs added to the package: pictures still in it, new links. */
+  newParts(documentXml: string): NewPart[] {
+    const used = (p: NewPart) => documentXml.includes(`"${p.relId}"`);
+    return [...this.images.filter(used), ...[...this.links.values()].filter(used)];
   }
 
   private serializeParagraph(el: HTMLElement, used: Set<string>): Element {
@@ -445,10 +621,33 @@ export class DocModel {
       if (link !== currentLink) {
         currentLink = link;
         linkEl = null;
-        if (link !== undefined) {
+        if (link?.startsWith('new:')) {
+          // A link made (or re-pointed) in the editor.
+          const url = link.slice(4);
+          linkEl = xml.createElementNS(W, 'w:hyperlink');
+          if (url.startsWith('#')) linkEl.setAttributeNS(W, 'w:anchor', url.slice(1));
+          else linkEl.setAttributeNS(R_NS, 'r:id', this.linkRel(url));
+          linkEl.setAttributeNS(W, 'w:history', '1');
+          p.append(linkEl);
+        } else if (link !== undefined) {
           const o = this.node(link);
           linkEl = o ? (o.cloneNode(false) as Element) : null;
           if (linkEl) p.append(linkEl);
+        }
+      }
+      // Text of a new link looks like one (Word's hyperlink blue, underlined) unless it has its own colour.
+      if (link?.startsWith('new:') && r.localName === 'r') {
+        let rPr = child(r, 'rPr');
+        if (!rPr) r.insertBefore((rPr = xml.createElementNS(W, 'w:rPr')), r.firstChild);
+        if (!child(rPr, 'color')) {
+          const c = xml.createElementNS(W, 'w:color');
+          c.setAttributeNS(W, 'w:val', '0563C1');
+          insertRPr(rPr, c);
+        }
+        if (!child(rPr, 'u')) {
+          const u = xml.createElementNS(W, 'w:u');
+          u.setAttributeNS(W, 'w:val', 'single');
+          insertRPr(rPr, u);
         }
       }
       (linkEl ?? p).append(r);
@@ -774,7 +973,7 @@ export function collect(el: HTMLElement): Segment[] {
     if (st.verticalAlign === 'super') f.va = 'superscript';
     else if (st.verticalAlign === 'sub') f.va = 'subscript';
     const r = e.dataset.r ?? run;
-    const l = e.dataset.hl ?? link;
+    const l = e.dataset.newHref ? `new:${e.dataset.newHref}` : (e.dataset.hl ?? link);
     for (const c of Array.from(e.childNodes)) walk(c, f, r, l);
   };
   for (const c of Array.from(el.childNodes)) walk(c, { b: false, i: false, u: false, s: false }, undefined, undefined);
@@ -795,6 +994,33 @@ function on(el: Element | null): boolean {
   if (!el) return false;
   const v = el.getAttributeNS(W, 'val');
   return v === null || !['0', 'false', 'off', 'none'].includes(v);
+}
+
+/** <col>s for column widths in twips (data-tw / data-px remember what was shown). */
+export function colgroup(doc: Document, twips: number[]): HTMLElement {
+  const cg = doc.createElement('colgroup');
+  for (const tw of twips) {
+    const c = doc.createElement('col');
+    c.style.width = `${Math.max(8, Math.round(tw / 15))}px`;
+    c.dataset.tw = String(tw);
+    c.dataset.px = c.style.width;
+    cg.append(c);
+  }
+  return cg;
+}
+
+/** A table with <col>s: fixed layout, as wide as its columns. */
+export function fitTable(t: HTMLTableElement | HTMLElement) {
+  const cols = Array.from(t.querySelectorAll<HTMLElement>(':scope > colgroup > col'));
+  if (!cols.length) return;
+  t.style.tableLayout = 'fixed';
+  t.style.width = `${cols.reduce((n, c) => n + (parseFloat(c.style.width) || 0), 0)}px`;
+}
+
+/** Properties of a new table: full width, single borders. */
+function newTablePr(xml: XMLDocument): Element {
+  const src = `<w:tblPr xmlns:w="${W}"><w:tblW w:w="5000" w:type="pct"/><w:tblBorders>${['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map((b) => `<w:${b} w:val="single" w:sz="4" w:space="0" w:color="auto"/>`).join('')}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>`;
+  return xml.importNode(new DOMParser().parseFromString(src, 'application/xml').documentElement, true) as Element;
 }
 
 // pPr children must follow the schema order.
