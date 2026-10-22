@@ -150,7 +150,7 @@
     gap: 6px;
     margin: 0 auto 14px;
     padding: 2px 4px 2px 10px;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     border: 1px solid var(--border-soft);
     color: var(--text-muted);
     font-size: var(--fs-small);

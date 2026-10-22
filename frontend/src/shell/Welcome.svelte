@@ -218,7 +218,7 @@
     height: calc(32px * var(--ui-scale));
     padding: 0 14px;
     border: 1px solid var(--border-soft);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     background: transparent;
     color: var(--text);
     cursor: pointer;
