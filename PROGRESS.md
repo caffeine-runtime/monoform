@@ -527,6 +527,11 @@
     their content types and relationships. The files open in LibreOffice and python-docx as edited. .odt documents
     keep the earlier, simpler toolbar (bold, italic, underline, strikethrough, headings 1–3).
   - Unit tests (docxNumbering, docxFormat, docFindPaste), Go test for added parts, self-tests `m53`–`m55`.
+- **Drawing board (Excalidraw / draw.io) fixes**: the style you pick (colour, fill, line width, dash, corners, fill
+  style, sloppiness) is now what new shapes get, kept across drawings and restarts; the style bar shows while a
+  drawing tool is on, so it can be set before drawing; **Sharp / Round corners** for rectangles, diamonds and
+  connectors (draw.io's rounded style too); the text being edited is no longer drawn under its edit box. Self-test
+  `m56`.
 - **Fix: a CI self-test (`m6`) failed on a fast runner**: the 3 GiB hash finished inside the 2.5 s it watched
   progress for. It now watches while the hash runs and tests Cancel on a fresh run.
 

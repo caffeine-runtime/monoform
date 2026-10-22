@@ -81,7 +81,7 @@ export function parseExcalidraw(text: string): ExcalidrawFile {
 
 export class ExcalidrawBoard implements BoardAdapter {
   readonly tools: Tool[] = ['select', 'rect', 'ellipse', 'diamond', 'arrow', 'line', 'draw', 'text'];
-  readonly styleKeys: (keyof BoardStyle)[] = ['stroke', 'fill', 'width', 'dash', 'fillStyle', 'roughness'];
+  readonly styleKeys: (keyof BoardStyle)[] = ['stroke', 'fill', 'width', 'dash', 'fillStyle', 'roughness', 'edges'];
   doc!: ExcalidrawFile;
   private byId = new Map<string, El>();
   private gen = rough.generator();
@@ -555,6 +555,7 @@ export class ExcalidrawBoard implements BoardAdapter {
       font: fontStack(src.fontFamily ?? 1),
       align: (src.textAlign ?? 'left') as TextEdit['align'],
       color: src.strokeColor ?? '#1e1e1e',
+      hide: t ? [t.id] : [],
     };
   }
 
@@ -779,6 +780,7 @@ export class ExcalidrawBoard implements BoardAdapter {
       dash: el?.strokeStyle ?? 'solid',
       fillStyle: el?.fillStyle ?? 'solid',
       roughness: el?.roughness ?? 1,
+      edges: el?.roundness ? 'round' : 'sharp',
     };
   }
 
@@ -795,6 +797,10 @@ export class ExcalidrawBoard implements BoardAdapter {
           if (s.dash !== undefined) t.strokeStyle = s.dash;
           if (s.fillStyle !== undefined) t.fillStyle = s.fillStyle;
           if (s.roughness !== undefined) t.roughness = s.roughness;
+          // Excalidraw's roundness: proportional (3) for rectangles, adaptive (2) for diamonds and connectors.
+          if (s.edges !== undefined && ['rectangle', 'diamond', 'arrow', 'line', 'iframe', 'embeddable'].includes(t.type)) {
+            t.roundness = s.edges === 'round' ? { type: t.type === 'rectangle' || t.type === 'iframe' || t.type === 'embeddable' ? 3 : 2 } : null;
+          }
         }
         this.touch(t);
       }
