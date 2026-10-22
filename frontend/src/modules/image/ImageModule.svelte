@@ -1370,7 +1370,7 @@
     <button class="btn ghost remove-object" title={t('Remove the selected object and fill the gap with what could be behind it')} onclick={() => void removeObject()}><Icon icon={Eraser2} size={14} /> {t('Remove')}</button>
     <button class="btn ghost" title={t('Delete pixels (Delete)')} onclick={() => editor?.clearSelectionPixels()}><Icon icon={Trash} size={14} /></button>
     <button class="btn ghost" title={t('Fill with colour')} onclick={() => editor?.fillSelection()}><Icon icon={PaintBucket} size={14} /></button>
-    <button class="btn ghost" title={t('Blur the selection: opens Adjust → Blur (Gaussian, motion, zoom, spin, lens, tilt-shift, surface)')} onclick={() => void openAdjust('blur')}><Icon icon={Droplets} size={14} /></button>
+    <button class="btn ghost" title={t('Blur the selection: opens Adjust → Blur (Gaussian, motion, zoom, spin, lens, tilt-shift, surface, frosted glass)')} onclick={() => void openAdjust('blur')}><Icon icon={Droplets} size={14} /></button>
     <button class="btn ghost" title={t('Pixelate the selection: opens Adjust → Pixelate, with the block size')} onclick={() => void openAdjust('pixelate')}><Icon icon={Grid} size={14} /></button>
     <button class="btn ghost" title={t('Crop to selection')} onclick={() => editor?.cropToSelection()}><Icon icon={Crop} size={14} /></button>
     <button class="btn ghost" title={t('Copy the text in the selection (OCR)')} onclick={openOcr}><Icon icon={ScanText} size={14} /> {t('Text')}</button>

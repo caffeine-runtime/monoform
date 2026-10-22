@@ -152,6 +152,7 @@ export default async function m9(dir: string) {
     ['lens', {}, true],
     ['tiltshift', { blurY: 0 }, true],
     ['surface', {}, false], // keeps hard edges
+    ['frosted', {}, true],
   ];
   for (const [kind, extra, blurs] of kinds) {
     adj.test.setBlurType(kind);
@@ -166,6 +167,16 @@ export default async function m9(dir: string) {
     const edge = changedAt(out, 121, 150) || changedAt(out, 118, 150);
     assertEq(edge, blurs, `${kind} blur ${blurs ? 'softens' : 'keeps'} the disc edge inside the selection`);
     assert(!changedAt(out, 279, 150) && !changedAt(out, 221, 150), `${kind} blur stays inside the selection`);
+    if (kind === 'frosted') {
+      // Grainy, not smooth: across the disc's edge the red channel jumps up and down.
+      let turns = 0;
+      for (let x = 106, d0 = 0; x < 136; x++) {
+        const d = Math.sign(px(out, x + 1, 150)[0] - px(out, x, 150)[0]);
+        if (d && d0 && d !== d0) turns++;
+        if (d) d0 = d;
+      }
+      assert(turns >= 4, `frosted glass is grainy across the edge (${turns} turns)`);
+    }
     log(`${kind} blur longest frame ${Math.round(bj.maxGap)} ms`);
     ed.undo();
     adj.test.reset();

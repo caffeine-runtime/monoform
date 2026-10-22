@@ -318,7 +318,7 @@
   "Remove": "Usuń",
   "Delete pixels (Delete)": "Usuń piksele (Delete)",
   "Fill with colour": "Wypełnij kolorem",
-  "Blur the selection: opens Adjust → Blur (Gaussian, motion, zoom, spin, lens, tilt-shift, surface)": "Rozmyj zaznaczenie: otwiera Dopasuj → Rozmycie (gaussowskie, ruch, zbliżenie, obrót, soczewka, tilt-shift, powierzchnia)",
+  "Blur the selection: opens Adjust → Blur (Gaussian, motion, zoom, spin, lens, tilt-shift, surface, frosted glass)": "Rozmyj zaznaczenie: otwiera Dopasuj → Rozmycie (gaussowskie, ruch, zbliżenie, obrót, soczewka, tilt-shift, powierzchnia, matowe szkło)",
   "Crop to selection": "Przytnij do zaznaczenia",
   "Copy the text in the selection (OCR)": "Kopiuj tekst z zaznaczenia (OCR)",
   "Invert selection ({shortcut})": "Odwróć zaznaczenie ({shortcut})",
@@ -548,7 +548,7 @@
   "Exposure, brightness, contrast, highlights, shadows": "Ekspozycja, jasność, kontrast, światła, cienie",
   "Saturation, vibrance, temperature, tint, hue": "Nasycenie, jaskrawość, temperatura, odcień, barwa",
   "Sharpen, vignette": "Wyostrzanie, winieta",
-  "Gaussian, motion, zoom, spin, lens, tilt-shift, surface": "Gaussa, ruchu, zbliżenia, obrotowe, obiektywu, tilt-shift, powierzchniowe",
+  "Gaussian, motion, zoom, spin, lens, tilt-shift, surface, frosted glass": "Gaussa, ruchu, zbliżenia, obrotowe, obiektywu, tilt-shift, powierzchniowe, matowe szkło",
   "[adjust] Pixelate": "Pikselizacja",
   "Square blocks, to hide faces, plates or text": "Kwadratowe bloki, by ukryć twarze, tablice lub tekst",
   "Black & white, sepia, vintage, noir… with a strength each": "Czarno-białe, sepia, vintage, noir… każdy z własną siłą",
@@ -559,5 +559,7 @@
   "Double-click to turn off": "Kliknij dwukrotnie, aby wyłączyć",
   "Pixelate the selection: opens Adjust → Pixelate, with the block size": "Pikselizuj zaznaczenie: otwiera Dopasuj → Pikselizacja, z rozmiarem bloku",
   "How strongly the area is blurred (shown in it before you apply)": "Jak mocno obszar jest rozmyty (widać to w nim przed zastosowaniem)",
-  "Size of the squares (shown in the area before you apply)": "Rozmiar kwadratów (widać go w obszarze przed zastosowaniem)"
+  "Size of the squares (shown in the area before you apply)": "Rozmiar kwadratów (widać go w obszarze przed zastosowaniem)",
+  "Frosted glass": "Matowe szkło",
+  "Grainy, milky diffusion, as if seen through frosted glass": "Ziarniste, mleczne rozproszenie, jak przez matowe szkło"
 }

@@ -85,7 +85,7 @@ export default async function m65(dir: string) {
   (await button('Blur the selection')).click();
   await waitFor(() => (h.adjust()?.test.page() === 'blur' ? true : null), 'Adjust › Blur opens');
   assertEq(h.adjust().test.get().blur, 8, 'with a radius set');
-  assert(root().querySelectorAll('.adjust .toggles .chip').length === 7, 'its seven kinds');
+  assert(root().querySelectorAll('.adjust .toggles .chip').length === 8, 'its eight kinds');
   h.adjust().test.reset();
   h.adjust().test.open(null);
   ed.deselect();

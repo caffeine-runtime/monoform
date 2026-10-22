@@ -554,6 +554,11 @@
   The selection bar's Blur and Pixelate buttons open their page with a visible strength already set. The **Blur
   region** and **Pixelate region** tools have a strength / block size in the tool bar and show the result inside
   the area before Enter. Self-test `m65`.
+- **After 1.1.3**: **Frosted glass**, an eighth kind of blur (a few taps scattered at random within the radius —
+  grainy, with a slight milky lift). **Settings** could not be scrolled to its last tiles (About…) in some window
+  sizes on Windows: WebView2 squeezed the tiles to the window's height and the extra columns spilled off to the
+  right; the tiles now keep their height and the page scrolls. Self-tests `m9` (frosted glass), `m59` (short
+  settings page).
 - **Image editor: fifteen looks** in Adjust › Effects besides black & white, sepia and invert — Vintage, Faded,
   Warm, Cool, Noir, Teal & orange, Cross-process, Lomo, Posterize, Solarize, Threshold, Emboss, Pencil sketch,
   Film grain, Thermal — one at a time with an Amount slider, previewed live on the GPU and limited to the
