@@ -47,6 +47,8 @@ var assocs = []Assoc{
 	{Ext: "glb", ProgID: "Monoform.glb", Description: "glTF 3D model", Icon: "file-model"},
 	{Ext: "gltf", ProgID: "Monoform.gltf", Description: "glTF 3D model", Icon: "file-model"},
 	{Ext: "stl", ProgID: "Monoform.stl", Description: "STL 3D model", Icon: "file-model"},
+	{Ext: "step", ProgID: "Monoform.step", Description: "STEP CAD model", Icon: "file-model"},
+	{Ext: "stp", ProgID: "Monoform.stp", Description: "STEP CAD model", Icon: "file-model"},
 	{Ext: "obj", ProgID: "Monoform.obj", Description: "OBJ 3D model", Icon: "file-model"},
 	{Ext: "fbx", ProgID: "Monoform.fbx", Description: "FBX 3D model", Icon: "file-model"},
 	{Ext: "3mf", ProgID: "Monoform.3mf", Description: "3MF 3D model", Icon: "file-model"},
