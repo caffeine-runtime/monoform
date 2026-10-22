@@ -82,7 +82,7 @@ describe('Excalidraw board', () => {
   it('styles and reorders', () => {
     const b = new ExcalidrawBoard(FILE, measure);
     b.setStyle(['box'], { stroke: '#e03131', fill: '', dash: 'dashed', fillStyle: 'cross-hatch', roughness: 0 });
-    expect(b.style(['box'])).toEqual({ stroke: '#e03131', fill: '', width: 2, dash: 'dashed', fillStyle: 'cross-hatch', roughness: 0 });
+    expect(b.style(['box'])).toEqual({ stroke: '#e03131', fill: '', width: 2, dash: 'dashed', fillStyle: 'cross-hatch', roughness: 0, edges: 'round' });
     const doc = JSON.parse(b.serialize());
     expect(doc.elements.find((e: { id: string }) => e.id === 'label').strokeColor).toBe('#e03131'); // text follows
     b.reorder(['box'], 'front');
