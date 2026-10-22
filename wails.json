@@ -326,6 +326,20 @@
         "role": "Viewer"
       },
       {
+        "ext": "step",
+        "name": "Monoform.step",
+        "description": "STEP CAD model",
+        "iconName": "file-model",
+        "role": "Viewer"
+      },
+      {
+        "ext": "stp",
+        "name": "Monoform.stp",
+        "description": "STEP CAD model",
+        "iconName": "file-model",
+        "role": "Viewer"
+      },
+      {
         "ext": "obj",
         "name": "Monoform.obj",
         "description": "OBJ 3D model",

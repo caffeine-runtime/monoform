@@ -63,8 +63,8 @@ export interface Packed {
 
 const MAP_SLOTS = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'aoMap', 'alphaMap', 'bumpMap', 'specularMap', 'lightMap', 'displacementMap', 'clearcoatMap', 'clearcoatNormalMap', 'clearcoatRoughnessMap', 'sheenColorMap', 'transmissionMap'];
 const COLOR_KEYS = ['color', 'emissive', 'specular', 'sheenColor', 'attenuationColor'];
-const NUM_KEYS = ['roughness', 'metalness', 'opacity', 'alphaTest', 'side', 'shininess', 'emissiveIntensity', 'envMapIntensity', 'size', 'aoMapIntensity', 'bumpScale', 'displacementScale', 'displacementBias', 'clearcoat', 'clearcoatRoughness', 'transmission', 'thickness', 'ior', 'sheen', 'sheenRoughness', 'lightMapIntensity', 'reflectivity', 'linewidth'];
-const BOOL_KEYS = ['transparent', 'vertexColors', 'flatShading', 'wireframe', 'sizeAttenuation', 'depthWrite', 'depthTest', 'fog'];
+const NUM_KEYS = ['roughness', 'metalness', 'opacity', 'alphaTest', 'side', 'shininess', 'emissiveIntensity', 'envMapIntensity', 'size', 'aoMapIntensity', 'bumpScale', 'displacementScale', 'displacementBias', 'clearcoat', 'clearcoatRoughness', 'transmission', 'thickness', 'ior', 'sheen', 'sheenRoughness', 'lightMapIntensity', 'reflectivity', 'linewidth', 'polygonOffsetFactor', 'polygonOffsetUnits'];
+const BOOL_KEYS = ['transparent', 'vertexColors', 'flatShading', 'wireframe', 'sizeAttenuation', 'depthWrite', 'depthTest', 'fog', 'polygonOffset'];
 
 export function pack(scene: THREE.Object3D, animations: THREE.AnimationClip[]): { packed: Packed; transfer: Transferable[] } {
   const transfer: Transferable[] = [];

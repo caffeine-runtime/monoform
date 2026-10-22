@@ -73,6 +73,7 @@ var byExt = map[string]entry{
 	"usd": {Model, "application/octet-stream"}, "usda": {Model, "text/plain"}, "usdc": {Model, "application/octet-stream"},
 	"wrl": {Model, "model/vrml"}, "vrml": {Model, "model/vrml"}, "amf": {Model, "application/octet-stream"},
 	"pcd": {Model, "application/octet-stream"}, "xyz": {Model, "text/plain"}, "vtk": {Model, "application/octet-stream"}, "vtp": {Model, "application/octet-stream"},
+	"step": {Model, "model/step"}, "stp": {Model, "model/step"},
 	// media
 	"mp3": {Audio, "audio/mpeg"}, "wav": {Audio, "audio/wav"}, "flac": {Audio, "audio/flac"}, "ogg": {Audio, "audio/ogg"},
 	"oga": {Audio, "audio/ogg"}, "opus": {Audio, "audio/ogg"}, "m4a": {Audio, "audio/mp4"}, "aac": {Audio, "audio/aac"},

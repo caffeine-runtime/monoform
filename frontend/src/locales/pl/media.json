@@ -383,5 +383,7 @@
   "audio decoding failed: {error}": "dekodowanie dźwięku nie powiodło się: {error}",
   "this video can’t be decoded here": "tego wideo nie można tu zdekodować",
   "reading the audio: {error}": "odczytywanie dźwięku: {error}",
-  "decoding the audio: {error}": "dekodowanie dźwięku: {error}"
+  "decoding the audio: {error}": "dekodowanie dźwięku: {error}",
+  "no 3D shapes found in this STEP file": "nie znaleziono kształtów 3D w tym pliku STEP",
+  "not a STEP file (no DATA section)": "to nie jest plik STEP (brak sekcji DATA)"
 }
