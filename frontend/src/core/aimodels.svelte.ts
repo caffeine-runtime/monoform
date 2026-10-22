@@ -9,7 +9,23 @@ import { t } from './i18n';
 
 class AIModels {
   packs = $state<AIPack[]>([]);
-  busy = $state<string | null>(null);
+  /** Packs downloading now, with how far each is (0–1); several can download at once. */
+  progress = $state<Record<string, number>>({});
+  private inflight = new Map<string, Promise<boolean>>();
+
+  busy(id: string): boolean {
+    return id in this.progress;
+  }
+
+  /** Supported packs not installed and not downloading yet. */
+  get missing(): AIPack[] {
+    return this.packs.filter((p) => p.supported && !p.installed && !this.busy(p.id));
+  }
+
+  /** What downloading these together transfers (the shared runtime once). */
+  downloadSize(list: AIPack[]): number {
+    return list.reduce((n, p) => n + p.download - p.runtime, 0) + Math.max(0, ...list.map((p) => p.runtime));
+  }
 
   async refresh() {
     try {
@@ -34,6 +50,8 @@ class AIModels {
    * the pack is installed.
    */
   async install(id: string, why = ''): Promise<boolean> {
+    const running = this.inflight.get(id);
+    if (running) return running;
     await this.refresh();
     const p = this.pack(id);
     if (!p) return false;
@@ -52,21 +70,54 @@ class AIModels {
       ],
     });
     if (r.button !== 'ok') return false;
-    this.busy = id;
-    try {
-      const done = await jobs.run(t('Downloading {name}', { name: p.name }), () => api.AIInstall(id));
-      if (done.cancelled) return false;
-      if (done.error) {
-        ui.toast(t('Download failed: {error}', { error: done.error }), 'error');
-        return false;
+    return this.download(p);
+  }
+
+  /** Download every pack not installed yet, at the same time, after one question. */
+  async installAll(): Promise<boolean> {
+    await this.refresh();
+    const todo = this.missing;
+    if (!todo.length) return true;
+    const size = formatBytes(this.downloadSize(todo));
+    const r = await ui.ask({
+      title: t('Download all AI models?'),
+      message: `${todo.map((p) => p.purpose).join(' ')} ${t("It's a one-time download of {size} from huggingface.co and nuget.org; after that everything runs on this computer, offline. You can remove them in Settings › AI models.", { size })}`,
+      details: [...todo.map((p) => t('Model: {model} ({license}) — {source}', { model: p.model, license: p.license, source: p.source.split('@')[0] })), t('Runs with ONNX Runtime (MIT, Microsoft)')],
+      buttons: [
+        { id: 'cancel', label: t('Not now') },
+        { id: 'ok', label: t('Download {size}', { size }), primary: true },
+      ],
+    });
+    if (r.button !== 'ok') return false;
+    const ok = await Promise.all(todo.map((p) => this.download(p)));
+    return ok.every(Boolean);
+  }
+
+  /** One pack's download as a job (others can run alongside). */
+  private download(p: AIPack): Promise<boolean> {
+    const run = (async () => {
+      this.progress = { ...this.progress, [p.id]: 0 };
+      try {
+        const done = await jobs.run(t('Downloading {name}', { name: p.name }), () => api.AIInstall(p.id), {
+          onProgress: (j) => j.total > 0 && this.busy(p.id) && (this.progress = { ...this.progress, [p.id]: j.done / j.total }),
+        });
+        if (done.cancelled) return false;
+        if (done.error) {
+          ui.toast(t('Download failed: {error}', { error: done.error }), 'error');
+          return false;
+        }
+        await this.refresh();
+        const ok = !!this.pack(p.id)?.installed;
+        if (ok) ui.toast(t('{name} is installed.', { name: p.name }), 'success');
+        return ok;
+      } finally {
+        const { [p.id]: _, ...rest } = this.progress;
+        this.progress = rest;
+        this.inflight.delete(p.id);
       }
-      await this.refresh();
-      const ok = !!this.pack(id)?.installed;
-      if (ok) ui.toast(t('{name} is installed.', { name: p.name }), 'success');
-      return ok;
-    } finally {
-      this.busy = null;
-    }
+    })();
+    this.inflight.set(p.id, run);
+    return run;
   }
 
   async remove(id: string) {

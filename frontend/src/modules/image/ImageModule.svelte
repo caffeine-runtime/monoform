@@ -341,7 +341,7 @@
       tab.dirty = s.dirty;
       updateStatus();
     };
-    editor.onPick = (t, x, y, mode) => (t === 'picker' ? pickAt(x, y) : void (t === 'wand' ? wandAt(x, y, mode) : objectAt(x, y, mode)));
+    editor.onPick = (t, x, y, mode) => (t === 'picker' ? pickAt(x, y) : void (t === 'fill' ? fillAt(x, y) : t === 'wand' ? wandAt(x, y, mode) : objectAt(x, y, mode)));
     editor.setTool(tool);
     editor.selectMode = selMode;
     opts = { ...editor.opts };
@@ -428,6 +428,18 @@
       editor.setPixelSelection(selection.fromMask(maskCanvas(r), r.bounds, { canvas: r.edges, scale: r.edgeScale }), mode);
     } catch (e) {
       toastError(e, t('Magic wand failed'));
+    }
+  }
+
+  /** Paint bucket: flood-fill the clicked colour area of the active layer (the wand's fill, off the main thread). */
+  async function fillAt(x: number, y: number) {
+    if (!editor || x < 0 || y < 0 || x >= editor.width || y >= editor.height) return;
+    try {
+      const r = await vision.wand(editor.base, x, y, editor.opts.wandTolerance, editor.opts.wandContiguous);
+      r.edges?.close();
+      editor.bucketFill(maskCanvas(r));
+    } catch (e) {
+      toastError(e, t('Fill failed'));
     }
   }
 
@@ -976,6 +988,7 @@
     imgMode: () => imgMode,
     natural: () => natural,
     wandAt,
+    fillAt,
     objectAt,
     removeBackground,
     selectSubject,
@@ -1013,6 +1026,7 @@
     [
       { id: 'brush', icon: Brush, label: t('Brush'), help: t('Drag to paint on the active layer. Set size, opacity and colour in the toolbar.'), key: 'B' },
       { id: 'eraser', icon: Eraser, label: t('Eraser'), help: t('Drag to erase the active layer to transparency.'), key: 'E' },
+      { id: 'fill', icon: PaintBucket, label: t('Paint bucket'), help: t('Click to fill an area of similar colour on the active layer (only inside the selection, if there is one). Set Tolerance in the toolbar.'), key: 'G' },
     ],
     [
       { id: 'picker', icon: Pipette, label: t('Colour picker'), help: t('Click the image to pick a colour: see it as HEX/RGB/HSL in Colours, copy it or use it to draw.'), key: 'I' },
@@ -1114,6 +1128,10 @@
         <span class="hint">{t('Click an object · Shift-click to add · Alt-click to exclude')}</span>
         <button class="btn ghost" title={t('Select the main subject of the image automatically')} onclick={() => void selectSubject()}><Icon icon={Sparkles} size={14} /> {t('Select subject')}</button>
       {/if}
+      <span class="sep"></span>
+    {:else if tool === 'fill'}
+      <label class="opt" title={t('How different a colour can be and still be filled')}>{t('Tolerance')} <input type="range" min="0" max="128" value={opts.wandTolerance} oninput={(e) => setOpt('wandTolerance', +(e.target as HTMLInputElement).value)} /><span class="v">{opts.wandTolerance}</span></label>
+      <label class="opt chk" title={t('Off: fill every pixel of that colour, not only the connected area')}><input type="checkbox" checked={opts.wandContiguous} onchange={(e) => setOpt('wandContiguous', (e.target as HTMLInputElement).checked)} /> {t('Contiguous')}</label>
       <span class="sep"></span>
     {:else if tool === 'brush' || tool === 'eraser'}
       <label class="opt">{t('Size')} <input type="range" min="1" max="300" value={opts.brushSize || 12} oninput={(e) => setOpt('brushSize', +(e.target as HTMLInputElement).value)} /><span class="v">{opts.brushSize || t('auto')}</span></label>

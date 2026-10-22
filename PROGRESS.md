@@ -489,6 +489,17 @@
   (a distro package) links to the download page. *Skip this version* keeps it quiet until the next one. Go tests
   (`internal/update`: version order, checksums, replacing a running binary/bundle), self-test `m49`, and an
   end-to-end run on Linux (1.0.0 updating itself to 1.0.1 from a local stand-in for GitHub, `m49real`).
+- **Fix: changing the text or interface size left the editor mis-measured** (clicks and the caret landed on the
+  wrong line until a restart): the code editor kept the old line height. It now re-measures when either changes, and
+  the interface-size slider applies when released (it showed the value while dragging but rescaled the menu under
+  the pointer on every step). Self-test `m50`.
+- **Image editor: drag layers** up and down the Layers panel to restack them (a line shows where it lands; undoable);
+  **paint bucket** (G): a click fills the area of similar colour on the active layer with the current colour, only
+  inside the selection when there is one, with Tolerance and Contiguous in the toolbar (the magic wand's fill, off
+  the main thread). Self-test `m51`.
+- **AI models download side by side**, and *Settings › AI models* offers *Download all* (one question, the shared
+  runtime counted once) when more than one is missing; each row shows its percentage. Go test (two installs at once
+  fetch the shared runtime once) and self-test `m43`.
 - **Fix: a CI self-test (`m6`) failed on a fast runner**: the 3 GiB hash finished inside the 2.5 s it watched
   progress for. It now watches while the hash runs and tests Cancel on a fresh run.
 

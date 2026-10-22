@@ -446,5 +446,12 @@
   "Remove object (AI)": "Quitar objeto (IA)",
   "Removes the selected object and fills the gap with what could be behind it. Select it first, e.g. by clicking it with Select object.": "Quita el objeto seleccionado y rellena el hueco con lo que podría haber detrás. Selecciónalo antes, p. ej. haciendo clic en él con Seleccionar objeto.",
   "Needs an optional download: click to get it in Settings › AI models.": "Necesita una descarga opcional: haz clic para obtenerla en Ajustes › Modelos de IA.",
-  "Click the object to remove (Shift-click adds a part), then press Remove object (AI) again.": "Haz clic en el objeto que quieres quitar (Mayús+clic añade una parte) y vuelve a pulsar Quitar objeto (IA)."
+  "Click the object to remove (Shift-click adds a part), then press Remove object (AI) again.": "Haz clic en el objeto que quieres quitar (Mayús+clic añade una parte) y vuelve a pulsar Quitar objeto (IA).",
+  "Drag to move it up or down": "Arrastra para moverla arriba o abajo",
+  "Fill failed": "El relleno falló",
+  "Paint bucket": "Bote de pintura",
+  "Click to fill an area of similar colour on the active layer (only inside the selection, if there is one). Set Tolerance in the toolbar.": "Haz clic para rellenar un área de color similar en la capa activa (solo dentro de la selección, si la hay). Ajusta la Tolerancia en la barra de herramientas.",
+  "How different a colour can be and still be filled": "Cuánto puede diferir un color y seguir rellenándose",
+  "Off: fill every pixel of that colour, not only the connected area": "Desactivado: rellena cada píxel de ese color, no solo el área conectada",
+  "Tool: paint bucket": "Herramienta: bote de pintura"
 }

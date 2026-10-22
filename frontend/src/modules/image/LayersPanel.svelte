@@ -115,6 +115,53 @@
     menu.show({ clientX: r.left, clientY: r.top - 4 }, items);
   }
 
+  // Drag a layer up or down the list to put it elsewhere in the stack.
+  let list = $state<HTMLDivElement>();
+  let drag = $state<{ id: string; from: number; slot: number; moved: boolean } | null>(null);
+  let justDragged = false;
+
+  /** The gap (0 = above the top row … n = below the last) nearest the pointer. */
+  function slotAt(y: number): number {
+    const rows = [...list!.querySelectorAll<HTMLElement>('.layer')];
+    const i = rows.findIndex((r) => {
+      const b = r.getBoundingClientRect();
+      return y < b.top + b.height / 2;
+    });
+    return i < 0 ? rows.length : i;
+  }
+
+  function dragStart(e: PointerEvent, id: string, from: number) {
+    if (e.button !== 0 || (e.target as HTMLElement).closest('button')) return;
+    const y0 = e.clientY;
+    const row = e.currentTarget as HTMLElement;
+    const move = (m: PointerEvent) => {
+      if (!drag) {
+        if (Math.abs(m.clientY - y0) < 4) return;
+        drag = { id, from, slot: from, moved: true };
+        try {
+          row.setPointerCapture(m.pointerId);
+        } catch {
+          /* synthetic events */
+        }
+      }
+      drag.slot = slotAt(m.clientY);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      if (!drag) return;
+      const d = drag;
+      drag = null;
+      justDragged = true;
+      setTimeout(() => (justDragged = false));
+      // Rows are listed top first; the stack is bottom first.
+      const to = d.slot > d.from ? d.slot - 1 : d.slot;
+      if (to !== d.from) editor.placeLayer(d.id, es.layers.length - 1 - to);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  }
+
   async function rename(id: string, name: string) {
     const n = await ui.prompt(t('Layer name'), name, t('Rename'));
     if (n && n !== name) editor.setLayerProps(id, { name: n });
@@ -122,9 +169,20 @@
 </script>
 
 <div class="layers">
-  <div class="list" role="listbox" aria-label={t('Layers')}>
-    {#each top as l (l.id)}
-      <div class="layer" class:active={l.id === es.activeId} role="option" aria-selected={l.id === es.activeId} tabindex="-1" onclick={() => editor.setActive(l.id)} ondblclick={() => rename(l.id, l.name)} onkeydown={() => {}}>
+  <div class="list" role="listbox" aria-label={t('Layers')} bind:this={list} class:dragging={!!drag}>
+    {#each top as l, i (l.id)}
+      <div
+        class="layer"
+        class:active={l.id === es.activeId}
+        class:lifted={drag?.id === l.id}
+        class:drop-before={drag && drag.slot === i && drag.slot !== drag.from && drag.slot !== drag.from + 1}
+        class:drop-after={drag && i === top.length - 1 && drag.slot === top.length && drag.from !== top.length - 1}
+        role="option"
+        aria-selected={l.id === es.activeId}
+        tabindex="-1"
+        title={t('Drag to move it up or down')}
+        onpointerdown={(e) => dragStart(e, l.id, i)}
+        onclick={() => !justDragged && editor.setActive(l.id)} ondblclick={() => rename(l.id, l.name)} onkeydown={() => {}}>
         <button class="icon-btn xs eye" title={l.visible ? t('Hide layer') : t('Show layer')} aria-label={l.visible ? t('Hide {name}', { name: l.name }) : t('Show {name}', { name: l.name })} onclick={(e) => (e.stopPropagation(), editor.setLayerProps(l.id, { visible: !l.visible }))}>
           <Icon icon={l.visible ? Eye : EyeOff} size={13} />
         </button>
@@ -197,6 +255,31 @@
     padding: 4px 6px;
     border-radius: var(--radius);
     cursor: pointer;
+    position: relative;
+    touch-action: none;
+  }
+  .list.dragging .layer {
+    cursor: grabbing;
+  }
+  .layer.lifted {
+    opacity: 0.45;
+  }
+  .layer.drop-before::before,
+  .layer.drop-after::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--accent);
+    pointer-events: none;
+  }
+  .layer.drop-before::before {
+    top: -2px;
+  }
+  .layer.drop-after::after {
+    bottom: -2px;
   }
   .layer:hover {
     background: var(--bg-hover);

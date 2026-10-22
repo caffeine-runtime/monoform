@@ -56,6 +56,9 @@ type AIPack struct {
 	// missing); Disk is the space it takes once installed.
 	Download int64 `json:"download"`
 	Disk     int64 `json:"disk"`
+	// Runtime is the part of Download that is the shared runtime (counted
+	// once when several packs are installed together).
+	Runtime int64 `json:"runtime"`
 }
 
 // AIPacks lists the optional models and whether each is installed.
@@ -66,14 +69,14 @@ func (a *App) AIPacks() []AIPack {
 		info := AIPack{
 			ID: p.ID, Name: p.Name, Purpose: p.Purpose, Model: p.Model, License: p.License, Source: p.Source,
 			Installed: e.Store.Installed(p), Supported: ai.Supported(),
-			Download: e.Store.DownloadBytes(p), Disk: p.DiskBytes(),
+			Download: e.Store.DownloadBytes(p), Disk: p.DiskBytes(), Runtime: e.Store.RuntimeDownloadBytes(),
 		}
 		if !e.Store.RuntimeInstalled() {
 			info.Disk += ai.RuntimeDiskBytes()
 		}
 		if aiFake() {
 			_, err := os.Stat(fakeInstalled(p))
-			info.Installed, info.Supported = err == nil, true
+			info.Installed, info.Supported, info.Runtime = err == nil, true, 0
 			if info.Installed {
 				info.Download = 0
 			}

@@ -159,11 +159,19 @@ func (s Store) DownloadBytes(p Pack) int64 {
 			n += f.Transfer()
 		}
 	}
-	if r, ok := platformRuntime(); ok && !s.RuntimeInstalled() {
-		n += r.Transfer()
-		for _, f := range runtimeNotices {
-			n += f.Transfer()
-		}
+	return n + s.RuntimeDownloadBytes()
+}
+
+// RuntimeDownloadBytes is the runtime's share of a pack's download: what it
+// transfers when it isn't installed yet (shared by every pack), else 0.
+func (s Store) RuntimeDownloadBytes() int64 {
+	r, ok := platformRuntime()
+	if !ok || s.RuntimeInstalled() {
+		return 0
+	}
+	n := r.Transfer()
+	for _, f := range runtimeNotices {
+		n += f.Transfer()
 	}
 	return n
 }

@@ -458,5 +458,12 @@
   "Remove object (AI)": "Usuń obiekt (AI)",
   "Removes the selected object and fills the gap with what could be behind it. Select it first, e.g. by clicking it with Select object.": "Usuwa zaznaczony obiekt i wypełnia lukę tym, co mogło być za nim. Najpierw go zaznacz, np. klikając go narzędziem Zaznacz obiekt.",
   "Needs an optional download: click to get it in Settings › AI models.": "Wymaga dodatkowego pobrania: kliknij, aby pobrać w Ustawieniach › Modele AI.",
-  "Click the object to remove (Shift-click adds a part), then press Remove object (AI) again.": "Kliknij obiekt do usunięcia (Shift+klik dodaje część), a potem ponownie naciśnij Usuń obiekt (AI)."
+  "Click the object to remove (Shift-click adds a part), then press Remove object (AI) again.": "Kliknij obiekt do usunięcia (Shift+klik dodaje część), a potem ponownie naciśnij Usuń obiekt (AI).",
+  "Drag to move it up or down": "Przeciągnij, aby przenieść wyżej lub niżej",
+  "Fill failed": "Wypełnianie nie zadziałało",
+  "Paint bucket": "Wiadro z farbą",
+  "Click to fill an area of similar colour on the active layer (only inside the selection, if there is one). Set Tolerance in the toolbar.": "Kliknij, aby wypełnić obszar o podobnym kolorze na aktywnej warstwie (tylko wewnątrz zaznaczenia, jeśli jest). Tolerancję ustawisz na pasku narzędzi.",
+  "How different a colour can be and still be filled": "Jak bardzo kolor może się różnić, by nadal został wypełniony",
+  "Off: fill every pixel of that colour, not only the connected area": "Wyłączone: wypełnia każdy piksel tego koloru, nie tylko połączony obszar",
+  "Tool: paint bucket": "Narzędzie: wiadro z farbą"
 }
