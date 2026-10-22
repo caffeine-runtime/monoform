@@ -1,0 +1,36 @@
+name: Move v1.0.0 to the rewritten history
+
+# One-off (removed after it has run): the history was rewritten for the account
+# rename, so v1.0.0 moves to its new commit, and the release notes' links point
+# at the renamed account.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  move:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Move the tag and fix the release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          OLD: 4f65bbd00dd57faf299ba4c8585a17c382b33d87
+          NEW: 4e566834503cd72c87273ee691a0129e0a2e7635
+        run: |
+          set -euo pipefail
+          cur=$(gh api "repos/$REPO/git/ref/tags/v1.0.0" -q .object.sha)
+          if [ "$cur" = "$OLD" ]; then
+            gh api -X PATCH "repos/$REPO/git/refs/tags/v1.0.0" -f sha="$NEW" -F force=true >/dev/null
+            echo "v1.0.0 moved to $NEW"
+          elif [ "$cur" = "$NEW" ]; then
+            echo "v1.0.0 already at $NEW"
+          else
+            echo "::error::v1.0.0 is at $cur, expected $OLD"; exit 1
+          fi
+          gh release view v1.0.0 -R "$REPO" --json body -q .body > body.md
+          sed -E -i 's#github\.com/[A-Za-z0-9-]+/(monoform|Hold-It-All)#github.com/caffeine-runtime/monoform#gI' body.md
+          gh release edit v1.0.0 -R "$REPO" --notes-file body.md >/dev/null
+          echo "release notes:"; grep -o 'github\.com/[^ )]*' body.md | sort -u
