@@ -53,7 +53,11 @@ export default async function m36(dir: string) {
   const slider = root.querySelector<HTMLInputElement>('[data-control="uiScale"] input[type="range"]')!;
   slider.value = String(UI_SCALES.indexOf(1.25));
   slider.dispatchEvent(new Event('input', { bubbles: true }));
-  await waitFor(() => (settings.value.uiScale === 1.25 ? true : null), 'interface size from the slider');
+  await sleep(50);
+  assert(settings.value.uiScale !== 1.25, 'not applied while dragging (the menu would rescale under the pointer)');
+  assert(root.querySelector('[data-control="uiScale"]')!.textContent!.includes('125%'), 'the value shows while dragging');
+  slider.dispatchEvent(new Event('change', { bubbles: true }));
+  await waitFor(() => (settings.value.uiScale === 1.25 ? true : null), 'interface size from the slider, on release');
   slider.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
   await waitFor(() => (settings.value.uiScale === 1 ? true : null), 'double-click resets it');
   theme.set(themeBefore as typeof settings.value.theme & ("system" | "dark" | "light"));
