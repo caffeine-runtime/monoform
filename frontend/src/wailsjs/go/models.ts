@@ -1644,6 +1644,7 @@ export namespace settings {
 	    welcomeDone: boolean;
 	    pathBarOff: boolean;
 	    panelsHidden: boolean;
+	    lightCanvases: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -1677,6 +1678,7 @@ export namespace settings {
 	        this.welcomeDone = source["welcomeDone"];
 	        this.pathBarOff = source["pathBarOff"];
 	        this.panelsHidden = source["panelsHidden"];
+	        this.lightCanvases = source["lightCanvases"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

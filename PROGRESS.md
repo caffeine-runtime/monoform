@@ -449,6 +449,12 @@
   effect re-ran itself ~1000 times. It now builds once (~0.4 s, with "Opening the drawing…" while it does), zooming
   scales the drawing until the wheel rests (≤ 50 ms frames instead of ~130 ms), and an edit is one rebuild. Self-test
   `m44` on a generated CAD drawing.
+- **Dark canvases.** In the dark theme, Excalidraw and draw.io drawings, Mermaid and Graphviz diagrams and the
+  diagram blocks in Markdown previews are darkened the way Excalidraw's own dark mode does it (white paper →
+  near-black, black ink → near-white, colours keep their hue). The files and exports keep their colours, photos
+  inside a drawing stay as they are, and a drawing that already has a dark background is left alone. A moon button
+  in the drawing/diagram toolbar (and *Settings › Appearance*) keeps them light. CAD drawings already followed the
+  theme. Unit tests (`core/canvas.test.ts`) and self-test `m45`.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
