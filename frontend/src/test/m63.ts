@@ -1,8 +1,9 @@
 // M63: moving, scaling and turning a selection's outline (not the pixels).
 // On a 200 × 160 picture with the rectangle select tool, a selection of
 // 80 × 40 at (60, 30) gets handles. Dragged from inside by (20, 10) it is at
-// (80, 40); its right handle dragged 20 further makes it 100 wide; turned 90°
-// with the round handle it stands 40 × 100 about the same middle (the mask
+// (80, 40); its right handle dragged 20 further makes it 100 wide; turned 5°
+// it stays at 5° (no snapping back, the angle shown by the pointer); with
+// Shift it snaps to 90° and stands 40 × 100 about the same middle (the mask
 // follows: inside the new shape selected, the old corners not); the picture
 // is untouched throughout. Shift-dragging inside adds a selection instead of
 // moving; a click inside drops it. A wand-like mask selection moves the same
@@ -89,10 +90,28 @@ export default async function m63(dir: string) {
   assert(near(b1.x, 80) && near(b1.width, 100) && near(b1.height, 40), `the right handle widens it (${bounds()})`);
   assert(selected(175, 60) && !selected(185, 60), 'the mask too');
 
-  // ---- turned 90° with the round handle ----
+  // ---- a small turn stays small (no snapping back to 0°), its angle shown ----
   const mid = screen(130, 60);
-  await drag(handle('rotater'), { x: mid.x + 200, y: mid.y + 1 });
-  assert(near(ed.selFrame.rotation(), 90), `turned to 90° (snapped): ${ed.selFrame.rotation()}`);
+  {
+    const r0 = handle('rotater');
+    const R = Math.hypot(r0.x - mid.x, r0.y - mid.y);
+    const a = (5 * Math.PI) / 180;
+    const to = { x: mid.x + R * Math.sin(a), y: mid.y - R * Math.cos(a) };
+    fire('down', r0.x, r0.y);
+    for (let i = 1; i <= 8; i++) fire('move', r0.x + ((to.x - r0.x) * i) / 8, r0.y + ((to.y - r0.y) * i) / 8);
+    const tip = ed.angleTip;
+    const shown = tip.getText().text();
+    assert(tip.visible() && /°$/.test(shown) && Math.abs(parseFloat(shown) - 5) < 0.3, `the angle shown while turning (${tip.visible()} ${shown})`);
+    fire('up', to.x, to.y);
+    await sleep(60);
+    await framed();
+    assert(Math.abs(ed.selFrame.rotation() - 5) < 0.3, `turned 5°, not snapped to 0° (${ed.selFrame.rotation()})`);
+    assert(!tip.visible(), 'the angle hidden after');
+  }
+
+  // ---- turned to 90° with Shift (15° steps) ----
+  await drag(handle('rotater'), { x: mid.x + 200, y: mid.y + 7 }, true);
+  assert(Math.abs(ed.selFrame.rotation() - 90) < 1e-6, `Shift snaps it to exactly 90° (${ed.selFrame.rotation()})`);
   const b2 = ed.selection.bounds;
   assert(near(b2.width, 40) && near(b2.height, 100) && near(b2.x + b2.width / 2, 130) && near(b2.y + b2.height / 2, 60), `stands 40 × 100 about the same middle (${bounds()})`);
   assert(selected(130, 15) && selected(130, 95), 'above and below the old box now selected');

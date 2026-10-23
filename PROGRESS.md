@@ -539,7 +539,7 @@
   (AP203 and AP214). Unit tests (parser, band and pole faces, the fixture assembly), self-test `m57`.
 - **After 1.1.2 (image editor)**: **move, resize and turn a selection's outline** — with the rectangle, ellipse or
   lasso select tool a selection gets handles: drag inside it to move it, a side or corner to resize it, the round
-  handle to turn it (snaps to 45°), so a tilted area can be selected; the pixels don't move (the earlier
+  handle to turn it (any angle, shown by the pointer; Shift for 15° steps), so a tilted area can be selected; the pixels don't move (the earlier
   pixel-moving command is now **Transform pixels**, Ctrl+Shift+R). Shift / Alt still draw another selection to
   add or take away, and a click inside drops it. **Effects**: Black & white, Sepia and Invert join the looks as
   one list of eighteen; each chosen effect gets its own strength slider, listed below all the chips, and effects
@@ -554,6 +554,9 @@
   The selection bar's Blur and Pixelate buttons open their page with a visible strength already set. The **Blur
   region** and **Pixelate region** tools have a strength / block size in the tool bar and show the result inside
   the area before Enter. Self-test `m65`.
+- **Turning is free** (image editor): the round handle of a layer, floating pixels or a selection no longer
+  snaps within 5° of every 45° (3°, 5° or 10° were impossible); the angle shows by the pointer while turning,
+  and Shift snaps to 15° steps. `m63` turns a selection 5° and, with Shift, to exactly 90°.
 - **Better click-to-select (image editor)**: the bundled model is now **EfficientSAM-Ti** (was SlimSAM-77; same
   14 MB): whole thin parts (a shuttle's tail boom and pods), just the thing clicked (the orbiter, not the stack
   and its flame). Edges are snapped to the picture with a colour guided filter instead of re-deciding pixels by
@@ -572,7 +575,7 @@
   selection like every adjustment. Settings tiles wrap long paths (the command-line path ran out of its tile).
   Unit test, self-test `m62`; `m59` checks no tile overflows.
 - **Image editor: turning things**: **rotate / scale / move selected pixels** (selection bar, right-click, Ctrl+Shift+R)
-  — the selected pixels float with the move tool's handles (rotation snaps to 45°), Enter puts them back into
+  — the selected pixels float with the move tool's handles (any angle; Shift for 15° steps), Enter puts them back into
   their layer as one undo step, Esc puts everything back; **rotate the active layer** 90° either way or by an
   angle (live preview) from the move tool's bar, a layer's right-click menu in the Layers panel (also rename,
   duplicate, merge down, delete) and the editor's right-click menu, about the layer's middle; **turn the view**

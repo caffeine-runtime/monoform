@@ -1361,7 +1361,7 @@
 
 {#if es?.transforming}
   <div class="banner transforming">
-    <span class="grow">{t('Drag to move the selection; drag the handles to scale it, the round one to rotate it (it snaps to 45°).')}</span>
+    <span class="grow">{t('Drag to move the selection; drag the handles to scale it, the round one to rotate it (any angle; hold Shift for 15° steps).')}</span>
     <button class="btn ghost" title={t('Put it back as it was (Esc)')} onclick={() => editor?.finishTransform(false)}><Icon icon={XIcon} size={14} /> {t('Cancel')}</button>
     <button class="btn primary" onclick={() => editor?.finishTransform(true)}><Icon icon={Check} size={14} /> {t('Apply (Enter)')}</button>
   </div>
