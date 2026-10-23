@@ -24,6 +24,7 @@ import { Line as KLine } from 'konva/lib/shapes/Line';
 import { Arrow } from 'konva/lib/shapes/Arrow';
 import { Text as KText } from 'konva/lib/shapes/Text';
 import { Transformer } from 'konva/lib/shapes/Transformer';
+import { Label, Tag } from 'konva/lib/shapes/Label';
 import type { Node as KNode } from 'konva/lib/Node';
 import { centered, clampZoom, fitZoom, normRect, stepZoom, viewWith, wheelIntent, zoomAt, type Rect, type View } from './geometry';
 import * as raster from './raster';
@@ -224,6 +225,8 @@ export class ImageEditor {
   /** The frame is being dragged or turned (the outline previews). */
   private selLive = false;
   private tr: Transformer;
+  /** The angle shown by the pointer while a layer or selection is being turned. */
+  private angleTip: Label;
   private lassoLine: KLine;
   private layers: LiveLayer[] = [];
   private activeId = '';
@@ -315,9 +318,16 @@ export class ImageEditor {
     this.regionTr = new Transformer({ rotateEnabled: false, keepRatio: false, borderStroke: ACCENT, anchorStroke: ACCENT, anchorSize: ANCHOR, anchorCornerRadius: 3, ignoreStroke: true });
     this.selFrame = new KRect({ visible: false, fill: 'rgba(0,0,0,0)', draggable: true, name: 'selection-frame' });
     this.world.add(this.selFrame);
-    this.selTr = new Transformer({ rotateEnabled: true, keepRatio: false, borderStroke: ACCENT, borderDash: [4, 4], anchorStroke: ACCENT, anchorSize: ANCHOR - 1, anchorCornerRadius: 2, rotationSnaps: [0, 45, 90, 135, 180, 225, 270, 315], name: 'selection-handles' });
-    this.tr = new Transformer({ borderStroke: ACCENT, anchorStroke: ACCENT, anchorSize: ANCHOR, anchorCornerRadius: 3, rotateEnabled: true, rotationSnaps: [0, 45, 90, 135, 180, 225, 270, 315] });
-    this.klayer.add(this.regionTr, this.selTr, this.tr);
+    this.selTr = new Transformer({ rotateEnabled: true, keepRatio: false, borderStroke: ACCENT, borderDash: [4, 4], anchorStroke: ACCENT, anchorSize: ANCHOR - 1, anchorCornerRadius: 2, name: 'selection-handles' });
+    // Turning is free (any angle); Shift snaps to 15° steps (Konva's own).
+    this.tr = new Transformer({ borderStroke: ACCENT, anchorStroke: ACCENT, anchorSize: ANCHOR, anchorCornerRadius: 3, rotateEnabled: true });
+    this.angleTip = new Label({ visible: false, listening: false });
+    this.angleTip.add(new Tag({ fill: 'rgba(20,20,20,0.85)', cornerRadius: 3 }), new KText({ text: '', fontSize: 12, fontFamily: 'Inter Variable, sans-serif', fill: '#fff', padding: 4 }));
+    this.klayer.add(this.regionTr, this.selTr, this.tr, this.angleTip);
+    for (const t of [this.tr, this.selTr]) {
+      t.on('transform', () => this.showAngle(t));
+      t.on('transformend', () => this.angleTip.visible(false));
+    }
     this.addLiveLayer(plainLayer(t('Background'), base));
     this.activeId = this.layers[0].id;
     this.history = [this.snapshot()];
@@ -2197,6 +2207,17 @@ export class ImageEditor {
       viewRotation: this.viewRotation,
       version: this.version,
     };
+  }
+
+  /** While a transformer's round handle turns its node: the angle, by the pointer. */
+  private showAngle(t: Transformer) {
+    const node = t.nodes()[0];
+    const p = this.stage.getPointerPosition();
+    if (!node || !p || !t.getActiveAnchor()?.startsWith('rotater')) return;
+    let deg = ((node.rotation() % 360) + 540) % 360 - 180; // -180…180
+    if (Math.abs(deg) < 0.05) deg = 0;
+    (this.angleTip.getText() as KText).text(`${Math.round(deg * 10) / 10}°`);
+    this.angleTip.setAttrs({ x: p.x + 16, y: p.y + 16, visible: true });
   }
 
   private emit() {

@@ -487,7 +487,7 @@
   "Turn the view right ({shortcut}) — the picture itself is not changed": "Girar la vista a la derecha ({shortcut}): la imagen no cambia",
   "Turn the view right": "Girar la vista a la derecha",
   "Turns the active layer about its middle": "Gira la capa activa sobre su centro",
-  "Drag to move the selection; drag the handles to scale it, the round one to rotate it (it snaps to 45°).": "Arrastra para mover la selección; los tiradores la escalan y el redondo la gira (se ajusta a 45°).",
+  "Drag to move the selection; drag the handles to scale it, the round one to rotate it (any angle; hold Shift for 15° steps).": "Arrastra para mover la selección; arrastra los tiradores para escalarla y el redondo para girarla (cualquier ángulo; con Shift, en pasos de 15°).",
   "Put it back as it was (Esc)": "Dejarla como estaba (Esc)",
   "Transform pixels": "Transformar píxeles",
   "Rotate, scale or move the selected pixels ({shortcut})": "Girar, escalar o mover los píxeles seleccionados ({shortcut})",

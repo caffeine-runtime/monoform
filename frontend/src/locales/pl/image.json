@@ -499,7 +499,7 @@
   "Turn the view right ({shortcut}) — the picture itself is not changed": "Obróć widok w prawo ({shortcut}) — sam obraz się nie zmienia",
   "Turn the view right": "Obróć widok w prawo",
   "Turns the active layer about its middle": "Obraca aktywną warstwę wokół jej środka",
-  "Drag to move the selection; drag the handles to scale it, the round one to rotate it (it snaps to 45°).": "Przeciągnij, aby przesunąć zaznaczenie; uchwyty je skalują, okrągły obraca (przyciąga do 45°).",
+  "Drag to move the selection; drag the handles to scale it, the round one to rotate it (any angle; hold Shift for 15° steps).": "Przeciągnij, aby przesunąć zaznaczenie; przeciągnij uchwyty, aby je przeskalować, a okrągły, aby je obrócić (o dowolny kąt; z Shift co 15°).",
   "Put it back as it was (Esc)": "Przywróć jak było (Esc)",
   "Transform pixels": "Przekształć piksele",
   "Rotate, scale or move the selected pixels ({shortcut})": "Obróć, przeskaluj lub przesuń zaznaczone piksele ({shortcut})",
