@@ -19,6 +19,10 @@
   import Eraser from '@lucide/svelte/icons/eraser';
   import ChevronLeft from '@lucide/svelte/icons/chevron-left';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import ChartColumn from '@lucide/svelte/icons/chart-column';
+  import Spline from '@lucide/svelte/icons/spline';
+  import CurveGraph from './CurveGraph.svelte';
+  import { CURVE_NEUTRAL, LEVELS_NEUTRAL, autoLevels, curveNeutral, curvesNeutral, histogram, levelsNeutral, type CurveChannel, type CurvePoint, type Histogram, type Levels } from './tone';
 
   let { editor, es, pick }: { editor: ImageEditor; es: EditorState; pick?: () => Promise<string | null> } = $props();
 
@@ -56,10 +60,12 @@
     },
   ];
 
-  type Page = 'light' | 'colour' | 'detail' | 'blur' | 'pixelate' | 'effects' | 'cleanup';
+  type Page = 'light' | 'levels' | 'curves' | 'colour' | 'detail' | 'blur' | 'pixelate' | 'effects' | 'cleanup';
   const differs = (keys: (keyof Adjustments)[]) => keys.some((k) => a[k] !== NEUTRAL[k]);
   const PAGES: { id: Page; title: string; help: string; icon: typeof Sun; on: () => boolean }[] = [
     { id: 'light', title: GROUPS[0].title, help: t('Exposure, brightness, contrast, highlights, shadows'), icon: Sun, on: () => differs(GROUPS[0].sliders.map((s) => s.key)) },
+    { id: 'levels', title: t('Levels'), help: t('Black point, midtones and white point, with the histogram'), icon: ChartColumn, on: () => !levelsNeutral(a.levels) },
+    { id: 'curves', title: t('Curves'), help: t('A tone curve for all colours or one channel'), icon: Spline, on: () => !curvesNeutral(a.curves) },
     { id: 'colour', title: GROUPS[1].title, help: t('Saturation, vibrance, temperature, tint, hue'), icon: Palette, on: () => differs(GROUPS[1].sliders.map((s) => s.key)) },
     { id: 'detail', title: GROUPS[2].title, help: t('Sharpen, vignette'), icon: Aperture, on: () => differs(GROUPS[2].sliders.map((s) => s.key)) },
     { id: 'blur', title: t('Blur'), help: t('Gaussian, motion, zoom, spin, lens, tilt-shift, surface, frosted glass'), icon: Droplets, on: () => a.blur > 0 },
@@ -70,9 +76,56 @@
   let page = $state<Page | null>(null);
   const current = $derived(PAGES.find((p) => p.id === page));
 
+  // ---- Levels and Curves ----
+  let hist = $state<Histogram | null>(null);
+  let channel = $state<CurveChannel>('rgb');
+  const CHANNELS: { id: CurveChannel; label: string; colour: string }[] = [
+    { id: 'rgb', label: t('RGB'), colour: 'var(--text)' },
+    { id: 'r', label: t('Red'), colour: '#e5484d' },
+    { id: 'g', label: t('Green'), colour: '#30a46c' },
+    { id: 'b', label: t('Blue'), colour: '#3e8ed0' },
+  ];
+
+  /** The active layer's histogram, from a small copy (fast at any size). */
+  function loadHistogram() {
+    const src = editor.base;
+    const k = Math.min(1, 256 / Math.max(src.width, src.height));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(src.width * k));
+    c.height = Math.max(1, Math.round(src.height * k));
+    const g = c.getContext('2d', { willReadFrequently: true })!;
+    g.drawImage(src, 0, 0, c.width, c.height);
+    hist = histogram(g.getImageData(0, 0, c.width, c.height).data);
+  }
+
+  function setLevels(l: Partial<Levels>) {
+    a.levels = { ...a.levels, ...l };
+    changed();
+  }
+
+  function setCurve(ch: CurveChannel, points: CurvePoint[]) {
+    a.curves = { ...a.curves, [ch]: points };
+    changed();
+  }
+
+  function autoLevelsNow() {
+    if (!hist) loadHistogram();
+    setLevels(autoLevels(hist!.l));
+  }
+
+  const levelsPath = $derived.by(() => {
+    if (!hist) return '';
+    let max = 1;
+    for (let i = 1; i < 255; i++) max = Math.max(max, hist.l[i]);
+    let d = 'M0 64';
+    for (let i = 0; i < 256; i++) d += `L${i} ${(64 - Math.min(1, hist.l[i] / max) * 60).toFixed(1)}`;
+    return `${d}L256 64Z`;
+  });
+
   /** Open a page (the selection bar's Blur and Pixelate start them at a visible strength). */
   export function open(p: Page | null, start = false) {
     page = p;
+    if ((p === 'levels' || p === 'curves') && !hist) loadHistogram();
     if (start && p === 'blur' && !a.blur) set('blur', 8);
     if (start && p === 'pixelate' && !a.pixelate) set('pixelate', Math.max(6, Math.round(Math.max(editor.width, editor.height) / 80)));
   }
@@ -148,7 +201,7 @@
   // Leaving the panel (or the tab) discards an unapplied preview.
   $effect(() => () => editor.cancelAdjust());
   // Hooks for the self-test.
-  export const test = { set, setBlurType, toggleEffect, setEffect, apply, reset, open, page: () => page, get: () => $state.snapshot(a) as Adjustments };
+  export const test = { set, setBlurType, toggleEffect, setEffect, setLevels, setCurve, autoLevels: autoLevelsNow, apply, reset, open, page: () => page, get: () => $state.snapshot(a) as Adjustments };
 </script>
 
 <div class="adjust">
@@ -215,6 +268,52 @@
           <span class="num">{fmt(s, a[s.key] as number)}</span>
         </label>
       {/each}
+    {:else if page === 'levels'}
+      <svg class="histo" viewBox="0 0 256 64" preserveAspectRatio="none" aria-label={t('Histogram')}>
+        {#if levelsPath}<path d={levelsPath} />{/if}
+        <line class="mark" x1={a.levels.inBlack * 256} y1="0" x2={a.levels.inBlack * 256} y2="64" />
+        <line class="mark" x1={a.levels.inWhite * 256} y1="0" x2={a.levels.inWhite * 256} y2="64" />
+      </svg>
+      <label class="row" ondblclick={() => setLevels({ inBlack: 0 })} title={t('Double-click to reset')}>
+        <span class="lbl">{t('Black point')}</span>
+        <input type="range" min="0" max="254" step="1" value={Math.round(a.levels.inBlack * 255)} oninput={(e) => setLevels({ inBlack: Math.min(+(e.target as HTMLInputElement).value, Math.round(a.levels.inWhite * 255) - 1) / 255 })} />
+        <span class="num">{Math.round(a.levels.inBlack * 255)}</span>
+      </label>
+      <label class="row" ondblclick={() => setLevels({ gamma: 1 })} title={t('Double-click to reset')}>
+        <span class="lbl">{t('Midtones')}</span>
+        <input type="range" min="-1" max="1" step="0.01" value={Math.log10(a.levels.gamma)} oninput={(e) => setLevels({ gamma: Math.round(10 ** +(e.target as HTMLInputElement).value * 100) / 100 })} />
+        <span class="num">{num(a.levels.gamma)}</span>
+      </label>
+      <label class="row" ondblclick={() => setLevels({ inWhite: 1 })} title={t('Double-click to reset')}>
+        <span class="lbl">{t('White point')}</span>
+        <input type="range" min="1" max="255" step="1" value={Math.round(a.levels.inWhite * 255)} oninput={(e) => setLevels({ inWhite: Math.max(+(e.target as HTMLInputElement).value, Math.round(a.levels.inBlack * 255) + 1) / 255 })} />
+        <span class="num">{Math.round(a.levels.inWhite * 255)}</span>
+      </label>
+      <label class="row" ondblclick={() => setLevels({ outBlack: 0 })} title={t('Double-click to reset')}>
+        <span class="lbl">{t('Output black')}</span>
+        <input type="range" min="0" max="255" step="1" value={Math.round(a.levels.outBlack * 255)} oninput={(e) => setLevels({ outBlack: +(e.target as HTMLInputElement).value / 255 })} />
+        <span class="num">{Math.round(a.levels.outBlack * 255)}</span>
+      </label>
+      <label class="row" ondblclick={() => setLevels({ outWhite: 1 })} title={t('Double-click to reset')}>
+        <span class="lbl">{t('Output white')}</span>
+        <input type="range" min="0" max="255" step="1" value={Math.round(a.levels.outWhite * 255)} oninput={(e) => setLevels({ outWhite: +(e.target as HTMLInputElement).value / 255 })} />
+        <span class="num">{Math.round(a.levels.outWhite * 255)}</span>
+      </label>
+      <div class="toggles">
+        <button class="chip" title={t('Set the black and white points where the picture really starts and ends')} onclick={autoLevelsNow}>{t('Auto')}</button>
+        <button class="chip" onclick={() => setLevels(LEVELS_NEUTRAL)}>{t('Reset')}</button>
+      </div>
+    {:else if page === 'curves'}
+      <div class="toggles" role="radiogroup" aria-label={t('Channel')}>
+        {#each CHANNELS as c (c.id)}
+          <button class="chip" role="radio" aria-checked={channel === c.id} class:on={channel === c.id} class:edited={!curveNeutral(a.curves[c.id])} onclick={() => (channel = c.id)}>{c.label}</button>
+        {/each}
+      </div>
+      <CurveGraph points={a.curves[channel]} hist={hist ? hist[channel === 'rgb' ? 'l' : channel] : null} colour={CHANNELS.find((c) => c.id === channel)!.colour} onchange={(p) => setCurve(channel, p)} />
+      <p class="hint">{t('Click to add a point, drag to move it, double-click to remove it.')}</p>
+      <div class="toggles">
+        <button class="chip" onclick={() => setCurve(channel, CURVE_NEUTRAL)}>{t('Reset channel')}</button>
+      </div>
     {:else if page === 'pixelate'}
       <label class="row pixelate" ondblclick={() => set('pixelate', 0)} title={t('Double-click to turn off')}>
         <span class="lbl">{t('Block size')}</span>
@@ -319,6 +418,31 @@
   }
   .toggles {
     margin: 8px 0 6px;
+  }
+  .histo {
+    width: 100%;
+    height: 64px;
+    display: block;
+    margin: 6px 0;
+    background: var(--bg-hover);
+    border-radius: var(--radius-sm);
+  }
+  .histo path {
+    fill: var(--text-muted);
+    opacity: 0.45;
+  }
+  .histo .mark {
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+  }
+  .chip.edited:not(.on) {
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+  .hint {
+    margin: 0;
+    font-size: var(--fs-small);
+    color: var(--text-muted);
   }
   .pickrow {
     display: flex;

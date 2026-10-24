@@ -554,6 +554,11 @@
   The selection bar's Blur and Pixelate buttons open their page with a visible strength already set. The **Blur
   region** and **Pixelate region** tools have a strength / block size in the tool bar and show the result inside
   the area before Enter. Self-test `m65`.
+- **Levels and Curves** (image editor, Adjust): Levels has the histogram, black point / midtones / white point,
+  output black and white, and Auto (clips 0.1 % at each end); Curves edits a tone curve for RGB or for red,
+  green or blue alone over the histogram — click to add a point, drag it, double-click to remove it. Both preview
+  live on the GPU (one 256-entry table per channel) and stay inside the selection. Unit tests (tone), self-test
+  `m68`.
 - **Clone stamp and spot healing brush** (image editor, S and J): Alt-click the source, then paint — the layer as
   it was shows through a soft round brush, aligned (the source moves with the brush, a mark shows where);
   opacity and size in the tool bar, inside the selection only if there is one. The spot healing brush replaces

@@ -5,6 +5,7 @@
 // block the UI on large photos.
 
 import { t } from '../../core/i18n';
+import { CURVES_NEUTRAL, LEVELS_NEUTRAL, curvesNeutral, levelsNeutral, toneLut, type Curves, type Levels } from './tone';
 
 export interface Adjustments {
   exposure: number; // stops, -2..2
@@ -29,6 +30,9 @@ export interface Adjustments {
   pixelate: number;
   /** Effects that are on, each with its strength (0..1), applied in EFFECTS order. */
   effects: Partial<Record<Effect, number>>;
+  /** Levels and Curves (tone.ts), applied together after the colour sliders. */
+  levels: Levels;
+  curves: Curves;
   /** Clean up: pale pixels (a light watermark, scanner shading) turn white; 0 = off, 1 = everything lighter than mid-grey. */
   lightMarks: number;
   /** Clean up: pixels near this colour turn white ('' = off), within markTolerance (0..1). */
@@ -92,6 +96,8 @@ export const NEUTRAL: Adjustments = {
   vignette: 0,
   pixelate: 0,
   effects: {},
+  levels: LEVELS_NEUTRAL,
+  curves: CURVES_NEUTRAL,
   lightMarks: 0,
   markColor: '',
   markTolerance: 0.2,
@@ -102,7 +108,7 @@ const BLUR_SHAPE: (keyof Adjustments)[] = ['blurType', 'blurAngle', 'blurX', 'bl
 /** True when nothing would change (blur shape settings alone, or effects at strength 0, don't count). */
 export function isNeutral(a: Adjustments): boolean {
   return (Object.keys(NEUTRAL) as (keyof Adjustments)[]).every((k) =>
-    k === 'effects' ? Object.values(a.effects).every((v) => !v) : BLUR_SHAPE.includes(k) || a[k] === NEUTRAL[k],
+    k === 'effects' ? Object.values(a.effects).every((v) => !v) : k === 'levels' ? levelsNeutral(a.levels) : k === 'curves' ? curvesNeutral(a.curves) : BLUR_SHAPE.includes(k) || a[k] === NEUTRAL[k],
   );
 }
 
@@ -190,7 +196,8 @@ uniform sampler2D src;
 uniform sampler2D sharpSrc; // small blur, for unsharp mask
 uniform sampler2D blurSrc;  // big blur
 uniform sampler2D mask;
-uniform bool useMask, useSharp, useBlur, tilt;
+uniform sampler2D tone; // Levels + Curves: 256×1, entry v of channel k → output (tone.ts)
+uniform bool useMask, useSharp, useBlur, tilt, useTone;
 uniform vec2 tiltC, tiltN, size;
 uniform float tiltW;
 uniform float exposure, brightness, contrast, highlights, shadows, saturation, vibrance, temperature, tint, hue, sharpen, vignette, pixelate;
@@ -301,6 +308,10 @@ void main() {
   float g = luma(c);
   float sat = max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b));
   c = mix(vec3(g), c, 1.0 + saturation + vibrance * (1.0 - sat));
+  if (useTone) {
+    vec3 q = clamp(c, 0.0, 1.0) * (255.0 / 256.0) + 0.5 / 256.0;
+    c = vec3(texture(tone, vec2(q.r, 0.5)).r, texture(tone, vec2(q.g, 0.5)).g, texture(tone, vec2(q.b, 0.5)).b);
+  }
   for (int i = 0; i < ${EFFECTS.length}; i++) {
     if (fxAmt[i] > 0.0) c = mix(c, applyLook(c, i + 1), fxAmt[i]);
   }
@@ -351,6 +362,9 @@ export class Adjuster {
   private fx: WebGLProgram;
   private src: WebGLTexture;
   private mask: WebGLTexture | null = null;
+  /** The Levels/Curves table and what it was made from. */
+  private toneT: WebGLTexture | null = null;
+  private toneKey = '';
   private tmp: Target;
   private sharpT: Target;
   private blurT: Target;
@@ -395,6 +409,24 @@ export class Adjuster {
     if (img) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
     else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.w, this.h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     return t;
+  }
+
+  private toneTexture(levels: Levels, curves: Curves): WebGLTexture {
+    const gl = this.gl;
+    const key = JSON.stringify([levels, curves]);
+    if (!this.toneT) this.toneT = gl.createTexture()!;
+    gl.bindTexture(gl.TEXTURE_2D, this.toneT);
+    if (key !== this.toneKey) {
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, toneLut(levels, curves));
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      this.toneKey = key;
+    }
+    return this.toneT;
   }
 
   private target(): Target {
@@ -484,6 +516,11 @@ export class Adjuster {
     gl.bindTexture(gl.TEXTURE_2D, this.mask ?? this.src);
     gl.uniform1i(u('mask'), 3);
     gl.uniform1i(u('useMask'), this.mask ? 1 : 0);
+    const useTone = !levelsNeutral(a.levels) || !curvesNeutral(a.curves);
+    gl.uniform1i(u('useTone'), useTone ? 1 : 0);
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, useTone ? this.toneTexture(a.levels, a.curves) : this.src);
+    gl.uniform1i(u('tone'), 4);
     gl.uniform1i(u('useSharp'), sharpSigma ? 1 : 0);
     gl.uniform1i(u('useBlur'), useBlur ? 1 : 0);
     const tr = (a.blurAngle * Math.PI) / 180;

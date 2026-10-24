@@ -51,7 +51,7 @@ export default async function m65(dir: string) {
     const l = root().querySelectorAll<HTMLButtonElement>('.adjust .page');
     return l.length ? l : null;
   }, 'the Adjust list');
-  assertEq(Array.from(pages).map((p) => p.dataset.page).join(','), 'light,colour,detail,blur,pixelate,effects,cleanup', 'one entry per kind of adjustment');
+  assertEq(Array.from(pages).map((p) => p.dataset.page).join(','), 'light,levels,curves,colour,detail,blur,pixelate,effects,cleanup', 'one entry per kind of adjustment');
   assertEq(root().querySelectorAll('.adjust input[type=range]').length, 0, 'no sliders in the list itself');
 
   // ---- Pixelate from the selection bar ----

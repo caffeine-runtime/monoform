@@ -510,6 +510,10 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   came from, so the move tool's transformer (move, scale, rotate, snapping) works on them unchanged; applying
   renders that layer into the source layer's pixels and drops it, and the history in between collapses to one
   step (cancel restores the snapshot from before the lift). Changing tool, layer or saving applies it first.
+- **Levels and Curves are one lookup table** (`tone.ts`): levels, then the RGB curve, then each channel's curve are
+  folded into a 256×1 RGBA texture the adjustment shader samples once per channel, rebuilt only when they change.
+  Curves go through their points without overshooting (monotone cubic, Fritsch–Carlson), so an S-curve never
+  bends below black or above white, as in Photoshop. They run after the colour sliders and before the effects.
 - **Spot healing is a patch search plus a membrane, not a model** (`vision/heal.ts`): the ring of pixels around the
   painted area is compared with the same ring shifted over a grid of candidate places 2.5 sizes around (then
   refined to the pixel, nearer places winning ties, the source never overlapping what was painted); the best
