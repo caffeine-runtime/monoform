@@ -4,11 +4,14 @@
 // "demo: rec" when the scene starts and "demo: end" when it ends. Scenes
 // named "still-<name>" stage one view for a screenshot and log "demo: still".
 import { EditorView } from '@codemirror/view';
+import { aiModels } from '../core/aimodels.svelte';
+import { api } from '../core/backend';
 import { compareFiles } from '../core/compare';
+import { dropInto } from '../core/split';
 import { join } from '../core/paths';
 import { settings } from '../core/settings.svelte';
 import { workspace, type Tab } from '../core/tabs.svelte';
-import { pasteInto } from '../core/transfer.svelte';
+import { pasteInto, pngOf, readTransfer } from '../core/transfer.svelte';
 import { ui } from '../core/ui.svelte';
 import { WindowSetSize } from '../wailsjs/runtime/runtime';
 import { log, press, sleep, waitFor } from './harness';
@@ -166,19 +169,79 @@ async function palette(query: string) {
 
 // ------------------------------------------------------------------ scenes
 
-/** Every kind of file in one window: click through the project folder. */
+/** Everyday files in one window: a note, the report, a CSV and an SVG; then
+ * the photo, where Select subject (with the optional AI model) finds the
+ * shuttle, and the cut-out goes into the report, dragged beside it. */
 async function tour(dir: string) {
   await moveTo(140, 300, 400);
-  await openFromTree(dir, 'Notes.md', 1900);
-  await openFromTree(dir, 'Shuttle fact sheet.pdf', 1700);
-  await openFromTree(dir, 'Atlantis in orbit.jpg', 1500);
-  await openFromTree(dir, 'Fleet.xlsx', 1500);
-  await openFromTree(dir, 'Rocket.svg', 1400);
-  const model = await openFromTree(dir, '3DBenchy.stl', 0);
-  await cut(spin(model, 8));
-  await sleep(2400);
-  await openFromTree(dir, 'Goldberg Variation 1.ogg', 1500);
-  await openFromTree(dir, 'Atlantis landing.webm', 1800);
+  await openFromTree(dir, 'Notes.md', 2100);
+  await openFromTree(dir, 'Report.docx', 1900);
+  await openFromTree(dir, 'Landmark flights.csv', 1800);
+  await openFromTree(dir, 'Mission profile.svg', 2200);
+  const img = await openFromTree(dir, 'Atlantis in orbit.jpg', 700);
+  const report = workspace.findByPath(join(dir, 'Report.docx'))!;
+  const h = await waitFor(() => (img as unknown as { imageTest?: any }).imageTest, 'image editor');
+  await waitFor(() => h.editor(), 'editor');
+  // The object tool, then Select subject: the model finds the shuttle.
+  await click(await waitFor(() => pane(img)!.querySelector<HTMLElement>('button[aria-label="Select object"]'), 'object tool'));
+  await sleep(400);
+  const subject = await waitFor(() => [...pane(img)!.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('Select subject')), 'Select subject');
+  await click(subject);
+  await sleep(300);
+  await cut(waitFor(() => (!h.busy() && h.editor().selection ? true : null), 'subject selected', 120000));
+  await sleep(1500);
+  const copy = await waitFor(() => [...pane(img)!.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === 'Copy'), 'Copy');
+  await click(copy);
+  await sleep(600);
+  // Drag the report's tab onto the right edge of the photo: side by side.
+  const tabEl = document.querySelector<HTMLElement>(`.tab[data-tab="${report.id}"]`)!;
+  const from = centre(tabEl);
+  await moveTo(from.x, from.y);
+  const ghost = document.createElement('div');
+  ghost.textContent = report.title;
+  Object.assign(ghost.style, {
+    position: 'fixed', left: '0', top: '0', zIndex: '2147483646', pointerEvents: 'none', padding: '6px 12px', borderRadius: '6px',
+    font: '500 14px Inter, sans-serif', color: '#fff', background: 'rgba(40, 44, 56, .92)', boxShadow: '0 4px 14px rgba(0,0,0,.4)',
+    transition: 'transform 700ms cubic-bezier(.35,.1,.2,1)', transform: `translate(${from.x + 14}px, ${from.y + 10}px)`,
+  });
+  document.body.appendChild(ghost);
+  const view = pane(img)!.getBoundingClientRect();
+  const edge = { x: view.right - 70, y: view.top + view.height / 2 };
+  const hint = document.createElement('div');
+  Object.assign(hint.style, {
+    position: 'fixed', left: `${view.left + view.width / 2}px`, top: `${view.top}px`, width: `${view.width / 2}px`, height: `${view.height}px`,
+    background: 'rgba(224, 120, 70, .16)', border: '2px solid rgba(224, 120, 70, .7)', borderRadius: '6px', zIndex: '2147483645',
+    pointerEvents: 'none', opacity: '0', transition: 'opacity 250ms',
+  });
+  document.body.appendChild(hint);
+  await sleep(16);
+  ghost.style.transform = `translate(${edge.x + 14}px, ${edge.y + 10}px)`;
+  await moveTo(edge.x, edge.y, 700);
+  hint.style.opacity = '1';
+  await sleep(500);
+  ghost.remove();
+  hint.remove();
+  workspace.setSplit(dropInto(workspace.split, report.id, img.id, 'right'));
+  await sleep(900);
+  // Into the report: a new line after the introduction, then paste.
+  const d = await waitFor(() => (report as unknown as { docTest?: any }).docTest, 'document editor');
+  const page = d.page() as HTMLElement;
+  const intro = [...page.querySelectorAll<HTMLElement>('[data-p]')].find((p) => p.textContent?.includes('science fair'))!;
+  await click(intro, 60, 0);
+  const r = document.createRange();
+  r.selectNodeContents(intro);
+  r.collapse(false);
+  window.getSelection()!.removeAllRanges();
+  window.getSelection()!.addRange(r);
+  page.focus();
+  document.dispatchEvent(new Event('selectionchange'));
+  document.execCommand('insertParagraph');
+  void keycap('Ctrl  V');
+  await sleep(300);
+  const x = await readTransfer();
+  if (x?.kind === 'image') await d.addPicture(await pngOf(x.image), 'png');
+  await waitFor(() => page.querySelector('img'), 'the cut-out in the report', 15000);
+  await sleep(3200);
 }
 
 /** A key press, shown as a keycap for a moment. */
@@ -276,7 +339,7 @@ async function split() {
   await sleep(1400);
 }
 
-const FILES = ['notes/Notes (draft).md', 'Notes.md', 'Shuttle fact sheet.pdf', 'Atlantis in orbit.jpg', 'Fleet.xlsx', 'Rocket.svg', '3DBenchy.stl', 'Goldberg Variation 1.ogg', 'Atlantis landing.webm', 'notes/Moodboard.md', 'notes/Poster.md'];
+const FILES = ['notes/Notes (draft).md', 'Notes.md', 'Report.docx', 'Landmark flights.csv', 'Mission profile.svg', 'Shuttle fact sheet.pdf', 'Atlantis in orbit.jpg', 'Fleet.xlsx', 'Rocket.svg', '3DBenchy.stl', 'Goldberg Variation 1.ogg', 'Atlantis landing.webm', 'notes/Moodboard.md', 'notes/Poster.md'];
 
 const SCENES: Record<string, (dir: string) => Promise<void>> = { tour, image, markdown, split };
 
@@ -318,6 +381,16 @@ export default async function demo(arg: string) {
     s.uiScale = 1.1;
   });
   WindowSetSize(W, H);
+  // "models": install the optional subject model into the cache once (the
+  // script keeps that cache between runs), before any recording.
+  if (scene === 'models') {
+    if (!(await aiModels.installed('subject'))) {
+      await api.AIInstall('subject');
+      await waitFor(async () => ((await aiModels.installed('subject')) ? true : null), 'subject model installed', 1_500_000);
+    }
+    log('demo: models ready');
+    return;
+  }
   // Warm up: each viewer's code and the files load once before recording,
   // so nothing in the clip waits on a first load.
   for (const f of FILES) {

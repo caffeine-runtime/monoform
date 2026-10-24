@@ -6,6 +6,9 @@
 # "demo" self-test on its own X display (1280×800, no window manager, so
 # the window fills it) and records it with ffmpeg; the clips are animated
 # WebP. Needs a built app (scripts/build.sh), Xvfb and ffmpeg with libwebp.
+# The tour uses the optional subject model (Better subject selection): it is
+# downloaded once (~200 MB, with the ONNX Runtime library) into
+# $MF_DEMO_MODELS (default ~/.cache/monoform-demo/app) and kept there.
 set -euo pipefail
 # The interface in English unless a test asks otherwise (labels are looked up by their English text).
 export MF_SYSTEM_LANG=${MF_SYSTEM_LANG:-en}
@@ -16,7 +19,7 @@ STILLS=(pdf word spreadsheet compare svg model3d audio video json html archive s
 BIN=${MF_BIN:-build/bin/monoform}
 OUT=docs/readme
 WORK=$(mktemp -d)
-trap 'kill $XPID 2>/dev/null || true; [ -n "${MF_KEEP:-}" ] && echo "kept $WORK" || rm -rf "$WORK"; rm -rf "$DIR"' EXIT
+trap 'kill ${XPID:-} 2>/dev/null || true; [ -n "${MF_KEEP:-}" ] && echo "kept $WORK" || rm -rf "$WORK"; rm -rf "$DIR"' EXIT
 mkdir -p "$OUT"
 # The folder shows in the path bar, so it lives somewhere tidy.
 DEMO=${MF_DEMO_ROOT:-/tmp/Documents}
@@ -28,7 +31,7 @@ XPID=$!
 sleep 1
 
 # Theme per scene: light or dark.
-declare -A THEME=([tour]=light [image]=dark [markdown]=light [split]=dark
+declare -A THEME=([tour]=dark [image]=dark [markdown]=light [split]=dark
   [still-pdf]=dark [still-model3d]=dark [still-audio]=dark [still-video]=dark [still-json]=dark [still-archive]=dark)
 
 waitlog() { # waitlog <file> <text> <seconds>
@@ -36,12 +39,22 @@ waitlog() { # waitlog <file> <text> <seconds>
   echo "timed out waiting for '$2'"; tail -20 "$1"; return 1
 }
 
-start() { # start <scene>: the app running the scene, logging to $LOG
+MODELS=${MF_DEMO_MODELS:-${XDG_CACHE_HOME:-$HOME/.cache}/monoform-demo/app}
+start() { # start <scene> [seconds]: the app running the scene, logging to $LOG
   LOG="$WORK/$1.log"
-  MF_TEST=demo MF_TEST_ARG="$1|$DIR|${THEME[$1]:-light}" MF_SETTINGS="$WORK/$1-settings.json" MF_CACHE="$WORK/cache" \
-    timeout 180 "$BIN" >"$LOG" 2>&1 &
+  local cache="$WORK/cache"
+  [[ $1 == tour || $1 == models ]] && cache=$MODELS
+  MF_TEST=demo MF_TEST_ARG="$1|$DIR|${THEME[$1]:-light}" MF_SETTINGS="$WORK/$1-settings.json" MF_CACHE="$cache" \
+    timeout "${2:-180}" "$BIN" >"$LOG" 2>&1 &
   APP=$!
 }
+
+if [[ " ${SCENES[*]} " == *" tour "* ]]; then
+  mkdir -p "$MODELS"
+  start models 1800
+  waitlog "$LOG" "demo: models ready" 1800
+  wait $APP || true
+fi
 
 for s in "${SCENES[@]}"; do
   if [[ $s == still-* ]]; then

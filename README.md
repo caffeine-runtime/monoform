@@ -24,7 +24,7 @@ and OpenDocument files, archives and file hashes. It runs on Windows, macOS and 
 telemetry, needs no account and saves everything as plain files. Free and open source (MIT); written by Claude,
 directed and reviewed by its maintainer, with tests and CI.
 
-<p align="center"><img src="docs/readme/tour.webp" width="100%" alt="Clicking through a project folder: Markdown notes, a PDF fact sheet, a NASA photo, a spreadsheet, an SVG, the 3DBenchy model, a piano recording and NASA landing footage, each opening in the same window"></p>
+<p align="center"><img src="docs/readme/tour.webp" width="100%" alt="In the dark theme, clicking through a project folder: Markdown notes, a Word report, a CSV of shuttle flights and a mission-profile SVG; then a NASA photo where Select subject (with the optional AI model) finds the shuttle, which is copied and pasted into the Word report dragged beside it"></p>
 
 ## One window, every file
 

@@ -565,6 +565,10 @@
   the palette and the shortcut list. The code editor's Ctrl+K Ctrl+U / Ctrl+K Ctrl+L case chords never got past
   the palette and were removed (Ctrl+K stays the palette everywhere; the case commands are in the palette and the
   right-click menu). Self-test `m76` presses the keys as key events.
+- **README tour clip redone** (dark theme): a note, the Word report, a CSV of landmark flights and a mission-profile
+  SVG, then Select subject with the optional BiRefNet model on the NASA photo and the cut-out pasted into the report
+  dragged beside it. `scripts/demo_files.py` writes the CSV and the SVG (own drawing, schematic); `readme-media.sh`
+  installs the subject model once into a kept cache (`MF_DEMO_MODELS`) for the tour.
 - **Rulers, guides, grid and snapping** (image editor, the ▦ button in the tool bar): rulers in picture pixels
   along the top and left (Mod+R) with a mark where the pointer is; drag out of a ruler for a guide, drag a guide
   (move or hand tool) back onto a ruler to remove it, or Clear guides; a grid (Mod+', a round size or one you set);

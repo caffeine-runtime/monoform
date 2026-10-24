@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Writes the demo folder the README clips and screenshots are made from: a
 school project about the Space Shuttle ("Shuttle project") with notes, a
-fact sheet PDF, a spreadsheet, a report, NASA photos and footage, a piano
+fact sheet PDF, a spreadsheet, a CSV of landmark flights, a mission-profile
+infographic (SVG), a report, NASA photos and footage, a piano
 recording, an icon and a 3D model to print.
 
     python3 scripts/demo_files.py OUT_DIR [--chromium PATH]
@@ -206,6 +207,195 @@ def fleet_xlsx(path):
     wb.save(path)
 
 
+# ------------------------------------------------------------------- CSV
+
+# Landmark flights: (mission, orbiter, launch, landing, highlight). Days are worked out.
+FLIGHTS = [
+    ('STS-1', 'Columbia', '1981-04-12', '1981-04-14', 'First orbital flight'),
+    ('STS-7', 'Challenger', '1983-06-18', '1983-06-24', 'Sally Ride, first American woman in space'),
+    ('STS-9', 'Columbia', '1983-11-28', '1983-12-08', 'First Spacelab'),
+    ('STS-41-B', 'Challenger', '1984-02-03', '1984-02-11', 'First untethered spacewalk'),
+    ('STS-41-D', 'Discovery', '1984-08-30', '1984-09-05', "Discovery's first flight"),
+    ('STS-51-J', 'Atlantis', '1985-10-03', '1985-10-07', "Atlantis's first flight"),
+    ('STS-26', 'Discovery', '1988-09-29', '1988-10-03', 'Return to flight'),
+    ('STS-31', 'Discovery', '1990-04-24', '1990-04-29', 'Hubble Space Telescope deployed'),
+    ('STS-49', 'Endeavour', '1992-05-07', '1992-05-16', "Endeavour's first flight"),
+    ('STS-61', 'Endeavour', '1993-12-02', '1993-12-13', 'First Hubble servicing'),
+    ('STS-71', 'Atlantis', '1995-06-27', '1995-07-07', 'First docking with Mir'),
+    ('STS-88', 'Endeavour', '1998-12-04', '1998-12-15', 'First ISS assembly flight (Unity)'),
+    ('STS-114', 'Discovery', '2005-07-26', '2005-08-09', 'Return to flight'),
+    ('STS-117', 'Atlantis', '2007-06-08', '2007-06-22', 'The photo in this folder'),
+    ('STS-125', 'Atlantis', '2009-05-11', '2009-05-24', 'Last Hubble servicing'),
+    ('STS-129', 'Atlantis', '2009-11-16', '2009-11-27', 'The landing video'),
+    ('STS-133', 'Discovery', '2011-02-24', '2011-03-09', "Discovery's last flight"),
+    ('STS-134', 'Endeavour', '2011-05-16', '2011-06-01', "Endeavour's last flight"),
+    ('STS-135', 'Atlantis', '2011-07-08', '2011-07-21', 'Last flight of the programme'),
+]
+
+
+def flights_csv(path):
+    import csv
+    from datetime import date
+
+    with open(path, 'w', newline='') as f:
+        w = csv.writer(f)
+        w.writerow(['Mission', 'Orbiter', 'Launch', 'Landing', 'Days', 'Highlight'])
+        for m, o, a, b, h in FLIGHTS:
+            w.writerow([m, o, a, b, (date.fromisoformat(b) - date.fromisoformat(a)).days, h])
+
+
+# ------------------------------------------------------------------- SVG
+
+def mission_svg(path):
+    """A launch-to-landing infographic: a curved Earth, altitude rings, the
+    flight path with its eight phases, the ISS and the orbiter (schematic)."""
+    import math
+    import random
+
+    W, H = 1600, 1000
+    cx, cy, R = 800, 2330, 1640  # Earth's centre and radius in the drawing; its top is at y = 690
+    k = 1.0  # pixels per km of altitude
+    rnd = random.Random(1981)
+    out = []
+    a = out.append
+
+    def pt(deg, alt):
+        t = math.radians(deg)
+        r = R + alt * k
+        return cx + r * math.sin(t), cy - r * math.cos(t)
+
+    def poly(points):
+        return 'M' + ' L'.join(f'{x:.1f},{y:.1f}' for x, y in points)
+
+    a(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">')
+    a('<title>Space Shuttle mission profile</title>')
+    a('<defs>')
+    a('<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#03050d"/><stop offset=".55" stop-color="#0a1430"/><stop offset="1" stop-color="#17305f"/></linearGradient>')
+    a(f'<radialGradient id="earth" cx="{cx}" cy="{cy - R * 0.55:.0f}" r="{R * 1.1:.0f}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3f8fd8"/><stop offset=".45" stop-color="#1d5aa6"/><stop offset="1" stop-color="#0a234d"/></radialGradient>')
+    a(f'<radialGradient id="air" cx="{cx}" cy="{cy}" r="{R + 70}" gradientUnits="userSpaceOnUse"><stop offset="{(R - 10) / (R + 70):.4f}" stop-color="#7cc6ff" stop-opacity=".75"/><stop offset="{(R + 20) / (R + 70):.4f}" stop-color="#4aa3ff" stop-opacity=".28"/><stop offset="1" stop-color="#4aa3ff" stop-opacity="0"/></radialGradient>')
+    a('<linearGradient id="up" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ffd166"/><stop offset="1" stop-color="#ff7a3d"/></linearGradient>')
+    a('<linearGradient id="down" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7aa8"/><stop offset="1" stop-color="#ff4d5e"/></linearGradient>')
+    a('<linearGradient id="panel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4c95d"/><stop offset="1" stop-color="#b8862b"/></linearGradient>')
+    a('<linearGradient id="card" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16213f" stop-opacity=".92"/><stop offset="1" stop-color="#0d1530" stop-opacity=".92"/></linearGradient>')
+    a(f'<clipPath id="globe"><circle cx="{cx}" cy="{cy}" r="{R}"/></clipPath>')
+    a('</defs>')
+    a(f'<rect width="{W}" height="{H}" fill="url(#sky)"/>')
+    # Stars, a few brighter ones with a soft halo.
+    a('<g fill="#fff">')
+    for _ in range(260):
+        x, y = rnd.uniform(0, W), rnd.uniform(0, 640)
+        r = rnd.choice((0.5, 0.6, 0.8, 1.0, 1.3)) if rnd.random() > 0.04 else 1.9
+        a(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r}" opacity="{rnd.uniform(0.35, 0.95):.2f}"/>')
+        if r > 1.5:
+            a(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="6" opacity=".12"/>')
+    a('</g>')
+    # Earth: atmosphere glow, the globe, latitude and longitude lines, city lights.
+    a(f'<circle cx="{cx}" cy="{cy}" r="{R + 70}" fill="url(#air)"/>')
+    a(f'<circle cx="{cx}" cy="{cy}" r="{R}" fill="url(#earth)"/>')
+    a('<g clip-path="url(#globe)" fill="none" stroke="#9fd0ff" stroke-opacity=".14" stroke-width="1.2">')
+    for i in range(1, 9):
+        a(f'<ellipse cx="{cx}" cy="{cy}" rx="{R * i / 9:.0f}" ry="{R}"/>')
+    for i in range(1, 12):
+        a(f'<circle cx="{cx}" cy="{cy + R * 0.1}" r="{R * (1 - i * 0.012):.0f}"/>')
+    a('</g>')
+    a('<g fill="#ffd98a">')
+    for _ in range(140):
+        deg = rnd.uniform(-30, 30)
+        x, y = pt(deg, -rnd.uniform(4, 120))
+        a(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{rnd.choice((0.7, 1, 1.4))}" opacity="{rnd.uniform(0.25, 0.7):.2f}"/>')
+    a('</g>')
+    # Altitude rings.
+    a('<g fill="none" stroke="#c9d8ff" stroke-opacity=".22" stroke-dasharray="4 8">')
+    for alt in (100, 200, 300, 400):
+        a(f'<circle cx="{cx}" cy="{cy}" r="{R + alt * k}"/>')
+    a('</g>')
+
+    # The flight: ascent, orbit, descent.
+    asc = [(-24 + 13 * (i / 50) ** 0.75, 400 * (1 - math.exp(-4.2 * i / 50)) / (1 - math.exp(-4.2))) for i in range(51)]
+    orb = [(-11 + 22 * i / 40, 400) for i in range(41)]
+    des = [(11 + 13 * i / 50, 400 * (1 - (i / 50) ** 1.6) ** 1.25) for i in range(51)]
+    for pts, stroke in ((asc, 'url(#up)'), (orb, '#6fe3ff'), (des, 'url(#down)')):
+        line = poly(pt(d, h) for d, h in pts)
+        a(f'<path d="{line}" fill="none" stroke="{stroke}" stroke-opacity=".25" stroke-width="12" stroke-linecap="round"/>')
+        a(f'<path d="{line}" fill="none" stroke="{stroke}" stroke-width="3.5" stroke-linecap="round"/>')
+    # Direction ticks along the orbit.
+    for d in (-6, 0, 6):
+        x, y = pt(d, 400)
+        a(f'<path d="M{x - 7:.1f},{y - 6:.1f} L{x + 5:.1f},{y:.1f} L{x - 7:.1f},{y + 6:.1f}" fill="none" stroke="#6fe3ff" stroke-width="2.4" transform="rotate({d} {x:.1f} {y:.1f})"/>')
+
+    # The ISS near the top of the orbit: truss, modules, eight solar wings, radiators.
+    ix, iy = pt(3, 400)
+    a(f'<g transform="translate({ix:.1f} {iy - 46:.1f}) rotate(3)">')
+    a('<rect x="-62" y="-2.5" width="124" height="5" fill="#cfd6e4"/>')
+    for sx in (-58, -42, 42, 58):
+        for sy in (-1, 1):
+            y0 = -30 if sy < 0 else 4
+            a(f'<rect x="{sx - 6}" y="{y0}" width="12" height="26" fill="url(#panel)" stroke="#6b4e12" stroke-width=".6"/>')
+            for gy in range(1, 4):
+                a(f'<line x1="{sx - 6}" y1="{y0 + gy * 6.5}" x2="{sx + 6}" y2="{y0 + gy * 6.5}" stroke="#6b4e12" stroke-width=".5"/>')
+    a('<rect x="-18" y="-6" width="36" height="12" rx="5" fill="#e9edf5"/><rect x="-6" y="-16" width="12" height="32" rx="4" fill="#dfe5ef"/>')
+    a('<rect x="-30" y="-12" width="8" height="24" fill="#f5f7fb" opacity=".9"/><rect x="22" y="-12" width="8" height="24" fill="#f5f7fb" opacity=".9"/>')
+    a('</g>')
+    # The orbiter on its way to the station.
+    ox, oy = pt(-6.5, 400)
+    a(f'<g transform="translate({ox:.1f} {oy - 24:.1f}) rotate(-4) scale(1.15)">')
+    a('<path d="M-30,0 C-26,-5 -10,-6 6,-6 L20,-17 L26,-17 L22,-6 L30,-4 C34,-2 34,2 30,4 L22,6 L26,17 L20,17 L6,6 C-10,6 -26,5 -30,0 Z" fill="#f2f4f8" stroke="#3a4560" stroke-width="1"/>')
+    a('<path d="M-30,0 C-27,-3.5 -21,-4.5 -16,-4.5 L-16,4.5 C-21,4.5 -27,3.5 -30,0 Z" fill="#2b3245"/>')
+    a('<path d="M24,-3 L36,-8 L36,8 L24,3 Z" fill="#ffb347" opacity=".85"/>')
+    a('</g>')
+
+    # Launch pad and runway.
+    lx, ly = pt(-24, 0)
+    a(f'<g transform="translate({lx:.1f} {ly:.1f}) rotate(-24)"><rect x="-3" y="-26" width="6" height="26" fill="#e8edf6"/><rect x="-11" y="-30" width="4" height="30" fill="#8794b3"/><rect x="-16" y="-2" width="32" height="4" fill="#8794b3"/></g>')
+    rx, ry = pt(24, 0)
+    a(f'<g transform="translate({rx:.1f} {ry:.1f}) rotate(24)"><rect x="-34" y="-3" width="68" height="5" fill="#5d6a88"/>'
+      + ''.join(f'<rect x="{-30 + i * 9}" y="-1.2" width="5" height="1.4" fill="#fff"/>' for i in range(7)) + '</g>')
+
+    # The eight phases: (angle, altitude, label, detail, label side).
+    phases = [
+        (-24, 0, 'Launch', 'Kennedy Space Center, Florida', 'below'),
+        (-21.6, 150, 'Boosters separate', '≈ 2 min after launch · ≈ 45 km', 'right'),
+        (-14.2, 360, 'Main engines cut off', '≈ 8½ min · the tank falls away', 'right-low'),
+        (-9, 400, 'In orbit', '≈ 28 000 km/h · ≈ 350–400 km up', 'above'),
+        (3, 400, 'Docking with the ISS', 'crew, cargo and new modules', 'above-r'),
+        (11, 400, 'Deorbit burn', 'about an hour before landing', 'right'),
+        (17.5, 140, 'Entry', 'heat shield up to ≈ 1 600 °C', 'left'),
+        (24, 0, 'Landing', '≈ 350 km/h on the runway', 'below'),
+    ]
+    for n, (deg, alt, label, detail, side) in enumerate(phases, 1):
+        x, y = pt(deg, alt)
+        bw = max(len(label) * 10.5, len(detail) * 7.6) + 30
+        tx, ty = {
+            'left': (x - bw - 40, y - 22),
+            'right': (x + 40, y - 22),
+            'right-low': (x + 36, y + 8),
+            'above': (x - 110, y - 120),
+            'above-r': (x + 30, y - 150),
+            'below': (x - 100, y + 52),
+        }[side]
+        anchor = 'start'
+        a(f'<line x1="{x:.1f}" y1="{y:.1f}" x2="{tx + 14:.1f}" y2="{ty + 20:.1f}" stroke="#c9d8ff" stroke-opacity=".45" stroke-width="1.2"/>')
+        a(f'<g transform="translate({tx:.1f} {ty:.1f})"><rect width="{bw:.0f}" height="56" rx="10" fill="url(#card)" stroke="#3a4f86" stroke-width="1"/>'
+          f'<text x="15" y="24" font-size="17" font-weight="700" fill="#f3f6ff" text-anchor="{anchor}">{label}</text>'
+          f'<text x="15" y="44" font-size="13" fill="#a9b8de" text-anchor="{anchor}">{detail}</text></g>')
+        a(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="15" fill="#0d1530" stroke="#ffd166" stroke-width="2.5"/>'
+          f'<text x="{x:.1f}" y="{y + 5.5:.1f}" font-size="15" font-weight="700" fill="#ffd166" text-anchor="middle">{n}</text>')
+
+    # Title, legend and the honest small print.
+    a('<g transform="translate(56 70)"><text font-size="15" font-weight="700" letter-spacing="4" fill="#ff9f5a">SPACE SHUTTLE · 1981–2011</text>'
+      '<text y="52" font-size="46" font-weight="800" fill="#f3f6ff">Mission profile</text>'
+      '<text y="84" font-size="18" fill="#a9b8de">From the launch pad to the runway: a typical flight took one to two weeks.</text></g>')
+    a('<g transform="translate(1268 62)"><rect width="276" height="128" rx="12" fill="url(#card)" stroke="#3a4f86"/>')
+    for i, (stroke, name) in enumerate((('#ffa94d', 'Ascent'), ('#6fe3ff', 'Orbit'), ('#ff5d73', 'Descent and entry'))):
+        a(f'<line x1="22" y1="{32 + i * 32}" x2="70" y2="{32 + i * 32}" stroke="{stroke}" stroke-width="4" stroke-linecap="round"/>'
+          f'<text x="86" y="{37 + i * 32}" font-size="15" fill="#e3e9fb">{name}</text>')
+    a('</g>')
+    a(f'<text x="{W - 40}" y="{H - 28}" font-size="13" fill="#7f8fb8" text-anchor="end">Schematic, not to scale.</text>')
+    a('</svg>')
+    with open(path, 'w') as f:
+        f.write('\n'.join(out) + '\n')
+
+
 # ----------------------------------------------------------------- report
 
 def report_docx(path):
@@ -277,7 +467,8 @@ LANDING_START = 1.5
 
 def find_chromium():
     base = os.environ.get('PLAYWRIGHT_BROWSERS_PATH', '/opt/pw-browsers')
-    found = sorted(glob.glob(os.path.join(base, 'chromium_headless_shell-*', '*', 'headless_shell')))
+    found = sorted(glob.glob(os.path.join(base, 'chromium_headless_shell-*', '*', 'headless_shell'))
+                   + glob.glob(os.path.join(base, 'chromium_headless_shell-*', '*', 'chrome-headless-shell')))
     return found[-1] if found else None
 
 
@@ -306,6 +497,8 @@ def main():
             f.write(text)
     fact_sheet(put('Shuttle fact sheet.pdf'), put('STS-135 launch.jpg'), put('Atlantis in orbit.jpg'), args.chromium)
     fleet_xlsx(put('Fleet.xlsx'))
+    flights_csv(put('Landmark flights.csv'))
+    mission_svg(put('Mission profile.svg'))
     report_docx(put('Report.docx'))
     with open(put('missions.json'), 'w') as f:
         json.dump(MISSIONS, f, indent=2, ensure_ascii=False)
