@@ -18,10 +18,11 @@
   <a href="docs/DEVELOPMENT.md">Contribute</a>
 </p>
 
-**Monoform is a free, open-source, AI-written everyday tool — a real-world alternative to the pile of small apps you
-open files with.** One fast desktop window for notes and Markdown, PDFs, images, SVG and web pages, 3D models, music
-and other audio, videos, JSON/YAML/CSV, Word, Excel and OpenDocument files, archives and file hashes. It runs on
-Windows, macOS and Linux, works offline, collects no telemetry, needs no account and saves everything as plain files.
+**Monoform is one window for everyday files — instead of the pile of small apps you open them with.** It opens notes
+and Markdown, PDFs, images, SVG and web pages, 3D models, music and other audio, videos, JSON/YAML/CSV, Word, Excel
+and OpenDocument files, archives and file hashes. It runs on Windows, macOS and Linux, works offline, collects no
+telemetry, needs no account and saves everything as plain files. Free and open source (MIT); written by Claude,
+directed and reviewed by its maintainer, with tests and CI.
 
 <p align="center"><img src="docs/readme/tour.webp" width="100%" alt="Clicking through a project folder: Markdown notes, a PDF fact sheet, a NASA photo, a spreadsheet, an SVG, the 3DBenchy model, a piano recording and NASA landing footage, each opening in the same window"></p>
 
@@ -159,16 +160,17 @@ builds all three platforms on every push to `main` and on pull requests.
 
 ## Privacy
 
-Monoform makes no network connections except one: when it starts, it asks GitHub whether there is a newer version
-(a single request to the public releases API; nothing about you, your files or this computer is sent). Turn it off in
-*Settings › About*. A new version is downloaded only after you choose **Download and install**, and checked against the
-release's SHA-256 sums before it replaces the app. The other exceptions happen only when you ask for an optional model: *search by
-meaning* (about 200 MB, Apache-2.0) and, for the image editor, *Better subject selection* (BiRefNet, MIT, about 210 MB)
-and *Object removal* (Moebius, Apache-2.0, about 1.2 GB) with the ONNX Runtime library they run on (MIT, 6–13 MB,
-from Microsoft's NuGet package). Each is downloaded once after you agree, checked against fixed SHA-256 sums, and runs
-on your computer only while you use it. Your files never leave your computer. Settings live in your OS config folder
-(`Monoform/settings.json`). The optional models and search indexes live in the OS cache folder and can be removed
-from the app (Settings › AI models, which can also download them all at once).
+Monoform connects to the internet only when you ask it to, with one exception: when it starts, it asks GitHub whether
+there is a newer version (a single request to the public releases API; nothing about you, your files or this computer
+is sent). Turn it off in *Settings › About*. A new version is downloaded only after you choose **Download and
+install**, and checked against the release's SHA-256 sums before it replaces the app. Everything else happens only
+when you ask: the optional models — *search by meaning* (about 200 MB, Apache-2.0) and, for the image editor, *Better
+subject selection* (BiRefNet, MIT, about 210 MB) and *Object removal* (Moebius, Apache-2.0, about 1.2 GB) with the
+ONNX Runtime library they run on (MIT, 6–13 MB, from Microsoft's NuGet package) — and a web page's images, fonts and
+styles once you allow them in its preview. Each model is downloaded once after you agree, checked against fixed
+SHA-256 sums, and runs on your computer only while you use it. Your files never leave your computer. Settings live in
+your OS config folder (`Monoform/settings.json`). The optional models and search indexes live in the OS cache folder
+and can be removed from the app (Settings › AI models, which can also download them all at once).
 
 ## Documentation
 

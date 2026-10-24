@@ -15,7 +15,7 @@ import {
 } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab, copyLineDown, cursorMatchingBracket } from '@codemirror/commands';
 import { autocompletion, closeBrackets, closeBracketsKeymap, completeAnyWord, completionKeymap, type CompletionContext } from '@codemirror/autocomplete';
-import { addCursorVertical, expandToLine, insertLineAbove, joinLines, sortLines, splitIntoLines, transformCase } from './editing';
+import { addCursorVertical, expandToLine, insertLineAbove, joinLines, sortLines, splitIntoLines } from './editing';
 import { indentGuides, minimap } from './minimap';
 import { editorPhrases } from './phrases';
 import { indentOnInput, bracketMatching, foldGutter, foldKeymap, syntaxHighlighting, HighlightStyle, LanguageDescription } from '@codemirror/language';
@@ -129,8 +129,6 @@ export const sublimeKeymap = Prec.high(
     { key: 'Mod-m', run: cursorMatchingBracket },
     { key: 'Mod-Alt-ArrowUp', run: addCursorVertical(-1) },
     { key: 'Mod-Alt-ArrowDown', run: addCursorVertical(1) },
-    { key: 'Mod-k Mod-u', run: transformCase('upper') },
-    { key: 'Mod-k Mod-l', run: transformCase('lower') },
     { key: 'F9', run: sortLines },
   ]),
 );

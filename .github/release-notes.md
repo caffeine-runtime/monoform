@@ -1,3 +1,9 @@
+## What's new
+
+- Word documents: Ctrl+B makes the selection bold and Ctrl+K inserts a link (they hid the sidebar and opened the command palette).
+- Code editor: Ctrl+/ comments and uncomments lines (it showed the shortcut list).
+- The code editor's Ctrl+K Ctrl+U / Ctrl+K Ctrl+L case shortcuts are gone (Ctrl+K is the command palette); UPPERCASE and lowercase are in the palette and the right-click menu.
+
 ## Downloads
 
 | System | File |

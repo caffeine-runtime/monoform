@@ -26,13 +26,15 @@ building.
 1. The commit you release is on GitHub (pushed) and its last **Build** run is green
    (repository → **Actions → Build**). If you're unsure, run the workflow once without a version first.
 2. `PROGRESS.md` describes what's in this version and its known issues — the release notes point there.
+   Replace the **What's new** list at the top of `.github/release-notes.md` with this version's changes: the update
+   popup in installed copies shows the first lines of the notes.
 3. Optional but recommended for a non-beta: go through the manual checklist in `docs/TESTING.md` on Windows and
    macOS with the previous release's files or a build from **Actions → Build → a run → Artifacts**.
 
 ## Publish — option A: from the GitHub website (no tools needed)
 
 1. Open the repository on GitHub → **Actions** → **Build** (left list) → **Run workflow** (right side).
-2. **Use workflow from:** the branch to release (today: `claude/monoform-v1-er4dqs`, the default branch).
+2. **Use workflow from:** the branch to release (normally `main`, the default branch).
 3. **Version:** e.g. `1.1.0`. Leave it empty and the run only builds and tests, without publishing.
    **Skip macOS** leaves the macOS package out (use it when GitHub has no macOS runner for the account — the
    job then waits and is cancelled, and nothing is published). The release notes then say there is no macOS
@@ -52,7 +54,7 @@ The tag (`v1.1.0`) is created by the release on the commit the run built.
 ## Publish — option B: push a tag (command line)
 
 ```sh
-git checkout claude/monoform-v1-er4dqs   # the branch to release
+git checkout main   # the branch to release
 git pull
 git tag -a v1.1.0 -m "Monoform 1.1.0"
 git push origin v1.1.0
@@ -63,7 +65,7 @@ Pushing a tag that starts with `v` starts the same workflow; the version is the 
 ## Publish — option C: from an agent or the `gh` CLI
 
 ```sh
-gh workflow run build.yml --ref claude/determined-pasteur-coex2l -f version=1.1.0
+gh workflow run build.yml --ref main -f version=1.1.0
 gh run watch            # follow it
 gh release view v1.1.0  # check the result
 ```
@@ -124,7 +126,5 @@ never a 1.x before them) were deleted, so the first published release is 1.0.0.
 - **Code signing.** Windows SmartScreen and macOS Gatekeeper warn about unsigned apps. Signing needs a Windows
   code-signing certificate and an Apple Developer account (for signing + notarization); both would be added as
   repository secrets and steps in the build job.
-- **Auto-update.** The app never contacts the network, so it doesn't check for new versions; users download new
-  releases themselves.
 - **Linux distribution packages** (.deb, Flatpak, AppImage) — see `docs/DECISIONS.md` (Packaging) for why the
   tarball is used.

@@ -1058,11 +1058,6 @@
       openFind(true);
       return;
     }
-    if (!odt && k === 'k' && !e.shiftKey) {
-      e.preventDefault();
-      void editLink();
-      return;
-    }
     if (!odt && e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       insertPageBreak();
@@ -1074,6 +1069,7 @@
       toggleList(e.code === 'Digit7' ? 'number' : 'bullet');
       return;
     }
+    // Ctrl+B and Ctrl+K reach the document through its commands (office/index.ts), ahead of the app's.
     if (k === 'b' || k === 'i' || k === 'u') {
       e.preventDefault();
       exec(k === 'b' ? 'bold' : k === 'i' ? 'italic' : 'underline');
@@ -1137,6 +1133,8 @@
     italic: () => exec('italic'),
     underline: () => exec('underline'),
     style: (s) => setStyle(s),
+    link: () => void editLink(),
+    ownsKey: (k) => !tab.readOnly && !!page?.contains(document.activeElement) && (k === 'bold' || !odt),
   });
 
   function utf8Base64(s: string): string {

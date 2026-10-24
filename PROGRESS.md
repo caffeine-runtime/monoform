@@ -159,7 +159,7 @@
   beyond Ctrl+D: add a cursor above/below (Ctrl+Alt+↑/↓), split a selection into lines (Ctrl+Shift+L), select all
   occurrences (Alt+F3); select line (Ctrl+L, again for the next), duplicate (Ctrl+Shift+D), join (Ctrl+J), insert
   line above (Ctrl+Shift+Enter), jump to bracket (Ctrl+M); sort (F9) / natural sort / reverse / unique lines, trim
-  trailing whitespace; UPPER (Ctrl+K Ctrl+U), lower (Ctrl+K Ctrl+L), Title and swap case; brackets and quotes close
+  trailing whitespace; UPPER, lower, Title and swap case (palette and right-click menu); brackets and quotes close
   themselves; completion from the language plus words in the file; indent guides; show whitespace. The status bar
   counts cursors. All of it is off for files over 8 MB (like highlighting).
 - **M19 — Database browser (SQLite).** .db/.sqlite/.sqlite3 files (also recognised by their header) open in a
@@ -557,6 +557,14 @@
 - **Brush size ring** (image editor): the brush, eraser, clone stamp, healing brush and selection brush show a
   ring round the pointer as wide as the brush (dark and light dashed, visible on any picture), following size
   changes and the zoom; hidden off the picture, for other tools and on touch. Self-test `m75`.
+- **Fix: editor keys lost to the app's shortcuts.** The app's capture-phase shortcut handler took Ctrl+B, Ctrl+K
+  and Ctrl+/ before the editors saw them: in a Word document Ctrl+B hid the sidebar instead of bolding and Ctrl+K
+  opened the palette instead of the link dialog; in the code editor Ctrl+/ showed the shortcut list instead of
+  commenting the line. While the caret is in a document's page (or a code editor whose language has comments) these are the editor's,
+  through commands that claim them (`office/index.ts`, `text/commands.ts`); elsewhere they are still the sidebar,
+  the palette and the shortcut list. The code editor's Ctrl+K Ctrl+U / Ctrl+K Ctrl+L case chords never got past
+  the palette and were removed (Ctrl+K stays the palette everywhere; the case commands are in the palette and the
+  right-click menu). Self-test `m76` presses the keys as key events.
 - **Rulers, guides, grid and snapping** (image editor, the ▦ button in the tool bar): rulers in picture pixels
   along the top and left (Mod+R) with a mark where the pointer is; drag out of a ruler for a guide, drag a guide
   (move or hand tool) back onto a ruler to remove it, or Clear guides; a grid (Mod+', a round size or one you set);
@@ -720,8 +728,8 @@ available here).
 - Opening a 50 MB file has one or two 80–120 ms frames on the software-rendered VM (budget 50 ms).
 - Markdown preview code blocks are not syntax-highlighted, and task lists (`- [ ]`, `- [x]`) show as plain text, not checkboxes.
 - The first PDF opened in a session takes ~0.5 s to show page 1 (cold worker/fonts); later ones meet the 300 ms budget.
-- PDF: applying a page operation, compression, signatures or redactions reloads the document; pdf.js's first repaint of it is one ~170–250 ms frame on the test VM. Redacted pages become images (by design: nothing under the boxes survives), so their text is no longer selectable — OCR (planned) can bring it back. Signatures are images, not cryptographic (certificate) signatures.
-- Word editing: creating new bullet/numbered lists, inserting images/tables and editing headers/footers aren't supported yet (existing ones are preserved). Legacy .doc conversion keeps text only; .xls conversion keeps values (not formulas/formatting).
+- PDF: applying a page operation, compression, signatures or redactions reloads the document; pdf.js's first repaint of it is one ~170–250 ms frame on the test VM. Redacted pages become images (by design: nothing under the boxes survives), so their text is no longer selectable until the document is made searchable again (OCR). Signatures are images, not cryptographic (certificate) signatures.
+- Word editing: headers and footers can't be edited yet (existing ones are preserved). Legacy .doc conversion keeps text only; .xls conversion keeps values (not formulas/formatting).
 - Search by meaning is slow to index (single-threaded WebAssembly; the webview can't run WASM threads — see DECISIONS) — a large notes folder takes hours on slow hardware, though every file gets one passage early. A query waits for at most one in-flight indexing passage (a few seconds on slow machines).
 - A cold load of the search model produces one 50–75 ms UI frame on the test VM (budget 50 ms).
 - Search by meaning indexes plain text/Markdown/code only (not PDFs or Word files yet).

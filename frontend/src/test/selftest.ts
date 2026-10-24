@@ -81,6 +81,7 @@ const scenarios: Record<string, () => Promise<{ default: (arg: string) => Promis
   m73: () => import('./m73'),
   m74: () => import('./m74'),
   m75: () => import('./m75'),
+  m76: () => import('./m76'),
   m49real: () => import('./m49').then((m) => ({ default: m.m49real })),
   m43: () => import('./m43'),
   m43real: () => import('./m43real'),

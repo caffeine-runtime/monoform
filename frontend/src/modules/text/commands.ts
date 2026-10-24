@@ -8,13 +8,17 @@ import { controllers } from './controllers';
 import { formatShortcut } from '../../core/keys';
 import { EditorSelection, type StateCommand } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { copyLineDown } from '@codemirror/commands';
+import { copyLineDown, toggleComment } from '@codemirror/commands';
 import { selectSelectionMatches } from '@codemirror/search';
 import * as ed from './editing';
 import { t } from '../../core/i18n';
 
 /** An encoding's name for display. */
 const encodingLabel = (e: Encoding) => (e === 'utf-8-bom' ? t('UTF-8 with BOM') : labelOf(e));
+
+/** The caret is in this editor and its language has comment syntax. */
+const commentable = (v: EditorView | undefined) =>
+  !!v && v.contentDOM.contains(document.activeElement) && v.state.languageDataAt('commentTokens', v.state.selection.main.head).length > 0;
 
 let registered = false;
 
@@ -41,6 +45,8 @@ export function registerTextCommands() {
     { id: 'text.zoomOut', title: t('Editor: smaller font'), category: t('View'), shortcut: 'Mod+-', when: has, run: () => settings.update((s) => (s.fontSize = Math.max(9, s.fontSize - 1))) },
     { id: 'text.zoomReset', title: t('Editor: reset font size'), category: t('View'), shortcut: 'Mod+0', when: has, run: () => settings.update((s) => (s.fontSize = 14)) },
     // ---- Sublime-style editing (the keys also work inside the editor) ----
+    // Ctrl+/ while typing in a language with comments comments the line (CodeMirror's key), ahead of the app's shortcut list.
+    { id: 'text.commentKey', title: t('Toggle comment'), category: t('Edit'), shortcut: 'Mod+/', hidden: true, when: () => commentable(activeController()?.view), run: run((c) => toggleComment(c.view)) },
     { id: 'text.gotoSymbol', title: t('Go to symbol in file…'), category: t('Go'), shortcut: 'Mod+R', when: has, run: run((c) => gotoSymbol(c.view)) },
     ...(
       [
@@ -57,8 +63,8 @@ export function registerTextCommands() {
         ['text.reverseLines', t('Reverse lines'), ed.reverseLines],
         ['text.uniqueLines', t('Remove duplicate lines'), ed.uniqueLines],
         ['text.trimTrailing', t('Trim trailing whitespace'), ed.trimTrailing],
-        ['text.upper', t('Convert to UPPERCASE ({shortcut})', { shortcut: `${formatShortcut('Mod+K')} ${formatShortcut('Mod+U')}` }), ed.transformCase('upper')],
-        ['text.lower', t('Convert to lowercase ({shortcut})', { shortcut: `${formatShortcut('Mod+K')} ${formatShortcut('Mod+L')}` }), ed.transformCase('lower')],
+        ['text.upper', t('Convert to UPPERCASE'), ed.transformCase('upper')],
+        ['text.lower', t('Convert to lowercase'), ed.transformCase('lower')],
         ['text.title', t('Convert to Title Case'), ed.transformCase('title')],
         ['text.swapCase', t('Swap case'), ed.transformCase('swap')],
       ] as [string, string, StateCommand][]

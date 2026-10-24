@@ -87,6 +87,10 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 - **Session restore loads only the active tab**; other tabs load when first activated instead of all in the background — cheaper on memory with large files, and still "shell first, contents after".
 - **Module commands register once per module** (when its chunk loads) and act on the active tab via `when()`, rather than per tab instance, so IDs stay unique and the palette doesn't fill with duplicates.
 - **Later command registrations win shortcut conflicts** (if their `when` holds), so a module can claim e.g. `Mod+F` while it is active.
+  Editors claim the keys they own the same way while the caret is in them (hidden commands: Ctrl+B / Ctrl+K in a Word
+  page, Ctrl+/ in the code editor): the capture-phase handler runs before the editor's own keydown and stops the
+  event, so a key the editor handles itself never arrives. Ctrl+K stays the palette in the code editor, so it has no
+  Ctrl+K chords.
 - **No native menu bar on Windows/Linux.** The ☰ button in the sidebar lists every command grouped by category (built from the command registry); the palette covers the rest. A native GTK/Win32 menu bar would clash with the calm look and duplicate key handling. macOS gets the standard app/Edit menu (needed for Cmd+C/V in WKWebView).
 - **Shortcuts are handled in JS only** (capture-phase listener reading the command registry), so they behave the same on all three webviews and in the palette.
 - **Toggle-theme shortcut is `Mod+Alt+T`**; there is no common standard for this.
