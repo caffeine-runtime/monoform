@@ -3,7 +3,7 @@
 // Photoshop's Layer Style. The effects are one picture per layer, worked out
 // here from the layer's content (in the vision worker while editing, here on
 // the main thread when a picture is needed at once). Pure functions.
-import { blur, signedDistance } from "./vision/selmodify";
+import { blur, signedDistance } from './vision/selmodify';
 
 export interface DropShadow {
   color: string;
@@ -32,15 +32,9 @@ export interface LayerStyle {
   glow?: Glow | null;
 }
 
-export const SHADOW_DEFAULT: DropShadow = {
-  color: "#000000",
-  opacity: 0.6,
-  angle: 120,
-  distance: 8,
-  size: 10,
-};
-export const STROKE_DEFAULT: Stroke = { color: "#000000", opacity: 1, size: 3 };
-export const GLOW_DEFAULT: Glow = { color: "#ffd84d", opacity: 0.75, size: 16 };
+export const SHADOW_DEFAULT: DropShadow = { color: '#000000', opacity: 0.6, angle: 120, distance: 8, size: 10 };
+export const STROKE_DEFAULT: Stroke = { color: '#000000', opacity: 1, size: 3 };
+export const GLOW_DEFAULT: Glow = { color: '#ffd84d', opacity: 0.75, size: 16 };
 
 export function styleEmpty(s: LayerStyle | null | undefined): boolean {
   return !s || (!s.shadow && !s.stroke && !s.glow);
@@ -83,12 +77,7 @@ export interface StyleRender {
  * shadow, the glow over it, the stroke over both. Null when the layer is
  * empty or the style has nothing on.
  */
-export function renderStyle(
-  alpha: Uint8ClampedArray | Uint8Array,
-  w: number,
-  h: number,
-  s: LayerStyle,
-): StyleRender | null {
+export function renderStyle(alpha: Uint8ClampedArray | Uint8Array, w: number, h: number, s: LayerStyle): StyleRender | null {
   if (styleEmpty(s)) return null;
   // What the layer covers.
   let x0 = w;
@@ -113,9 +102,7 @@ export function renderStyle(
   const W = x1 - x0 + 1 + 2 * pad;
   const H = y1 - y0 + 1 + 2 * pad;
   const a = new Float32Array(W * H);
-  for (let y = y0; y <= y1; y++)
-    for (let x = x0; x <= x1; x++)
-      a[(y - oy) * W + x - ox] = alpha[y * w + x] / 255;
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) a[(y - oy) * W + x - ox] = alpha[y * w + x] / 255;
 
   // Straight-alpha colour layers, drawn bottom first.
   const out = new Float32Array(W * H * 4); // r, g, b in 0..255, a in 0..1
@@ -171,8 +158,7 @@ export function renderStyle(
   if (s.stroke && sd) {
     const st = new Float32Array(W * H);
     // Outside the shape up to its size, and under its soft edge (not inside it).
-    for (let i = 0; i < st.length; i++)
-      st[i] = clamp01(0.5 + s.stroke.size - sd[i]) * clamp01(sd[i] + 1.5);
+    for (let i = 0; i < st.length; i++) st[i] = clamp01(0.5 + s.stroke.size - sd[i]) * clamp01(sd[i] + 1.5);
     over(st, s.stroke.color, s.stroke.opacity);
   }
 
@@ -196,16 +182,12 @@ export function parseStyle(json: string | undefined): LayerStyle | null {
   } catch {
     return null;
   }
-  if (!v || typeof v !== "object") return null;
-  const num = (x: unknown, d: number, lo: number, hi: number) =>
-    typeof x === "number" && Number.isFinite(x)
-      ? Math.min(hi, Math.max(lo, x))
-      : d;
-  const col = (x: unknown, d: string) =>
-    typeof x === "string" && /^#[0-9a-f]{6}$/i.test(x) ? x : d;
+  if (!v || typeof v !== 'object') return null;
+  const num = (x: unknown, d: number, lo: number, hi: number) => (typeof x === 'number' && Number.isFinite(x) ? Math.min(hi, Math.max(lo, x)) : d);
+  const col = (x: unknown, d: string) => (typeof x === 'string' && /^#[0-9a-f]{6}$/i.test(x) ? x : d);
   const out: LayerStyle = {};
   const sh = v.shadow;
-  if (sh && typeof sh === "object")
+  if (sh && typeof sh === 'object')
     out.shadow = {
       color: col(sh.color, SHADOW_DEFAULT.color),
       opacity: num(sh.opacity, SHADOW_DEFAULT.opacity, 0, 1),
@@ -214,18 +196,8 @@ export function parseStyle(json: string | undefined): LayerStyle | null {
       size: num(sh.size, SHADOW_DEFAULT.size, 0, 250),
     };
   const st = v.stroke;
-  if (st && typeof st === "object")
-    out.stroke = {
-      color: col(st.color, STROKE_DEFAULT.color),
-      opacity: num(st.opacity, 1, 0, 1),
-      size: num(st.size, STROKE_DEFAULT.size, 1, 250),
-    };
+  if (st && typeof st === 'object') out.stroke = { color: col(st.color, STROKE_DEFAULT.color), opacity: num(st.opacity, 1, 0, 1), size: num(st.size, STROKE_DEFAULT.size, 1, 250) };
   const gl = v.glow;
-  if (gl && typeof gl === "object")
-    out.glow = {
-      color: col(gl.color, GLOW_DEFAULT.color),
-      opacity: num(gl.opacity, GLOW_DEFAULT.opacity, 0, 1),
-      size: num(gl.size, GLOW_DEFAULT.size, 1, 250),
-    };
+  if (gl && typeof gl === 'object') out.glow = { color: col(gl.color, GLOW_DEFAULT.color), opacity: num(gl.opacity, GLOW_DEFAULT.opacity, 0, 1), size: num(gl.size, GLOW_DEFAULT.size, 1, 250) };
   return styleEmpty(out) ? null : out;
 }
