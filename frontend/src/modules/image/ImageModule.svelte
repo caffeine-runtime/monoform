@@ -33,6 +33,8 @@
   import Layers from '@lucide/svelte/icons/layers';
   import Sliders from '@lucide/svelte/icons/sliders-horizontal';
   import Sparkles from '@lucide/svelte/icons/sparkles';
+  import Stamp from '@lucide/svelte/icons/stamp';
+  import Bandage from '@lucide/svelte/icons/bandage';
   import UserRoundSearch from '@lucide/svelte/icons/user-round-search';
   import Download from '@lucide/svelte/icons/download';
   import { flashAt, openSettingsAt } from '../../core/settingsLink';
@@ -349,6 +351,19 @@
       updateStatus();
     };
     editor.onPick = (t, x, y, mode) => (t === 'picker' ? pickAt(x, y) : void (t === 'fill' ? fillAt(x, y) : t === 'wand' ? wandAt(x, y, mode) : objectAt(x, y, mode)));
+    editor.notify = (msg) => ui.toast(msg);
+    editor.onHeal = async (crop, mask) => {
+      const slow = setTimeout(() => (busy = t('Healing…')), 300);
+      try {
+        return await vision.heal(crop, mask);
+      } catch (e) {
+        toastError(e);
+        return null;
+      } finally {
+        clearTimeout(slow);
+        busy = '';
+      }
+    };
     editor.onPainted = (s) =>
       void vision
         .edges(s.mask)
@@ -1189,6 +1204,8 @@
     [
       { id: 'brush', icon: Brush, label: t('Brush'), help: t('Drag to paint on the active layer. Set size, opacity and colour in the toolbar.'), key: 'B' },
       { id: 'eraser', icon: Eraser, label: t('Eraser'), help: t('Drag to erase the active layer to transparency.'), key: 'E' },
+      { id: 'clone', icon: Stamp, label: t('Clone stamp'), help: t('Alt-click where to copy from, then paint where it should go. The source follows the brush.'), key: 'S' },
+      { id: 'heal', icon: Bandage, label: t('Spot healing brush'), help: t('Paint over a spot, a blemish or a small object: it is replaced from nearby, matched to the light around it.'), key: 'J' },
       { id: 'fill', icon: PaintBucket, label: t('Paint bucket'), help: t('Click to fill an area of similar colour on the active layer (only inside the selection, if there is one). Set Tolerance in the toolbar.'), key: 'G' },
     ],
     [
@@ -1313,6 +1330,11 @@
       <label class="opt" title={t('How different a colour can be and still be filled')}>{t('Tolerance')} <input type="range" min="0" max="128" value={opts.wandTolerance} oninput={(e) => setOpt('wandTolerance', +(e.target as HTMLInputElement).value)} /><span class="v">{opts.wandTolerance}</span></label>
       <label class="opt chk" title={t('Off: fill every pixel of that colour, not only the connected area')}><input type="checkbox" checked={opts.wandContiguous} onchange={(e) => setOpt('wandContiguous', (e.target as HTMLInputElement).checked)} /> {t('Contiguous')}</label>
       <span class="sep"></span>
+    {:else if tool === 'clone' || tool === 'heal'}
+      <label class="opt">{t('Size')} <input type="range" min="2" max="300" value={opts.brushSize || 24} oninput={(e) => setOpt('brushSize', +(e.target as HTMLInputElement).value)} /><span class="v">{opts.brushSize || 24}</span></label>
+      {#if tool === 'clone'}<label class="opt">{t('Opacity')} <input type="range" min="5" max="100" value={Math.round(opts.brushOpacity * 100)} oninput={(e) => setOpt('brushOpacity', +(e.target as HTMLInputElement).value / 100)} /></label>{/if}
+      <span class="hint">{tool === 'clone' ? t('Alt-click the source, then paint') : t('Paint over what should go')}</span>
+      <span class="sep"></span>
     {:else if tool === 'brush' || tool === 'eraser'}
       <label class="opt">{t('Size')} <input type="range" min="1" max="300" value={opts.brushSize || 12} oninput={(e) => setOpt('brushSize', +(e.target as HTMLInputElement).value)} /><span class="v">{opts.brushSize || t('auto')}</span></label>
       {#if tool === 'brush'}<label class="opt">{t('Opacity')} <input type="range" min="5" max="100" value={Math.round(opts.brushOpacity * 100)} oninput={(e) => setOpt('brushOpacity', +(e.target as HTMLInputElement).value / 100)} /></label>{/if}
@@ -1335,7 +1357,7 @@
       {/if}
       <span class="sep"></span>
     {/if}
-    {#if tool !== 'eraser' && !SELECT_TOOLS.includes(tool) && tool !== 'crop' && tool !== 'blur' && tool !== 'pixelate'}
+    {#if tool !== 'eraser' && !SELECT_TOOLS.includes(tool) && tool !== 'crop' && tool !== 'blur' && tool !== 'pixelate' && tool !== 'clone' && tool !== 'heal'}
       {#each COLORS as c (c)}
         <button class="swatch" class:on={(obj?.color ?? opts.color) === c} style:background={c} title={t('Colour')} aria-label={t('Colour {value}', { value: c })} onclick={() => pickColor(c)}></button>
       {/each}

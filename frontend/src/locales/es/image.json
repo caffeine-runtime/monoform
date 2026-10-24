@@ -570,5 +570,15 @@
   "Selection: contract…": "Selección: contraer…",
   "Selection: smooth…": "Selección: suavizar…",
   "Selection: border…": "Selección: borde…",
-  "Modify selection": "Modificar selección"
+  "Modify selection": "Modificar selección",
+  "Clone stamp": "Tampón de clonar",
+  "Alt-click where to copy from, then paint where it should go. The source follows the brush.": "Haz Alt-clic donde copiar y pinta donde debe ir. El origen sigue al pincel.",
+  "Spot healing brush": "Pincel corrector puntual",
+  "Paint over a spot, a blemish or a small object: it is replaced from nearby, matched to the light around it.": "Pinta sobre una mancha, una imperfección o un objeto pequeño: se sustituye con algo cercano, ajustado a la luz de alrededor.",
+  "Alt-click the source, then paint": "Alt-clic en el origen y luego pinta",
+  "Paint over what should go": "Pinta sobre lo que debe desaparecer",
+  "Healing…": "Corrigiendo…",
+  "Tool: clone stamp": "Herramienta: tampón de clonar",
+  "Tool: spot healing brush": "Herramienta: pincel corrector puntual",
+  "Alt-click where to copy from first.": "Primero haz Alt-clic donde copiar."
 }

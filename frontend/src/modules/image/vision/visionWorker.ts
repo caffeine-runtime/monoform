@@ -14,6 +14,7 @@ import { refineMask, sample, snapMask } from './refine';
 import { dilate, ERASE_SIZE, feather, type Rect } from './erase';
 import { plainBorder, removePlain } from './plainbg';
 import { modifyMask, type ModifyOp } from './selmodify';
+import { heal } from './heal';
 import u2netpUrl from '../models/u2netp.onnx?url';
 import samEncUrl from '../models/efficientsam-ti-encoder-q8.onnx?url';
 import samDecUrl from '../models/efficientsam-ti-decoder-q8.onnx?url';
@@ -34,6 +35,7 @@ export type VisionIn =
   | { id: number; type: 'samDecode'; key: string; points: { x: number; y: number; positive: boolean }[] }
   | { id: number; type: 'edges'; image: ImageBitmap }
   | { id: number; type: 'modify'; image: ImageBitmap; op: ModifyOp; amount: number }
+  | { id: number; type: 'heal'; image: ImageBitmap; mask: ImageBitmap }
   | { id: number; type: 'aiSubject'; image: ImageBitmap; base: string }
   | { id: number; type: 'eraseBegin'; image: ImageBitmap; mask: ImageBitmap; rect: Rect; base: string; seed: number }
   | { id: number; type: 'eraseFinish'; started: EraseStarted; base: string };
@@ -56,7 +58,7 @@ export interface PlainOut {
   everywhere: boolean;
 }
 
-type Result = MaskResult | { millis: number } | EraseStarted | ErasePatch | PlainOut;
+type Result = MaskResult | { millis: number } | EraseStarted | ErasePatch | PlainOut | { healed: ImageBitmap };
 export type VisionOut = { id: number; ok: true; result: Result } | { id: number; ok: false; error: string };
 
 const MEAN = [0.485, 0.456, 0.406];
@@ -485,6 +487,22 @@ function plainBg(img: ImageBitmap, everywhere: boolean | 'auto', force: boolean)
   return { image: c.transferToImageBitmap(), color, everywhere: r.everywhere };
 }
 
+/** Spot healing on a crop: the painted pixels (mask alpha) replaced from nearby (heal.ts). */
+function healSpot(img: ImageBitmap, maskImg: ImageBitmap): { healed: ImageBitmap } {
+  const w = img.width;
+  const h = img.height;
+  const px = pixels(img);
+  const mp = pixels(maskImg);
+  img.close();
+  maskImg.close();
+  const mask = new Uint8Array(w * h);
+  for (let i = 0; i < mask.length; i++) mask[i] = mp[i * 4 + 3];
+  const out = heal(px, w, h, mask);
+  const c = new OffscreenCanvas(w, h);
+  c.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(out), w, h), 0, 0);
+  return { healed: c.transferToImageBitmap() };
+}
+
 function edgesOnly(img: ImageBitmap, modify?: { op: ModifyOp; amount: number }): MaskResult {
   const t0 = performance.now();
   const px = pixels(img);
@@ -510,8 +528,9 @@ self.onmessage = async (e: MessageEvent<VisionIn>) => {
     else if (m.type === 'samEncode') result = await samEncode(m.image, m.key);
     else if (m.type === 'samDecode') result = await samDecode(m.key, m.points);
     else if (m.type === 'modify') result = edgesOnly(m.image, m);
+    else if (m.type === 'heal') result = healSpot(m.image, m.mask);
     else result = edgesOnly(m.image);
-    const transfer = 'mask' in result ? [result.mask, result.edges] : 'patch' in result ? [result.patch] : 'everywhere' in result && result.image ? [result.image] : [];
+    const transfer = 'healed' in result ? [result.healed] : 'mask' in result ? [result.mask, result.edges] : 'patch' in result ? [result.patch] : 'everywhere' in result && result.image ? [result.image] : [];
     (self as unknown as Worker).postMessage({ id: m.id, ok: true, result } satisfies VisionOut, transfer);
   } catch (err) {
     (self as unknown as Worker).postMessage({ id: m.id, ok: false, error: err instanceof Error ? err.message : String(err) } satisfies VisionOut);

@@ -53,7 +53,9 @@ export type Tool =
   | 'text'
   | 'blur'
   | 'pixelate'
-  | 'picker';
+  | 'picker'
+  | 'clone'
+  | 'heal';
 export const REGION_TOOLS: Tool[] = ['crop', 'blur', 'pixelate'];
 export const SELECT_TOOLS: Tool[] = ['select', 'ellipse', 'lasso', 'selbrush', 'wand', 'object'];
 /** Tools whose selection gets handles: the outline itself moved, scaled and turned (not the pixels). */
@@ -195,6 +197,26 @@ function moved(p: Path2D, m: DOMMatrix): Path2D {
   return q;
 }
 
+/** A soft round brush stamped from a to b (clone stamp): full in the middle, fading over its outer half. */
+function stamp(g: CanvasRenderingContext2D, a: { x: number; y: number }, b: { x: number; y: number }, size: number) {
+  const r = Math.max(1, size / 2);
+  const len = Math.hypot(b.x - a.x, b.y - a.y);
+  const step = Math.max(1, r * 0.25);
+  const n = Math.max(1, Math.ceil(len / step));
+  for (let i = len ? 1 : 0; i <= n; i++) {
+    const x = a.x + ((b.x - a.x) * i) / n;
+    const y = a.y + ((b.y - a.y) * i) / n;
+    const grad = g.createRadialGradient(x, y, 0, x, y, r);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(0.5, 'rgba(255,255,255,1)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grad;
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.fill();
+  }
+}
+
 function applyMask(c: HTMLCanvasElement, mask: HTMLCanvasElement): HTMLCanvasElement {
   const out = raster.clone(c);
   const g = out.getContext('2d')!;
@@ -246,6 +268,8 @@ export class ImageEditor {
     erase: boolean;
     /** Painting the layer's mask. */
     onMask: boolean;
+    /** Clone stamp: paint is a soft mask through which the shifted layer shows. */
+    clone: boolean;
   } | null = null;
   private docW: number;
   private docH: number;
@@ -288,6 +312,18 @@ export class ImageEditor {
   onPick: (tool: 'wand' | 'object' | 'picker' | 'fill', x: number, y: number, mode: SelectMode) => void = () => {};
   /** Called after the selection brush changed the selection (the module draws its outline off the main thread). */
   onPainted: (s: Selection) => void = () => {};
+  /** Spot healing (the module runs it in the vision worker): a crop of the layer and the painted mask → the healed crop. */
+  onHeal: (crop: HTMLCanvasElement, mask: HTMLCanvasElement) => Promise<CanvasImageSource | null> = async () => null;
+  /** A short message for the user (wired to the app's toasts). */
+  notify: (msg: string) => void = () => {};
+
+  // ---- clone stamp ----
+  /** Where Alt-click chose to copy from, and the stroke-to-source shift once painting started (aligned). */
+  private cloneSrc: { x: number; y: number } | null = null;
+  private cloneOffset: { dx: number; dy: number } | null = null;
+  private cloneMark: Konva.Group;
+  /** Spot healing: the stroke being painted (document points). */
+  private healPts: number[] | null = null;
 
   constructor(
     private container: HTMLDivElement,
@@ -310,6 +346,13 @@ export class ImageEditor {
     this.world.add(this.lassoLine);
     this.selPaintLine = new KLine({ points: [], stroke: 'rgba(255, 70, 70, 0.45)', lineCap: 'round', lineJoin: 'round', listening: false });
     this.world.add(this.selPaintLine);
+    this.cloneMark = new Konva.Group({ visible: false, listening: false });
+    for (const [stroke, dash] of [['#000', undefined], ['#fff', [3, 3]]] as const) {
+      this.cloneMark.add(new KEllipse({ x: 0, y: 0, radiusX: 1, radiusY: 1, stroke, strokeWidth: 1.5, strokeScaleEnabled: false, dash: dash ? [...dash] : undefined, name: 'ring' }));
+      this.cloneMark.add(new KLine({ points: [-6, 0, 6, 0], stroke, strokeWidth: 1.5, strokeScaleEnabled: false, dash: dash ? [...dash] : undefined, name: 'cross' }));
+      this.cloneMark.add(new KLine({ points: [0, -6, 0, 6], stroke, strokeWidth: 1.5, strokeScaleEnabled: false, dash: dash ? [...dash] : undefined, name: 'cross' }));
+    }
+    this.world.add(this.cloneMark);
     this.region = new KRect({ visible: false, stroke: '#ffffff', dash: [6, 4], strokeScaleEnabled: false, strokeWidth: 1.5, fill: 'rgba(217,119,87,0.12)', draggable: true, name: 'region' });
     this.regionPreview = new KImage({ image: undefined, visible: false, listening: false });
     this.world.add(this.regionPreview);
@@ -444,6 +487,7 @@ export class ImageEditor {
     this.world.draggable(t === 'hand');
     this.updateDraggable();
     if (t === 'move') this.tr.nodes([this.active.group]);
+    this.showCloneMark(this.cloneSrc);
     const cursors: Partial<Record<Tool, string>> = { hand: 'grab', move: 'move', text: 'text', brush: 'crosshair', eraser: 'crosshair' };
     this.container.style.cursor = cursors[t] ?? 'crosshair';
     this.klayer.batchDraw();
@@ -453,6 +497,7 @@ export class ImageEditor {
   setOptions(o: Partial<ToolOptions>) {
     Object.assign(this.opts, o);
     if ('regionBlur' in o || 'pixelSize' in o) this.schedulePreview();
+    if ('brushSize' in o && this.cloneMark.visible()) this.showCloneMark(this.cloneMark.position());
   }
 
   private updateDraggable() {
@@ -552,6 +597,7 @@ export class ImageEditor {
     this.lasso = null;
     this.lassoLine.points([]);
     this.selPaint = null;
+    this.healPts = null;
     this.selPaintLine.points([]);
     for (const tr of [this.tr, this.regionTr, this.selTr]) if (tr.isTransforming()) tr.stopTransform();
     const nodes: KNode[] = [this.world, this.selFrame, this.region, ...this.layers.flatMap((L) => [L.group as KNode, ...(L.objs.getChildren() as KNode[])])];
@@ -644,6 +690,11 @@ export class ImageEditor {
         void this.addText(p);
         return;
       }
+      if (t === 'clone' && ((e.evt as MouseEvent).altKey || !this.cloneSrc)) {
+        if ((e.evt as MouseEvent).altKey) this.setCloneSource(p);
+        else this.askCloneSource();
+        return;
+      }
       this.start = p;
       const sw = this.autoStroke();
       const c = this.opts.color;
@@ -666,8 +717,13 @@ export class ImageEditor {
         this.lasso = [p.x, p.y];
         this.lassoLine.points(this.lasso);
         return;
-      } else if (t === 'brush' || t === 'eraser') {
+      } else if (t === 'brush' || t === 'eraser' || t === 'clone') {
         this.beginStroke(p);
+        return;
+      } else if (t === 'heal') {
+        this.healPts = [p.x, p.y, p.x, p.y];
+        this.selPaintLine.setAttrs({ points: this.healPts, strokeWidth: this.brushSize(), stroke: 'rgba(255, 180, 40, 0.5)' });
+        this.klayer.batchDraw();
         return;
       }
       if (this.draft) this.active.objs.add(this.draft as Konva.Shape);
@@ -680,11 +736,12 @@ export class ImageEditor {
         this.strokeTo(p);
         return;
       }
-      if (this.selPaint) {
-        const n = this.selPaint.length;
-        if (Math.hypot(p.x - this.selPaint[n - 2], p.y - this.selPaint[n - 1]) * this.view.zoom > 2) {
-          this.selPaint.push(p.x, p.y);
-          this.selPaintLine.points(this.selPaint);
+      const painted = this.selPaint ?? this.healPts;
+      if (painted) {
+        const n = painted.length;
+        if (Math.hypot(p.x - painted[n - 2], p.y - painted[n - 1]) * this.view.zoom > 2) {
+          painted.push(p.x, p.y);
+          this.selPaintLine.points(painted);
           this.klayer.batchDraw();
         }
         return;
@@ -728,6 +785,13 @@ export class ImageEditor {
         this.start = null;
         this.selPaintLine.points([]);
         this.paintSelection(pts, (e.evt as MouseEvent).altKey ? 'subtract' : 'add');
+        return;
+      }
+      if (this.healPts) {
+        const pts = this.healPts;
+        this.healPts = null;
+        this.start = null;
+        void this.healStroke(pts);
         return;
       }
       if (this.lasso) {
@@ -1736,19 +1800,24 @@ export class ImageEditor {
     const eraser = (this.tool === 'eraser') !== (onMask && this.opts.maskHide);
     // Inside a selection the stroke is drawn on its own canvas and shown only
     // through the selection mask, so painting never leaks outside it.
-    const paint = this.selection ? raster.makeCanvas(before.width, before.height) : null;
+    const clone = this.tool === 'clone';
+    const paint = this.selection || clone ? raster.makeCanvas(before.width, before.height) : null;
+    if (clone && !this.cloneOffset) this.cloneOffset = { dx: this.cloneSrc!.x - p.x, dy: this.cloneSrc!.y - p.y };
     const g = (paint ?? canvas).getContext('2d')!;
     g.lineCap = 'round';
     g.lineJoin = 'round';
     g.lineWidth = this.brushSize();
     g.strokeStyle = onMask ? '#fff' : this.opts.color;
     g.fillStyle = g.strokeStyle;
-    g.globalAlpha = eraser && !onMask ? 1 : this.opts.brushOpacity;
+    g.globalAlpha = eraser && !onMask ? 1 : clone ? 1 : this.opts.brushOpacity;
     g.globalCompositeOperation = eraser && !paint ? 'destination-out' : 'source-over';
-    g.beginPath();
-    g.arc(p.x, p.y, g.lineWidth / 2, 0, Math.PI * 2);
-    g.fill();
-    this.stroke = { canvas, g, last: p, before, paint, erase: eraser, onMask };
+    if (clone) stamp(g, p, p, g.lineWidth);
+    else {
+      g.beginPath();
+      g.arc(p.x, p.y, g.lineWidth / 2, 0, Math.PI * 2);
+      g.fill();
+    }
+    this.stroke = { canvas, g, last: p, before, paint, erase: eraser && !clone, onMask, clone };
     this.showStroke(p, p);
     if (onMask) this.setCanvas(L, L.canvas, canvas);
     else this.setCanvas(L, canvas);
@@ -1757,10 +1826,16 @@ export class ImageEditor {
 
   private strokeTo(p: { x: number; y: number }) {
     const s = this.stroke!;
-    s.g.beginPath();
-    s.g.moveTo(s.last.x, s.last.y);
-    s.g.lineTo(p.x, p.y);
-    s.g.stroke();
+    if (s.clone) {
+      stamp(s.g, s.last, p, s.g.lineWidth);
+      const o = this.cloneOffset!;
+      this.cloneMark.position({ x: p.x + o.dx, y: p.y + o.dy });
+    } else {
+      s.g.beginPath();
+      s.g.moveTo(s.last.x, s.last.y);
+      s.g.lineTo(p.x, p.y);
+      s.g.stroke();
+    }
     this.showStroke(s.last, p);
     const L = this.active;
     if (L.mask && L.maskOn) {
@@ -1777,7 +1852,7 @@ export class ImageEditor {
   /** Recompose the area a segment touched: before + stroke ∩ selection (only with a selection). */
   private showStroke(a: { x: number; y: number }, b: { x: number; y: number }) {
     const s = this.stroke!;
-    if (!s.paint || !this.selection) return;
+    if (!s.paint || (!this.selection && !s.clone)) return;
     const pad = Math.ceil(s.g.lineWidth / 2) + 2;
     const x = Math.max(0, Math.floor(Math.min(a.x, b.x) - pad));
     const y = Math.max(0, Math.floor(Math.min(a.y, b.y) - pad));
@@ -1786,15 +1861,103 @@ export class ImageEditor {
     if (w <= 0 || h <= 0) return;
     const t = raster.makeCanvas(w, h);
     const tg = t.getContext('2d')!;
+    if (s.clone) {
+      // The layer as it was, shifted from the source, through the brush's soft mask.
+      const o = this.cloneOffset!;
+      tg.drawImage(s.before, x + o.dx, y + o.dy, w, h, 0, 0, w, h);
+      tg.globalCompositeOperation = 'destination-in';
+    }
     tg.drawImage(s.paint, x, y, w, h, 0, 0, w, h);
     tg.globalCompositeOperation = 'destination-in';
-    tg.drawImage(this.selection.mask, x, y, w, h, 0, 0, w, h);
+    if (this.selection) tg.drawImage(this.selection.mask, x, y, w, h, 0, 0, w, h);
     const g = s.canvas.getContext('2d')!;
     g.clearRect(x, y, w, h);
     g.drawImage(s.before, x, y, w, h, x, y, w, h);
     g.globalCompositeOperation = s.erase ? 'destination-out' : 'source-over';
+    if (s.clone) g.globalAlpha = this.opts.brushOpacity;
     g.drawImage(t, x, y);
+    g.globalAlpha = 1;
     g.globalCompositeOperation = 'source-over';
+  }
+
+  /** Clone stamp: Alt-click chose where to copy from (the next stroke aligns to it). */
+  setCloneSource(p: { x: number; y: number }) {
+    this.cloneSrc = { ...p };
+    this.cloneOffset = null;
+    this.showCloneMark(p);
+  }
+
+  private askCloneSource() {
+    this.notify(t('Alt-click where to copy from first.'));
+  }
+
+  private showCloneMark(p: { x: number; y: number } | null) {
+    const on = this.tool === 'clone' && !!p;
+    this.cloneMark.visible(on);
+    if (on) {
+      const r = this.brushSize() / 2;
+      this.cloneMark.position(p!);
+      this.cloneMark.find('.ring').forEach((n) => n.setAttrs({ radiusX: r, radiusY: r }));
+    }
+    this.klayer.batchDraw();
+  }
+
+  /** Spot healing: the painted stroke is replaced from nearby (one undo step). */
+  async healStroke(pts: number[]) {
+    const L = this.active;
+    this.bake(L);
+    const size = this.brushSize();
+    const W = L.canvas.width;
+    const H = L.canvas.height;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let i = 0; i < pts.length; i += 2) {
+      x0 = Math.min(x0, pts[i]);
+      x1 = Math.max(x1, pts[i]);
+      y0 = Math.min(y0, pts[i + 1]);
+      y1 = Math.max(y1, pts[i + 1]);
+    }
+    // The crop: the stroke and far enough around it to find a patch (heal.ts looks 2.5 sizes away).
+    const span = Math.max(x1 - x0, y1 - y0) + size;
+    const m = Math.ceil(span * 2.5 + size + 8);
+    const cx = Math.max(0, Math.floor(x0 - m)), cy = Math.max(0, Math.floor(y0 - m));
+    const cw = Math.min(W, Math.ceil(x1 + m)) - cx, ch = Math.min(H, Math.ceil(y1 + m)) - cy;
+    if (cw <= 0 || ch <= 0) return this.clearHealLine();
+    const crop = raster.makeCanvas(cw, ch);
+    crop.getContext('2d')!.drawImage(L.canvas, -cx, -cy);
+    const mask = raster.makeCanvas(cw, ch);
+    const g = mask.getContext('2d')!;
+    g.translate(-cx, -cy);
+    g.strokeStyle = g.fillStyle = '#fff';
+    g.lineWidth = size;
+    g.lineCap = g.lineJoin = 'round';
+    g.beginPath();
+    g.moveTo(pts[0], pts[1]);
+    for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]);
+    g.stroke();
+    g.beginPath();
+    g.arc(pts[0], pts[1], size / 2, 0, Math.PI * 2);
+    g.fill();
+    if (this.selection) {
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.globalCompositeOperation = 'destination-in';
+      g.drawImage(this.selection.mask, -cx, -cy);
+    }
+    try {
+      const healed = await this.onHeal(crop, mask);
+      if (!healed || L !== this.active) return;
+      this.pixelOp((c) => {
+        const out = raster.clone(c);
+        out.getContext('2d')!.drawImage(healed, cx, cy);
+        return out;
+      });
+    } finally {
+      this.clearHealLine();
+    }
+  }
+
+  private clearHealLine() {
+    this.selPaintLine.setAttrs({ points: [], stroke: 'rgba(255, 70, 70, 0.45)' });
+    this.klayer.batchDraw();
   }
 
   private endStroke() {

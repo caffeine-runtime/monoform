@@ -114,6 +114,14 @@ class Vision {
     return this.call({ type: 'modify', image, op, amount }, [image]);
   }
 
+  /** Spot healing: a crop of the layer and the painted mask (same size) → the healed crop. */
+  async heal(crop: CanvasImageSource, mask: CanvasImageSource): Promise<ImageBitmap> {
+    const image = await createImageBitmap(crop as ImageBitmapSource);
+    const m = await createImageBitmap(mask as ImageBitmapSource);
+    const r = await this.call<{ healed: ImageBitmap }>({ type: 'heal', image, mask: m }, [image, m]);
+    return r.healed;
+  }
+
   async edges(mask: CanvasImageSource): Promise<MaskResult> {
     const image = await createImageBitmap(mask as ImageBitmapSource);
     return this.call({ type: 'edges', image }, [image]);

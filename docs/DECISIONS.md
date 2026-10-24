@@ -510,6 +510,14 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   came from, so the move tool's transformer (move, scale, rotate, snapping) works on them unchanged; applying
   renders that layer into the source layer's pixels and drops it, and the history in between collapses to one
   step (cancel restores the snapshot from before the lift). Changing tool, layer or saving applies it first.
+- **Spot healing is a patch search plus a membrane, not a model** (`vision/heal.ts`): the ring of pixels around the
+  painted area is compared with the same ring shifted over a grid of candidate places 2.5 sizes around (then
+  refined to the pixel, nearer places winning ties, the source never overlapping what was painted); the best
+  patch is pasted and the difference between the surroundings and the patch along the edge is spread over the
+  inside by solving Laplace's equation (successive over-relaxation), which is how a healing brush keeps texture
+  but matches brightness. Small spots take milliseconds in the worker; the AI object removal stays for large
+  objects. The clone stamp is a soft round stamp (full to half the radius, then fading) painted into a mask
+  through which the layer as it was, shifted to the source, is drawn; aligned like Photoshop's default.
 - **Select › Modify measures exact distances** (`vision/selmodify.ts`): expand, contract and border use a
   Felzenszwalb–Huttenlocher Euclidean distance transform of the selection (inside and outside), so a 5 px expand
   rounds the corners like Photoshop and partial pixels give anti-aliased edges; feather is three box blurs (a

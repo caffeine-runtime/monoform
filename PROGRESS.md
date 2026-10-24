@@ -554,6 +554,11 @@
   The selection bar's Blur and Pixelate buttons open their page with a visible strength already set. The **Blur
   region** and **Pixelate region** tools have a strength / block size in the tool bar and show the result inside
   the area before Enter. Self-test `m65`.
+- **Clone stamp and spot healing brush** (image editor, S and J): Alt-click the source, then paint — the layer as
+  it was shows through a soft round brush, aligned (the source moves with the brush, a mark shows where);
+  opacity and size in the tool bar, inside the selection only if there is one. The spot healing brush replaces
+  what was painted over with a patch from nearby that fits its surroundings, blended seamlessly (the patch's
+  texture, the light of where it goes), in the vision worker, one undo step. Unit tests (heal), self-test `m67`.
 - **Select › Modify** (image editor): **feather, expand, contract, smooth, border** a selection by a number of
   pixels — from the selection bar's Modify menu, right-click › Modify selection or Ctrl+K. True (Euclidean)
   distances, so expanded corners are round and edges anti-aliased; worked out in the vision worker over the

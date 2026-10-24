@@ -582,5 +582,15 @@
   "Selection: contract…": "Zaznaczenie: zwęź…",
   "Selection: smooth…": "Zaznaczenie: wygładź…",
   "Selection: border…": "Zaznaczenie: obramowanie…",
-  "Modify selection": "Zmień zaznaczenie"
+  "Modify selection": "Zmień zaznaczenie",
+  "Clone stamp": "Stempel",
+  "Alt-click where to copy from, then paint where it should go. The source follows the brush.": "Kliknij z Alt, skąd kopiować, potem maluj tam, gdzie ma się pojawić. Źródło podąża za pędzlem.",
+  "Spot healing brush": "Pędzel korygujący punktowy",
+  "Paint over a spot, a blemish or a small object: it is replaced from nearby, matched to the light around it.": "Zamaluj plamkę, skazę lub mały obiekt: zostanie zastąpiony fragmentem z okolicy, dopasowanym do otaczającego światła.",
+  "Alt-click the source, then paint": "Kliknij źródło z Alt, potem maluj",
+  "Paint over what should go": "Zamaluj to, co ma zniknąć",
+  "Healing…": "Korygowanie…",
+  "Tool: clone stamp": "Narzędzie: stempel",
+  "Tool: spot healing brush": "Narzędzie: pędzel korygujący punktowy",
+  "Alt-click where to copy from first.": "Najpierw kliknij z Alt miejsce, z którego kopiować."
 }
