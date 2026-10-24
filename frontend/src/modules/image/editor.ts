@@ -37,6 +37,9 @@ import { apply as applyH, cropSize, dragCorner, dragEdge, forgetUpload, homograp
 import { renderStyleLater, renderStyleNow, type StyleFx } from './styleJobs';
 import { t } from '../../core/i18n';
 
+/** t, where a local `t` (the text) hides it. */
+const tr = t;
+
 export type Tool =
   | 'hand'
   | 'move'
@@ -116,6 +119,9 @@ export interface EditorState {
   transforming: boolean;
   /** Corners being dragged: a layer skewed, distorted or put in perspective, or a perspective crop. */
   warping: WarpMode | 'crop' | null;
+  /** The history, oldest first (what each step did), and the step shown. */
+  steps: string[];
+  step: number;
   /** Degrees the view is turned (the picture isn't). */
   viewRotation: number;
   version: number; // increments on every committed change
@@ -171,6 +177,8 @@ interface LayerModel {
 }
 
 interface Snapshot {
+  /** What this step did (the History panel lists them). */
+  name: string;
   width: number;
   height: number;
   active: string;
@@ -199,7 +207,7 @@ interface LiveLayer {
   fxRunning: number;
 }
 
-const MAX_HISTORY = 40;
+export const MAX_HISTORY = 40;
 const MAX_HISTORY_PIXELS = 160e6;
 const ACCENT = '#d97757';
 /** Transformer handle size: bigger where the pointer is a finger. */
@@ -461,7 +469,7 @@ export class ImageEditor {
     }
     this.addLiveLayer(plainLayer(t('Background'), base));
     this.activeId = this.layers[0].id;
-    this.history = [this.snapshot()];
+    this.history = [this.snapshot(t('Opened'))];
     this.index = 0;
     this.savedIndex = 0;
     this.bindEvents();
@@ -975,7 +983,7 @@ export class ImageEditor {
         }
         if (d instanceof KRect) d.setAttrs(normRect({ x: d.x(), y: d.y(), width: d.width(), height: d.height() }, Infinity, Infinity));
         this.decorate(d);
-        this.commit();
+        this.commit(d instanceof Arrow ? t('Arrow') : d instanceof KRect ? t('Rectangle') : t('Ellipse'));
         return;
       }
       if (!this.region.visible()) return;
@@ -1036,8 +1044,8 @@ export class ImageEditor {
     const tool = this.tool;
     this.cancelRegion();
     if (tool === 'crop') this.crop(r);
-    else if (tool === 'blur') this.pixelOp((c) => raster.blurRegion(c, r, this.opts.regionBlur));
-    else if (tool === 'pixelate') this.pixelOp((c) => raster.pixelateRegion(c, r, this.pixelBlock()));
+    else if (tool === 'blur') this.pixelOp(t('Blur region'), (c) => raster.blurRegion(c, r, this.opts.regionBlur));
+    else if (tool === 'pixelate') this.pixelOp(t('Pixelate region'), (c) => raster.pixelateRegion(c, r, this.pixelBlock()));
   }
 
   /** Pixelate region: the block size (automatic: about 1/80 of the picture's longer side). */
@@ -1289,7 +1297,8 @@ export class ImageEditor {
       objs.add(n as Konva.Shape);
       this.decorate(n);
     }
-    group.on('dragend transformend', () => this.commit());
+    group.on('dragend', () => this.commit(t('Move layer')));
+    group.on('transformend', () => this.commit(t('Transform layer')));
     const L: LiveLayer = { id: m.id, name: m.name, canvas: m.canvas, group, img, objs, mask: m.mask, maskOn: m.maskOn, maskNode, shown: null, style: m.style, fx, fxRev: 1, fxDone: 0, fxRunning: 0 };
     this.layers.splice(index, 0, L);
     this.docGroup.add(group);
@@ -1374,7 +1383,7 @@ export class ImageEditor {
     this.activeId = L.id;
     this.updateDraggable();
     if (this.tool === 'move') this.tr.nodes([L.group]);
-    this.commit();
+    this.commit(t('New layer'));
     return L.id;
   }
 
@@ -1385,7 +1394,7 @@ export class ImageEditor {
     const idx = this.layers.indexOf(L) + 1;
     const N = this.addLiveLayer({ ...m, id: newId(), name: t('{name} copy', { name: L.name }) }, idx);
     this.activeId = N.id;
-    this.commit();
+    this.commit(t('Duplicate layer'));
   }
 
   deleteLayer(id = this.activeId) {
@@ -1396,7 +1405,7 @@ export class ImageEditor {
     L.group.destroy();
     this.activeId = this.layers[Math.max(0, i - 1)].id;
     this.select(null);
-    this.commit();
+    this.commit(t('Delete layer'));
   }
 
   moveLayer(id: string, dir: 1 | -1) {
@@ -1405,7 +1414,7 @@ export class ImageEditor {
     if (i < 0 || j < 0 || j >= this.layers.length) return;
     [this.layers[i], this.layers[j]] = [this.layers[j], this.layers[i]];
     this.layers.forEach((l, k) => l.group.zIndex(k));
-    this.commit();
+    this.commit(t('Reorder layers'));
   }
 
   /** Put a layer at a position in the stack (0 = bottom), e.g. after dragging it in the layer list. */
@@ -1417,7 +1426,7 @@ export class ImageEditor {
     this.layers.splice(j, 0, L);
     this.layers.forEach((l, k) => l.group.zIndex(k));
     this.activeId = id;
-    this.commit();
+    this.commit(t('Reorder layers'));
   }
 
   setLayerProps(id: string, p: Partial<{ name: string; visible: boolean; opacity: number; blend: Blend }>, commit = true) {
@@ -1429,7 +1438,7 @@ export class ImageEditor {
     if (p.blend !== undefined) L.group.globalCompositeOperation(p.blend);
     this.refreshCache(L);
     this.klayer.batchDraw();
-    if (commit) this.commit();
+    if (commit) this.commit(p.name !== undefined ? t('Rename layer') : p.visible !== undefined ? (p.visible ? t('Show layer') : t('Hide layer')) : p.opacity !== undefined ? t('Layer opacity') : t('Blend mode'));
     else this.emit();
   }
 
@@ -1449,7 +1458,7 @@ export class ImageEditor {
     below.group.opacity(1);
     below.group.globalCompositeOperation('source-over');
     this.activeId = below.id;
-    this.commit();
+    this.commit(t('Merge layer down'));
   }
 
   /** Merge every visible layer into one. */
@@ -1461,7 +1470,7 @@ export class ImageEditor {
     const L = this.addLiveLayer(plainLayer(t('Background'), flat));
     this.activeId = L.id;
     this.editMask = false;
-    this.commit();
+    this.commit(t('Flatten image'));
   }
 
   /**
@@ -1503,7 +1512,7 @@ export class ImageEditor {
       this.refreshCache(L);
       this.klayer.batchDraw();
     }
-    if (commit) this.commit();
+    if (commit) this.commit(t('Layer style'));
     else {
       this.scheduleStyles();
       this.emit();
@@ -1577,7 +1586,7 @@ export class ImageEditor {
     L.maskOn = true;
     this.setCanvas(L, L.canvas, m);
     this.editMask = true;
-    this.commit();
+    this.commit(t('Add a mask'));
   }
 
   /** Show or hide the selection (or, without one, everything) on the active layer's mask. */
@@ -1594,7 +1603,7 @@ export class ImageEditor {
       g.fillRect(0, 0, m.width, m.height);
     }
     this.setCanvas(L, L.canvas, m);
-    this.commit();
+    this.commit(show ? t('Show on the mask') : t('Hide on the mask'));
   }
 
   invertMask() {
@@ -1607,7 +1616,7 @@ export class ImageEditor {
     g.globalCompositeOperation = 'destination-out';
     g.drawImage(L.mask, 0, 0);
     this.setCanvas(L, L.canvas, m);
-    this.commit();
+    this.commit(t('Invert the mask'));
   }
 
   /** Turn the mask off and on without losing it. */
@@ -1616,7 +1625,7 @@ export class ImageEditor {
     if (!L.mask) return;
     L.maskOn = on;
     this.refreshCache(L);
-    this.commit();
+    this.commit(on ? t('Turn the mask on') : t('Turn the mask off'));
   }
 
   /** Make the mask permanent: hidden pixels are erased and the mask goes. */
@@ -1627,7 +1636,7 @@ export class ImageEditor {
     const out = L.maskOn ? applyMask(L.canvas, L.mask!) : L.canvas;
     this.editMask = false;
     this.setCanvas(L, out, null);
-    this.commit();
+    this.commit(t('Apply the mask'));
   }
 
   deleteMask() {
@@ -1635,7 +1644,7 @@ export class ImageEditor {
     if (!L.mask) return;
     this.editMask = false;
     this.setCanvas(L, L.canvas, null);
-    this.commit();
+    this.commit(t('Delete the mask'));
   }
 
   /** On a mask, the brush hides (true) or shows. */
@@ -1762,18 +1771,18 @@ export class ImageEditor {
   }
 
   /** Apply a pixel operation to the active layer (restricted to the selection, if any). */
-  pixelOp(op: (c: HTMLCanvasElement) => HTMLCanvasElement, opts: { ignoreSelection?: boolean } = {}) {
+  pixelOp(name: string, op: (c: HTMLCanvasElement) => HTMLCanvasElement, opts: { ignoreSelection?: boolean } = {}) {
     const L = this.active;
     this.bake(L);
     const before = L.canvas;
     let next = op(before);
     if (this.selection && !opts.ignoreSelection) next = sel.blendThroughMask(before, next, this.selection.mask);
     this.setCanvas(L, next);
-    this.commit();
+    this.commit(name);
   }
 
   /** Apply an operation to every layer (whole-document transforms). */
-  private documentOp(op: (c: HTMLCanvasElement) => HTMLCanvasElement) {
+  private documentOp(name: string, op: (c: HTMLCanvasElement) => HTMLCanvasElement) {
     for (const L of this.layers) {
       this.bake(L);
       this.setCanvas(L, op(L.canvas), L.mask && op(L.mask));
@@ -1782,7 +1791,7 @@ export class ImageEditor {
     this.docW = c.width;
     this.docH = c.height;
     this.selection = null;
-    this.commit();
+    this.commit(name);
     this.fit();
   }
 
@@ -1792,7 +1801,7 @@ export class ImageEditor {
     this.docH = r.height;
     this.selection = null;
     for (const L of this.layers) this.bake(L);
-    this.commit();
+    this.commit(t('Crop'));
     this.fit();
   }
 
@@ -1801,15 +1810,15 @@ export class ImageEditor {
   }
 
   rotate(clockwise: boolean) {
-    this.documentOp((c) => raster.rotate(c, clockwise));
+    this.documentOp(clockwise ? t('Rotate right') : t('Rotate left'), (c) => raster.rotate(c, clockwise));
   }
 
   flip(horizontal: boolean) {
-    this.documentOp((c) => raster.flip(c, horizontal));
+    this.documentOp(horizontal ? t('Flip horizontally') : t('Flip vertically'), (c) => raster.flip(c, horizontal));
   }
 
   resizeTo(w: number, h: number) {
-    this.documentOp((c) => raster.resize(c, w, h));
+    this.documentOp(t('Resize'), (c) => raster.resize(c, w, h));
   }
 
   /**
@@ -1853,7 +1862,7 @@ export class ImageEditor {
       }
       this.refreshCache(bottom);
     }
-    this.commit();
+    this.commit(t('Canvas size'));
     this.fit();
   }
 
@@ -1861,7 +1870,7 @@ export class ImageEditor {
   rotateBy(degrees: number, expand = true) {
     if (!degrees) return;
     this.previewRotation(0);
-    this.documentOp((c) => raster.rotateAny(c, degrees, expand));
+    this.documentOp(t('Rotate by angle'), (c) => raster.rotateAny(c, degrees, expand));
   }
 
   /** Visual-only rotation while the user drags the angle slider. */
@@ -1883,17 +1892,17 @@ export class ImageEditor {
   clearSelectionPixels() {
     if (!this.selection) return;
     const s = this.selection;
-    this.pixelOp((c) => sel.clearInside(c, s), { ignoreSelection: true });
+    this.pixelOp(t('Delete pixels'), (c) => sel.clearInside(c, s), { ignoreSelection: true });
   }
 
   fillSelection(color = this.opts.color) {
     const s = this.selection ?? sel.selectAll(this.docW, this.docH);
-    this.pixelOp((c) => sel.fillInside(c, s, color), { ignoreSelection: true });
+    this.pixelOp(t('Fill selection'), (c) => sel.fillInside(c, s, color), { ignoreSelection: true });
   }
 
   /** Paint bucket: fill the mask's pixels of the active layer with a colour (inside the selection, if any). */
   bucketFill(mask: HTMLCanvasElement, color = this.opts.color) {
-    this.pixelOp((c) => {
+    this.pixelOp(t('Paint bucket'), (c) => {
       const fill = raster.makeCanvas(c.width, c.height);
       const g = fill.getContext('2d')!;
       g.fillStyle = color;
@@ -1905,13 +1914,13 @@ export class ImageEditor {
   blurSelection() {
     const s = this.selection;
     if (!s) return;
-    this.pixelOp((c) => raster.blurRegion(c, s.bounds));
+    this.pixelOp(t('Blur selection'), (c) => raster.blurRegion(c, s.bounds));
   }
 
   pixelateSelection() {
     const s = this.selection;
     if (!s) return;
-    this.pixelOp((c) => raster.pixelateRegion(c, s.bounds));
+    this.pixelOp(t('Pixelate selection'), (c) => raster.pixelateRegion(c, s.bounds));
   }
 
   /** Turn a layer by deg (clockwise) about its middle; the pixels stay as they are until baked. */
@@ -1920,7 +1929,7 @@ export class ImageEditor {
     if (!L || !deg) return;
     this.turnAboutMiddle(L.group, deg);
     if (this.tool === 'move' && L.id === this.activeId) this.tr.nodes([L.group]);
-    this.commit();
+    this.commit(t('Rotate layer'));
     this.klayer.batchDraw();
     this.emit();
   }
@@ -1960,7 +1969,7 @@ export class ImageEditor {
       return;
     }
     if (this.tool === 'move') this.tr.nodes([L.group]);
-    this.commit();
+    this.commit(t('Rotate layer'));
     this.emit();
   }
 
@@ -2144,7 +2153,7 @@ export class ImageEditor {
       const out = clipRect(quadBounds(w.quad), this.docW, this.docH);
       if (out) c.getContext('2d')!.drawImage(warpCanvas(src, invert(homography(rectQuad(0, 0, src.width, src.height), w.quad)), out), out.x, out.y);
       this.setCanvas(L, c);
-      this.commit();
+      this.commit(w.mode === 'skew' ? t('Skew') : w.mode === 'distort' ? t('Distort') : t('Perspective'));
     } else if (alive) this.setCanvas(L, before);
     forgetUpload();
     this.updateDraggable();
@@ -2157,7 +2166,7 @@ export class ImageEditor {
   perspectiveCrop(q: Quad) {
     const { w, h } = cropSize(q);
     const back = homography(rectQuad(0, 0, w, h), q); // output → picture
-    this.documentOp((c) => {
+    this.documentOp(t('Perspective crop'), (c) => {
       forgetUpload();
       return warpCanvas(c, back, { x: 0, y: 0, width: w, height: h });
     });
@@ -2173,7 +2182,7 @@ export class ImageEditor {
     if (Math.abs(deg) < 0.01) return;
     if (!crop) return this.rotateBy(deg, true);
     const r = innerRect(this.docW, this.docH, deg);
-    this.documentOp((c) => {
+    this.documentOp(t('Straighten'), (c) => {
       const turned = raster.rotateAny(c, deg, false);
       return raster.crop(turned, { x: Math.round((turned.width - r.w) / 2), y: Math.round((turned.height - r.h) / 2), width: r.w, height: r.h });
     });
@@ -2229,7 +2238,7 @@ export class ImageEditor {
     // The lift, the moves and this: one step to undo.
     this.history = this.history.slice(0, f.at + 1);
     this.index = f.at;
-    this.commit();
+    this.commit(t('Transform pixels'));
     if (this.tool === 'move') this.tr.nodes([this.active.group]);
     this.klayer.batchDraw();
     this.emit();
@@ -2259,6 +2268,7 @@ export class ImageEditor {
   /** Paint a patch (object removal: a fill with a soft edge) over the active layer at (x, y), as one undo step. */
   paintPatch(patch: CanvasImageSource, x: number, y: number) {
     this.pixelOp(
+      t('Remove object'),
       (c) => {
         const out = raster.clone(c);
         out.getContext('2d')!.drawImage(patch, x, y);
@@ -2269,8 +2279,8 @@ export class ImageEditor {
   }
 
   /** Replace the active layer's pixels with a picture of the same size (inside the selection, if any), as one undo step. */
-  replacePixels(img: CanvasImageSource) {
-    this.pixelOp((c) => {
+  replacePixels(img: CanvasImageSource, name = t('Replace pixels')) {
+    this.pixelOp(name, (c) => {
       const out = raster.makeCanvas(c.width, c.height);
       out.getContext('2d')!.drawImage(img, 0, 0);
       return out;
@@ -2280,6 +2290,7 @@ export class ImageEditor {
   /** Keep only the masked part of the active layer (background removal). */
   applyMaskToLayer(mask: HTMLCanvasElement) {
     this.pixelOp(
+      t('Remove background'),
       (c) => {
         const out = raster.clone(c);
         const g = out.getContext('2d')!;
@@ -2474,7 +2485,7 @@ export class ImageEditor {
     }
     this.showGradient();
     this.gradient = null;
-    this.commit();
+    this.commit(t('Gradient'));
   }
 
   /** A gradient programmatically (tests): from a to b with the current options. */
@@ -2529,7 +2540,7 @@ export class ImageEditor {
     try {
       const healed = await this.onHeal(crop, mask);
       if (!healed || L !== this.active) return;
-      this.pixelOp((c) => {
+      this.pixelOp(t('Spot healing'), (c) => {
         const out = raster.clone(c);
         out.getContext('2d')!.drawImage(healed, cx, cy);
         return out;
@@ -2548,7 +2559,7 @@ export class ImageEditor {
     const s = this.stroke;
     if (!s) return;
     this.stroke = null;
-    this.commit();
+    this.commit(s.onMask ? t('Paint the mask') : s.clone ? t('Clone stamp') : s.erase ? t('Eraser') : t('Brush'));
   }
 
   /** Paint a stroke programmatically (tests). */
@@ -2565,14 +2576,15 @@ export class ImageEditor {
 
   private decorate(n: KNode) {
     n.draggable(this.tool === 'hand');
-    n.on('dragend transformend', () => this.commit());
+    n.on('dragend', () => this.commit(t('Move')));
+    n.on('transformend', () => this.commit(t('Transform')));
     if (n instanceof KText) {
       n.on('dblclick dbltap', async () => {
-        const t = await this.askText(n.text());
-        if (t !== null && t !== n.text()) {
-          if (t === '') n.destroy();
-          else n.text(t);
-          this.commit();
+        const text = await this.askText(n.text());
+        if (text !== null && text !== n.text()) {
+          if (text === '') n.destroy();
+          else n.text(text);
+          this.commit(t('Edit text'));
         }
       });
     }
@@ -2602,7 +2614,7 @@ export class ImageEditor {
     node.setAttr('mfFamily', o.fontFamily);
     this.active.objs.add(node);
     this.decorate(node);
-    this.commit();
+    this.commit(tr('Text'));
     return node;
   }
 
@@ -2612,7 +2624,7 @@ export class ImageEditor {
     const a = new Arrow({ points: [x1, y1, x2, y2], stroke: c, fill: c, strokeWidth: sw, pointerLength: sw * 4, pointerWidth: sw * 4, lineCap: 'round' });
     this.active.objs.add(a);
     this.decorate(a);
-    this.commit();
+    this.commit(t('Arrow'));
   }
 
   private select(n: KNode | null) {
@@ -2693,7 +2705,7 @@ export class ImageEditor {
       if (p.cornerRadius !== undefined && n instanceof KRect) n.cornerRadius(Math.max(0, p.cornerRadius));
     }
     this.tr.forceUpdate();
-    this.commit();
+    this.commit(t('Edit object'));
   }
 
   deleteSelection() {
@@ -2701,7 +2713,7 @@ export class ImageEditor {
     if (!nodes.length) return;
     nodes.forEach((n) => n.destroy());
     this.tr.nodes([]);
-    this.commit();
+    this.commit(t('Delete object'));
   }
 
   setColor(c: string) {
@@ -2747,7 +2759,7 @@ export class ImageEditor {
     ad.a.destroy();
     this.adjuster = null;
     this.setCanvas(ad.layer, out);
-    this.commit();
+    this.commit(t('Adjust colours'));
   }
 
   cancelAdjust() {
@@ -2784,11 +2796,11 @@ export class ImageEditor {
     };
   }
 
-  private snapshot(): Snapshot {
-    return { width: this.docW, height: this.docH, active: this.activeId, layers: this.layers.map((L) => this.modelOf(L)) };
+  private snapshot(name: string): Snapshot {
+    return { name, width: this.docW, height: this.docH, active: this.activeId, layers: this.layers.map((L) => this.modelOf(L)) };
   }
 
-  private commit() {
+  private commit(name: string) {
     this.version++;
     if (this.layers.some((L) => L.style)) {
       for (const L of this.layers) if (L.style) L.fxRev++;
@@ -2797,7 +2809,7 @@ export class ImageEditor {
     for (const L of this.layers) this.refreshCache(L);
     this.updateDraggable(); // (the active layer may have changed: duplicated, deleted, merged…)
     this.history = this.history.slice(0, this.index + 1);
-    this.history.push(this.snapshot());
+    this.history.push(this.snapshot(name));
     this.index = this.history.length - 1;
     // Bound memory: count each distinct raster once, drop the oldest states.
     const seen = new Set<HTMLCanvasElement>();
@@ -2852,6 +2864,16 @@ export class ImageEditor {
     this.restore(this.history[this.index]);
   }
 
+  /** Jump to step i of the history (the History panel): back or forward any number of steps at once. */
+  goTo(i: number) {
+    if (this.warp) this.finishWarp(false);
+    if (this.floating) this.finishTransform(false);
+    if (this.adjuster) this.cancelAdjust();
+    if (i < 0 || i >= this.history.length || i === this.index) return;
+    this.index = i;
+    this.restore(this.history[i]);
+  }
+
   redo() {
     if (this.index >= this.history.length - 1) return;
     this.index++;
@@ -2885,7 +2907,7 @@ export class ImageEditor {
     this.activeId = this.layers[this.layers.length - 1].id;
     this.editMask = false;
     this.updateDraggable();
-    this.history = [this.snapshot()];
+    this.history = [this.snapshot(t('Opened'))];
     this.index = 0;
     this.savedIndex = 0;
     this.version++;
@@ -2960,6 +2982,8 @@ export class ImageEditor {
       editMask: this.editMask,
       transforming: !!this.floating,
       warping: this.warp ? (this.warp.kind === 'crop' ? 'crop' : this.warp.mode) : null,
+      steps: this.history.map((h) => h.name),
+      step: this.index,
       viewRotation: this.viewRotation,
       version: this.version,
     };

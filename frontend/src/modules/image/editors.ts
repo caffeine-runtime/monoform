@@ -45,7 +45,7 @@ export interface ImageController {
   removeObject(): void;
   saveCopy(): void;
   saveLayers(): void;
-  panel(p: 'layers' | 'adjust'): void;
+  panel(p: 'layers' | 'adjust' | 'history'): void;
   editable(): boolean;
 }
 

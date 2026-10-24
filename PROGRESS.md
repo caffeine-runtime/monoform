@@ -554,6 +554,10 @@
   The selection bar's Blur and Pixelate buttons open their page with a visible strength already set. The **Blur
   region** and **Pixelate region** tools have a strength / block size in the tool bar and show the result inside
   the area before Enter. Self-test `m65`.
+- **History panel** (image editor, a tab beside Layers / Adjust / Colours, and a tool-bar button): every step
+  listed by what it did (Brush, Crop, Layer opacity, Perspective…), oldest first; click one to go back (or
+  forward again) any number of steps at once; undone steps stay greyed until something new is done. Undo and redo
+  move the current step too. Self-test `m73`.
 - **Skew, distort, perspective; perspective crop; straighten** (image editor): the move tool (and a lifted
   selection's banner) offers Skew (slide a side along itself), Distort (any corner or side anywhere) and
   Perspective (a corner drags its neighbour the other way); the layer's content gets four corner handles and is

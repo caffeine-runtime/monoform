@@ -93,6 +93,7 @@ const cmds: Command[] = [
   { id: 'image.saveCopy', title: t('Save a copy (keep original)'), category: t('Image'), shortcut: 'Mod+Alt+S', when: edit, run: run((c) => c.saveCopy()) },
   { id: 'image.saveLayers', title: t('Save with layers (.ora)…'), category: t('Image'), when: edit, run: run((c) => c.saveLayers()) },
   { id: 'image.layers', title: t('Show layers'), category: t('Image'), when: edit, run: run((c) => c.panel('layers')) },
+  { id: 'image.history', title: t('Show history'), category: t('Image'), when: edit, run: run((c) => c.panel('history')) },
   { id: 'image.adjust', title: t('Adjust colours (brightness, contrast, saturation…)'), category: t('Image'), when: edit, run: run((c) => c.panel('adjust')) },
 ];
 commands.register(...cmds);

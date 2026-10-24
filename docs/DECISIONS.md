@@ -510,6 +510,10 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   came from, so the move tool's transformer (move, scale, rotate, snapping) works on them unchanged; applying
   renders that layer into the source layer's pixels and drops it, and the history in between collapses to one
   step (cancel restores the snapshot from before the lift). Changing tool, layer or saving applies it first.
+- **The History panel is the undo stack, named**: each step was already a snapshot (layers share rasters that
+  never change after they enter the history), so jumping to any of them is the same restore undo does. Every place
+  that records a step now has to say what it did (`commit(name)` takes a required name, so the compiler finds a
+  forgotten one); the opened picture is the first step.
 - **Corner-pin transforms are a homography drawn on the GPU** (`warp.ts`): the four corners give a 3×3 projective
   map; a WebGL2 fragment shader takes every output pixel back through its inverse and samples the picture there
   (bilinear, mipmapped when it shrinks, edges anti-aliased by how far inside the source the point lands). Canvas

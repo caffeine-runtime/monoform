@@ -16,6 +16,7 @@
   import ScanEye from '@lucide/svelte/icons/scan-eye';
   import Crop from '@lucide/svelte/icons/crop';
   import Ruler from '@lucide/svelte/icons/ruler';
+  import HistoryIcon from '@lucide/svelte/icons/history';
   import Brush from '@lucide/svelte/icons/paintbrush';
   import Eraser from '@lucide/svelte/icons/eraser';
   import MoveUpRight from '@lucide/svelte/icons/move-up-right';
@@ -73,6 +74,7 @@
   import { parseStyle as parseLayerStyle } from './styles';
   import type { WarpMode } from './warp';
   import LayersPanel from './LayersPanel.svelte';
+  import HistoryPanel from './HistoryPanel.svelte';
   import AdjustPanel from './AdjustPanel.svelte';
   import AnimEditor from './AnimEditor.svelte';
   import IconView from './IconView.svelte';
@@ -189,7 +191,7 @@
   let angle = $state(0);
   let expand = $state(true);
   let siblings = $state<string[] | null>(null);
-  let panel = $state<'layers' | 'adjust' | 'colours' | null>(loadPanel());
+  let panel = $state<'layers' | 'adjust' | 'colours' | 'history' | null>(loadPanel());
   // A narrow pane (split view, small window): the panel floats over the
   // content, closed when the pane becomes narrow.
   let bodyW = $state(0);
@@ -216,19 +218,19 @@
   const zoom = $derived(imgMode ? imgView.zoom : (es?.zoom ?? 1));
   const position = $derived(siblings && tab.filePath ? `${siblings.indexOf(tab.filePath) + 1} / ${siblings.length}` : '');
 
-  function loadPanel(): 'layers' | 'adjust' | 'colours' | null {
+  function loadPanel(): 'layers' | 'adjust' | 'colours' | 'history' | null {
     try {
       const v = localStorage.getItem('mf.image.panel');
-      return v === 'none' ? null : v === 'adjust' ? 'adjust' : v === 'colours' ? 'colours' : 'layers';
+      return v === 'none' ? null : v === 'adjust' || v === 'colours' || v === 'history' ? v : 'layers';
     } catch {
       return 'layers';
     }
   }
   /** Toolbar buttons toggle; commands and tabs just show. */
-  function togglePanel(p: 'layers' | 'adjust' | 'colours') {
+  function togglePanel(p: 'layers' | 'adjust' | 'colours' | 'history') {
     setPanel(panel === p ? null : p);
   }
-  function setPanel(p: 'layers' | 'adjust' | 'colours' | null) {
+  function setPanel(p: 'layers' | 'adjust' | 'colours' | 'history' | null) {
     panel = p;
     // Asking for a panel shows side panels again if they were hidden.
     if (p && settings.value.panelsHidden) settings.update((s) => (s.panelsHidden = false));
@@ -624,7 +626,7 @@
         busy = '';
       }
       if (r.image) {
-        editor.replacePixels(r.image);
+        editor.replacePixels(r.image, t('Remove background'));
         r.image.close();
         const v = editor.state().version;
         const redo = (all: boolean) => () => {
@@ -874,7 +876,7 @@
     removeObject: () => void removeObject(),
     saveCopy: () => void saveCopy(),
     saveLayers: () => void saveWithLayers(),
-    panel: (p: 'layers' | 'adjust' | 'colours') => setPanel(p),
+    panel: (p: 'layers' | 'adjust' | 'colours' | 'history') => setPanel(p),
     picked: () => picked,
     editable: () => editable,
   };
@@ -1491,6 +1493,7 @@
     <span class="sep"></span>
     <button class="icon-btn" class:on={panel === 'layers'} title={t('Layers')} onclick={() => togglePanel('layers')}><Icon icon={Layers} /></button>
     <button class="icon-btn" class:on={panel === 'adjust'} title={t('Adjust colours')} onclick={() => togglePanel('adjust')}><Icon icon={Sliders} /></button>
+    <button class="icon-btn" class:on={panel === 'history'} title={t('History: go back several steps at once')} onclick={() => togglePanel('history')}><Icon icon={HistoryIcon} /></button>
   {/if}
 </div>
 
@@ -1649,9 +1652,12 @@
         <button class:on={panel === 'layers'} onclick={() => setPanel('layers')}>{t('Layers')}</button>
         <button class:on={panel === 'adjust'} onclick={() => setPanel('adjust')}>{t('Adjust')}</button>
         <button class:on={panel === 'colours'} onclick={() => setPanel('colours')}>{t('Colours')}</button>
+        <button class:on={panel === 'history'} onclick={() => setPanel('history')}>{t('History')}</button>
       </div>
       {#if panel === 'layers'}
         <LayersPanel {editor} {es} onrotate={() => openRotate(true)} />
+      {:else if panel === 'history'}
+        <HistoryPanel {editor} {es} />
       {:else if panel === 'colours'}
         <ColoursPanel {editor} {picked} title={tab.filePath ?? tab.title} onuse={(c) => (pickColor(c), ui.toast(t('Using {colour}', { colour: c }), 'success'))} />
       {:else}
