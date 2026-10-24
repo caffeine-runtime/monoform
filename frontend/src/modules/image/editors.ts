@@ -1,6 +1,7 @@
 // Per-tab controllers for image commands.
 import { workspace } from '../../core/tabs.svelte';
 import type { ModifyOp } from './vision/selmodify';
+import type { WarpMode } from './warp';
 
 export type MaskOp = 'add' | 'edit' | 'invert' | 'toggle' | 'apply' | 'delete' | 'hide' | 'show' | 'swap';
 
@@ -19,6 +20,8 @@ export interface ImageController {
   navigate(dir: 1 | -1): void;
   resize(): void;
   canvasSize(): void;
+  warp(mode: WarpMode): void;
+  perspectiveCrop(): void;
   rotateAngle(): void;
   transformSelection(): void;
   rotateLayer(deg: number): void;

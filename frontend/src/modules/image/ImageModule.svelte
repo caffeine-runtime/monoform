@@ -15,6 +15,7 @@
   import Wand from '@lucide/svelte/icons/wand-sparkles';
   import ScanEye from '@lucide/svelte/icons/scan-eye';
   import Crop from '@lucide/svelte/icons/crop';
+  import Ruler from '@lucide/svelte/icons/ruler';
   import Brush from '@lucide/svelte/icons/paintbrush';
   import Eraser from '@lucide/svelte/icons/eraser';
   import MoveUpRight from '@lucide/svelte/icons/move-up-right';
@@ -70,6 +71,7 @@
   import { vision, type MaskResult } from './vision/vision';
   import { readOra, writeOra, blendToOra } from './ora';
   import { parseStyle as parseLayerStyle } from './styles';
+  import type { WarpMode } from './warp';
   import LayersPanel from './LayersPanel.svelte';
   import AdjustPanel from './AdjustPanel.svelte';
   import AnimEditor from './AnimEditor.svelte';
@@ -165,6 +167,11 @@
   /** Where the picture sits in the new canvas: 0, 0.5 or 1 each way. */
   let anchor = $state({ x: 0.5, y: 0.5 });
   let canvasFill = $state<'clear' | 'colour'>('clear');
+  const WARPS: { id: WarpMode; label: string; help: string }[] = [
+    { id: 'skew', label: t('Skew'), help: t('Drag the middle of a side to slant it along itself.') },
+    { id: 'distort', label: t('Distort'), help: t('Drag any corner (or the middle of a side) anywhere.') },
+    { id: 'perspective', label: t('Perspective'), help: t('Drag a corner: the one beside it moves the other way, as if the picture leaned back.') },
+  ];
   const ANCHORS = [
     { x: 0, y: 0, label: t('[anchor] Top left') },
     { x: 0.5, y: 0, label: t('[anchor] Top') },
@@ -805,9 +812,10 @@
     flip: (h: boolean) => editor?.flip(h),
     undo: () => (anim ? animEd?.undo() : editor?.undo()),
     redo: () => (anim ? animEd?.redo() : editor?.redo()),
-    apply: () => (es?.transforming ? editor?.finishTransform(true) : editor?.applyRegion()),
+    apply: () => (es?.transforming ? editor?.finishTransform(true) : es?.warping ? editor?.finishWarp(true) : editor?.applyRegion()),
     escape: () => {
       if (es?.transforming) editor?.finishTransform(false);
+      else if (es?.warping) editor?.finishWarp(false);
       else if (resizeOpen) resizeOpen = false;
       else if (canvasOpen) canvasOpen = false;
       else if (rotateOpen) cancelRotate();
@@ -823,6 +831,14 @@
     navigate: (dir: 1 | -1) => (anim ? animEd?.step(dir) : void navigate(dir)),
     resize: () => openResize(),
     canvasSize: () => openCanvasSize(),
+    warp: (m: WarpMode) => {
+      if (tool !== 'move') setTool('move');
+      editor?.startWarp(m);
+    },
+    perspectiveCrop: () => {
+      if (tool !== 'crop') setTool('crop');
+      editor?.startPerspectiveCrop();
+    },
     rotateAngle: () => openRotate(),
     transformSelection: () => editor?.transformSelection(),
     rotateLayer: (deg: number) => editor?.rotateLayer(deg),
@@ -1144,6 +1160,10 @@
       { label: t('Flip vertically'), shortcut: 'Shift+V', run: () => ed.flip(false) },
       { label: t('Resize…'), shortcut: formatShortcut('Mod+Alt+I'), run: () => openResize() },
       { label: t('Canvas size…'), shortcut: formatShortcut('Mod+Alt+C'), run: () => openCanvasSize() },
+      { label: t('Perspective crop…'), run: () => ctl.perspectiveCrop() },
+      { label: t('Skew…'), run: () => ctl.warp('skew') },
+      { label: t('Distort…'), run: () => ctl.warp('distort') },
+      { label: t('Perspective…'), run: () => ctl.warp('perspective') },
       { separator: true },
       { label: t('Remove a watermark…'), run: () => void openCleanup() },
       { label: t('Remove background'), run: () => void removeBackground() },
@@ -1238,7 +1258,10 @@
       { id: 'wand', icon: Wand, label: t('Magic wand'), help: t('Click to select pixels of a similar colour. Set Tolerance in the toolbar; Shift adds, Alt subtracts.'), key: 'W' },
       { id: 'object', icon: ScanEye, label: t('Select object'), help: t('Click an object to select it, with edges snapped to the pixels. Shift-click adds, Alt-click excludes a part.'), key: 'O' },
     ],
-    [{ id: 'crop', icon: Crop, label: t('Crop'), help: t('Drag the area to keep (Ctrl for a square), adjust the handles, then press Enter.'), key: 'C' }],
+    [
+      { id: 'crop', icon: Crop, label: t('Crop'), help: t('Drag the area to keep (Ctrl for a square), adjust the handles, then press Enter.'), key: 'C' },
+      { id: 'straighten', icon: Ruler, label: t('Straighten'), help: t('Drag along something that should be level (a horizon, a shelf) or upright: the picture turns to match.') },
+    ],
     [
       { id: 'brush', icon: Brush, label: t('Brush'), help: t('Drag to paint on the active layer. Set size, opacity and colour in the toolbar.'), key: 'B' },
       { id: 'eraser', icon: Eraser, label: t('Eraser'), help: t('Drag to erase the active layer to transparency.'), key: 'E' },
@@ -1334,11 +1357,20 @@
       <button class="btn ghost" class:on={opts.outline} title={t('Outline around the letters')} onclick={() => setOpt('outline', !opts!.outline)}>{t('Outline', {}, 'text effect')}</button>
       <button class="btn ghost" class:on={opts.shadow} title={t('Soft shadow behind the text')} onclick={() => setOpt('shadow', !opts!.shadow)}>{t('Shadow')}</button>
       <span class="sep"></span>
-    {:else if tool === 'move' && !es?.transforming}
+    {:else if tool === 'crop' && !es?.warping}
+      <button class="btn ghost" title={t('Drag four corners onto something photographed at an angle (a page, a sign, a screen); it is cropped out and made a rectangle')} onclick={() => editor?.startPerspectiveCrop()}>{t('Perspective crop…')}</button>
+      <span class="sep"></span>
+    {:else if tool === 'straighten'}
+      <span class="hint">{t('Drag along a line that should be level or upright')}</span>
+      <label class="opt chk" title={t('Cut off the empty corners the turn leaves; otherwise the canvas grows to fit')}><input type="checkbox" checked={opts.straightenCrop} onchange={(e) => setOpt('straightenCrop', (e.target as HTMLInputElement).checked)} /> {t('Crop the corners')}</label>
+      <span class="sep"></span>
+    {:else if tool === 'move' && !es?.transforming && !es?.warping}
       <span class="hint">{t('Drag to move · handles scale · round handle rotates')}</span>
       <button class="btn ghost" title={t('Rotate the layer 90° counter-clockwise')} onclick={() => editor?.rotateLayer(-90)}><Icon icon={RotateCcw} size={14} /> 90°</button>
       <button class="btn ghost" title={t('Rotate the layer 90° clockwise')} onclick={() => editor?.rotateLayer(90)}><Icon icon={RotateCw} size={14} /> 90°</button>
       <button class="btn ghost" title={t('Rotate the layer by an angle')} onclick={() => openRotate(true)}>{t('Angle…')}</button>
+      <span class="sep"></span>
+      {#each WARPS as w (w.id)}<button class="btn ghost" title={w.help} onclick={() => editor?.startWarp(w.id)}>{w.label}</button>{/each}
       <span class="sep"></span>
     {:else if tool === 'blur'}
       <label class="opt" title={t('How strongly the area is blurred (shown in it before you apply)')}>{t('Strength')} <input class="region-strength" type="range" min="0.25" max="3" step="0.05" value={opts.regionBlur} oninput={(e) => setOpt('regionBlur', +(e.target as HTMLInputElement).value)} /><span class="v">{Math.round(opts.regionBlur * 100)}%</span></label>
@@ -1506,11 +1538,21 @@
   </div>
 {/if}
 
-{#if es?.transforming}
+{#if es?.warping === 'crop'}
+  <div class="banner warping">
+    <span class="grow">{t('Drag the corners onto the edges of what should become a rectangle (a page, a sign, a screen), then apply.')}</span>
+    <button class="btn ghost" title={t('Discard the crop (Esc)')} onclick={() => editor?.finishWarp(false)}><Icon icon={XIcon} size={14} /> {t('Cancel')}</button>
+    <button class="btn primary" onclick={() => editor?.finishWarp(true)}><Icon icon={Check} size={14} /> {t('Apply (Enter)')}</button>
+  </div>
+{:else if es?.transforming || es?.warping}
   <div class="banner transforming">
-    <span class="grow">{t('Drag to move the selection; drag the handles to scale it, the round one to rotate it (any angle; hold Shift for 15° steps).')}</span>
-    <button class="btn ghost" title={t('Put it back as it was (Esc)')} onclick={() => editor?.finishTransform(false)}><Icon icon={XIcon} size={14} /> {t('Cancel')}</button>
-    <button class="btn primary" onclick={() => editor?.finishTransform(true)}><Icon icon={Check} size={14} /> {t('Apply (Enter)')}</button>
+    <span class="chips" role="radiogroup" aria-label={t('How the handles change it')}>
+      {#if es.transforming}<button class="chip" role="radio" aria-checked={!es.warping} class:on={!es.warping} onclick={() => editor?.finishWarp(true)}>{t('Scale & rotate')}</button>{/if}
+      {#each WARPS as w (w.id)}<button class="chip" role="radio" aria-checked={es.warping === w.id} class:on={es.warping === w.id} title={w.help} onclick={() => editor?.startWarp(w.id)}>{w.label}</button>{/each}
+    </span>
+    <span class="grow">{es.warping ? WARPS.find((w) => w.id === es!.warping)!.help : t('Drag to move the selection; drag the handles to scale it, the round one to rotate it (any angle; hold Shift for 15° steps).')}</span>
+    <button class="btn ghost" title={t('Put it back as it was (Esc)')} onclick={() => (es?.transforming ? editor?.finishTransform(false) : editor?.finishWarp(false))}><Icon icon={XIcon} size={14} /> {t('Cancel')}</button>
+    <button class="btn primary" onclick={() => (es?.transforming ? editor?.finishTransform(true) : editor?.finishWarp(true))}><Icon icon={Check} size={14} /> {t('Apply (Enter)')}</button>
   </div>
 {:else if es?.hasRegion}
   <div class="banner">

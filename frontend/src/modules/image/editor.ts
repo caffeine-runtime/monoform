@@ -33,6 +33,7 @@ import type { Selection, SelectMode } from './selection';
 import { Adjuster, type Adjustments } from './adjust';
 import { cssFamily } from './fonts';
 import { styleEmpty, type LayerStyle } from './styles';
+import { apply as applyH, cropSize, dragCorner, dragEdge, forgetUpload, homography, innerRect, invert, quadBounds, quadOk, rectQuad, straightenAngle, warpCanvas, type Pt, type Quad, type WarpMode } from './warp';
 import { renderStyleLater, renderStyleNow, type StyleFx } from './styleJobs';
 import { t } from '../../core/i18n';
 
@@ -58,7 +59,8 @@ export type Tool =
   | 'picker'
   | 'clone'
   | 'heal'
-  | 'gradient';
+  | 'gradient'
+  | 'straighten';
 export const REGION_TOOLS: Tool[] = ['crop', 'blur', 'pixelate'];
 export const SELECT_TOOLS: Tool[] = ['select', 'ellipse', 'lasso', 'selbrush', 'wand', 'object'];
 /** Tools whose selection gets handles: the outline itself moved, scaled and turned (not the pixels). */
@@ -112,6 +114,8 @@ export interface EditorState {
   editMask: boolean;
   /** A selection lifted to be moved, scaled or rotated (applied with Enter, cancelled with Esc). */
   transforming: boolean;
+  /** Corners being dragged: a layer skewed, distorted or put in perspective, or a perspective crop. */
+  warping: WarpMode | 'crop' | null;
   /** Degrees the view is turned (the picture isn't). */
   viewRotation: number;
   version: number; // increments on every committed change
@@ -142,6 +146,8 @@ export interface ToolOptions {
   gradType: 'linear' | 'radial';
   gradEnd: 'transparent' | 'white' | 'black';
   gradReverse: boolean;
+  /** Straighten tool: cut off the corners the turn leaves (else the canvas grows to fit). */
+  straightenCrop: boolean;
 }
 
 interface LayerModel {
@@ -201,6 +207,41 @@ const ANCHOR = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)
 
 let layerSeq = 0;
 const newId = () => `L${Date.now().toString(36)}${(++layerSeq).toString(36)}`;
+
+const mid = (a: Pt, b: Pt): Pt => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+
+/** r cut to the w × h picture (null when nothing is left). */
+function clipRect(r: Rect, w: number, h: number): Rect | null {
+  const x = Math.max(0, r.x);
+  const y = Math.max(0, r.y);
+  const x2 = Math.min(w, r.x + r.width);
+  const y2 = Math.min(h, r.y + r.height);
+  return x2 > x && y2 > y ? { x, y, width: x2 - x, height: y2 - y } : null;
+}
+
+/** The rectangle around a canvas's visible pixels (null when there are none). */
+function contentBounds(c: HTMLCanvasElement): Rect | null {
+  const d = c.getContext('2d', { willReadFrequently: true })!.getImageData(0, 0, c.width, c.height).data;
+  let x0 = c.width;
+  let y0 = c.height;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < c.height; y++) {
+    let row = false;
+    for (let x = 0; x < c.width; x++) {
+      if (d[(y * c.width + x) * 4 + 3]) {
+        row = true;
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+      }
+    }
+    if (row) {
+      if (y < y0) y0 = y;
+      y1 = y;
+    }
+  }
+  return x1 < 0 ? null : { x: x0, y: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 };
+}
 
 /** A new, untransformed, unmasked layer. */
 function plainLayer(name: string, canvas: HTMLCanvasElement): LayerModel {
@@ -317,6 +358,7 @@ export class ImageEditor {
     gradType: 'linear',
     gradEnd: 'transparent',
     gradReverse: false,
+    straightenCrop: true,
   };
   editMask = false;
   selection: Selection | null = null;
@@ -346,6 +388,8 @@ export class ImageEditor {
   private cloneSrc: { x: number; y: number } | null = null;
   private cloneOffset: { dx: number; dy: number } | null = null;
   private cloneMark: Konva.Group;
+  /** Corner handles, frame and (for a crop) grid of a skew / distort / perspective. */
+  private warpUi: Konva.Group;
   /** Spot healing: the stroke being painted (document points). */
   private healPts: number[] | null = null;
 
@@ -379,6 +423,24 @@ export class ImageEditor {
     this.world.add(this.cloneMark);
     this.gradLine = new KLine({ points: [], stroke: '#fff', strokeWidth: 1.5, strokeScaleEnabled: false, shadowColor: '#000', shadowBlur: 2, shadowOpacity: 0.9, listening: false });
     this.world.add(this.gradLine);
+    this.warpUi = new Konva.Group({ visible: false, name: 'warp' });
+    this.warpUi.add(new KLine({ points: [], closed: true, stroke: ACCENT, strokeWidth: 1.5, strokeScaleEnabled: false, listening: false, name: 'frame' }));
+    for (let i = 0; i < 4; i++) this.warpUi.add(new KLine({ points: [], stroke: 'rgba(255,255,255,0.7)', strokeWidth: 1, strokeScaleEnabled: false, dash: [4, 4], listening: false, name: 'grid' }));
+    for (let i = 0; i < 4; i++) {
+      const e = new KRect({ fill: '#fff', stroke: ACCENT, strokeWidth: 1.5, strokeScaleEnabled: false, draggable: true, name: `edge edge${i}` });
+      e.on('dragstart', () => this.warpDragStart(e));
+      e.on('dragmove', () => this.warpEdge(i, e.position()));
+      e.on('dragend', () => this.warpDragEnd());
+      this.warpUi.add(e);
+    }
+    for (let i = 0; i < 4; i++) {
+      const c = new KEllipse({ radiusX: 5, radiusY: 5, fill: '#fff', stroke: ACCENT, strokeWidth: 1.5, strokeScaleEnabled: false, draggable: true, name: `corner corner${i}` });
+      c.on('dragstart', () => this.warpDragStart(c));
+      c.on('dragmove', () => this.warpCorner(i, c.position()));
+      c.on('dragend', () => this.warpDragEnd());
+      this.warpUi.add(c);
+    }
+    this.world.add(this.warpUi);
     this.region = new KRect({ visible: false, stroke: '#ffffff', dash: [6, 4], strokeScaleEnabled: false, strokeWidth: 1.5, fill: 'rgba(217,119,87,0.12)', draggable: true, name: 'region' });
     this.regionPreview = new KImage({ image: undefined, visible: false, listening: false });
     this.world.add(this.regionPreview);
@@ -457,6 +519,7 @@ export class ImageEditor {
     this.world.scale({ x: this.view.zoom, y: this.view.zoom });
     this.world.rotation(this.viewRotation);
     this.klayer.imageSmoothingEnabled(this.view.zoom < 2);
+    if (this.warp) this.showWarp();
     this.klayer.batchDraw();
     this.emit();
   }
@@ -505,6 +568,7 @@ export class ImageEditor {
   // ---- tools ----
 
   setTool(t: Tool) {
+    if (this.warp && (this.warp.kind === 'crop' ? t !== 'crop' : t !== 'move')) this.finishWarp(this.warp.kind !== 'crop');
     if (this.floating && t !== 'move') this.finishTransform(true);
     if (this.stroke) this.endStroke();
     this.cancelRegion();
@@ -528,7 +592,7 @@ export class ImageEditor {
 
   private updateDraggable() {
     for (const L of this.layers) {
-      L.group.draggable(this.tool === 'move' && L.id === this.activeId);
+      L.group.draggable(this.tool === 'move' && L.id === this.activeId && !this.warp);
       // Moving: only the active layer takes the pointer — a layer above it
       // (even a transparent one, hit as its whole rectangle) mustn't catch the drag.
       L.group.listening(this.tool !== 'move' || L.id === this.activeId);
@@ -633,6 +697,10 @@ export class ImageEditor {
       else this.setCanvas(this.active, gr.before);
     }
     this.selPaintLine.points([]);
+    if (this.tool === 'straighten') {
+      this.gradLine.points([]);
+      this.angleTip.visible(false);
+    }
     for (const tr of [this.tr, this.regionTr, this.selTr]) if (tr.isTransforming()) tr.stopTransform();
     const nodes: KNode[] = [this.world, this.selFrame, this.region, ...this.layers.flatMap((L) => [L.group as KNode, ...(L.objs.getChildren() as KNode[])])];
     for (const n of nodes) if (n.isDragging()) n.stopDrag();
@@ -697,6 +765,7 @@ export class ImageEditor {
     this.stage.on('mousedown touchstart', (e) => {
       const t = this.tool;
       const target = e.target;
+      if (this.warp) return; // only the corner handles take the pointer
       if (target === this.selFrame) {
         // Shift / Alt (or the add / subtract mode) draws another selection there instead of moving this one.
         if (this.modeFor(e.evt) === 'replace') return;
@@ -754,6 +823,9 @@ export class ImageEditor {
       } else if (t === 'brush' || t === 'eraser' || t === 'clone') {
         this.beginStroke(p);
         return;
+      } else if (t === 'straighten') {
+        this.gradLine.points([p.x, p.y, p.x, p.y]);
+        return;
       } else if (t === 'gradient') {
         const L = this.active;
         this.bake(L);
@@ -788,6 +860,17 @@ export class ImageEditor {
         this.gradLine.points([g.from.x, g.from.y, p.x, p.y]);
         cancelAnimationFrame(g.raf);
         g.raf = requestAnimationFrame(() => this.showGradient());
+        return;
+      }
+      if (this.tool === 'straighten') {
+        const s = this.start!;
+        this.gradLine.points([s.x, s.y, p.x, p.y]);
+        const sp = this.stage.getPointerPosition();
+        if (sp && Math.hypot(p.x - s.x, p.y - s.y) * this.view.zoom > 8) {
+          (this.angleTip.getText() as KText).text(`${Math.round(-straightenAngle(s, p) * 10) / 10}°`);
+          this.angleTip.setAttrs({ x: sp.x + 16, y: sp.y + 16, visible: true });
+        }
+        this.klayer.batchDraw();
         return;
       }
       const painted = this.selPaint ?? this.healPts;
@@ -836,6 +919,16 @@ export class ImageEditor {
       if (this.gradient) {
         this.start = null;
         this.endGradient();
+        return;
+      }
+      if (this.tool === 'straighten' && this.start) {
+        const a = this.start;
+        const b = this.pointer();
+        this.start = null;
+        this.gradLine.points([]);
+        this.angleTip.visible(false);
+        this.klayer.batchDraw();
+        if (Math.hypot(b.x - a.x, b.y - a.y) * this.view.zoom >= 10) this.straightenAlong(a, b);
         return;
       }
       if (this.selPaint) {
@@ -1871,6 +1964,221 @@ export class ImageEditor {
     this.emit();
   }
 
+  // ---- corner pin: skew, distort, perspective; perspective crop ----
+
+  /**
+   * A layer's corners being dragged (its content cut out of its pixels and
+   * shown warped until applied), or a quadrilateral to crop to.
+   */
+  private warp: {
+    kind: 'layer' | 'crop';
+    mode: WarpMode;
+    quad: Quad;
+    /** The corners when a handle's drag began, and where that handle was. */
+    drag: { quad: Quad; at: Pt } | null;
+    raf: number;
+    layer?: { L: LiveLayer; before: HTMLCanvasElement; src: HTMLCanvasElement; preview: KImage };
+  } | null = null;
+
+  /** Skew, distort or put in perspective the active layer's content (its corners get handles). Enter applies, Esc cancels. */
+  startWarp(mode: WarpMode) {
+    if (this.warp?.kind === 'layer') {
+      this.warp.mode = mode;
+      this.showWarp();
+      this.emit();
+      return;
+    }
+    if (this.warp) this.finishWarp(false);
+    if (this.stroke) this.endStroke();
+    this.cancelRegion();
+    this.select(null);
+    const L = this.active;
+    this.bake(L);
+    const box = contentBounds(L.canvas);
+    if (!box) {
+      this.notify(t('The layer is empty.'));
+      return;
+    }
+    forgetUpload();
+    const before = L.canvas;
+    const src = raster.crop(before, box);
+    const rest = raster.clone(before);
+    rest.getContext('2d')!.clearRect(box.x, box.y, box.width, box.height);
+    this.setCanvas(L, rest);
+    const preview = new KImage({ image: undefined, listening: false, name: 'warp-preview' });
+    L.group.add(preview);
+    this.tr.nodes([]);
+    this.warp = { kind: 'layer', mode, quad: rectQuad(box.x, box.y, box.width, box.height), drag: null, raf: 0, layer: { L, before, src, preview } };
+    this.updateDraggable();
+    this.showWarp();
+    this.renderWarp(true);
+    this.emit();
+  }
+
+  /** Perspective crop: drag the corners onto what should become a rectangle; Enter crops to it, straightened. */
+  startPerspectiveCrop() {
+    if (this.warp) this.finishWarp(false);
+    this.cancelRegion();
+    this.select(null);
+    const m = 0.1;
+    this.warp = { kind: 'crop', mode: 'distort', quad: rectQuad(this.docW * m, this.docH * m, this.docW * (1 - 2 * m), this.docH * (1 - 2 * m)), drag: null, raf: 0 };
+    this.showWarp();
+    this.emit();
+  }
+
+  /** The corners being dragged (for tests and the status line). */
+  warpQuad(): Quad | null {
+    return this.warp ? (this.warp.quad.map((p) => ({ ...p })) as Quad) : null;
+  }
+
+  /** Move corner i (0 top left, clockwise) or, with edge, the middle of edge i, as if dragged there. */
+  warpDrag(i: number, to: Pt, edge = false) {
+    const w = this.warp;
+    if (!w) return;
+    const at = edge ? mid(w.quad[i], w.quad[(i + 1) % 4]) : w.quad[i];
+    w.drag = { quad: w.quad.map((p) => ({ ...p })) as Quad, at };
+    if (edge) this.warpEdge(i, to);
+    else this.warpCorner(i, to);
+    this.warpDragEnd();
+  }
+
+  private warpDragStart(node: Konva.Node) {
+    const w = this.warp;
+    if (w) w.drag = { quad: w.quad.map((p) => ({ ...p })) as Quad, at: node.position() };
+  }
+
+  private warpCorner(i: number, p: Pt) {
+    const w = this.warp;
+    if (!w?.drag) return;
+    this.setQuad(dragCorner(w.drag.quad, i, p, w.mode));
+  }
+
+  private warpEdge(i: number, p: Pt) {
+    const w = this.warp;
+    if (!w?.drag) return;
+    this.setQuad(dragEdge(w.drag.quad, i, { x: p.x - w.drag.at.x, y: p.y - w.drag.at.y }, w.mode));
+  }
+
+  private warpDragEnd() {
+    const w = this.warp;
+    if (!w) return;
+    w.drag = null;
+    this.showWarp();
+    this.renderWarp(true);
+  }
+
+  private setQuad(q: Quad) {
+    const w = this.warp!;
+    if (quadOk(q)) w.quad = q;
+    this.showWarp();
+    cancelAnimationFrame(w.raf);
+    w.raf = requestAnimationFrame(() => this.renderWarp(false));
+  }
+
+  /** Put the handles, frame and grid where the corners are. */
+  private showWarp() {
+    const w = this.warp;
+    this.warpUi.visible(!!w);
+    if (!w) return;
+    const q = w.quad;
+    const z = this.view.zoom || 1;
+    const r = ANCHOR / 2 / z;
+    (this.warpUi.findOne('.frame') as KLine).points(q.flatMap((p) => [p.x, p.y]));
+    const grid = this.warpUi.find('.grid') as KLine[];
+    const h = homography(rectQuad(0, 0, 1, 1), q);
+    grid.forEach((g, k) => {
+      const f = k % 2 ? 2 / 3 : 1 / 3;
+      const [a, b] = k < 2 ? [applyH(h, { x: f, y: 0 }), applyH(h, { x: f, y: 1 })] : [applyH(h, { x: 0, y: f }), applyH(h, { x: 1, y: f })];
+      g.setAttrs({ points: [a.x, a.y, b.x, b.y], visible: w.kind === 'crop' });
+    });
+    for (let i = 0; i < 4; i++) {
+      const c = this.warpUi.findOne(`.corner${i}`) as KEllipse;
+      c.setAttrs({ x: q[i].x, y: q[i].y, radiusX: r, radiusY: r, visible: w.mode !== 'skew' });
+      const e = this.warpUi.findOne(`.edge${i}`) as KRect;
+      const m = mid(q[i], q[(i + 1) % 4]);
+      e.setAttrs({ x: m.x, y: m.y, width: r * 1.6, height: r * 1.6, offsetX: r * 0.8, offsetY: r * 0.8, visible: w.mode !== 'perspective' });
+    }
+    this.warpUi.moveToTop();
+    this.klayer.batchDraw();
+  }
+
+  /** The layer drawn through the corners (smaller while dragging, for speed). */
+  private renderWarp(full: boolean) {
+    const w = this.warp;
+    const lw = w?.layer;
+    if (!w || !lw) return;
+    const out = clipRect(quadBounds(w.quad), this.docW, this.docH);
+    if (!out) {
+      lw.preview.visible(false);
+      this.klayer.batchDraw();
+      return;
+    }
+    const inv = invert(homography(rectQuad(0, 0, lw.src.width, lw.src.height), w.quad));
+    const scale = full ? 1 : Math.min(1, 1200 / Math.max(out.width, out.height));
+    const c = warpCanvas(lw.src, inv, out, scale);
+    lw.preview.setAttrs({ image: c, x: out.x, y: out.y, width: out.width, height: out.height, visible: true });
+    lw.preview.moveToTop();
+    this.klayer.batchDraw();
+  }
+
+  /** Apply (Enter) or cancel (Esc) the skew, distort, perspective or perspective crop. */
+  finishWarp(apply = true) {
+    const w = this.warp;
+    if (!w) return;
+    this.warp = null;
+    cancelAnimationFrame(w.raf);
+    this.warpUi.visible(false);
+    if (w.kind === 'crop') {
+      if (apply) this.perspectiveCrop(w.quad);
+      else {
+        this.klayer.batchDraw();
+        this.emit();
+      }
+      return;
+    }
+    const { L, before, src, preview } = w.layer!;
+    preview.destroy();
+    const alive = this.layers.includes(L);
+    if (alive && apply) {
+      const c = raster.clone(L.canvas);
+      const out = clipRect(quadBounds(w.quad), this.docW, this.docH);
+      if (out) c.getContext('2d')!.drawImage(warpCanvas(src, invert(homography(rectQuad(0, 0, src.width, src.height), w.quad)), out), out.x, out.y);
+      this.setCanvas(L, c);
+      this.commit();
+    } else if (alive) this.setCanvas(L, before);
+    forgetUpload();
+    this.updateDraggable();
+    if (this.tool === 'move') this.tr.nodes([this.active.group]);
+    this.klayer.batchDraw();
+    this.emit();
+  }
+
+  /** Crop to a quadrilateral, made a rectangle as wide and high as its sides on average (every layer, one step). */
+  perspectiveCrop(q: Quad) {
+    const { w, h } = cropSize(q);
+    const back = homography(rectQuad(0, 0, w, h), q); // output → picture
+    this.documentOp((c) => {
+      forgetUpload();
+      return warpCanvas(c, back, { x: 0, y: 0, width: w, height: h });
+    });
+    forgetUpload();
+  }
+
+  /** Turn the picture so the line a→b is level (or upright); cut off the corners left empty unless told not to. */
+  straightenAlong(a: Pt, b: Pt) {
+    this.straighten(straightenAngle(a, b));
+  }
+
+  straighten(deg: number, crop = this.opts.straightenCrop) {
+    if (Math.abs(deg) < 0.01) return;
+    if (!crop) return this.rotateBy(deg, true);
+    const r = innerRect(this.docW, this.docH, deg);
+    this.documentOp((c) => {
+      const turned = raster.rotateAny(c, deg, false);
+      return raster.crop(turned, { x: Math.round((turned.width - r.w) / 2), y: Math.round((turned.height - r.h) / 2), width: r.w, height: r.h });
+    });
+  }
+
   // ---- transforming a selection ----
 
   /** The selected pixels lifted onto a layer of their own above the one they came from, until applied. */
@@ -1897,6 +2205,7 @@ export class ImageEditor {
   finishTransform(apply = true) {
     const f = this.floating;
     if (!f) return;
+    if (this.warp) this.finishWarp(apply);
     this.floating = null;
     const F = this.layers.find((l) => l.id === f.id);
     const into = this.layers.find((l) => l.id === f.from);
@@ -2535,6 +2844,7 @@ export class ImageEditor {
   }
 
   undo() {
+    if (this.warp) return this.finishWarp(false);
     if (this.adjuster) this.cancelAdjust();
     if (this.floating) return this.finishTransform(false);
     if (this.index <= 0) return;
@@ -2649,6 +2959,7 @@ export class ImageEditor {
       adjusting: !!this.adjuster,
       editMask: this.editMask,
       transforming: !!this.floating,
+      warping: this.warp ? (this.warp.kind === 'crop' ? 'crop' : this.warp.mode) : null,
       viewRotation: this.viewRotation,
       version: this.version,
     };

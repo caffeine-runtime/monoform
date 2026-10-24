@@ -510,6 +510,14 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   came from, so the move tool's transformer (move, scale, rotate, snapping) works on them unchanged; applying
   renders that layer into the source layer's pixels and drops it, and the history in between collapses to one
   step (cancel restores the snapshot from before the lift). Changing tool, layer or saving applies it first.
+- **Corner-pin transforms are a homography drawn on the GPU** (`warp.ts`): the four corners give a 3×3 projective
+  map; a WebGL2 fragment shader takes every output pixel back through its inverse and samples the picture there
+  (bilinear, mipmapped when it shrinks, edges anti-aliased by how far inside the source the point lands). Canvas
+  2D can't draw a perspective at all, and splitting the picture into triangles leaves seams. While a handle is
+  dragged the preview is drawn at most 1200 px across, full size when it is let go; without WebGL2 the same
+  mapping runs as a plain loop. Perspective crop is the same map from the output rectangle into the
+  quadrilateral, applied to every layer and mask. Straightening turns about the middle and keeps the largest
+  upright rectangle inside the turned picture (closed form).
 - **Layer styles are one picture under the layer, worked out from its alpha** (`styles.ts`): the drop shadow is the
   alpha blurred (three box blurs) and moved away from the light; stroke and glow come from the signed distance to
   the shape's edge (the same exact distance transform as Select › Modify), so a 20 px stroke is round at corners and

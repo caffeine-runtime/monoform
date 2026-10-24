@@ -554,6 +554,13 @@
   The selection bar's Blur and Pixelate buttons open their page with a visible strength already set. The **Blur
   region** and **Pixelate region** tools have a strength / block size in the tool bar and show the result inside
   the area before Enter. Self-test `m65`.
+- **Skew, distort, perspective; perspective crop; straighten** (image editor): the move tool (and a lifted
+  selection's banner) offers Skew (slide a side along itself), Distort (any corner or side anywhere) and
+  Perspective (a corner drags its neighbour the other way); the layer's content gets four corner handles and is
+  previewed warped while dragging, Enter applies it as one step, Esc puts it back. Crop › Perspective crop… drags
+  four corners onto something photographed at an angle (a page, a sign, a screen) and makes it a rectangle as wide
+  and high as its sides on average. The straighten tool turns the picture so a line dragged along a horizon (or an
+  upright) is level, cutting off the empty corners (or growing the canvas). Unit tests (warp), self-test `m72`.
 - **Layer styles** (image editor, Layers panel ✦ button or a layer's right-click menu): drop shadow (colour,
   opacity, angle of the light, distance, size), stroke outside the shape (colour, size, opacity) and outer glow
   (colour, size, opacity), drawn beneath the layer from the shape of its pixels, text and shapes included, and
