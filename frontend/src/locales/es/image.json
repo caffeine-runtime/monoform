@@ -621,5 +621,11 @@
   "[anchor] Right": "Derecha",
   "[anchor] Bottom left": "Abajo a la izquierda",
   "[anchor] Bottom": "Abajo",
-  "[anchor] Bottom right": "Abajo a la derecha"
+  "[anchor] Bottom right": "Abajo a la derecha",
+  "Drop shadow": "Sombra paralela",
+  "Outer glow": "Resplandor exterior",
+  "Layer style…": "Estilo de capa…",
+  "Clear layer style": "Quitar el estilo de capa",
+  "Has a layer style": "Tiene un estilo de capa",
+  "Layer style: drop shadow, stroke, outer glow": "Estilo de capa: sombra, contorno, resplandor"
 }

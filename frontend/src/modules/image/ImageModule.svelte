@@ -69,6 +69,7 @@
   import { availableFonts, fontLabel } from './fonts';
   import { vision, type MaskResult } from './vision/vision';
   import { readOra, writeOra, blendToOra } from './ora';
+  import { parseStyle as parseLayerStyle } from './styles';
   import LayersPanel from './LayersPanel.svelte';
   import AdjustPanel from './AdjustPanel.svelte';
   import AnimEditor from './AnimEditor.svelte';
@@ -313,7 +314,7 @@
               const o = ora.layers[i];
               const raw = o.raw || l.objects.length ? await oraEntry(o.raw ?? `data/raw${i}.png`) : null;
               const mask = o.mask ? await oraEntry(o.mask.src) : null;
-              return { ...l, canvas: raw ?? l.canvas, mask: raw && mask ? mask : null, maskOn: o.mask?.on ?? true };
+              return { ...l, canvas: raw ?? l.canvas, mask: raw && mask ? mask : null, maskOn: o.mask?.on ?? true, style: parseLayerStyle(o.style) };
             }),
           ),
         );
@@ -1008,6 +1009,7 @@
           objects: l.objects.length ? JSON.stringify(l.objects) : undefined,
           raw: raws[i] ? `data/raw${i}.png` : undefined,
           mask: l.mask ? { src: `data/mask${i}.png`, on: l.maskOn ?? true } : undefined,
+          style: l.style ? JSON.stringify(l.style) : undefined,
         })),
       ),
       merged: await raster.toPNG(merged),

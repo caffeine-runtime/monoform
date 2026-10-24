@@ -1,4 +1,4 @@
-// Stages the image editor for README screenshots. Arg: "<fixtures dir>|layers|adjust|adjustlist"
+// Stages the image editor for README screenshots. Arg: "<fixtures dir>|layers|adjust|adjustlist|styles"
 import { join } from '../core/paths';
 import { workspace, type Tab } from '../core/tabs.svelte';
 import type { ImageEditor } from '../modules/image/editor';
@@ -23,6 +23,13 @@ export default async function imgshot(arg: string) {
     a.test.set('saturation', 0.4);
     if (mode === 'adjust') a.test.open('colour');
   } else h.setPanel('layers');
+  if (mode === 'styles') {
+    const notes = ed.state().layers[1].id;
+    ed.setActive(notes);
+    ed.setLayerStyle(notes, { shadow: { color: '#000000', opacity: 0.55, angle: 120, distance: 6, size: 8 }, stroke: { color: '#ffffff', opacity: 1, size: 3 } });
+    await sleep(300);
+    (document.querySelector('.tabview.active .layers .actions button[aria-pressed]') as HTMLButtonElement | null)?.click();
+  }
   ed.setTool('wand');
   await sleep(6000);
 }

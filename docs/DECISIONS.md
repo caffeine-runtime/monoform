@@ -510,6 +510,16 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   came from, so the move tool's transformer (move, scale, rotate, snapping) works on them unchanged; applying
   renders that layer into the source layer's pixels and drops it, and the history in between collapses to one
   step (cancel restores the snapshot from before the lift). Changing tool, layer or saving applies it first.
+- **Layer styles are one picture under the layer, worked out from its alpha** (`styles.ts`): the drop shadow is the
+  alpha blurred (three box blurs) and moved away from the light; stroke and glow come from the signed distance to
+  the shape's edge (the same exact distance transform as Select › Modify), so a 20 px stroke is round at corners and
+  costs the same as a 2 px one. Only the content's bounding box plus the effects' reach is worked out. It runs in a
+  small worker of its own (`styleWorker.ts`, not the vision worker, which carries the ONNX runtime) after every
+  change, and on the main thread only when a picture is needed at once (saving, copying, merging) and the worker's
+  answer for the latest change isn't in yet. The picture is a Konva image beneath the layer's raster in its group,
+  so the layer's transform, opacity and blend apply to it; with a mask over markup (a cached group) it goes in last
+  with destination-over, so the mask doesn't cut the shadow. A layer's own pixels (bake, .ora layer PNG) never
+  include it.
 - **Canvas size is a crop with a negative offset**: every layer is shifted by the anchor's share of the size
   change and re-rendered at the new document size, the same path as Crop, so masks, rotated or scaled layers and
   markup come along. A fill colour goes only into the bottom layer, only outside the old picture (an even-odd

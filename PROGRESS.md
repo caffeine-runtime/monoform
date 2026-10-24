@@ -554,6 +554,13 @@
   The selection bar's Blur and Pixelate buttons open their page with a visible strength already set. The **Blur
   region** and **Pixelate region** tools have a strength / block size in the tool bar and show the result inside
   the area before Enter. Self-test `m65`.
+- **Layer styles** (image editor, Layers panel ✦ button or a layer's right-click menu): drop shadow (colour,
+  opacity, angle of the light, distance, size), stroke outside the shape (colour, size, opacity) and outer glow
+  (colour, size, opacity), drawn beneath the layer from the shape of its pixels, text and shapes included, and
+  worked out again whenever the layer changes — in a worker, so dragging a slider previews without stalling the
+  editor (one undo step on letting go). Layers with a style show "fx". Saved in .ora (`mf:style`; the merged image
+  carries the look for other apps); merge down, flatten, copy and export burn it in. Unit tests (styles), self-test
+  `m71`.
 - **Canvas size** (image editor, Image › Canvas size…, Mod+Alt+C): unlike Resize the picture stays as it is and
   the canvas grows (or shrinks, cutting) around it; a 3×3 anchor says where the picture sits, and the new space is
   transparent or the current colour (painted into the bottom layer). Every layer moves with the picture; one undo

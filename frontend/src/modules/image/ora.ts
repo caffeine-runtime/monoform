@@ -21,6 +21,8 @@ export interface OraLayer {
   mask?: { src: string; on: boolean };
   /** Our entry with the layer's pixels before markup and mask. */
   raw?: string;
+  /** Our layer style (JSON): drop shadow, stroke, glow. Only the merged image shows it to other apps. */
+  style?: string;
 }
 
 export interface OraImage {
@@ -65,7 +67,7 @@ export async function writeOra(img: OraImage): Promise<ArrayBuffer> {
     top
       .map(
         (l, i) =>
-          `  <layer name="${esc(l.name)}" src="data/layer${top.length - 1 - i}.png" x="${Math.round(l.x)}" y="${Math.round(l.y)}" opacity="${l.opacity.toFixed(3)}" visibility="${l.visible ? 'visible' : 'hidden'}" composite-op="${l.composite}"${l.objects ? ` mf:objects="${esc(l.objects)}"` : ''}${l.raw ? ` mf:raw="${esc(l.raw)}"` : ''}${l.mask ? ` mf:mask="${esc(l.mask.src)}"${l.mask.on ? '' : ' mf:mask-off="1"'}` : ''}/>`,
+          `  <layer name="${esc(l.name)}" src="data/layer${top.length - 1 - i}.png" x="${Math.round(l.x)}" y="${Math.round(l.y)}" opacity="${l.opacity.toFixed(3)}" visibility="${l.visible ? 'visible' : 'hidden'}" composite-op="${l.composite}"${l.objects ? ` mf:objects="${esc(l.objects)}"` : ''}${l.raw ? ` mf:raw="${esc(l.raw)}"` : ''}${l.mask ? ` mf:mask="${esc(l.mask.src)}"${l.mask.on ? '' : ' mf:mask-off="1"'}` : ''}${l.style ? ` mf:style="${esc(l.style)}"` : ''}/>`,
       )
       .join('\n') +
     `\n </stack>\n</image>\n`;
@@ -101,6 +103,7 @@ export interface OraStackLayer {
   objects?: string;
   mask?: { src: string; on: boolean };
   raw?: string;
+  style?: string;
 }
 
 const attr = (l: Element, name: string) => l.getAttribute(`mf:${name}`) ?? l.getAttributeNS('https://monoform.dev/ora', name) ?? undefined;
@@ -129,6 +132,7 @@ export async function readOra(path: string): Promise<{ width: number; height: nu
     objects: attr(l, 'objects'),
     mask: attr(l, 'mask') ? { src: attr(l, 'mask')!, on: attr(l, 'mask-off') !== '1' } : undefined,
     raw: attr(l, 'raw'),
+    style: attr(l, 'style'),
   }));
   const layers = await Promise.all(
     stackLayers

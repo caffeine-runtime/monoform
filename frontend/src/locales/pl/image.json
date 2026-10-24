@@ -633,5 +633,11 @@
   "[anchor] Right": "Prawo",
   "[anchor] Bottom left": "Lewy dolny róg",
   "[anchor] Bottom": "Dół",
-  "[anchor] Bottom right": "Prawy dolny róg"
+  "[anchor] Bottom right": "Prawy dolny róg",
+  "Drop shadow": "Cień",
+  "Outer glow": "Poświata zewnętrzna",
+  "Layer style…": "Styl warstwy…",
+  "Clear layer style": "Usuń styl warstwy",
+  "Has a layer style": "Ma styl warstwy",
+  "Layer style: drop shadow, stroke, outer glow": "Styl warstwy: cień, obrys, poświata"
 }

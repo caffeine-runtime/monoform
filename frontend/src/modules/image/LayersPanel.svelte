@@ -11,9 +11,11 @@
   import ArrowDown from '@lucide/svelte/icons/arrow-down';
   import Merge from '@lucide/svelte/icons/merge';
   import Contrast from '@lucide/svelte/icons/contrast';
+  import Sparkles from '@lucide/svelte/icons/sparkles';
   import { menu, ui, type MenuItem } from '../../core/ui.svelte';
   import { t } from '../../core/i18n';
   import type { Blend, EditorState, ImageEditor } from './editor';
+  import { GLOW_DEFAULT, SHADOW_DEFAULT, STROKE_DEFAULT, type LayerStyle } from './styles';
 
   let { editor, es, onrotate }: { editor: ImageEditor; es: EditorState; onrotate?: () => void } = $props();
 
@@ -30,6 +32,8 @@
       { separator: true },
       { label: t('Rename…'), run: () => void rename(id, name) },
       { label: t('Duplicate layer'), run: () => editor.duplicateLayer(id) },
+      { label: t('Layer style…'), run: () => (stylesOpen = true) },
+      { label: t('Clear layer style'), disabled: !es.layers[i]?.style, run: () => editor.setLayerStyle(id, null) },
       { label: t('Merge layer down'), disabled: i <= 0, run: () => editor.mergeDown(id) },
       { label: t('Delete layer'), disabled: es.layers.length < 2, run: () => editor.deleteLayer(id) },
     ]);
@@ -180,6 +184,53 @@
     window.addEventListener('pointerup', up);
   }
 
+  // Layer style: drop shadow, stroke, outer glow, each with its own settings.
+  let stylesOpen = $state(false);
+  type FxKind = 'shadow' | 'stroke' | 'glow';
+  type Knob = { key: string; label: string; min: number; max: number; unit: string; scale?: number };
+  const FX: { id: FxKind; label: string; knobs: Knob[] }[] = [
+    {
+      id: 'shadow',
+      label: t('Drop shadow'),
+      knobs: [
+        { key: 'opacity', label: t('Opacity'), min: 0, max: 100, unit: '%', scale: 100 },
+        { key: 'angle', label: t('Angle'), min: 0, max: 360, unit: '°' },
+        { key: 'distance', label: t('Distance'), min: 0, max: 100, unit: ' px' },
+        { key: 'size', label: t('Size'), min: 0, max: 100, unit: ' px' },
+      ],
+    },
+    {
+      id: 'stroke',
+      label: t('Stroke'),
+      knobs: [
+        { key: 'size', label: t('Size'), min: 1, max: 50, unit: ' px' },
+        { key: 'opacity', label: t('Opacity'), min: 0, max: 100, unit: '%', scale: 100 },
+      ],
+    },
+    {
+      id: 'glow',
+      label: t('Outer glow'),
+      knobs: [
+        { key: 'size', label: t('Size'), min: 1, max: 100, unit: ' px' },
+        { key: 'opacity', label: t('Opacity'), min: 0, max: 100, unit: '%', scale: 100 },
+      ],
+    },
+  ];
+  const DEFAULTS = { shadow: SHADOW_DEFAULT, stroke: STROKE_DEFAULT, glow: GLOW_DEFAULT };
+  const style = $derived<LayerStyle>(active?.style ?? {});
+
+  function setFx(kind: FxKind, value: object | null, commit = true) {
+    if (!active) return;
+    editor.setLayerStyle(active.id, { ...style, [kind]: value }, commit);
+  }
+  function fxValue(kind: FxKind, k: Knob): number {
+    const v = (style[kind] as unknown as Record<string, number>)[k.key];
+    return Math.round(v * (k.scale ?? 1));
+  }
+  function setKnob(kind: FxKind, k: Knob, raw: string, commit: boolean) {
+    setFx(kind, { ...style[kind], [k.key]: +raw / (k.scale ?? 1) }, commit);
+  }
+
   async function rename(id: string, name: string) {
     const n = await ui.prompt(t('Layer name'), name, t('Rename'));
     if (n && n !== name) editor.setLayerProps(id, { name: n });
@@ -218,6 +269,7 @@
           ></canvas>
         {/if}
         <span class="name" title={t('{name} (double-click to rename)', { name: l.name })}>{l.name}</span>
+        {#if l.style}<span class="fxmark" title={t('Has a layer style')}>fx</span>{/if}<!-- i18n-ignore: the usual mark -->
         {#if l.opacity < 1}<span class="op">{Math.round(l.opacity * 100)}%</span>{/if}
       </div>
     {/each}
@@ -239,6 +291,30 @@
         </select>
       </label>
     </div>
+    {#if stylesOpen}
+      <div class="styles">
+        {#each FX as f (f.id)}
+          <div class="fx" data-fx={f.id}>
+            <label class="head">
+              <input type="checkbox" checked={!!style[f.id]} onchange={(e) => setFx(f.id, (e.target as HTMLInputElement).checked ? { ...DEFAULTS[f.id] } : null)} />
+              <span>{f.label}</span>
+              {#if style[f.id]}
+                <input class="colour" type="color" title={t('Colour')} value={style[f.id]!.color} oninput={(e) => setFx(f.id, { ...style[f.id], color: (e.target as HTMLInputElement).value }, false)} onchange={(e) => setFx(f.id, { ...style[f.id], color: (e.target as HTMLInputElement).value })} />
+              {/if}
+            </label>
+            {#if style[f.id]}
+              {#each f.knobs as k (k.key)}
+                <label class="row" data-knob={k.key}>
+                  <span>{k.label}</span>
+                  <input type="range" min={k.min} max={k.max} value={fxValue(f.id, k)} oninput={(e) => setKnob(f.id, k, (e.target as HTMLInputElement).value, false)} onchange={(e) => setKnob(f.id, k, (e.target as HTMLInputElement).value, true)} />
+                  <span class="num">{fxValue(f.id, k)}{k.unit}</span>
+                </label>
+              {/each}
+            {/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
   {/if}
   <div class="actions">
     <button class="icon-btn" title={t('New layer')} onclick={() => editor.addLayer()}><Icon icon={Plus} size={15} /></button>
@@ -246,6 +322,7 @@
     <button class="icon-btn" title={t('Move up')} disabled={activeIndex >= es.layers.length - 1} onclick={() => editor.moveLayer(es.activeId, 1)}><Icon icon={ArrowUp} size={15} /></button>
     <button class="icon-btn" title={t('Move down')} disabled={activeIndex <= 0} onclick={() => editor.moveLayer(es.activeId, -1)}><Icon icon={ArrowDown} size={15} /></button>
     <button class="icon-btn" class:on={active?.mask} title={active?.mask ? t('Mask…') : t('Add a mask: hide parts of the layer without erasing them')} onclick={maskMenu}><Icon icon={Contrast} size={15} /></button>
+    <button class="icon-btn" class:on={stylesOpen} title={t('Layer style: drop shadow, stroke, outer glow')} aria-pressed={stylesOpen} onclick={() => (stylesOpen = !stylesOpen)}><Icon icon={Sparkles} size={15} /></button>
     <button class="icon-btn" title={t('Merge down')} disabled={activeIndex <= 0} onclick={() => editor.mergeDown()}><Icon icon={Merge} size={15} /></button>
     <button class="icon-btn" title={t('Delete layer')} disabled={es.layers.length < 2} onclick={() => editor.deleteLayer()}><Icon icon={Trash} size={15} /></button>
   </div>
@@ -371,6 +448,55 @@
   .num {
     width: 36px;
     text-align: right;
+  }
+  .styles .num {
+    width: 48px;
+  }
+  .fxmark {
+    font-size: 10px;
+    font-style: italic;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding: 0 4px;
+    border: 1px solid var(--border-soft);
+    border-radius: 3px;
+  }
+  .styles {
+    padding: 4px 10px 8px;
+    border-top: 1px solid var(--border-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 45%;
+    overflow: auto;
+  }
+  .fx {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .fx .head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--fs-small);
+    font-weight: 600;
+    padding-top: 4px;
+  }
+  .fx .head input[type='checkbox'] {
+    accent-color: var(--accent);
+  }
+  .fx .head span {
+    flex: 1;
+  }
+  .colour {
+    width: 26px;
+    height: 20px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: none;
+    cursor: pointer;
   }
   .actions {
     display: flex;
