@@ -55,7 +55,8 @@ export type Tool =
   | 'pixelate'
   | 'picker'
   | 'clone'
-  | 'heal';
+  | 'heal'
+  | 'gradient';
 export const REGION_TOOLS: Tool[] = ['crop', 'blur', 'pixelate'];
 export const SELECT_TOOLS: Tool[] = ['select', 'ellipse', 'lasso', 'selbrush', 'wand', 'object'];
 /** Tools whose selection gets handles: the outline itself moved, scaled and turned (not the pixels). */
@@ -134,6 +135,10 @@ export interface ToolOptions {
   regionBlur: number;
   /** Pixelate region tool: block size in pixels (0 = automatic, from the picture's size). */
   pixelSize: number;
+  /** Gradient tool: its shape, what the colour fades to, and reversed. */
+  gradType: 'linear' | 'radial';
+  gradEnd: 'transparent' | 'white' | 'black';
+  gradReverse: boolean;
 }
 
 interface LayerModel {
@@ -257,6 +262,9 @@ export class ImageEditor {
   private lasso: number[] | null = null;
   private selPaint: number[] | null = null;
   private selPaintLine: KLine;
+  /** A gradient being dragged: the layer (or mask) before it, and the guide line shown meanwhile. */
+  private gradient: { before: HTMLCanvasElement; onMask: boolean; from: { x: number; y: number }; to: { x: number; y: number }; raf: number } | null = null;
+  private gradLine!: KLine;
   private stroke: {
     canvas: HTMLCanvasElement;
     g: CanvasRenderingContext2D;
@@ -293,6 +301,9 @@ export class ImageEditor {
     maskHide: true,
     regionBlur: 1,
     pixelSize: 0,
+    gradType: 'linear',
+    gradEnd: 'transparent',
+    gradReverse: false,
   };
   editMask = false;
   selection: Selection | null = null;
@@ -353,6 +364,8 @@ export class ImageEditor {
       this.cloneMark.add(new KLine({ points: [0, -6, 0, 6], stroke, strokeWidth: 1.5, strokeScaleEnabled: false, dash: dash ? [...dash] : undefined, name: 'cross' }));
     }
     this.world.add(this.cloneMark);
+    this.gradLine = new KLine({ points: [], stroke: '#fff', strokeWidth: 1.5, strokeScaleEnabled: false, shadowColor: '#000', shadowBlur: 2, shadowOpacity: 0.9, listening: false });
+    this.world.add(this.gradLine);
     this.region = new KRect({ visible: false, stroke: '#ffffff', dash: [6, 4], strokeScaleEnabled: false, strokeWidth: 1.5, fill: 'rgba(217,119,87,0.12)', draggable: true, name: 'region' });
     this.regionPreview = new KImage({ image: undefined, visible: false, listening: false });
     this.world.add(this.regionPreview);
@@ -598,6 +611,14 @@ export class ImageEditor {
     this.lassoLine.points([]);
     this.selPaint = null;
     this.healPts = null;
+    if (this.gradient) {
+      const gr = this.gradient;
+      cancelAnimationFrame(gr.raf);
+      this.gradient = null;
+      this.gradLine.points([]);
+      if (gr.onMask) this.setCanvas(this.active, this.active.canvas, gr.before);
+      else this.setCanvas(this.active, gr.before);
+    }
     this.selPaintLine.points([]);
     for (const tr of [this.tr, this.regionTr, this.selTr]) if (tr.isTransforming()) tr.stopTransform();
     const nodes: KNode[] = [this.world, this.selFrame, this.region, ...this.layers.flatMap((L) => [L.group as KNode, ...(L.objs.getChildren() as KNode[])])];
@@ -720,6 +741,12 @@ export class ImageEditor {
       } else if (t === 'brush' || t === 'eraser' || t === 'clone') {
         this.beginStroke(p);
         return;
+      } else if (t === 'gradient') {
+        const L = this.active;
+        this.bake(L);
+        const onMask = this.editMask && !!L.mask;
+        this.gradient = { before: onMask ? L.mask! : L.canvas, onMask, from: p, to: p, raf: 0 };
+        return;
       } else if (t === 'heal') {
         this.healPts = [p.x, p.y, p.x, p.y];
         this.selPaintLine.setAttrs({ points: this.healPts, strokeWidth: this.brushSize(), stroke: 'rgba(255, 180, 40, 0.5)' });
@@ -734,6 +761,20 @@ export class ImageEditor {
       let p = this.pointer();
       if (this.stroke) {
         this.strokeTo(p);
+        return;
+      }
+      if (this.gradient) {
+        const g = this.gradient;
+        // Shift: the angle in 45° steps.
+        if ((e.evt as MouseEvent).shiftKey) {
+          const a = Math.round(Math.atan2(p.y - g.from.y, p.x - g.from.x) / (Math.PI / 4)) * (Math.PI / 4);
+          const d = Math.hypot(p.x - g.from.x, p.y - g.from.y);
+          p = { x: g.from.x + d * Math.cos(a), y: g.from.y + d * Math.sin(a) };
+        }
+        g.to = p;
+        this.gradLine.points([g.from.x, g.from.y, p.x, p.y]);
+        cancelAnimationFrame(g.raf);
+        g.raf = requestAnimationFrame(() => this.showGradient());
         return;
       }
       const painted = this.selPaint ?? this.healPts;
@@ -777,6 +818,11 @@ export class ImageEditor {
       if (this.stroke) {
         this.endStroke();
         this.start = null;
+        return;
+      }
+      if (this.gradient) {
+        this.start = null;
+        this.endGradient();
         return;
       }
       if (this.selPaint) {
@@ -1488,7 +1534,9 @@ export class ImageEditor {
 
   /** Visible layers flattened at 1:1. */
   composite(): HTMLCanvasElement {
-    if (this.layers.length === 1 && this.isBaked(this.layers[0]) && this.layers[0].group.opacity() === 1 && this.layers[0].group.visible()) return this.layers[0].canvas;
+    // One plain layer is its own composite (not with a mask on: that has to be applied).
+    const L0 = this.layers[0];
+    if (this.layers.length === 1 && this.isBaked(L0) && L0.group.opacity() === 1 && L0.group.visible() && !(L0.mask && L0.maskOn)) return L0.canvas;
     return this.atIdentity(() => this.docGroup.toCanvas({ x: 0, y: 0, width: this.docW, height: this.docH, pixelRatio: 1 }) as HTMLCanvasElement);
   }
 
@@ -1900,6 +1948,87 @@ export class ImageEditor {
       this.cloneMark.find('.ring').forEach((n) => n.setAttrs({ radiusX: r, radiusY: r }));
     }
     this.klayer.batchDraw();
+  }
+
+  // ---- gradient ----
+
+  /** Draw a gradient from a to b into a w×h canvas (the colours from the tool options; on a mask, shown → hidden: opaque → clear). */
+  private gradientCanvas(w: number, h: number, a: { x: number; y: number }, b: { x: number; y: number }, onMask: boolean): HTMLCanvasElement {
+    const c = raster.makeCanvas(w, h);
+    const g = c.getContext('2d')!;
+    const o = this.opts;
+    const rgb = (hex: string) => {
+      const n = parseInt(hex.replace('#', '').padEnd(6, '0').slice(0, 6), 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    };
+    const [r0, g0, b0] = rgb(onMask ? '#ffffff' : o.color);
+    let start = `rgba(${r0},${g0},${b0},1)`;
+    let end = onMask ? 'rgba(255,255,255,0)' : o.gradEnd === 'white' ? 'rgba(255,255,255,1)' : o.gradEnd === 'black' ? 'rgba(0,0,0,1)' : `rgba(${r0},${g0},${b0},0)`;
+    if (o.gradReverse) [start, end] = [end, start];
+    const grad = o.gradType === 'radial' ? g.createRadialGradient(a.x, a.y, 0, a.x, a.y, Math.max(1, Math.hypot(b.x - a.x, b.y - a.y))) : g.createLinearGradient(a.x, a.y, b.x, b.y);
+    grad.addColorStop(0, start);
+    grad.addColorStop(1, end);
+    g.fillStyle = grad;
+    g.fillRect(0, 0, w, h);
+    if (this.selection) {
+      g.globalCompositeOperation = 'destination-in';
+      g.drawImage(this.selection.mask, 0, 0);
+    }
+    return c;
+  }
+
+  /** The layer (or mask) as it would be with the gradient dragged so far. */
+  private gradientResult(): HTMLCanvasElement {
+    const gr = this.gradient!;
+    const { before } = gr;
+    const out = raster.clone(before);
+    const g = out.getContext('2d')!;
+    const grad = this.gradientCanvas(before.width, before.height, gr.from, gr.to, gr.onMask);
+    if (gr.onMask) {
+      // A mask is its alpha: the gradient replaces it (inside the selection, if any).
+      g.globalCompositeOperation = 'destination-out';
+      if (this.selection) g.drawImage(this.selection.mask, 0, 0);
+      else g.fillRect(0, 0, out.width, out.height);
+      g.globalCompositeOperation = 'source-over';
+    } else g.globalAlpha = this.opts.brushOpacity;
+    g.drawImage(grad, 0, 0);
+    return out;
+  }
+
+  private showGradient() {
+    const gr = this.gradient;
+    if (!gr) return;
+    const L = this.active;
+    if (gr.onMask) this.setCanvas(L, L.canvas, this.gradientResult());
+    else this.setCanvas(L, this.gradientResult());
+    this.klayer.batchDraw();
+  }
+
+  private endGradient() {
+    const gr = this.gradient!;
+    cancelAnimationFrame(gr.raf);
+    this.gradLine.points([]);
+    const L = this.active;
+    if (Math.hypot(gr.to.x - gr.from.x, gr.to.y - gr.from.y) < 2) {
+      // A click, not a drag: nothing.
+      if (gr.onMask) this.setCanvas(L, L.canvas, gr.before);
+      else this.setCanvas(L, gr.before);
+      this.gradient = null;
+      this.klayer.batchDraw();
+      return;
+    }
+    this.showGradient();
+    this.gradient = null;
+    this.commit();
+  }
+
+  /** A gradient programmatically (tests): from a to b with the current options. */
+  drawGradient(a: { x: number; y: number }, b: { x: number; y: number }) {
+    const L = this.active;
+    this.bake(L);
+    const onMask = this.editMask && !!L.mask;
+    this.gradient = { before: onMask ? L.mask! : L.canvas, onMask, from: a, to: b, raf: 0 };
+    this.endGradient();
   }
 
   /** Spot healing: the painted stroke is replaced from nearby (one undo step). */

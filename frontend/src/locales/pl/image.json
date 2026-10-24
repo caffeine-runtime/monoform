@@ -610,5 +610,15 @@
   "Click to add a point, drag to move it, double-click to remove it.": "Kliknij, aby dodać punkt, przeciągnij, aby go przesunąć, kliknij dwukrotnie, aby go usunąć.",
   "Reset channel": "Resetuj kanał",
   "Tone curve: click to add a point, drag to move it, double-click to remove it": "Krzywa tonalna: kliknij, aby dodać punkt, przeciągnij, aby go przesunąć, kliknij dwukrotnie, aby go usunąć",
-  "Point {x}, {y}": "Punkt {x}, {y}"
+  "Point {x}, {y}": "Punkt {x}, {y}",
+  "Gradient": "Gradient",
+  "Drag from where the colour starts to where it has faded (Shift: in 45° steps). Linear or radial in the toolbar; on a layer mask it fades the layer out.": "Przeciągnij od miejsca, gdzie kolor się zaczyna, do miejsca, gdzie zanika (Shift: co 45°). Liniowy lub radialny na pasku; na masce warstwy płynnie ją wygasza.",
+  "Gradient shape": "Kształt gradientu",
+  "Linear": "Liniowy",
+  "Radial": "Radialny",
+  "What the colour fades to": "Do czego przechodzi kolor",
+  "[gradient] To": "Do",
+  "On the mask: shown → hidden": "Na masce: widoczne → ukryte",
+  "Swap the start and end colours": "Zamień kolory początku i końca",
+  "Tool: gradient": "Narzędzie: gradient"
 }

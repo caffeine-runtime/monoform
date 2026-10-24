@@ -554,6 +554,11 @@
   The selection bar's Blur and Pixelate buttons open their page with a visible strength already set. The **Blur
   region** and **Pixelate region** tools have a strength / block size in the tool bar and show the result inside
   the area before Enter. Self-test `m65`.
+- **Gradient tool** (image editor, Shift+G): drag from where the colour starts to where it has faded — linear or
+  radial, the colour fading to transparent, white or black, reversed if wanted, with opacity; previewed while
+  dragging (a guide line shows), Shift keeps the angle to 45°, only inside the selection if there is one. On a
+  layer mask it fades the layer out (shown → hidden). Fix found on the way: a one-layer picture with a mask was
+  saved (and copied) without its mask. Self-test `m69`.
 - **Levels and Curves** (image editor, Adjust): Levels has the histogram, black point / midtones / white point,
   output black and white, and Auto (clips 0.1 % at each end); Curves edits a tone curve for RGB or for red,
   green or blue alone over the histogram — click to add a point, drag it, double-click to remove it. Both preview

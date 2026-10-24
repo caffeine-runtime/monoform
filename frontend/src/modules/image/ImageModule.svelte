@@ -35,6 +35,7 @@
   import Sparkles from '@lucide/svelte/icons/sparkles';
   import Stamp from '@lucide/svelte/icons/stamp';
   import Bandage from '@lucide/svelte/icons/bandage';
+  import Blend from '@lucide/svelte/icons/blend';
   import UserRoundSearch from '@lucide/svelte/icons/user-round-search';
   import Download from '@lucide/svelte/icons/download';
   import { flashAt, openSettingsAt } from '../../core/settingsLink';
@@ -1206,6 +1207,7 @@
       { id: 'eraser', icon: Eraser, label: t('Eraser'), help: t('Drag to erase the active layer to transparency.'), key: 'E' },
       { id: 'clone', icon: Stamp, label: t('Clone stamp'), help: t('Alt-click where to copy from, then paint where it should go. The source follows the brush.'), key: 'S' },
       { id: 'heal', icon: Bandage, label: t('Spot healing brush'), help: t('Paint over a spot, a blemish or a small object: it is replaced from nearby, matched to the light around it.'), key: 'J' },
+      { id: 'gradient', icon: Blend, label: t('Gradient'), help: t('Drag from where the colour starts to where it has faded (Shift: in 45° steps). Linear or radial in the toolbar; on a layer mask it fades the layer out.'), key: 'Shift+G' },
       { id: 'fill', icon: PaintBucket, label: t('Paint bucket'), help: t('Click to fill an area of similar colour on the active layer (only inside the selection, if there is one). Set Tolerance in the toolbar.'), key: 'G' },
     ],
     [
@@ -1329,6 +1331,25 @@
     {:else if tool === 'fill'}
       <label class="opt" title={t('How different a colour can be and still be filled')}>{t('Tolerance')} <input type="range" min="0" max="128" value={opts.wandTolerance} oninput={(e) => setOpt('wandTolerance', +(e.target as HTMLInputElement).value)} /><span class="v">{opts.wandTolerance}</span></label>
       <label class="opt chk" title={t('Off: fill every pixel of that colour, not only the connected area')}><input type="checkbox" checked={opts.wandContiguous} onchange={(e) => setOpt('wandContiguous', (e.target as HTMLInputElement).checked)} /> {t('Contiguous')}</label>
+      <span class="sep"></span>
+    {:else if tool === 'gradient'}
+      <span class="chips" role="radiogroup" aria-label={t('Gradient shape')}>
+        <button class="chip" role="radio" aria-checked={opts.gradType === 'linear'} class:on={opts.gradType === 'linear'} onclick={() => setOpt('gradType', 'linear')}>{t('Linear')}</button>
+        <button class="chip" role="radio" aria-checked={opts.gradType === 'radial'} class:on={opts.gradType === 'radial'} onclick={() => setOpt('gradType', 'radial')}>{t('Radial')}</button>
+      </span>
+      {#if !es?.editMask}
+        <label class="opt" title={t('What the colour fades to')}>{t('To', {}, 'gradient')}
+          <select value={opts.gradEnd} onchange={(e) => setOpt('gradEnd', (e.target as HTMLSelectElement).value as 'transparent' | 'white' | 'black')}>
+            <option value="transparent">{t('Transparent')}</option>
+            <option value="white">{t('White')}</option>
+            <option value="black">{t('Black')}</option>
+          </select>
+        </label>
+        <label class="opt">{t('Opacity')} <input type="range" min="5" max="100" value={Math.round(opts.brushOpacity * 100)} oninput={(e) => setOpt('brushOpacity', +(e.target as HTMLInputElement).value / 100)} /></label>
+      {:else}
+        <span class="hint">{t('On the mask: shown → hidden')}</span>
+      {/if}
+      <button class="btn ghost" class:on={opts.gradReverse} title={t('Swap the start and end colours')} onclick={() => setOpt('gradReverse', !opts!.gradReverse)}>{t('Reverse')}</button>
       <span class="sep"></span>
     {:else if tool === 'clone' || tool === 'heal'}
       <label class="opt">{t('Size')} <input type="range" min="2" max="300" value={opts.brushSize || 24} oninput={(e) => setOpt('brushSize', +(e.target as HTMLInputElement).value)} /><span class="v">{opts.brushSize || 24}</span></label>

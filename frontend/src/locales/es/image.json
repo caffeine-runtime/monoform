@@ -598,5 +598,15 @@
   "Click to add a point, drag to move it, double-click to remove it.": "Haz clic para añadir un punto, arrástralo para moverlo, doble clic para quitarlo.",
   "Reset channel": "Restablecer canal",
   "Tone curve: click to add a point, drag to move it, double-click to remove it": "Curva tonal: haz clic para añadir un punto, arrástralo para moverlo, doble clic para quitarlo",
-  "Point {x}, {y}": "Punto {x}, {y}"
+  "Point {x}, {y}": "Punto {x}, {y}",
+  "Gradient": "Degradado",
+  "Drag from where the colour starts to where it has faded (Shift: in 45° steps). Linear or radial in the toolbar; on a layer mask it fades the layer out.": "Arrastra desde donde empieza el color hasta donde se ha desvanecido (Shift: en pasos de 45°). Lineal o radial en la barra; en una máscara de capa desvanece la capa.",
+  "Gradient shape": "Forma del degradado",
+  "Linear": "Lineal",
+  "Radial": "Radial",
+  "What the colour fades to": "A qué se desvanece el color",
+  "[gradient] To": "Hasta",
+  "On the mask: shown → hidden": "En la máscara: visible → oculto",
+  "Swap the start and end colours": "Intercambia los colores de inicio y fin",
+  "Tool: gradient": "Herramienta: degradado"
 }
