@@ -510,6 +510,12 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   came from, so the move tool's transformer (move, scale, rotate, snapping) works on them unchanged; applying
   renders that layer into the source layer's pixels and drops it, and the history in between collapses to one
   step (cancel restores the snapshot from before the lift). Changing tool, layer or saving applies it first.
+- **Select › Modify measures exact distances** (`vision/selmodify.ts`): expand, contract and border use a
+  Felzenszwalb–Huttenlocher Euclidean distance transform of the selection (inside and outside), so a 5 px expand
+  rounds the corners like Photoshop and partial pixels give anti-aliased edges; feather is three box blurs (a
+  Gaussian of σ = radius / 2); smooth blurs and thresholds at 50 %, which rounds corners and drops specks. Only the
+  selection's box plus the radius is processed, in the vision worker (a 12 MP mask stays off the UI thread).
+  Contract doesn't shrink from the canvas edges (pixels beyond them count as selected), as Photoshop does by default.
 - **Turning handles don't snap unless Shift is held**: Konva's 45° snap list (5° tolerance) pulled small turns
   back to 0°; with no list Konva's own Shift behaviour snaps to 15°, as in other editors. A small label by the
   pointer shows the angle while the round handle is dragged.

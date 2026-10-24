@@ -554,6 +554,10 @@
   The selection bar's Blur and Pixelate buttons open their page with a visible strength already set. The **Blur
   region** and **Pixelate region** tools have a strength / block size in the tool bar and show the result inside
   the area before Enter. Self-test `m65`.
+- **Select › Modify** (image editor): **feather, expand, contract, smooth, border** a selection by a number of
+  pixels — from the selection bar's Modify menu, right-click › Modify selection or Ctrl+K. True (Euclidean)
+  distances, so expanded corners are round and edges anti-aliased; worked out in the vision worker over the
+  selection's box only. Unit tests (selmodify), self-test `m66`.
 - **Turning is free** (image editor): the round handle of a layer, floating pixels or a selection no longer
   snaps within 5° of every 45° (3°, 5° or 10° were impossible); the angle shows by the pointer while turning,
   and Shift snaps to 15° steps. `m63` turns a selection 5° and, with Shift, to exactly 90°.

@@ -56,6 +56,7 @@ const MODULES: Record<string, Entry[]> = {
     'image.selectAll',
     'image.deselect',
     'image.invertSelection',
+    { label: t('Modify selection'), items: ['image.selFeather', 'image.selExpand', 'image.selContract', 'image.selSmooth', 'image.selBorder'] },
     'image.transformSelection',
     'image.selectSubject',
     '-',

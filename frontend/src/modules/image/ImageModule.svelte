@@ -58,6 +58,7 @@
   import { imageControllers, type MaskOp } from './editors';
   import * as raster from './raster';
   import * as selection from './selection';
+  import type { ModifyOp } from './vision/selmodify';
   import { eraseRect } from './vision/erase';
   import { aiModels } from '../../core/aimodels.svelte';
   import { jobs } from '../../core/jobs.svelte';
@@ -642,6 +643,48 @@
     }
   }
 
+  /** Select › Modify: how much is asked for each, and the last amount used. */
+  const MODIFY: { op: ModifyOp; label: string; ask: string; amount: number }[] = [
+    { op: 'feather', label: t('Feather…'), ask: t('Feather radius (pixels)'), amount: 8 },
+    { op: 'expand', label: t('Expand…'), ask: t('Expand by (pixels)'), amount: 4 },
+    { op: 'contract', label: t('Contract…'), ask: t('Contract by (pixels)'), amount: 4 },
+    { op: 'smooth', label: t('Smooth…'), ask: t('Smooth radius (pixels)'), amount: 4 },
+    { op: 'border', label: t('Border…'), ask: t('Border width (pixels)'), amount: 8 },
+  ];
+
+  async function modifySelection(op: ModifyOp, amount?: number) {
+    if (!editor?.selection) return;
+    const m = MODIFY.find((x) => x.op === op)!;
+    if (amount === undefined) {
+      const v = await ui.prompt(m.ask, String(m.amount), t('Apply'));
+      if (v === null) return;
+      amount = parseFloat(v.replace(',', '.'));
+    }
+    if (!(amount > 0 && amount <= 500)) {
+      ui.toast(t('Enter a number of pixels from 1 to 500.'), 'error');
+      return;
+    }
+    m.amount = amount;
+    const sel0 = editor.selection;
+    const slow = setTimeout(() => (busy = t('Changing the selection…')), 300);
+    try {
+      const r = await vision.modify(sel0.mask, op, amount);
+      if (editor.selection !== sel0) return r.mask.close(); // changed meanwhile
+      editor.setPixelSelection(selection.fromMask(maskCanvas(r), r.bounds, { canvas: r.edges, scale: r.edgeScale }), 'replace');
+      if (!editor.selection) ui.toast(t('Nothing is left selected.'));
+    } catch (e) {
+      toastError(e);
+    } finally {
+      clearTimeout(slow);
+      busy = '';
+    }
+  }
+
+  function modifyMenu(e: MouseEvent) {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    menu.show({ clientX: r.left, clientY: r.bottom + 4 }, MODIFY.map((m) => ({ label: m.label, run: () => void modifySelection(m.op) })));
+  }
+
   async function invertSelection() {
     if (!editor) return;
     const inv = selection.invert(editor.selection, editor.width, editor.height);
@@ -755,6 +798,7 @@
     selectAll: () => editor?.selectAll(),
     deselect: () => editor?.deselect(),
     invert: () => void invertSelection(),
+    modifySelection: (op: ModifyOp) => void modifySelection(op),
     layerFromSelection: () => editor?.layerFromSelection(),
     newLayer: () => editor?.addLayer(),
     mergeDown: () => editor?.mergeDown(),
@@ -1114,6 +1158,7 @@
     adjust: () => adjustPanel,
     setPanel,
     openAdjust,
+    modifySelection,
     busy: () => busy,
     fonts: () => availableFonts(),
     tool: () => tool,
@@ -1386,6 +1431,7 @@
     <button class="btn ghost" title={t('Pixelate the selection: opens Adjust → Pixelate, with the block size')} onclick={() => void openAdjust('pixelate')}><Icon icon={Grid} size={14} /></button>
     <button class="btn ghost" title={t('Crop to selection')} onclick={() => editor?.cropToSelection()}><Icon icon={Crop} size={14} /></button>
     <button class="btn ghost" title={t('Copy the text in the selection (OCR)')} onclick={openOcr}><Icon icon={ScanText} size={14} /> {t('Text')}</button>
+    <button class="btn ghost" title={t('Feather, expand, contract, smooth or border the selection')} onclick={modifyMenu}>{t('Modify')} ▾</button>
     <button class="btn ghost" title={t('Invert selection ({shortcut})', { shortcut: formatShortcut('Mod+Shift+I') })} onclick={invertSelection}>{t('Invert')}</button>
     <button class="btn ghost" title={t('Deselect ({shortcut})', { shortcut: formatShortcut('Mod+D') })} onclick={() => editor?.deselect()}><Icon icon={XIcon} size={14} /></button>
   </div>

@@ -1,5 +1,6 @@
 // Per-tab controllers for image commands.
 import { workspace } from '../../core/tabs.svelte';
+import type { ModifyOp } from './vision/selmodify';
 
 export type MaskOp = 'add' | 'edit' | 'invert' | 'toggle' | 'apply' | 'delete' | 'hide' | 'show' | 'swap';
 
@@ -28,6 +29,7 @@ export interface ImageController {
   selectAll(): void;
   deselect(): void;
   invert(): void;
+  modifySelection(op: ModifyOp): void;
   layerFromSelection(): void;
   newLayer(): void;
   mergeDown(): void;

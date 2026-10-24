@@ -2,6 +2,7 @@
 // after a minute idle so the models' memory is returned.
 import type { ErasePatch, EraseStarted, MaskResult, PlainOut, VisionIn, VisionOut } from './visionWorker';
 import type { Rect } from './erase';
+import type { ModifyOp } from './selmodify';
 import { t } from '../../../core/i18n';
 
 const IDLE_MS = 60_000;
@@ -107,6 +108,12 @@ class Vision {
   }
 
   /** Outline of an arbitrary mask (inverted selections etc.). */
+  /** Select › Modify on a selection mask (feather, expand, …, by amount px). */
+  async modify(mask: CanvasImageSource, op: ModifyOp, amount: number): Promise<MaskResult> {
+    const image = await createImageBitmap(mask as ImageBitmapSource);
+    return this.call({ type: 'modify', image, op, amount }, [image]);
+  }
+
   async edges(mask: CanvasImageSource): Promise<MaskResult> {
     const image = await createImageBitmap(mask as ImageBitmapSource);
     return this.call({ type: 'edges', image }, [image]);

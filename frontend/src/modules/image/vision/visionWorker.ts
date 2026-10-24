@@ -13,6 +13,7 @@ import { CONFIRM_IOU, CONFIRM_SCORE, innerPoint, iou, largerCandidate, measure, 
 import { refineMask, sample, snapMask } from './refine';
 import { dilate, ERASE_SIZE, feather, type Rect } from './erase';
 import { plainBorder, removePlain } from './plainbg';
+import { modifyMask, type ModifyOp } from './selmodify';
 import u2netpUrl from '../models/u2netp.onnx?url';
 import samEncUrl from '../models/efficientsam-ti-encoder-q8.onnx?url';
 import samDecUrl from '../models/efficientsam-ti-decoder-q8.onnx?url';
@@ -32,6 +33,7 @@ export type VisionIn =
   | { id: number; type: 'samEncode'; image: ImageBitmap; key: string }
   | { id: number; type: 'samDecode'; key: string; points: { x: number; y: number; positive: boolean }[] }
   | { id: number; type: 'edges'; image: ImageBitmap }
+  | { id: number; type: 'modify'; image: ImageBitmap; op: ModifyOp; amount: number }
   | { id: number; type: 'aiSubject'; image: ImageBitmap; base: string }
   | { id: number; type: 'eraseBegin'; image: ImageBitmap; mask: ImageBitmap; rect: Rect; base: string; seed: number }
   | { id: number; type: 'eraseFinish'; started: EraseStarted; base: string };
@@ -483,14 +485,15 @@ function plainBg(img: ImageBitmap, everywhere: boolean | 'auto', force: boolean)
   return { image: c.transferToImageBitmap(), color, everywhere: r.everywhere };
 }
 
-function edgesOnly(img: ImageBitmap): MaskResult {
+function edgesOnly(img: ImageBitmap, modify?: { op: ModifyOp; amount: number }): MaskResult {
   const t0 = performance.now();
   const px = pixels(img);
-  const alpha = new Uint8ClampedArray(img.width * img.height);
+  let alpha: Uint8ClampedArray = new Uint8ClampedArray(img.width * img.height);
   for (let i = 0; i < alpha.length; i++) alpha[i] = px[i * 4 + 3];
   const w = img.width;
   const h = img.height;
   img.close();
+  if (modify) alpha = modifyMask(alpha, w, h, modify.op, modify.amount);
   return finish(alpha, w, h, t0);
 }
 
@@ -506,6 +509,7 @@ self.onmessage = async (e: MessageEvent<VisionIn>) => {
     else if (m.type === 'plainBg') result = plainBg(m.image, m.everywhere, m.force);
     else if (m.type === 'samEncode') result = await samEncode(m.image, m.key);
     else if (m.type === 'samDecode') result = await samDecode(m.key, m.points);
+    else if (m.type === 'modify') result = edgesOnly(m.image, m);
     else result = edgesOnly(m.image);
     const transfer = 'mask' in result ? [result.mask, result.edges] : 'patch' in result ? [result.patch] : 'everywhere' in result && result.image ? [result.image] : [];
     (self as unknown as Worker).postMessage({ id: m.id, ok: true, result } satisfies VisionOut, transfer);
