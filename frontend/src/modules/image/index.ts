@@ -93,6 +93,11 @@ const cmds: Command[] = [
   { id: 'image.saveCopy', title: t('Save a copy (keep original)'), category: t('Image'), shortcut: 'Mod+Alt+S', when: edit, run: run((c) => c.saveCopy()) },
   { id: 'image.saveLayers', title: t('Save with layers (.ora)…'), category: t('Image'), when: edit, run: run((c) => c.saveLayers()) },
   { id: 'image.layers', title: t('Show layers'), category: t('Image'), when: edit, run: run((c) => c.panel('layers')) },
+  { id: 'image.rulers', title: t('Show or hide rulers'), category: t('Image'), shortcut: 'Mod+R', when: edit, run: run((c) => c.overlay('rulers')) },
+  { id: 'image.guides', title: t('Show or hide guides'), category: t('Image'), shortcut: 'Mod+;', when: edit, run: run((c) => c.overlay('guides')) },
+  { id: 'image.grid', title: t('Show or hide the grid'), category: t('Image'), shortcut: "Mod+'", when: edit, run: run((c) => c.overlay('grid')) },
+  { id: 'image.snap', title: t('Snapping on or off'), category: t('Image'), shortcut: 'Mod+Shift+;', when: edit, run: run((c) => c.overlay('snap')) },
+  { id: 'image.clearGuides', title: t('Clear guides'), category: t('Image'), when: edit, run: run((c) => c.clearGuides()) },
   { id: 'image.history', title: t('Show history'), category: t('Image'), when: edit, run: run((c) => c.panel('history')) },
   { id: 'image.adjust', title: t('Adjust colours (brightness, contrast, saturation…)'), category: t('Image'), when: edit, run: run((c) => c.panel('adjust')) },
 ];

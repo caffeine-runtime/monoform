@@ -33,6 +33,7 @@ import type { Selection, SelectMode } from './selection';
 import { Adjuster, type Adjustments } from './adjust';
 import { cssFamily } from './fonts';
 import { styleEmpty, type LayerStyle } from './styles';
+import { autoGrid, gridLines, snapSpan, snapValue } from './guides';
 import { apply as applyH, cropSize, dragCorner, dragEdge, forgetUpload, homography, innerRect, invert, quadBounds, quadOk, rectQuad, straightenAngle, warpCanvas, type Pt, type Quad, type WarpMode } from './warp';
 import { renderStyleLater, renderStyleNow, type StyleFx } from './styleJobs';
 import { t } from '../../core/i18n';
@@ -66,6 +67,10 @@ export type Tool =
   | 'straighten';
 export const REGION_TOOLS: Tool[] = ['crop', 'blur', 'pixelate'];
 export const SELECT_TOOLS: Tool[] = ['select', 'ellipse', 'lasso', 'selbrush', 'wand', 'object'];
+/** Tools whose points snap to guides, the grid and the picture's edges and middle. */
+const SNAP_TOOLS: Tool[] = ['select', 'ellipse', 'crop', 'blur', 'pixelate', 'rect', 'oval', 'arrow', 'gradient'];
+/** How wide the image module's rulers are (a guide dragged onto them is removed). */
+export const RULER = 20;
 /** Tools whose selection gets handles: the outline itself moved, scaled and turned (not the pixels). */
 const FRAMED_TOOLS: Tool[] = ['select', 'ellipse', 'lasso'];
 
@@ -398,6 +403,20 @@ export class ImageEditor {
   private cloneMark: Konva.Group;
   /** Corner handles, frame and (for a crop) grid of a skew / distort / perspective. */
   private warpUi: Konva.Group;
+
+  // ---- rulers, guides, grid, snapping ----
+  /** The grid shown (every gridSize pixels; 0 = a round size from the picture's). */
+  grid = false;
+  gridSize = 0;
+  guidesShown = true;
+  /** Points, layers and handles snap to guides, the grid (when shown) and the picture's edges and middle. */
+  snap = true;
+  /** The image module shows rulers (a guide dragged back onto one is removed). */
+  rulersShown = false;
+  private guides: { id: number; axis: 'x' | 'y'; pos: number; line: KLine }[] = [];
+  private guideSeq = 0;
+  private gridShape: Konva.Shape;
+  private guideGroup: Konva.Group;
   /** Spot healing: the stroke being painted (document points). */
   private healPts: number[] | null = null;
 
@@ -416,6 +435,10 @@ export class ImageEditor {
     this.klayer.add(this.world);
     this.docGroup = new Konva.Group({ clipFunc: (ctx) => ctx.rect(0, 0, this.docW, this.docH) });
     this.world.add(this.docGroup);
+    this.gridShape = new Konva.Shape({ listening: false, visible: false, sceneFunc: (ctx) => this.drawGrid(ctx) });
+    this.world.add(this.gridShape);
+    this.guideGroup = new Konva.Group({ name: 'guides' });
+    this.world.add(this.guideGroup);
     this.overlay = new Konva.Shape({ listening: false, sceneFunc: (ctx) => this.drawSelection(ctx) });
     this.world.add(this.overlay);
     this.lassoLine = new KLine({ points: [], stroke: '#fff', strokeWidth: 1, strokeScaleEnabled: false, dash: [4, 4], listening: false, closed: false });
@@ -442,7 +465,7 @@ export class ImageEditor {
       this.warpUi.add(e);
     }
     for (let i = 0; i < 4; i++) {
-      const c = new KEllipse({ radiusX: 5, radiusY: 5, fill: '#fff', stroke: ACCENT, strokeWidth: 1.5, strokeScaleEnabled: false, draggable: true, name: `corner corner${i}` });
+      const c = new KEllipse({ radiusX: 5, radiusY: 5, fill: '#fff', stroke: ACCENT, strokeWidth: 1.5, strokeScaleEnabled: false, draggable: true, name: `corner corner${i}`, dragBoundFunc: (pos) => this.snapAbs(pos) });
       c.on('dragstart', () => this.warpDragStart(c));
       c.on('dragmove', () => this.warpCorner(i, c.position()));
       c.on('dragend', () => this.warpDragEnd());
@@ -463,6 +486,9 @@ export class ImageEditor {
     this.angleTip = new Label({ visible: false, listening: false });
     this.angleTip.add(new Tag({ fill: 'rgba(20,20,20,0.85)', cornerRadius: 3 }), new KText({ text: '', fontSize: 12, fontFamily: 'Inter Variable, sans-serif', fill: '#fff', padding: 4 }));
     this.klayer.add(this.regionTr, this.selTr, this.tr, this.angleTip);
+    for (const t of [this.tr, this.regionTr, this.selTr]) t.anchorDragBoundFunc((_old: Pt, pos: Pt) => (t.getActiveAnchor() === 'rotater' ? pos : this.snapAbs(pos)));
+    this.region.on('dragmove', () => this.snapNode(this.region));
+    this.selFrame.on('dragmove', () => this.snapNode(this.selFrame));
     for (const t of [this.tr, this.selTr]) {
       t.on('transform', () => this.showAngle(t));
       t.on('transformend', () => this.angleTip.visible(false));
@@ -586,8 +612,8 @@ export class ImageEditor {
     this.updateDraggable();
     if (t === 'move') this.tr.nodes([this.active.group]);
     this.showCloneMark(this.cloneSrc);
-    const cursors: Partial<Record<Tool, string>> = { hand: 'grab', move: 'move', text: 'text', brush: 'crosshair', eraser: 'crosshair' };
-    this.container.style.cursor = cursors[t] ?? 'crosshair';
+    this.setCursor();
+    this.updateGuides();
     this.klayer.batchDraw();
     this.emit();
   }
@@ -791,7 +817,7 @@ export class ImageEditor {
       }
       if (t === 'move') return; // the transformer handles it
       if (target === this.region || target.getParent() === this.regionTr || onTr) return;
-      const p = this.pointer();
+      const p = SNAP_TOOLS.includes(t) ? this.snapPoint(this.pointer()) : this.pointer();
       const mode = this.modeFor(e.evt);
       if (t === 'wand' || t === 'object' || t === 'picker' || t === 'fill') {
         this.onPick(t, p.x, p.y, mode);
@@ -851,7 +877,7 @@ export class ImageEditor {
 
     this.stage.on('mousemove touchmove', (e) => {
       if (!this.start && !this.lasso) return;
-      let p = this.pointer();
+      let p = SNAP_TOOLS.includes(this.tool) ? this.snapPoint(this.pointer()) : this.pointer();
       if (this.stroke) {
         this.strokeTo(p);
         return;
@@ -1297,6 +1323,7 @@ export class ImageEditor {
       objs.add(n as Konva.Shape);
       this.decorate(n);
     }
+    group.on('dragmove', () => this.snapNode(group));
     group.on('dragend', () => this.commit(t('Move layer')));
     group.on('transformend', () => this.commit(t('Transform layer')));
     const L: LiveLayer = { id: m.id, name: m.name, canvas: m.canvas, group, img, objs, mask: m.mask, maskOn: m.maskOn, maskNode, shown: null, style: m.style, fx, fxRev: 1, fxDone: 0, fxRunning: 0 };
@@ -1971,6 +1998,174 @@ export class ImageEditor {
     if (this.tool === 'move') this.tr.nodes([L.group]);
     this.commit(t('Rotate layer'));
     this.emit();
+  }
+
+  // ---- rulers, guides, grid, snapping ----
+
+  /** Show or hide the grid, the guides, snapping; set the grid size (0 = automatic). */
+  setOverlays(o: Partial<{ grid: boolean; gridSize: number; guidesShown: boolean; snap: boolean; rulersShown: boolean }>) {
+    Object.assign(this, o);
+    this.gridShape.visible(this.grid);
+    this.updateGuides();
+    this.emit();
+  }
+
+  /** The grid's spacing in pixels (the automatic one when none is set). */
+  gridStep(): number {
+    return this.gridSize > 0 ? this.gridSize : autoGrid(this.docW, this.docH);
+  }
+
+  private drawGrid(ctx: Konva.Context) {
+    const z = this.view.zoom || 1;
+    let step = this.gridStep();
+    while (step * z < 6) step *= 2; // never denser than every 6 screen pixels
+    ctx.beginPath();
+    for (const x of gridLines(step, 0, this.docW, 2000)) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, this.docH);
+    }
+    for (const y of gridLines(step, 0, this.docH, 2000)) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(this.docW, y);
+    }
+    ctx.setAttr('lineWidth', 1 / z);
+    ctx.setAttr('strokeStyle', 'rgba(128, 128, 128, 0.55)');
+    ctx.stroke();
+  }
+
+  /** A guide across the picture: axis x is upright (at x = pos), y level. Returns its id. */
+  addGuide(axis: 'x' | 'y', pos: number): number {
+    const id = ++this.guideSeq;
+    const line = new KLine({
+      points: axis === 'x' ? [0, -1e5, 0, 1e5] : [-1e5, 0, 1e5, 0],
+      x: axis === 'x' ? pos : 0,
+      y: axis === 'y' ? pos : 0,
+      stroke: '#00b4d8',
+      strokeWidth: 1,
+      strokeScaleEnabled: false,
+      hitStrokeWidth: 9,
+      draggable: true,
+      name: 'guide',
+    });
+    line.on('dragmove', () => {
+      // Along its own axis only, in whole pixels.
+      if (axis === 'x') {
+        line.x(Math.round(line.x()));
+        line.y(0);
+      } else {
+        line.x(0);
+        line.y(Math.round(line.y()));
+      }
+    });
+    line.on('dragend', () => {
+      const g = this.guides.find((q) => q.id === id);
+      if (!g) return;
+      g.pos = axis === 'x' ? line.x() : line.y();
+      // Dragged off the picture or back onto a ruler: gone.
+      const sp = this.stage.getPointerPosition();
+      const onRuler = this.rulersShown && !!sp && (axis === 'x' ? sp.x < RULER : sp.y < RULER);
+      if (onRuler || g.pos < 0 || g.pos > (axis === 'x' ? this.docW : this.docH)) this.removeGuide(id);
+      else this.emit();
+    });
+    line.on('mouseenter', () => (this.container.style.cursor = axis === 'x' ? 'ew-resize' : 'ns-resize'));
+    line.on('mouseleave', () => this.setCursor());
+    this.guideGroup.add(line);
+    this.guides.push({ id, axis, pos, line });
+    if (!this.guidesShown) this.guidesShown = true;
+    this.updateGuides();
+    this.emit();
+    return id;
+  }
+
+  moveGuide(id: number, pos: number) {
+    const g = this.guides.find((q) => q.id === id);
+    if (!g) return;
+    g.pos = pos;
+    g.line.position(g.axis === 'x' ? { x: pos, y: 0 } : { x: 0, y: pos });
+    this.klayer.batchDraw();
+  }
+
+  removeGuide(id: number) {
+    const g = this.guides.find((q) => q.id === id);
+    if (!g) return;
+    g.line.destroy();
+    this.guides = this.guides.filter((q) => q !== g);
+    this.setCursor();
+    this.klayer.batchDraw();
+    this.emit();
+  }
+
+  clearGuides() {
+    for (const g of this.guides) g.line.destroy();
+    this.guides = [];
+    this.klayer.batchDraw();
+    this.emit();
+  }
+
+  guideList(): { id: number; axis: 'x' | 'y'; pos: number }[] {
+    return this.guides.map(({ id, axis, pos }) => ({ id, axis, pos }));
+  }
+
+  /** Guides are shown when wanted, and taken (dragged) with the move and hand tools. */
+  private updateGuides() {
+    this.guideGroup.visible(this.guidesShown);
+    for (const g of this.guides) g.line.listening(this.guidesShown && (this.tool === 'move' || this.tool === 'hand'));
+    this.klayer.batchDraw();
+  }
+
+  private setCursor() {
+    const cursors: Partial<Record<Tool, string>> = { hand: 'grab', move: 'move', text: 'text', brush: 'crosshair', eraser: 'crosshair' };
+    this.container.style.cursor = cursors[this.tool] ?? 'crosshair';
+  }
+
+  /** A point on screen (client coordinates) in the picture's pixels. */
+  toDoc(clientX: number, clientY: number): Pt {
+    const r = this.container.getBoundingClientRect();
+    return this.docGroup.getAbsoluteTransform().copy().invert().point({ x: clientX - r.left, y: clientY - r.top });
+  }
+
+  /** A point of the picture on screen (client coordinates). */
+  toScreen(p: Pt): Pt {
+    const r = this.container.getBoundingClientRect();
+    const q = this.docGroup.getAbsoluteTransform().point(p);
+    return { x: q.x + r.left, y: q.y + r.top };
+  }
+
+  private snapTargets(axis: 'x' | 'y'): number[] {
+    const size = axis === 'x' ? this.docW : this.docH;
+    const t = [0, size / 2, size];
+    if (this.guidesShown) for (const g of this.guides) if (g.axis === axis) t.push(g.pos);
+    if (this.grid) t.push(...gridLines(this.gridStep(), 0, size, 2000));
+    return t;
+  }
+
+  /** Snapping reaches 6 screen pixels. */
+  private snapReach(): number {
+    return 6 / (this.view.zoom || 1);
+  }
+
+  /** A picture point moved onto a guide, grid line or edge nearby (each way on its own). */
+  snapPoint(p: Pt): Pt {
+    if (!this.snap) return p;
+    const r = this.snapReach();
+    return { x: snapValue(p.x, this.snapTargets('x'), r).v, y: snapValue(p.y, this.snapTargets('y'), r).v };
+  }
+
+  /** The same for a point in stage coordinates (handles). */
+  private snapAbs(pos: Pt): Pt {
+    if (!this.snap) return pos;
+    const T = this.docGroup.getAbsoluteTransform();
+    return T.point(this.snapPoint(T.copy().invert().point(pos)));
+  }
+
+  /** A node being dragged: its edges or middle onto a guide, grid line or the picture's edges. */
+  private snapNode(n: Konva.Node) {
+    if (!this.snap) return;
+    const b = n.getClientRect({ relativeTo: this.docGroup, skipShadow: true });
+    const r = this.snapReach();
+    const dx = snapSpan(b.x, b.x + b.width, this.snapTargets('x'), r);
+    const dy = snapSpan(b.y, b.y + b.height, this.snapTargets('y'), r);
+    if (dx || dy) n.position({ x: n.x() + dx, y: n.y() + dy });
   }
 
   // ---- corner pin: skew, distort, perspective; perspective crop ----

@@ -17,6 +17,9 @@
   import Crop from '@lucide/svelte/icons/crop';
   import Ruler from '@lucide/svelte/icons/ruler';
   import HistoryIcon from '@lucide/svelte/icons/history';
+  import Grid3x3 from '@lucide/svelte/icons/grid-3x3';
+  import { RULER } from './editor';
+  import { rulerSteps } from './guides';
   import Brush from '@lucide/svelte/icons/paintbrush';
   import Eraser from '@lucide/svelte/icons/eraser';
   import MoveUpRight from '@lucide/svelte/icons/move-up-right';
@@ -163,6 +166,163 @@
   let rw = $state(0);
   let rh = $state(0);
   let lockAspect = $state(true);
+  // Rulers, grid, guides and snapping: remembered between sessions.
+  type Overlays = { rulers: boolean; grid: boolean; guides: boolean; snap: boolean; gridSize: number };
+  let overlays = $state<Overlays>(loadOverlays());
+  function loadOverlays(): Overlays {
+    const d = { rulers: false, grid: false, guides: true, snap: true, gridSize: 0 };
+    try {
+      return { ...d, ...JSON.parse(localStorage.getItem('mf.image.overlays') ?? '{}') };
+    } catch {
+      return d;
+    }
+  }
+  function setOverlays(o: Partial<Overlays>) {
+    overlays = { ...overlays, ...o };
+    try {
+      localStorage.setItem('mf.image.overlays', JSON.stringify(overlays));
+    } catch {
+      /* private mode */
+    }
+    editor?.setOverlays({ grid: overlays.grid, gridSize: overlays.gridSize, guidesShown: overlays.guides, snap: overlays.snap, rulersShown: overlays.rulers });
+  }
+  async function askGridSize() {
+    const v = await ui.prompt(t('Grid size in pixels (empty: automatic)'), overlays.gridSize ? String(overlays.gridSize) : '', t('Set'));
+    if (v === null) return;
+    const n = Math.round(Number(v));
+    setOverlays({ gridSize: Number.isFinite(n) && n >= 1 && n <= 10000 ? n : 0, grid: true });
+  }
+  function viewMenu(e: MouseEvent) {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    menu.show({ clientX: r.left, clientY: r.bottom + 4 }, [
+      { label: t('Rulers'), checked: overlays.rulers, shortcut: formatShortcut('Mod+R'), run: () => setOverlays({ rulers: !overlays.rulers }) },
+      { label: t('Guides'), checked: overlays.guides, shortcut: formatShortcut('Mod+;'), run: () => setOverlays({ guides: !overlays.guides }) },
+      { label: t('Grid'), checked: overlays.grid, shortcut: formatShortcut("Mod+'"), run: () => setOverlays({ grid: !overlays.grid }) },
+      { label: t('Snap'), checked: overlays.snap, shortcut: formatShortcut('Mod+Shift+;'), run: () => setOverlays({ snap: !overlays.snap }) },
+      { separator: true },
+      { label: overlays.gridSize ? t('Grid size: {n} px…', { n: String(overlays.gridSize) }) : t('Grid size: automatic…'), run: () => void askGridSize() },
+      { label: t('Clear guides'), disabled: !editor?.guideList().length, run: () => editor?.clearGuides() },
+    ]);
+  }
+
+  // The rulers: picture pixels along the top and left, a mark where the pointer is.
+  let rulerTop = $state<HTMLCanvasElement>();
+  let rulerLeft = $state<HTMLCanvasElement>();
+  let pointerAt = $state<{ x: number; y: number } | null>(null);
+  const showRulers = $derived(overlays.rulers && !!editor && !imgMode && !es?.viewRotation);
+
+  function drawRulers() {
+    if (!editor || !rulerTop || !rulerLeft) return;
+    const ed = editor;
+    const z = ed.view.zoom || 1;
+    const { major, minor } = rulerSteps(z);
+    const cs = getComputedStyle(rulerTop);
+    const bg = cs.getPropertyValue('--bg-elevated').trim() || '#fff';
+    const fg = cs.getPropertyValue('--text-muted').trim() || '#666';
+    const line = cs.getPropertyValue('--border').trim() || '#ccc';
+    const accent = cs.getPropertyValue('--accent').trim() || '#d97757';
+    const dpr = window.devicePixelRatio || 1;
+    for (const [c, horiz] of [
+      [rulerTop, true],
+      [rulerLeft, false],
+    ] as const) {
+      const box = c.getBoundingClientRect();
+      c.width = Math.max(1, Math.round(box.width * dpr));
+      c.height = Math.max(1, Math.round(box.height * dpr));
+      const g = c.getContext('2d')!;
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.fillStyle = bg;
+      g.fillRect(0, 0, box.width, box.height);
+      g.fillStyle = line;
+      if (horiz) g.fillRect(0, box.height - 1, box.width, 1);
+      else g.fillRect(box.width - 1, 0, 1, box.height);
+      // Picture coordinates at the ruler's two ends.
+      const a = ed.toDoc(box.left, box.top);
+      const b = ed.toDoc(box.right, box.bottom);
+      const [from, to] = horiz ? [a.x, b.x] : [a.y, b.y];
+      const at = (v: number) => (horiz ? ed.toScreen({ x: v, y: 0 }).x - box.left : ed.toScreen({ x: 0, y: v }).y - box.top);
+      g.strokeStyle = fg;
+      g.fillStyle = fg;
+      g.lineWidth = 1;
+      g.font = '9px Inter Variable, sans-serif';
+      g.beginPath();
+      for (let v = Math.floor(from / minor) * minor; v <= to; v += minor) {
+        const p = Math.round(at(v)) + 0.5;
+        const big = Math.abs(v / major - Math.round(v / major)) < 1e-6;
+        const len = big ? RULER - 4 : 5;
+        if (horiz) {
+          g.moveTo(p, RULER);
+          g.lineTo(p, RULER - len);
+        } else {
+          g.moveTo(RULER, p);
+          g.lineTo(RULER - len, p);
+        }
+        if (big) {
+          const label = String(Math.round(v));
+          if (horiz) g.fillText(label, p + 3, 9);
+          else {
+            g.save();
+            g.translate(9, p - 3);
+            g.rotate(-Math.PI / 2);
+            g.fillText(label, 0, 0);
+            g.restore();
+          }
+        }
+      }
+      g.stroke();
+      if (pointerAt) {
+        const p = Math.round(at(horiz ? pointerAt.x : pointerAt.y)) + 0.5;
+        g.strokeStyle = accent;
+        g.beginPath();
+        if (horiz) {
+          g.moveTo(p, 0);
+          g.lineTo(p, RULER);
+        } else {
+          g.moveTo(0, p);
+          g.lineTo(RULER, p);
+        }
+        g.stroke();
+      }
+    }
+  }
+  $effect(() => {
+    if (!showRulers) return;
+    void es;
+    void bodyW;
+    void pointerAt;
+    const id = requestAnimationFrame(drawRulers);
+    return () => cancelAnimationFrame(id);
+  });
+
+  /** Drag from a ruler onto the picture: a new guide (back onto the ruler: none). */
+  function guideFromRuler(e: PointerEvent, axis: 'x' | 'y') {
+    if (!editor || e.button !== 0) return;
+    e.preventDefault();
+    const ruler = e.currentTarget as HTMLElement;
+    try {
+      ruler.setPointerCapture(e.pointerId);
+    } catch {
+      /* synthetic events */
+    }
+    const ed = editor;
+    if (!overlays.guides) setOverlays({ guides: true });
+    let id = 0;
+    const move = (m: PointerEvent) => {
+      const d = ed.toDoc(m.clientX, m.clientY);
+      const pos = Math.round(axis === 'x' ? d.x : d.y);
+      if (!id) id = ed.addGuide(axis, pos);
+      else ed.moveGuide(id, pos);
+    };
+    const up = (u: PointerEvent) => {
+      ruler.removeEventListener('pointermove', move);
+      ruler.removeEventListener('pointerup', up);
+      const r = ruler.getBoundingClientRect();
+      if (id && u.clientX >= r.left && u.clientX <= r.right && u.clientY >= r.top && u.clientY <= r.bottom) ed.removeGuide(id);
+    };
+    ruler.addEventListener('pointermove', move);
+    ruler.addEventListener('pointerup', up);
+  }
+
   let canvasOpen = $state(false);
   let cw = $state(0);
   let ch = $state(0);
@@ -380,6 +540,7 @@
     };
     editor.onPick = (t, x, y, mode) => (t === 'picker' ? pickAt(x, y) : void (t === 'fill' ? fillAt(x, y) : t === 'wand' ? wandAt(x, y, mode) : objectAt(x, y, mode)));
     editor.notify = (msg) => ui.toast(msg);
+    editor.setOverlays({ grid: overlays.grid, gridSize: overlays.gridSize, guidesShown: overlays.guides, snap: overlays.snap, rulersShown: overlays.rulers });
     editor.onHeal = async (crop, mask) => {
       const slow = setTimeout(() => (busy = t('Healing…')), 300);
       try {
@@ -833,6 +994,8 @@
     navigate: (dir: 1 | -1) => (anim ? animEd?.step(dir) : void navigate(dir)),
     resize: () => openResize(),
     canvasSize: () => openCanvasSize(),
+    overlay: (k: 'rulers' | 'grid' | 'guides' | 'snap') => setOverlays({ [k]: !overlays[k] }),
+    clearGuides: () => editor?.clearGuides(),
     warp: (m: WarpMode) => {
       if (tool !== 'move') setTool('move');
       editor?.startWarp(m);
@@ -1234,6 +1397,7 @@
     setPanel,
     openAdjust,
     modifySelection,
+    setOverlays,
     busy: () => busy,
     fonts: () => availableFonts(),
     tool: () => tool,
@@ -1480,6 +1644,7 @@
     <button class="icon-btn" title={t('Turn the view left ({shortcut}) — the picture itself is not changed', { shortcut: formatShortcut('Alt+ArrowLeft') })} aria-label={t('Turn the view left')} onclick={() => editor?.rotateView(-15)}><Icon icon={RotateCcw} /></button>
     {#if es?.viewRotation}<button class="btn ghost viewangle" title={t('Straighten the view ({shortcut})', { shortcut: formatShortcut('Alt+0') })} onclick={() => editor?.rotateView(0, true)}>{Math.round(es.viewRotation)}°</button>{/if}
     <button class="icon-btn" title={t('Turn the view right ({shortcut}) — the picture itself is not changed', { shortcut: formatShortcut('Alt+ArrowRight') })} aria-label={t('Turn the view right')} onclick={() => editor?.rotateView(15)}><Icon icon={RotateCw} /></button>
+    <button class="icon-btn" class:on={overlays.rulers || overlays.grid} title={t('Rulers, guides, grid and snapping')} aria-label={t('View options')} onclick={viewMenu}><Icon icon={Grid3x3} /></button>
   {/if}
   {#if tab.filePath}
     <span class="sep"></span>
@@ -1619,6 +1784,7 @@
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     }}
     onpointermove={(e) => {
+      if (showRulers && editor) pointerAt = editor.toDoc(e.clientX, e.clientY);
       if (!drag) return;
       imgView = { ...imgView, x: drag.vx + e.clientX - drag.x, y: drag.vy + e.clientY - drag.y };
       imgFitted = false;
@@ -1627,6 +1793,11 @@
     ondblclick={() => imgMode && (imgView.zoom === 1 ? imgFit() : ctl.actual())}
   >
     <div class="stage" class:hidden={imgMode} bind:this={stageHost}></div>
+    {#if showRulers}
+      <canvas class="ruler top" bind:this={rulerTop} title={t('Drag down onto the picture for a guide')} onpointerdown={(e) => guideFromRuler(e, 'y')}></canvas>
+      <canvas class="ruler left" bind:this={rulerLeft} title={t('Drag right onto the picture for a guide')} onpointerdown={(e) => guideFromRuler(e, 'x')}></canvas>
+      <div class="ruler corner"></div>
+    {/if}
     {#if imgMode && src}
       <img
         bind:this={imgEl}
@@ -1758,6 +1929,37 @@
   .stage.hidden {
     display: none;
   }
+  .ruler {
+    position: absolute;
+    z-index: 2;
+    display: block;
+  }
+  .ruler.top {
+    top: 0;
+    left: 20px;
+    right: 0;
+    height: 20px;
+    width: calc(100% - 20px);
+    cursor: ns-resize;
+  }
+  .ruler.left {
+    top: 20px;
+    left: 0;
+    bottom: 0;
+    width: 20px;
+    height: calc(100% - 20px);
+    cursor: ew-resize;
+  }
+  .ruler.corner {
+    top: 0;
+    left: 0;
+    width: 20px;
+    height: 20px;
+    background: var(--bg-elevated);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    box-sizing: border-box;
+  }
   img {
     position: absolute;
     left: 0;
@@ -1806,7 +2008,13 @@
   .ptabs button {
     border: none;
     background: transparent;
-    padding: 6px 10px;
+    padding: 6px 8px;
+    /* Four tabs share a narrow panel: they shrink (with an ellipsis) rather than spill over. */
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     border-radius: var(--radius) var(--radius) 0 0;
     cursor: pointer;
     color: var(--text-muted);

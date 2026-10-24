@@ -22,6 +22,8 @@ export interface ImageController {
   canvasSize(): void;
   warp(mode: WarpMode): void;
   perspectiveCrop(): void;
+  overlay(k: 'rulers' | 'grid' | 'guides' | 'snap'): void;
+  clearGuides(): void;
   rotateAngle(): void;
   transformSelection(): void;
   rotateLayer(deg: number): void;

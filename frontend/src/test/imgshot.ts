@@ -1,4 +1,4 @@
-// Stages the image editor for README screenshots. Arg: "<fixtures dir>|layers|adjust|adjustlist|styles|warp"
+// Stages the image editor for README screenshots. Arg: "<fixtures dir>|layers|adjust|adjustlist|styles|warp|rulers"
 import { join } from '../core/paths';
 import { workspace, type Tab } from '../core/tabs.svelte';
 import type { ImageEditor } from '../modules/image/editor';
@@ -29,6 +29,15 @@ export default async function imgshot(arg: string) {
     ed.setLayerStyle(notes, { shadow: { color: '#000000', opacity: 0.55, angle: 120, distance: 6, size: 8 }, stroke: { color: '#ffffff', opacity: 1, size: 3 } });
     await sleep(300);
     (document.querySelector('.tabview.active .layers .actions button[aria-pressed]') as HTMLButtonElement | null)?.click();
+  }
+  if (mode === 'rulers') {
+    ed.deselect();
+    h.setOverlays({ rulers: true, grid: true, guides: true, snap: true, gridSize: 0 });
+    ed.addGuide('x', 200);
+    ed.addGuide('y', 150);
+    await sleep(6000);
+    h.setOverlays({ rulers: false, grid: false });
+    return;
   }
   if (mode === 'warp') {
     ed.deselect();

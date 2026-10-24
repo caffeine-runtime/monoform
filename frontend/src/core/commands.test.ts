@@ -27,6 +27,10 @@ describe('keys', () => {
     expect(matches(c, key('P', { ctrlKey: true, shiftKey: true }))).toBe(true);
     expect(matches(c, key('p', { ctrlKey: true }))).toBe(false);
   });
+  it('matches ; and \' by physical key, whatever the layout types', () => {
+    expect(matches(parseShortcut("Mod+'", false), key('ä', { code: 'Quote', ctrlKey: true }))).toBe(true);
+    expect(matches(parseShortcut('Mod+Shift+;', false), key(':', { code: 'Semicolon', ctrlKey: true, shiftKey: true }))).toBe(true);
+  });
   it('formats for display', () => {
     expect(formatShortcut('Mod+Shift+S', true)).toBe('⇧⌘S');
     expect(formatShortcut('Mod+Shift+S', false)).toBe('Ctrl+Shift+S');

@@ -554,6 +554,13 @@
   The selection bar's Blur and Pixelate buttons open their page with a visible strength already set. The **Blur
   region** and **Pixelate region** tools have a strength / block size in the tool bar and show the result inside
   the area before Enter. Self-test `m65`.
+- **Rulers, guides, grid and snapping** (image editor, the ▦ button in the tool bar): rulers in picture pixels
+  along the top and left (Mod+R) with a mark where the pointer is; drag out of a ruler for a guide, drag a guide
+  (move or hand tool) back onto a ruler to remove it, or Clear guides; a grid (Mod+', a round size or one you set);
+  snapping (Mod+Shift+;, on by default) puts selections, crop and blur areas, shapes, gradients, dragged layers,
+  transform handles and perspective corners onto guides, grid lines and the picture's edges and middle within 6
+  screen pixels. Guides show or hide with Mod+;. The choices are remembered; rulers hide while the view is turned.
+  Unit tests (guides), self-test `m74`.
 - **History panel** (image editor, a tab beside Layers / Adjust / Colours, and a tool-bar button): every step
   listed by what it did (Brush, Crop, Layer opacity, Perspective…), oldest first; click one to go back (or
   forward again) any number of steps at once; undone steps stay greyed until something new is done. Undo and redo

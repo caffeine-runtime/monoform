@@ -678,5 +678,20 @@
   "Show on the mask": "Mostrar en la máscara",
   "Spot healing": "Pincel corrector puntual",
   "Transform layer": "Transformar capa",
-  "Undone: click to redo up to here": "Deshecho: haz clic para rehacer hasta aquí"
+  "Undone: click to redo up to here": "Deshecho: haz clic para rehacer hasta aquí",
+  "Clear guides": "Borrar las guías",
+  "Drag down onto the picture for a guide": "Arrastra hacia abajo sobre la imagen para crear una guía",
+  "Drag right onto the picture for a guide": "Arrastra hacia la derecha sobre la imagen para crear una guía",
+  "Grid size in pixels (empty: automatic)": "Tamaño de la cuadrícula en píxeles (vacío: automático)",
+  "Grid size: automatic…": "Tamaño de la cuadrícula: automático…",
+  "Grid size: {n} px…": "Tamaño de la cuadrícula: {n} px…",
+  "Guides": "Guías",
+  "Rulers": "Reglas",
+  "Rulers, guides, grid and snapping": "Reglas, guías, cuadrícula y ajuste",
+  "Show or hide guides": "Mostrar u ocultar las guías",
+  "Show or hide rulers": "Mostrar u ocultar las reglas",
+  "Show or hide the grid": "Mostrar u ocultar la cuadrícula",
+  "Snap": "Ajustar",
+  "Snapping on or off": "Activar o desactivar el ajuste",
+  "View options": "Opciones de vista"
 }

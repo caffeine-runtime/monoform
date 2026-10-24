@@ -690,5 +690,20 @@
   "Show on the mask": "Odsłonięcie na masce",
   "Spot healing": "Korektor punktowy",
   "Transform layer": "Przekształcenie warstwy",
-  "Undone: click to redo up to here": "Cofnięte: kliknij, aby ponowić do tego miejsca"
+  "Undone: click to redo up to here": "Cofnięte: kliknij, aby ponowić do tego miejsca",
+  "Clear guides": "Usuń prowadnice",
+  "Drag down onto the picture for a guide": "Przeciągnij w dół na obraz, aby dodać prowadnicę",
+  "Drag right onto the picture for a guide": "Przeciągnij w prawo na obraz, aby dodać prowadnicę",
+  "Grid size in pixels (empty: automatic)": "Rozmiar siatki w pikselach (puste: automatyczny)",
+  "Grid size: automatic…": "Rozmiar siatki: automatyczny…",
+  "Grid size: {n} px…": "Rozmiar siatki: {n} px…",
+  "Guides": "Prowadnice",
+  "Rulers": "Linijki",
+  "Rulers, guides, grid and snapping": "Linijki, prowadnice, siatka i przyciąganie",
+  "Show or hide guides": "Pokaż lub ukryj prowadnice",
+  "Show or hide rulers": "Pokaż lub ukryj linijki",
+  "Show or hide the grid": "Pokaż lub ukryj siatkę",
+  "Snap": "Przyciąganie",
+  "Snapping on or off": "Przyciąganie wł./wył.",
+  "View options": "Opcje widoku"
 }

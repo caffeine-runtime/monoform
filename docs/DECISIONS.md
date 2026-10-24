@@ -510,6 +510,14 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   came from, so the move tool's transformer (move, scale, rotate, snapping) works on them unchanged; applying
   renders that layer into the source layer's pixels and drops it, and the history in between collapses to one
   step (cancel restores the snapshot from before the lift). Changing tool, layer or saving applies it first.
+- **Guides and the grid live in the editor; rulers in the page**: guides are Konva lines in picture coordinates
+  (so they follow zoom, pan and the turned view for free), the grid a single shape drawn per frame at the current
+  zoom (never denser than 6 screen pixels). The rulers are two small canvases over the editor's top and left edge,
+  redrawn on every view change from the same picture-to-screen transform; they hide on a turned view, where
+  straight rulers would mislead. Snapping uses Konva's own hooks (`dragBoundFunc`, `anchorDragBoundFunc`,
+  dragmove), so every handle and drag gets it without tool-by-tool code, and reaches 6 screen pixels at any zoom.
+  It is on by default (as in Photoshop) but only to guides, grid lines (when shown) and the picture's edges and
+  middle — never to angles, after the free-rotation feedback.
 - **The History panel is the undo stack, named**: each step was already a snapshot (layers share rasters that
   never change after they enter the history), so jumping to any of them is the same restore undo does. Every place
   that records a step now has to say what it did (`commit(name)` takes a required name, so the compiler finds a

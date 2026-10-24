@@ -57,6 +57,8 @@ export function eventKey(e: Pick<KeyboardEvent, 'key' | 'code'>): string {
   if (e.code === 'Backslash') return '\\';
   if (e.code === 'BracketLeft') return '[';
   if (e.code === 'BracketRight') return ']';
+  if (e.code === 'Semicolon') return ';';
+  if (e.code === 'Quote') return "'";
   return (e.key || '').toLowerCase();
 }
 
