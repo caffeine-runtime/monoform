@@ -554,6 +554,9 @@
   The selection bar's Blur and Pixelate buttons open their page with a visible strength already set. The **Blur
   region** and **Pixelate region** tools have a strength / block size in the tool bar and show the result inside
   the area before Enter. Self-test `m65`.
+- **Brush size ring** (image editor): the brush, eraser, clone stamp, healing brush and selection brush show a
+  ring round the pointer as wide as the brush (dark and light dashed, visible on any picture), following size
+  changes and the zoom; hidden off the picture, for other tools and on touch. Self-test `m75`.
 - **Rulers, guides, grid and snapping** (image editor, the ▦ button in the tool bar): rulers in picture pixels
   along the top and left (Mod+R) with a mark where the pointer is; drag out of a ruler for a guide, drag a guide
   (move or hand tool) back onto a ruler to remove it, or Clear guides; a grid (Mod+', a round size or one you set);

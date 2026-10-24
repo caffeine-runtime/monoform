@@ -1,4 +1,4 @@
-// Stages the image editor for README screenshots. Arg: "<fixtures dir>|layers|adjust|adjustlist|styles|warp|rulers"
+// Stages the image editor for README screenshots. Arg: "<fixtures dir>|layers|adjust|adjustlist|styles|warp|rulers|ring"
 import { join } from '../core/paths';
 import { workspace, type Tab } from '../core/tabs.svelte';
 import type { ImageEditor } from '../modules/image/editor';
@@ -29,6 +29,16 @@ export default async function imgshot(arg: string) {
     ed.setLayerStyle(notes, { shadow: { color: '#000000', opacity: 0.55, angle: 120, distance: 6, size: 8 }, stroke: { color: '#ffffff', opacity: 1, size: 3 } });
     await sleep(300);
     (document.querySelector('.tabview.active .layers .actions button[aria-pressed]') as HTMLButtonElement | null)?.click();
+  }
+  if (mode === 'ring') {
+    ed.deselect();
+    h.setTool('brush');
+    ed.setOptions({ brushSize: 60 });
+    await sleep(200);
+    const p = ed.toScreen({ x: 160, y: 150 });
+    document.elementFromPoint(p.x, p.y)!.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: p.x, clientY: p.y }));
+    await sleep(6000);
+    return;
   }
   if (mode === 'rulers') {
     ed.deselect();

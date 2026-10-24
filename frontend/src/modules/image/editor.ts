@@ -401,6 +401,8 @@ export class ImageEditor {
   private cloneSrc: { x: number; y: number } | null = null;
   private cloneOffset: { dx: number; dy: number } | null = null;
   private cloneMark: Konva.Group;
+  /** The brush's size, as a ring round the pointer (brush, eraser, clone, healing and selection brushes). */
+  private brushRing: Konva.Group;
   /** Corner handles, frame and (for a crop) grid of a skew / distort / perspective. */
   private warpUi: Konva.Group;
 
@@ -452,6 +454,11 @@ export class ImageEditor {
       this.cloneMark.add(new KLine({ points: [0, -6, 0, 6], stroke, strokeWidth: 1.5, strokeScaleEnabled: false, dash: dash ? [...dash] : undefined, name: 'cross' }));
     }
     this.world.add(this.cloneMark);
+    this.brushRing = new Konva.Group({ visible: false, listening: false, name: 'brush-ring' });
+    // A dark ring and a light dashed one over it: visible on any picture.
+    for (const [stroke, dash] of [['rgba(0,0,0,0.75)', undefined], ['#fff', [3, 3]]] as const)
+      this.brushRing.add(new KEllipse({ x: 0, y: 0, radiusX: 1, radiusY: 1, stroke, strokeWidth: 1, strokeScaleEnabled: false, dash: dash ? [...dash] : undefined }));
+    this.world.add(this.brushRing);
     this.gradLine = new KLine({ points: [], stroke: '#fff', strokeWidth: 1.5, strokeScaleEnabled: false, shadowColor: '#000', shadowBlur: 2, shadowOpacity: 0.9, listening: false });
     this.world.add(this.gradLine);
     this.warpUi = new Konva.Group({ visible: false, name: 'warp' });
@@ -614,6 +621,7 @@ export class ImageEditor {
     this.showCloneMark(this.cloneSrc);
     this.setCursor();
     this.updateGuides();
+    if (!this.ringRadius()) this.showBrushRing(null);
     this.klayer.batchDraw();
     this.emit();
   }
@@ -622,6 +630,7 @@ export class ImageEditor {
     Object.assign(this.opts, o);
     if ('regionBlur' in o || 'pixelSize' in o) this.schedulePreview();
     if ('brushSize' in o && this.cloneMark.visible()) this.showCloneMark(this.cloneMark.position());
+    if ('brushSize' in o) this.showBrushRing();
   }
 
   private updateDraggable() {
@@ -759,7 +768,37 @@ export class ImageEditor {
     return m.shiftKey ? 'add' : m.altKey ? 'subtract' : this.selectMode;
   }
 
+  /** The ring's radius for the tool in hand (0: the tool has no brush). */
+  private ringRadius(): number {
+    const t = this.tool;
+    if (t === 'brush' || t === 'eraser' || t === 'clone' || t === 'heal') return this.brushSize() / 2;
+    if (t === 'selbrush') return this.selBrushSize() / 2;
+    return 0;
+  }
+
+  /** Show the brush's size round the pointer (at p, or where the ring already is); hidden for other tools. */
+  private showBrushRing(p?: Pt | null) {
+    const r = this.ringRadius();
+    if (p === null || !r || this.warp) this.brushRing.visible(false);
+    else {
+      if (p) this.brushRing.position(p);
+      this.brushRing.getChildren().forEach((n) => n.setAttrs({ radiusX: r, radiusY: r }));
+      this.brushRing.visible(!!p || this.brushRing.visible());
+    }
+    this.klayer.batchDraw();
+  }
+
+  /** Where the brush ring is (tests); null when hidden. */
+  brushRingAt(): { x: number; y: number; r: number } | null {
+    if (!this.brushRing.visible()) return null;
+    const e = this.brushRing.getChildren()[0] as KEllipse;
+    return { x: this.brushRing.x(), y: this.brushRing.y(), r: e.radiusX() };
+  }
+
   private bindEvents() {
+    // The brush ring follows a mouse or pen (not a finger: there is nothing to hover with).
+    this.stage.on('mousemove', () => this.showBrushRing(this.ringRadius() ? this.pointer() : null));
+    this.stage.on('mouseleave', () => this.showBrushRing(null));
     this.stage.on('wheel', (e) => {
       e.evt.preventDefault();
       const p = this.stage.getPointerPosition();
