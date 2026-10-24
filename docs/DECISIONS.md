@@ -510,6 +510,10 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   came from, so the move tool's transformer (move, scale, rotate, snapping) works on them unchanged; applying
   renders that layer into the source layer's pixels and drops it, and the history in between collapses to one
   step (cancel restores the snapshot from before the lift). Changing tool, layer or saving applies it first.
+- **Canvas size is a crop with a negative offset**: every layer is shifted by the anchor's share of the size
+  change and re-rendered at the new document size, the same path as Crop, so masks, rotated or scaled layers and
+  markup come along. A fill colour goes only into the bottom layer, only outside the old picture (an even-odd
+  path), and its mask is opened there so the new space shows.
 - **The gradient tool draws with the canvas's own gradients**: `createLinearGradient` / `createRadialGradient` over
   the whole layer, cut to the selection with `destination-in`, then drawn over the layer as it was — fast enough
   to redraw on every pointer move (once per frame). A mask is its alpha, so there the gradient runs from opaque to

@@ -554,6 +554,10 @@
   The selection bar's Blur and Pixelate buttons open their page with a visible strength already set. The **Blur
   region** and **Pixelate region** tools have a strength / block size in the tool bar and show the result inside
   the area before Enter. Self-test `m65`.
+- **Canvas size** (image editor, Image › Canvas size…, Mod+Alt+C): unlike Resize the picture stays as it is and
+  the canvas grows (or shrinks, cutting) around it; a 3×3 anchor says where the picture sits, and the new space is
+  transparent or the current colour (painted into the bottom layer). Every layer moves with the picture; one undo
+  step. Self-test `m70`.
 - **Gradient tool** (image editor, Shift+G): drag from where the colour starts to where it has faded — linear or
   radial, the colour fading to transparent, white or black, reversed if wanted, with opacity; previewed while
   dragging (a guide line shows), Shift keeps the angle to 45°, only inside the selection if there is one. On a

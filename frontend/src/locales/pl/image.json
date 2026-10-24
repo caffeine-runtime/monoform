@@ -620,5 +620,18 @@
   "[gradient] To": "Do",
   "On the mask: shown → hidden": "Na masce: widoczne → ukryte",
   "Swap the start and end colours": "Zamień kolory początku i końca",
-  "Tool: gradient": "Narzędzie: gradient"
+  "Tool: gradient": "Narzędzie: gradient",
+  "Canvas size…": "Rozmiar płótna…",
+  "Where the picture sits": "Położenie obrazu",
+  "New space": "Nowe miejsce",
+  "Current colour": "Bieżący kolor",
+  "Close without changing the canvas": "Zamknij bez zmiany płótna",
+  "[anchor] Top left": "Lewy górny róg",
+  "[anchor] Top": "Góra",
+  "[anchor] Top right": "Prawy górny róg",
+  "[anchor] Left": "Lewo",
+  "[anchor] Right": "Prawo",
+  "[anchor] Bottom left": "Lewy dolny róg",
+  "[anchor] Bottom": "Dół",
+  "[anchor] Bottom right": "Prawy dolny róg"
 }

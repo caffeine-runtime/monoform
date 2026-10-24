@@ -608,5 +608,18 @@
   "[gradient] To": "Hasta",
   "On the mask: shown → hidden": "En la máscara: visible → oculto",
   "Swap the start and end colours": "Intercambia los colores de inicio y fin",
-  "Tool: gradient": "Herramienta: degradado"
+  "Tool: gradient": "Herramienta: degradado",
+  "Canvas size…": "Tamaño del lienzo…",
+  "Where the picture sits": "Posición de la imagen",
+  "New space": "Espacio nuevo",
+  "Current colour": "Color actual",
+  "Close without changing the canvas": "Cerrar sin cambiar el lienzo",
+  "[anchor] Top left": "Arriba a la izquierda",
+  "[anchor] Top": "Arriba",
+  "[anchor] Top right": "Arriba a la derecha",
+  "[anchor] Left": "Izquierda",
+  "[anchor] Right": "Derecha",
+  "[anchor] Bottom left": "Abajo a la izquierda",
+  "[anchor] Bottom": "Abajo",
+  "[anchor] Bottom right": "Abajo a la derecha"
 }

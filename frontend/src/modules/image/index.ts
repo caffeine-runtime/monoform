@@ -45,6 +45,7 @@ const cmds: Command[] = [
   { id: 'image.flipH', title: t('Flip horizontally'), category: t('Image'), shortcut: 'Shift+H', when: edit, run: run((c) => c.flip(true)) },
   { id: 'image.flipV', title: t('Flip vertically'), category: t('Image'), shortcut: 'Shift+V', when: edit, run: run((c) => c.flip(false)) },
   { id: 'image.resize', title: t('Resize…'), category: t('Image'), shortcut: 'Mod+Alt+I', when: edit, run: run((c) => c.resize()) },
+  { id: 'image.canvasSize', title: t('Canvas size…'), category: t('Image'), shortcut: 'Mod+Alt+C', when: edit, run: run((c) => c.canvasSize()) },
   { id: 'image.undo', title: t('Undo'), category: t('Image'), shortcut: 'Mod+Z', when: edit, run: run((c) => c.undo()) },
   { id: 'image.redo', title: t('Redo'), category: t('Image'), shortcut: ['Mod+Shift+Z', 'Mod+Y'], when: edit, run: run((c) => c.redo()) },
   { id: 'image.delete', title: t('Delete selected markup or pixels'), category: t('Image'), shortcut: ['Delete', 'Backspace'], when: edit, run: run((c) => c.deleteSelection()) },

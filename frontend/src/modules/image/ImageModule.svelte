@@ -158,6 +158,23 @@
   let rw = $state(0);
   let rh = $state(0);
   let lockAspect = $state(true);
+  let canvasOpen = $state(false);
+  let cw = $state(0);
+  let ch = $state(0);
+  /** Where the picture sits in the new canvas: 0, 0.5 or 1 each way. */
+  let anchor = $state({ x: 0.5, y: 0.5 });
+  let canvasFill = $state<'clear' | 'colour'>('clear');
+  const ANCHORS = [
+    { x: 0, y: 0, label: t('[anchor] Top left') },
+    { x: 0.5, y: 0, label: t('[anchor] Top') },
+    { x: 1, y: 0, label: t('[anchor] Top right') },
+    { x: 0, y: 0.5, label: t('[anchor] Left') },
+    { x: 0.5, y: 0.5, label: t('Centre') },
+    { x: 1, y: 0.5, label: t('[anchor] Right') },
+    { x: 0, y: 1, label: t('[anchor] Bottom left') },
+    { x: 0.5, y: 1, label: t('[anchor] Bottom') },
+    { x: 1, y: 1, label: t('[anchor] Bottom right') },
+  ];
   let rotateOpen = $state(false);
   /** What "Rotate by angle" turns: the whole picture, or the active layer. */
   let rotateLayer = $state(false);
@@ -791,6 +808,7 @@
     escape: () => {
       if (es?.transforming) editor?.finishTransform(false);
       else if (resizeOpen) resizeOpen = false;
+      else if (canvasOpen) canvasOpen = false;
       else if (rotateOpen) cancelRotate();
       else if (es?.hasRegion) editor?.cancelRegion();
       else if (es?.pixelSelection) editor?.deselect();
@@ -803,6 +821,7 @@
     },
     navigate: (dir: 1 | -1) => (anim ? animEd?.step(dir) : void navigate(dir)),
     resize: () => openResize(),
+    canvasSize: () => openCanvasSize(),
     rotateAngle: () => openRotate(),
     transformSelection: () => editor?.transformSelection(),
     rotateLayer: (deg: number) => editor?.rotateLayer(deg),
@@ -890,6 +909,7 @@
     if (!editor) return;
     rw = editor.width;
     rh = editor.height;
+    canvasOpen = false;
     resizeOpen = true;
   }
   function changeW() {
@@ -902,6 +922,20 @@
     if (!editor || rw < 1 || rh < 1 || rw > 20000 || rh > 20000) return;
     editor.resizeTo(Math.round(rw), Math.round(rh));
     resizeOpen = false;
+  }
+
+  function openCanvasSize() {
+    if (!editor) return;
+    resizeOpen = false;
+    cw = editor.width;
+    ch = editor.height;
+    anchor = { x: 0.5, y: 0.5 };
+    canvasOpen = true;
+  }
+  function applyCanvasSize() {
+    if (!editor || cw < 1 || ch < 1 || cw > 20000 || ch > 20000) return;
+    editor.canvasSize(cw, ch, anchor, canvasFill === 'colour' ? editor.opts.color : null);
+    canvasOpen = false;
   }
 
   function openRotate(layer = false) {
@@ -1107,6 +1141,7 @@
       { label: t('Flip horizontally'), shortcut: 'Shift+H', run: () => ed.flip(true) },
       { label: t('Flip vertically'), shortcut: 'Shift+V', run: () => ed.flip(false) },
       { label: t('Resize…'), shortcut: formatShortcut('Mod+Alt+I'), run: () => openResize() },
+      { label: t('Canvas size…'), shortcut: formatShortcut('Mod+Alt+C'), run: () => openCanvasSize() },
       { separator: true },
       { label: t('Remove a watermark…'), run: () => void openCleanup() },
       { label: t('Remove background'), run: () => void removeBackground() },
@@ -1437,6 +1472,28 @@
   </div>
 {/if}
 
+{#if canvasOpen && editor}
+  <div class="banner resize canvas-size">
+    <label>{t('Width')} <input class="input num" type="number" min="1" bind:value={cw} /></label>
+    <label>{t('Height')} <input class="input num" type="number" min="1" bind:value={ch} /></label>
+    <div class="anchor" role="group" aria-label={t('Where the picture sits')}>
+      {#each ANCHORS as a (a.label)}
+        <button class="cell" class:on={anchor.x === a.x && anchor.y === a.y} title={a.label} aria-label={a.label} aria-pressed={anchor.x === a.x && anchor.y === a.y} onclick={() => (anchor = { x: a.x, y: a.y })}></button>
+      {/each}
+    </div>
+    <label>{t('New space')}
+      <select class="input" bind:value={canvasFill}>
+        <option value="clear">{t('Transparent')}</option>
+        <option value="colour">{t('Current colour')}</option>
+      </select>
+    </label>
+    <span class="muted">{t('from {w} × {h}', { w: String(editor.width), h: String(editor.height) })}</span>
+    <span class="grow"></span>
+    <button class="btn" title={t('Close without changing the canvas')} onclick={() => (canvasOpen = false)}>{t('Cancel')}</button>
+    <button class="btn primary" onclick={applyCanvasSize}>{t('Apply')}</button>
+  </div>
+{/if}
+
 {#if rotateOpen && editor}
   <div class="banner resize">
     <label class="angle">{t('Angle')} <input type="range" min="-180" max="180" step="0.5" bind:value={angle} oninput={previewAngle} /> <input class="input num sm" type="number" min="-360" max="360" step="0.5" bind:value={angle} oninput={previewAngle} />°</label>
@@ -1734,6 +1791,24 @@
     min-width: 58px;
     justify-content: center;
     font-variant-numeric: tabular-nums;
+  }
+  .anchor {
+    display: grid;
+    grid-template-columns: repeat(3, 14px);
+    gap: 2px;
+  }
+  .anchor .cell {
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: var(--bg-hover);
+    cursor: pointer;
+  }
+  .anchor .cell.on {
+    background: var(--accent);
+    border-color: var(--accent);
   }
   .resize label {
     display: inline-flex;

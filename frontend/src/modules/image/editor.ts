@@ -1618,6 +1618,51 @@ export class ImageEditor {
     this.documentOp((c) => raster.resize(c, w, h));
   }
 
+  /**
+   * Canvas size: the picture stays as it is, the canvas grows (or shrinks,
+   * cutting) to w × h around it. The anchor (0..1 each way) says where the
+   * old picture sits: 0, 0 top left, 0.5, 0.5 the middle. New space is
+   * transparent, or filled with a colour in the bottom layer.
+   */
+  canvasSize(w: number, h: number, anchor: { x: number; y: number } = { x: 0.5, y: 0.5 }, fill: string | null = null) {
+    w = Math.max(1, Math.round(w));
+    h = Math.max(1, Math.round(h));
+    if (w === this.docW && h === this.docH) return;
+    const ox = Math.round((w - this.docW) * anchor.x);
+    const oy = Math.round((h - this.docH) * anchor.y);
+    const old = { x: ox, y: oy, width: this.docW, height: this.docH };
+    for (const L of this.layers) L.group.setAttrs({ x: L.group.x() + ox, y: L.group.y() + oy });
+    this.docW = w;
+    this.docH = h;
+    this.selection = null;
+    for (const L of this.layers) this.bake(L);
+    const bottom = this.layers[0];
+    if (fill && bottom && (w > old.width || h > old.height)) {
+      const g = bottom.canvas.getContext('2d')!;
+      g.save();
+      g.fillStyle = fill;
+      g.beginPath();
+      g.rect(0, 0, w, h);
+      g.rect(old.x, old.y, old.width, old.height);
+      g.fill('evenodd');
+      g.restore();
+      if (bottom.mask) {
+        // The new space shows in the bottom layer even where it has a mask.
+        const m = bottom.mask.getContext('2d')!;
+        m.save();
+        m.fillStyle = '#fff';
+        m.beginPath();
+        m.rect(0, 0, w, h);
+        m.rect(old.x, old.y, old.width, old.height);
+        m.fill('evenodd');
+        m.restore();
+      }
+      this.refreshCache(bottom);
+    }
+    this.commit();
+    this.fit();
+  }
+
   /** Rotate the whole image by any angle; expand grows the canvas so nothing is cut off. */
   rotateBy(degrees: number, expand = true) {
     if (!degrees) return;

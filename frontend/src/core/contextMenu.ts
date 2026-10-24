@@ -61,7 +61,7 @@ const MODULES: Record<string, Entry[]> = {
     'image.selectSubject',
     '-',
     { label: t('Layer'), items: ['image.layerRotateCW', 'image.layerRotateCCW', 'image.layerRotateAngle', '-', 'image.layerFromSelection', 'image.newLayer', 'image.mergeDown', 'image.flatten', '-', 'image.maskAdd', 'image.maskInvert', 'image.maskApply', 'image.maskDelete'] },
-    { label: t('Transform'), items: ['image.rotateCW', 'image.rotateCCW', 'image.rotateAngle', 'image.flipH', 'image.flipV', 'image.resize'] },
+    { label: t('Transform'), items: ['image.rotateCW', 'image.rotateCCW', 'image.rotateAngle', 'image.flipH', 'image.flipV', 'image.resize', 'image.canvasSize'] },
     { label: t('Remove'), items: ['image.removeBackground', 'image.removeObject', 'image.removeWatermark'] },
     'image.adjust',
     '-',

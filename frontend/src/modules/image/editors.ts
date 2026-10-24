@@ -18,6 +18,7 @@ export interface ImageController {
   deleteSelection(): void;
   navigate(dir: 1 | -1): void;
   resize(): void;
+  canvasSize(): void;
   rotateAngle(): void;
   transformSelection(): void;
   rotateLayer(deg: number): void;
