@@ -1,7 +1,6 @@
 ## What's new
 
-- Monoform now speaks German and French, next to English, Polish and Spanish: the whole interface, the welcome screen and the setup program. It follows your system language on first start; Settings › Appearance › Language picks another.
-- Word documents: the font, size and line-spacing fields in the toolbar no longer cut off their labels.
+- Monoform is on its way to the Microsoft Store: this version is the first one built as a Store package. Nothing else changes; 1.4.0 brought German and French.
 
 ## Downloads
 
