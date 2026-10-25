@@ -137,7 +137,7 @@ These come from the original brief and are checked in review and CI:
 - **Offline and private:** no network calls, telemetry or accounts. The exceptions: the opt-in model downloads
   (search by meaning, image AI models), after explicit consent, and the update check at startup (one request to
   GitHub's releases API, off in Settings › About; an update is downloaded only when the user chooses to).
-- **Translated:** every interface string goes through `t()`/`tn()` with Polish and Spanish catalog entries
+- **Translated:** every interface string goes through `t()`/`tn()` with Polish, Spanish, German and French catalog entries
   (docs/TRANSLATING.md); `npm test` checks it.
 - **Fast:** start < 500 ms, initial JS bundle < 200 KB gzipped (keep feature code in lazily loaded modules), no
   main-thread task over 50 ms (move work to Go, a Web Worker, or chunk it), show progress for anything over 300 ms.

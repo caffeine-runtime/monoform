@@ -100,7 +100,7 @@ type Settings struct {
 	// ReduceMotion turns the interface's animations off (they are also off
 	// when the system asks for reduced motion).
 	ReduceMotion bool `json:"reduceMotion"`
-	// Language of the interface: "en", "pl", "es", or "" to follow the system.
+	// Language of the interface: "en", "pl", "es", "de", "fr", or "" to follow the system.
 	Language string `json:"language"`
 	// UpdateCheckOff stops looking for a new version at startup.
 	UpdateCheckOff bool `json:"updateCheckOff"`

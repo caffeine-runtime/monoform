@@ -99,6 +99,8 @@ jobs:
           # The interface in Polish and Spanish, picked from the system language.
           MF_SYSTEM_LANG=pl-PL scripts/selftest.sh m47 "$FX"
           MF_SYSTEM_LANG=es-ES scripts/selftest.sh m47 "$FX"
+          MF_SYSTEM_LANG=de-DE scripts/selftest.sh m47 "$FX"
+          MF_SYSTEM_LANG=fr-FR scripts/selftest.sh m47 "$FX"
           # Quick peek: started with --peek FILE.
           scripts/selftest.sh m32peek "$FX" "" --peek "$FX/diagrams/notes.md"
           MF_AI_FAKE=1 MF_CACHE="$(mktemp -d)" scripts/selftest.sh m43 "$FX"

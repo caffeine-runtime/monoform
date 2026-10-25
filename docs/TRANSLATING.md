@@ -1,6 +1,6 @@
 # Languages and translations
 
-Monoform's interface is in **English, Polish and Spanish**. On first start it follows the system language (if it is
+Monoform's interface is in **English, Polish, Spanish, German and French**. On first start it follows the system language (if it is
 one of these, else English); the welcome screen and **Settings › Appearance › Language** let the user pick another.
 Changing the language reloads the window (open tabs and the folder come back; with unsaved changes it waits for the
 next start).
@@ -48,8 +48,9 @@ chunk; English loads none).
 }
 ```
 
-Plural forms follow `Intl.PluralRules`: Polish needs `one`, `few` and `many` (`other` is for fractions), Spanish
-`one` and `other`.
+Plural forms follow `Intl.PluralRules`: Polish needs `one`, `few` and `many` (`other` is for fractions); Spanish,
+German and French need `one` and `other` (French `one` covers 0 and 1; its `many` is only for millions in compact
+notation).
 
 ## Checks
 
@@ -62,7 +63,7 @@ Plural forms follow `Intl.PluralRules`: Polish needs `one`, `few` and `many` (`o
 
 `I18N_SCOPE=modules/pdf,shell npx vitest run src/locales/` limits both to some folders while working on them.
 
-The in-app self-test `m47` runs the whole app in Polish and in Spanish (CI runs both): it opens a file of every
+The in-app self-test `m47` runs the whole app in Polish, Spanish, German and French (CI runs all four): it opens a file of every
 kind, the welcome screen and Settings, and fails on any English text on screen that has a translation.
 
 ## Adding a language
@@ -75,3 +76,11 @@ kind, the welcome screen and Settings, and fails on any English text on screen t
 
 Not translated yet: messages that come from the Go side (some error texts, e.g. from file operations or decoders)
 are in English.
+
+## Adding a language
+
+1. Add it to `Lang` and `LANGUAGES` in `frontend/src/core/i18n.ts` (named in its own language).
+2. Write `frontend/src/locales/<lang>/*.json` with the same keys as the Polish files; `scripts/check_catalog.py
+   <file> <lang>` compares one file (keys, order, placeholders, plural forms) while you work, `npm test` checks all.
+3. Run `MF_SYSTEM_LANG=<lang>-<REGION> scripts/selftest.sh m47 <fixtures>` and add that line to CI.
+

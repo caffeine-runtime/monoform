@@ -11,12 +11,14 @@
 // it reloads the window (core/language.ts), so module-level strings are fine
 // in lazily loaded modules. English needs no catalog.
 
-export type Lang = 'en' | 'pl' | 'es';
+export type Lang = 'en' | 'pl' | 'es' | 'de' | 'fr';
 
 export const LANGUAGES: readonly { id: Lang; name: string }[] = [
   { id: 'en', name: 'English' }, // i18n-ignore: each language by its own name
   { id: 'pl', name: 'Polski' }, // i18n-ignore
   { id: 'es', name: 'Español' }, // i18n-ignore
+  { id: 'de', name: 'Deutsch' }, // i18n-ignore
+  { id: 'fr', name: 'Français' }, // i18n-ignore
 ];
 
 type Plural = Partial<Record<Intl.LDMLPluralRule, string>>;

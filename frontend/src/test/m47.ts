@@ -1,11 +1,11 @@
-// M47: the interface in another language. Run with the system set to Polish
-// or Spanish (MF_SYSTEM_LANG=pl-PL / es-ES): the app starts in that language
+// M47: the interface in another language. Run with the system set to Polish,
+// Spanish, German or French (MF_SYSTEM_LANG=pl-PL / es-ES / de-DE / fr-FR): the app starts in that language
 // (no setting needed), numbers use its format, the first-run screen and
 // Settings offer "like my computer" and each language, and opening a file of
 // every kind shows no English text that has a translation (every text node
 // and title/aria-label/placeholder is checked against the catalogs).
 import { join } from '../core/paths';
-import { language, num, pickLanguage, t, type Catalog } from '../core/i18n';
+import { LANGUAGES, language, num, pickLanguage, t, type Catalog } from '../core/i18n';
 import { settings } from '../core/settings.svelte';
 import { workspace } from '../core/tabs.svelte';
 import { ui } from '../core/ui.svelte';
@@ -87,14 +87,14 @@ const FILES = [
 
 export default async function m47(dir: string) {
   const lang = language();
-  assert(lang !== 'en', `started in the system's language (got ${lang}; run with MF_SYSTEM_LANG=pl-PL or es-ES)`);
+  assert(lang !== 'en', `started in the system's language (got ${lang}; run with MF_SYSTEM_LANG=pl-PL, es-ES, de-DE or fr-FR)`);
   assertEq(settings.value.language ?? '', '', 'no language chosen: it follows the system');
   assertEq(document.documentElement.lang, lang, '<html lang>');
   assertEq(pickLanguage('', ['de-DE', `${lang}-XX`]), lang, 'first known system language wins');
   assertEq(pickLanguage('en', [lang]), 'en', 'a chosen language beats the system');
   // Numbers in the language's format.
   const n = num(12345.5);
-  assert(lang === 'pl' ? /^12\s345,5$/.test(n) : /^12\.?345,5$/.test(n), `number format ${n}`);
+  assert(lang === 'pl' || lang === 'fr' ? /^12\s345,5$/.test(n) : /^12\.?345,5$/.test(n), `number format ${n}`);
   log(`language ${lang}; 12345.5 → ${n}`);
 
   const english = englishWithTranslation(lang);
@@ -104,8 +104,8 @@ export default async function m47(dir: string) {
   ui.firstRun = true;
   const pick = await waitFor(() => document.querySelector<HTMLSelectElement>('.firstrun select'), 'language picker on the welcome screen');
   const opts = [...pick.options].map((o) => o.textContent?.trim());
-  assertEq(opts[0], t('Like my computer ({language})', { language: lang === 'pl' ? 'Polski' : 'Español' }), 'first option follows the system');
-  assertEq(opts.slice(1).join(','), 'English,Polski,Español', 'each language by its own name');
+  assertEq(opts[0], t('Like my computer ({language})', { language: LANGUAGES.find((l) => l.id === lang)!.name }), 'first option follows the system');
+  assertEq(opts.slice(1).join(','), LANGUAGES.map((l) => l.name).join(','), 'each language by its own name');
   assertEq(leaks(document.querySelector('.firstrun')!, english).join(' | '), '', 'welcome screen translated');
   ui.firstRun = false;
   await sleep(50);
