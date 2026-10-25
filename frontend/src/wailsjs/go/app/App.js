@@ -74,6 +74,14 @@ export function ConfirmQuit() {
   return window['go']['app']['App']['ConfirmQuit']();
 }
 
+export function ConvertFile(arg1, arg2) {
+  return window['go']['app']['App']['ConvertFile'](arg1, arg2);
+}
+
+export function ConvertFormats() {
+  return window['go']['app']['App']['ConvertFormats']();
+}
+
 export function ConvertImage(arg1, arg2, arg3) {
   return window['go']['app']['App']['ConvertImage'](arg1, arg2, arg3);
 }

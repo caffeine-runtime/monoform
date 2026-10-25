@@ -1818,6 +1818,7 @@ export namespace settings {
 	    updateCheckOff: boolean;
 	    updateSkip: string;
 	    boardStyle?: Record<string, any>;
+	    convertOnSave?: Record<string, Array<string>>;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -1857,6 +1858,7 @@ export namespace settings {
 	        this.updateCheckOff = source["updateCheckOff"];
 	        this.updateSkip = source["updateSkip"];
 	        this.boardStyle = source["boardStyle"];
+	        this.convertOnSave = source["convertOnSave"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

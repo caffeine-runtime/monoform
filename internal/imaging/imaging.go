@@ -19,11 +19,12 @@ import (
 
 	"github.com/HugoSmits86/nativewebp"
 	"golang.org/x/image/bmp"
+	"golang.org/x/image/tiff"
 	_ "golang.org/x/image/webp" // decoding WebP input
 )
 
 // Formats that can be written.
-var Formats = []string{"png", "jpg", "webp", "gif", "bmp"}
+var Formats = []string{"png", "jpg", "webp", "gif", "bmp", "tiff"}
 
 // Normalize maps extensions/aliases to a format name ("jpeg" -> "jpg").
 func Normalize(f string) string {
@@ -31,6 +32,8 @@ func Normalize(f string) string {
 	switch f {
 	case "jpeg", "jfif", "jpe":
 		return "jpg"
+	case "tif":
+		return "tiff"
 	}
 	return f
 }
@@ -76,6 +79,8 @@ func Encode(w io.Writer, img image.Image, opts Options) error {
 		return jpeg.Encode(w, flatten(img, opts.Background), &jpeg.Options{Quality: q})
 	case "bmp":
 		return bmp.Encode(w, flatten(img, opts.Background))
+	case "tiff":
+		return tiff.Encode(w, img, &tiff.Options{Compression: tiff.Deflate, Predictor: true})
 	case "gif":
 		// Single frame, 256-colour palette with dithering.
 		return gif.Encode(w, img, &gif.Options{NumColors: 256})

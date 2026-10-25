@@ -8,6 +8,7 @@ require (
 	github.com/dhowden/tag v0.0.0-20240417053706-3d75831295e8
 	github.com/ebitengine/purego v0.11.2
 	github.com/fsnotify/fsnotify v1.10.1
+	github.com/go-pdf/fpdf v0.9.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/hajimehoshi/go-mp3 v0.3.4
 	github.com/jfreymuth/oggvorbis v1.0.5

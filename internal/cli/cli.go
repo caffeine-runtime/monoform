@@ -24,10 +24,9 @@ import (
 	_ "golang.org/x/image/tiff"
 	_ "golang.org/x/image/webp"
 
+	"github.com/caffeine-runtime/monoform/internal/convert"
 	"github.com/caffeine-runtime/monoform/internal/filetype"
-	"github.com/caffeine-runtime/monoform/internal/fs"
 	"github.com/caffeine-runtime/monoform/internal/hash"
-	"github.com/caffeine-runtime/monoform/internal/imaging"
 	"github.com/caffeine-runtime/monoform/internal/pdf"
 )
 
@@ -42,8 +41,10 @@ Usage:
                                         sha256, sha512, blake3 or all), like sha256sum
   monoform verify CHECKSUMS...            check files against SHA256SUMS / *.sha256 / BSD lists
   monoform info FILE...                   type, size and details (pages, image size)
-  monoform convert IN OUT                 convert an image (format from OUT's extension:
-                                        png jpg webp gif bmp tiff ico icns; HEIC via the system)
+  monoform convert IN OUT                 convert a file; the format comes from OUT's extension:
+                                        pictures (png jpg webp gif bmp tiff ico icns pdf; HEIC
+                                        via the system), audio (flac wav), tables (xlsx csv tsv
+                                        json pdf), documents (pdf docx html md txt)
   monoform help | version
 
 Exit codes: 0 fine, 1 a check failed, 2 usage or I/O error.
@@ -274,90 +275,34 @@ func cmdConvert(ctx context.Context, args []string, out, errw io.Writer) int {
 		return 2
 	}
 	src, dst := args[0], args[1]
-	format := strings.ToLower(strings.TrimPrefix(filepath.Ext(dst), "."))
-	if format == "jpeg" {
-		format = "jpg"
-	}
-	img, err := decode(ctx, src)
+	res, err := convert.Convert(ctx, src, dst, nil)
 	if err != nil {
+		if errors.Is(err, convert.ErrUnsupported) {
+			if t := convert.Targets(src); len(t) > 0 {
+				err = fmt.Errorf("%v (.%s converts to %s)", err, convert.Ext(src), strings.Join(t, ", "))
+			}
+		}
 		fmt.Fprintf(errw, "monoform convert: %s: %v\n", src, cleanErr(err))
 		return 2
 	}
-	var werr error
-	switch format {
-	case "ico", "icns":
-		werr = fs.AtomicWrite(dst, func(w io.Writer) error {
-			if format == "ico" {
-				return imaging.EncodeICO(w, img, nil)
-			}
-			return imaging.EncodeICNS(w, img)
-		})
-	default:
-		werr = fs.AtomicWrite(dst, func(w io.Writer) error { return imaging.Encode(w, img, imaging.Options{Format: format, Quality: 92}) })
-	}
-	if werr != nil {
-		fmt.Fprintf(errw, "monoform convert: %s: %v\n", dst, cleanErr(werr))
-		return 2
-	}
-	b := img.Bounds()
-	fmt.Fprintf(out, "%s → %s (%d × %d)\n", src, dst, b.Dx(), b.Dy())
-	return 0
-}
-
-// decode reads an image Go can decode, or converts it with the system's
-// tools (HEIC/HEIF and other formats).
-func decode(ctx context.Context, p string) (image.Image, error) {
-	f, err := os.Open(p)
-	if err != nil {
-		return nil, err
-	}
-	img, _, err := image.Decode(f)
-	f.Close()
-	if err == nil {
-		return img, nil
-	}
-	ext := strings.ToLower(filepath.Ext(p))
-	if ext == ".ico" || ext == ".icns" {
-		b, err := os.ReadFile(p)
+	line := src + " → " + dst
+	for _, p := range []string{src, dst} { // a picture's size (HEIC: the result's)
+		fh, err := os.Open(p)
 		if err != nil {
-			return nil, err
+			continue
 		}
-		var imgs []imaging.IconImage
-		if ext == ".ico" {
-			imgs, err = imaging.DecodeICO(b)
-		} else {
-			imgs, err = imaging.DecodeICNS(b)
+		c, _, err := image.DecodeConfig(fh)
+		fh.Close()
+		if err == nil {
+			line += fmt.Sprintf(" (%d × %d)", c.Width, c.Height)
+			break
 		}
-		if err != nil || len(imgs) == 0 {
-			return nil, fmt.Errorf("can't read this icon: %v", err)
-		}
-		var best *image.NRGBA
-		for _, im := range imgs {
-			if im.Img != nil && (best == nil || im.Img.Bounds().Dx() > best.Bounds().Dx()) {
-				best = im.Img
-			}
-		}
-		if best == nil {
-			return nil, errors.New("this icon has no image this build can read")
-		}
-		return best, nil
 	}
-	tmp, err := os.MkdirTemp("", "monoform-")
-	if err != nil {
-		return nil, err
+	if res.Note != "" {
+		line += "; " + res.Note
 	}
-	defer os.RemoveAll(tmp)
-	png := filepath.Join(tmp, "in.png")
-	if _, serr := imaging.ConvertWithSystem(ctx, p, png); serr != nil {
-		return nil, fmt.Errorf("not an image this build can read (%v)", serr)
-	}
-	f, err = os.Open(png)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	img, _, err = image.Decode(f)
-	return img, err
+	fmt.Fprintln(out, line)
+	return 0
 }
 
 func human(n int64) string {
