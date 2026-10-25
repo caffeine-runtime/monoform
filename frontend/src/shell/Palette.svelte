@@ -278,6 +278,8 @@
     box-shadow: var(--shadow);
     overflow: hidden;
     border: 1px solid var(--border-soft);
+    transform-origin: top center;
+    animation: mf-pop var(--dur-2) var(--ease-out);
   }
   /* The search box keeps its height; only the list below scrolls (a long
      list — the recent files when it opens — used to squeeze it). */

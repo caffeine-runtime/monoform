@@ -94,7 +94,6 @@ select {
   color: var(--text);
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.12s var(--ease);
 }
 .btn:hover {
   background: var(--bg-active);
@@ -327,3 +326,111 @@ select {
     box-shadow: 0 0 0 2px transparent;
   }
 }
+
+/* ------------------------------------------------------------- motion
+   Entrance animations (nothing waits for an exit), on transform and opacity
+   only so the compositor draws them; components name these keyframes. */
+@keyframes mf-fade {
+  from {
+    opacity: 0;
+  }
+}
+/* A popup dropping from where it opens (palette, quick pick). */
+@keyframes mf-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+/* A dialog or card rising into place. */
+@keyframes mf-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+/* A menu unfolding downwards: a clip, not a transform, so its measured size and
+   its items' positions (submenus anchor to them) stay true while it opens. The
+   clip leaves room for the shadow. */
+@keyframes mf-menu {
+  from {
+    opacity: 0;
+    clip-path: inset(-24px -24px calc(100% - 12px) -24px);
+  }
+  to {
+    clip-path: inset(-24px);
+  }
+}
+/* A toast sliding in from the right. */
+@keyframes mf-toast {
+  from {
+    opacity: 0;
+    transform: translateX(24px) scale(0.98);
+  }
+}
+/* A new tab growing into the tab bar. */
+@keyframes mf-tab-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.92);
+  }
+}
+/* A side panel sliding in from its edge. */
+@keyframes mf-slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+}
+@keyframes mf-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+}
+/* Editors' side panels (outline, layers, properties…) slide in from their edge. */
+[data-sidepanel] {
+  animation: mf-slide-left var(--dur-2) var(--ease-out);
+}
+[data-sidepanel].left {
+  animation-name: mf-slide-right;
+}
+
+/* Buttons answer the press at once. */
+.btn,
+.icon-btn {
+  transition:
+    background var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease),
+    box-shadow var(--dur-1) var(--ease),
+    transform var(--dur-1) var(--ease-out);
+}
+.btn:active:not(:disabled),
+.icon-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* Reduced motion: Settings › Reduce motion, or the system's setting (unless
+   forced back on). Spinners keep turning (they say something is happening). */
+:root[data-motion='reduce'] *:not(.spinner),
+:root[data-motion='reduce'] *::before,
+:root[data-motion='reduce'] *::after {
+  animation-duration: 1ms !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  transition-delay: 0s !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='full']) *:not(.spinner),
+  :root:not([data-motion='full']) *::before,
+  :root:not([data-motion='full']) *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0s !important;
+  }
+}
+

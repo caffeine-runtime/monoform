@@ -97,6 +97,9 @@ type Settings struct {
 	// LightCanvases keeps drawings and diagrams (Excalidraw, draw.io, Mermaid,
 	// Graphviz) on white in the dark theme instead of darkening them.
 	LightCanvases bool `json:"lightCanvases"`
+	// ReduceMotion turns the interface's animations off (they are also off
+	// when the system asks for reduced motion).
+	ReduceMotion bool `json:"reduceMotion"`
 	// Language of the interface: "en", "pl", "es", or "" to follow the system.
 	Language string `json:"language"`
 	// UpdateCheckOff stops looking for a new version at startup.

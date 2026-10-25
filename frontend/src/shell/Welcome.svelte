@@ -36,7 +36,7 @@
 
 <div class="welcome">
   <div class="inner">
-    <section class="drop" aria-label={t('Open')}>
+    <section class="drop enter" aria-label={t('Open')}>
       <span class="dropicon"><Icon icon={ArrowDownToLine} size={18} /></span>
       <div class="droptext">
         <strong>{t('Drop files here')}</strong>
@@ -50,8 +50,8 @@
 
     <h3>{t('Create')}</h3>
     <div class="kinds">
-      {#each kinds as k (k.kind)}
-        <button class="kind" data-kind={k.kind} title="{k.title} — {k.detail}" onclick={() => void newFileOfKind(undefined, k.kind)}>
+      {#each kinds as k, i (k.kind)}
+        <button class="kind enter" style:--i={i + 1} data-kind={k.kind} title="{k.title} — {k.detail}" onclick={() => void newFileOfKind(undefined, k.kind)}>
           <span class="badge"><Icon icon={KIND[k.kind]} size={17} /></span>
           <span class="kn">{k.label}</span>
         </button>
@@ -61,8 +61,8 @@
     {#if settings.value.recents.length}
       <h3>{t('Recent')}</h3>
       <div class="recents">
-        {#each settings.value.recents.slice(0, 8) as p (p)}
-          <div class="rrow">
+        {#each settings.value.recents.slice(0, 8) as p, i (p)}
+          <div class="rrow enter" style:--i={i + 4}>
             <button class="recent" title={p} onclick={() => workspace.openPath(p)}>
               <Icon icon={iconFor(p, kindOf(p))} size={16} />
               <span class="rn">{basename(p)}</span>
@@ -159,12 +159,23 @@
     cursor: pointer;
     color: var(--text);
     transition:
-      background 0.12s var(--ease),
-      border-color 0.12s var(--ease);
+      background var(--dur-1) var(--ease),
+      border-color var(--dur-1) var(--ease),
+      transform var(--dur-2) var(--ease-out);
   }
   .kind:hover {
     background: var(--bg-hover);
     border-color: var(--border);
+    transform: translateY(-2px);
+  }
+  .kind:active {
+    transform: translateY(0) scale(0.97);
+    transition-duration: var(--dur-1);
+  }
+  /* The start page settles in: the drop area, then the tiles and recents one after another. */
+  .enter {
+    animation: mf-rise var(--dur-3) var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * 22ms);
   }
   .kind:hover .badge {
     color: var(--text);

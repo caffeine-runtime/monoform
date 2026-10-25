@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { cubicOut } from 'svelte/easing';
+  import { ms } from '../core/motion';
   import Icon from './Icon.svelte';
   import { Lock, X, PanelLeft } from '../core/icons';
   import { iconFor } from '../core/fileicons';
@@ -152,6 +154,30 @@
     const el = strip.querySelector<HTMLElement>(`[data-tab="${id}"]`);
     el?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   });
+
+  // FLIP: when tabs open, close or move, the others slide from where they were
+  // instead of jumping (the closed tab itself goes at once).
+  let lastLeft = new Map<string, number>();
+  const tabIds = () => workspace.tabs.map((t) => t.id).join();
+  $effect.pre(() => {
+    void tabIds();
+    if (strip) lastLeft = new Map([...strip.querySelectorAll<HTMLElement>('.tab')].map((el) => [el.dataset.tab!, el.getBoundingClientRect().left]));
+  });
+  $effect(() => {
+    void tabIds();
+    const duration = ms(170);
+    if (!strip || !duration) return;
+    for (const el of strip.querySelectorAll<HTMLElement>('.tab')) {
+      const before = lastLeft.get(el.dataset.tab!);
+      const dx = before === undefined ? 0 : before - el.getBoundingClientRect().left;
+      if (Math.abs(dx) > 1) el.animate([{ transform: `translateX(${dx}px)` }, { transform: 'none' }], { duration, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
+    }
+  });
+
+  /** A new tab grows into the strip. */
+  function tabIn(_: Element) {
+    return { duration: ms(170), easing: cubicOut, css: (t: number, u: number) => `opacity: ${t}; transform: translateY(${u * 6}px) scale(${0.92 + 0.08 * t})` };
+  }
 </script>
 
 <svelte:window onpointermove={drag} onpointerup={drop} onpointercancel={cancelDrag} onkeydown={(e) => tabDrag.id && e.key === 'Escape' && cancelDrag()} />
@@ -163,6 +189,7 @@
     {#each workspace.tabs as tab, i (tab.id)}
       <div
         class="tab"
+        in:tabIn
         class:active={workspace.activeId === tab.id}
         class:in-split={!!workspace.split?.panes.includes(tab.id)}
         class:drop-before={markAt === i}

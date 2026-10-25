@@ -1813,6 +1813,7 @@ export namespace settings {
 	    pathBarOff: boolean;
 	    panelsHidden: boolean;
 	    lightCanvases: boolean;
+	    reduceMotion: boolean;
 	    language: string;
 	    updateCheckOff: boolean;
 	    updateSkip: string;
@@ -1851,6 +1852,7 @@ export namespace settings {
 	        this.pathBarOff = source["pathBarOff"];
 	        this.panelsHidden = source["panelsHidden"];
 	        this.lightCanvases = source["lightCanvases"];
+	        this.reduceMotion = source["reduceMotion"];
 	        this.language = source["language"];
 	        this.updateCheckOff = source["updateCheckOff"];
 	        this.updateSkip = source["updateSkip"];

@@ -31,7 +31,8 @@
     pos = { x, y };
     queueMicrotask(() => {
       if (!el) return;
-      const r = el.getBoundingClientRect();
+      // The layout size (an opening animation never changes it).
+      const r = { width: el.offsetWidth, height: el.offsetHeight };
       if (anchor) {
         const right = anchor.right - 2;
         pos = {
@@ -144,6 +145,7 @@
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow);
     outline: none;
+    animation: mf-menu var(--dur-2) var(--ease-out);
   }
   .menu.sub {
     z-index: 302;

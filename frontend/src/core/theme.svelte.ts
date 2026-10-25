@@ -19,6 +19,8 @@ class ThemeState {
   apply() {
     document.documentElement.dataset.theme = this.resolved;
     document.documentElement.dataset.canvas = this.darkCanvas ? 'dark' : 'light';
+    // Animations off (base.css): asked for here, or by the system (prefers-reduced-motion).
+    document.documentElement.dataset.motion = settings.value.reduceMotion ? 'reduce' : 'auto';
   }
 
   set(mode: 'system' | 'dark' | 'light') {

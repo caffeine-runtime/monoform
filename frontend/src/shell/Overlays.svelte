@@ -114,6 +114,7 @@
     padding: 20px 22px 16px;
     border: 1px solid var(--border-soft);
     outline: none;
+    animation: mf-rise var(--dur-2) var(--ease-out);
   }
   .dialog h2 {
     margin: 0 0 8px;
@@ -169,7 +170,8 @@
     background: var(--bg-elevated);
     border: 1px solid var(--border-soft);
     box-shadow: var(--shadow);
-    animation: rise 0.18s var(--ease);
+    transform-origin: right center;
+    animation: mf-toast var(--dur-3) var(--ease-spring);
   }
   .ti {
     display: inline-flex;
@@ -188,11 +190,5 @@
     flex: 1;
     word-break: break-word;
     cursor: auto;
-  }
-  @keyframes rise {
-    from {
-      transform: translateY(6px);
-      opacity: 0;
-    }
   }
 </style>

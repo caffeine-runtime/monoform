@@ -147,7 +147,8 @@
   .app {
     display: grid;
     grid-template-columns: auto 1fr;
-    grid-template-rows: 1fr auto;
+    /* minmax: a long file tree at a large interface size scrolls instead of pushing the status bar off the window. */
+    grid-template-rows: minmax(0, 1fr) auto;
     height: 100%;
   }
   .main {

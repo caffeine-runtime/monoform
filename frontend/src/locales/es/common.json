@@ -59,6 +59,8 @@
   "Save and restart": "Guardar y reiniciar",
   "One request to GitHub when Monoform starts; nothing about you or this computer is sent.": "Una sola consulta a GitHub al iniciar Monoform; no se envía nada sobre ti ni sobre este equipo.",
   "The Microsoft Store keeps Monoform up to date.": "Microsoft Store mantiene Monoform actualizado.",
+  "Reduce motion": "Reducir movimiento",
+  "Turns the animations off. Monoform also does this when your system asks for less motion.": "Desactiva las animaciones. Monoform también lo hace cuando el sistema pide menos movimiento.",
   "Look for a new version when Monoform starts": "Buscar una versión nueva al iniciar Monoform",
   "Version {version} is available.": "La versión {version} está disponible.",
   "Monoform is up to date.": "Monoform está actualizado.",

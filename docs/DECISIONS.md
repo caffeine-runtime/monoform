@@ -86,6 +86,18 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 - **Module state stays mounted while a tab is open** (hidden with `display:none`), so undo history and scroll survive tab switches. A tab's module only loads when the tab is first shown, so restoring a session with 20 tabs loads one module.
 - **Session restore loads only the active tab**; other tabs load when first activated instead of all in the background — cheaper on memory with large files, and still "shell first, contents after".
 - **Module commands register once per module** (when its chunk loads) and act on the active tab via `when()`, rather than per tab instance, so IDs stay unique and the palette doesn't fill with duplicates.
+- **Interface motion: short entrance animations on transform and opacity** (`styles/base.css` keyframes `mf-*`,
+  tokens `--dur-1/2/3`, `--ease-out`, `--ease-spring`): popups drop in or unfold from where they open, dialogs rise,
+  toasts slide in, side panels slide from their edge, a shown tab fades in, the start page settles in with a short
+  stagger, buttons and tiles answer the press. Only entrances — nothing waits for an exit, so closing stays instant
+  and the DOM never holds a leaving element. Tabs slide when the list changes by a hand-written FLIP in the tab bar
+  (`$effect.pre` measures, `$effect` animates with the Web Animations API): Svelte's `animate:flip` runs only when
+  items reorder, not when a neighbour is removed. Menus unfold with a `clip-path` wipe rather than a scale: a transform
+  shrinks what `getBoundingClientRect` reports while they open, and menus size and place themselves (and anchor their
+  submenus) from those rects. No full-screen backdrop fade and no scaling on the palette: on the
+  software-rendered VM those doubled its frame cost. Settings › Reduce motion (and the system's
+  `prefers-reduced-motion`) cuts CSS animations to 1 ms and script-driven ones to 0 (`core/motion.ts`); spinners keep
+  turning.
 - **Later command registrations win shortcut conflicts** (if their `when` holds), so a module can claim e.g. `Mod+F` while it is active.
   Editors claim the keys they own the same way while the caret is in them (hidden commands: Ctrl+B / Ctrl+K in a Word
   page, Ctrl+/ in the code editor): the capture-phase handler runs before the editor's own keydown and stops the

@@ -120,6 +120,12 @@ export default async function m16(dir: string) {
   workspace.activate(csv);
   await waitFor(() => (document.querySelector('.tabview.active .grid') ? true : null), 'grid');
   assertEq(document.querySelector<HTMLElement>('.tabview.active .grid')!.style.getPropertyValue('--row'), '35px', 'grid rows follow the size');
+  // The largest size with the whole fixtures folder in the sidebar: the window still holds the status bar.
+  await workspace.openFolder(dir);
+  settings.update((s) => (s.uiScale = 2));
+  await sleep(300);
+  const bar = document.querySelector<HTMLElement>('footer.status')!.getBoundingClientRect();
+  assert(bar.height > 0 && bar.bottom <= innerHeight + 1, `status bar inside the window at 200% (bottom ${Math.round(bar.bottom)} of ${innerHeight})`);
   commands.execute('view.uiReset');
   await tick();
   assertEq(settings.value.uiScale, 1, 'reset');

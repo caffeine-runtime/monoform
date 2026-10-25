@@ -63,6 +63,8 @@
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow);
     overflow: hidden;
+    transform-origin: top center;
+    animation: mf-pop var(--dur-2) var(--ease-out);
   }
   .q {
     height: calc(44px * var(--ui-scale));

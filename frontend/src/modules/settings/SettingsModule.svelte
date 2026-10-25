@@ -93,6 +93,10 @@
       <span class="lbl" title={t('Excalidraw and draw.io drawings, Mermaid and Graphviz diagrams. The files and exports keep their colours.')}>{t('Darken drawings and diagrams in the dark theme')}</span>
       <input type="checkbox" checked={!s.lightCanvases} onchange={(e) => theme.setDarkCanvas((e.target as HTMLInputElement).checked)} />
     </label>
+    <label class="row check">
+      <span class="lbl" title={t('Turns the animations off. Monoform also does this when your system asks for less motion.')}>{t('Reduce motion')}</span>
+      <input type="checkbox" checked={s.reduceMotion} onchange={(e) => settings.update((x) => (x.reduceMotion = (e.target as HTMLInputElement).checked))} />
+    </label>
     <div class="row">
       <label class="lbl" for="uis" title={t('Makes text, buttons and icons everywhere larger or smaller ({shortcuts})', { shortcuts: 'Ctrl+Alt+= / Ctrl+Alt+−' })}>{t('Interface size')}</label>
       <span class="scale">

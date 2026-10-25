@@ -120,6 +120,7 @@
   }
   .tabview.shown {
     display: flex;
+    animation: mf-fade var(--dur-1) var(--ease-out);
   }
   .tabview.pane {
     inset: auto;

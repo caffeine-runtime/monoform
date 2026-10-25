@@ -72,6 +72,12 @@
   --statusbar-h: calc(26px * var(--ui-scale));
   --pathbar-h: calc(26px * var(--ui-scale));
   --ease: cubic-bezier(0.2, 0, 0, 1);
+  /* Motion: short, so it never holds up the next click; transform and opacity only. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+  --dur-1: 110ms;
+  --dur-2: 170ms;
+  --dur-3: 260ms;
 }
 
 /* Syntax colours: warm, low-contrast. */
