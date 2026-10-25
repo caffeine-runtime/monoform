@@ -6,7 +6,10 @@
 # "demo" self-test on its own X display (1280×800, no window manager, so
 # the window fills it) and records it with ffmpeg; the clips are animated
 # WebP. Needs a built app (scripts/build.sh), Xvfb and ffmpeg with libwebp.
-# The tour uses the optional subject model (Better subject selection): it is
+# "promo" records the 1080p promo video instead (H.264 MP4 with the demo
+# folder's Goldberg recording, CC0, faded in and out) to $MF_PROMO_OUT
+# (default build/bin/monoform-promo.mp4; not committed: upload it where needed).
+# The tour and the promo use the optional subject model (Better subject selection): it is
 # downloaded once (~200 MB, with the ONNX Runtime library) into
 # $MF_DEMO_MODELS (default ~/.cache/monoform-demo/app) and kept there.
 set -euo pipefail
@@ -26,12 +29,13 @@ DEMO=${MF_DEMO_ROOT:-/tmp/Documents}
 DIR=$(python3 scripts/demo_files.py "$DEMO")
 
 export DISPLAY=:97
-Xvfb :97 -screen 0 1280x800x24 -nocursor >/dev/null 2>&1 &
+# Big enough for the promo; the other scenes' 1280×800 window sits in its corner.
+Xvfb :97 -screen 0 1920x1080x24 -nocursor >/dev/null 2>&1 &
 XPID=$!
 sleep 1
 
 # Theme per scene: light or dark.
-declare -A THEME=([tour]=dark [image]=dark [markdown]=light [split]=dark
+declare -A THEME=([tour]=dark [promo]=dark [image]=dark [markdown]=light [split]=dark
   [still-pdf]=dark [still-model3d]=dark [still-audio]=dark [still-video]=dark [still-json]=dark [still-archive]=dark)
 
 waitlog() { # waitlog <file> <text> <seconds>
@@ -43,13 +47,13 @@ MODELS=${MF_DEMO_MODELS:-${XDG_CACHE_HOME:-$HOME/.cache}/monoform-demo/app}
 start() { # start <scene> [seconds]: the app running the scene, logging to $LOG
   LOG="$WORK/$1.log"
   local cache="$WORK/cache"
-  [[ $1 == tour || $1 == models ]] && cache=$MODELS
+  [[ $1 == tour || $1 == promo || $1 == models ]] && cache=$MODELS
   MF_TEST=demo MF_TEST_ARG="$1|$DIR|${THEME[$1]:-light}" MF_SETTINGS="$WORK/$1-settings.json" MF_CACHE="$cache" \
     timeout "${2:-180}" "$BIN" >"$LOG" 2>&1 &
   APP=$!
 }
 
-if [[ " ${SCENES[*]} " == *" tour "* ]]; then
+if [[ " ${SCENES[*]} " == *" tour "* || " ${SCENES[*]} " == *" promo "* ]]; then
   mkdir -p "$MODELS"
   start models 1800
   waitlog "$LOG" "demo: models ready" 1800
@@ -72,11 +76,13 @@ for s in "${SCENES[@]}"; do
     echo "$s: $(du -h "$PNG" | cut -f1)"
     continue
   fi
-  start "$s"
+  SIZE=1280x800
+  [[ $s == promo ]] && SIZE=1920x1080
+  start "$s" 240
   waitlog "$LOG" "demo: rec" 60
-  ffmpeg -loglevel error -y -f x11grab -draw_mouse 0 -framerate 30 -video_size 1280x800 -i :97 -c:v libx264rgb -crf 0 -preset ultrafast "$WORK/$s.mkv" &
+  ffmpeg -loglevel error -y -f x11grab -draw_mouse 0 -framerate 30 -video_size $SIZE -i :97 -c:v libx264rgb -crf 0 -preset ultrafast "$WORK/$s.mkv" &
   REC=$!
-  waitlog "$LOG" "demo: end" 150
+  waitlog "$LOG" "demo: end" 230
   sleep 0.2
   kill -INT $REC; wait $REC || true
   wait $APP || true
@@ -86,6 +92,16 @@ for s in "${SCENES[@]}"; do
   if [ -n "$CUTS" ]; then
     EXPR=$(echo "$CUTS" | tr ',' '\n' | awk -F- '{printf "%sbetween(t,%s,%s)", (NR>1?"+":""), $1, $2}')
     SEL="select='not($EXPR)',setpts=N/30/TB,"
+  fi
+  if [[ $s == promo ]]; then
+    PROMO=${MF_PROMO_OUT:-build/bin/monoform-promo.mp4}
+    mkdir -p "$(dirname "$PROMO")"
+    ffmpeg -loglevel error -y -i "$WORK/$s.mkv" -vf "${SEL}fps=30,format=yuv420p" -c:v libx264 -preset slow -crf 18 -an "$WORK/promo-video.mp4"
+    DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$WORK/promo-video.mp4")
+    ffmpeg -loglevel error -y -i "$WORK/promo-video.mp4" -i "$DIR/Goldberg Variation 1.ogg" -map 0:v -map 1:a -c:v copy \
+      -af "volume=0.55,afade=t=in:d=1.2,afade=t=out:st=$(echo "$DUR - 2.5" | bc):d=2.5" -c:a aac -b:a 160k -shortest -movflags +faststart "$PROMO"
+    echo "promo: $PROMO $(du -h "$PROMO" | cut -f1), ${DUR%.*} s"
+    continue
   fi
   ffmpeg -loglevel error -y -i "$WORK/$s.mkv" -vf "${SEL}fps=20,scale=1000:-1:flags=lanczos" \
     -c:v libwebp_anim -lossless 0 -quality 80 -compression_level 6 -loop 0 "$OUT/$s.webp"

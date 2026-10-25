@@ -572,6 +572,19 @@
 - **Demo photo: Discovery over the horizon** (NASA ISS018-E-043308) replaces Atlantis over clouds in the README's
   image, split and tour clips: *Select subject* cut the shuttle poorly out of the cloud background with the built-in
   model; against space and the bright Earth it finds the whole orbiter. The fact sheet keeps the Atlantis photo.
+- **Interface motion**: the palette and quick pick drop in, menus unfold from their corner, dialogs rise, toasts
+  slide in, editors' side panels slide from their edge, a shown tab fades in, new tabs grow into the strip and the
+  others slide along when tabs open, close or move, the start page settles in, buttons and tiles answer the press —
+  entrances only, transform and opacity only. Settings › Appearance › Reduce motion (also on when the system asks for
+  less motion). Unit test (`motion.test.ts`), self-test `m78` (animations present, longest frames logged, reduce
+  motion).
+- **Fix: at a large interface size a long file tree pushed the status bar out of the window** (the app grid's first
+  row was `1fr`, which never shrinks below its content). It is `minmax(0, 1fr)` now and the tree scrolls; `m16`
+  checks the status bar stays inside the window at 200% with the whole fixtures folder open.
+- **Promo video** (`scripts/readme-media.sh promo` → `build/bin/monoform-promo.mp4`, not committed): about 55 s at
+  1080p, recorded from the real app (the `promo` demo scene) with captions burned in — notes and a Mermaid diagram,
+  Word/CSV/PDF, SVG/3D/video, Select subject with the AI model pasted into the report, Ctrl+K and a four-way split —
+  between a title and an end card; the demo folder's Goldberg recording (CC0) underneath.
 - **Microsoft Store package (MSIX)**: CI packs it on Windows next to the installer — manifest generated from the
   setup program's file types (`internal/msix`, `cmd/msix`; Go tests), logos with scale and size variants
   (`scripts/icons.py --msix`) indexed by `makepri` — and test-installs a self-signed copy (alias, app start,
@@ -753,6 +766,8 @@ available here).
 - Audio preview: cut points can sound a few milliseconds late (the player seeks over removed parts); the saved file is exact. MP3 waveform and playback can be offset by up to ~25–50 ms (players skip the encoder delay differently); edits are sample-exact relative to the waveform.
 - Video saving without effects doesn't re-encode, so cuts snap to keyframes (the timeline shows the snapped result). With effects the video is rendered to WebM (VP9/VP8 + Opus) — the encoders every webview has; MP4/H.264 output isn't offered (no permissively licensed encoder in pure Go; WebKitGTK has no H.264 WebCodecs encoder). No crop or colour filters on video yet.
 - Video effects: rendering keeps the whole encoded output in memory until it is written (fine for clips; a long 1080p render needs RAM of roughly its file size), and runs at about 1–2× real time at 320×180 on the test VM (WebCodecs) — slower where WebKitGTK's WebCodecs decoder is missing its GStreamer parser (gst-plugins-bad), because frames then come from seeking a <video> element.
+- Motion: on the software-rendered VM a shown tab's fade-in costs 15–30 ms per frame more than without it (tab
+  switches 17–66 ms instead of 17–32 ms); real GPUs composite it for free. Settings › Reduce motion turns it off.
 - Split view: the first split of a session costs one 75–100 ms UI frame on the test VM (first layout of the panes); later changes 35–55 ms. Two 3D views can be shown, but only the focused one is live — the other keeps a still of its last frame until clicked (they share one WebGL renderer).
 - Interface size scales the design tokens and every font size, plus the shell's bars and controls; some module-specific paddings and canvas overlays stay at their pixel size.
 - Databases: SQLite only (no server databases — they'd need network access); WITHOUT ROWID tables and views are edited through the SQL console, not the grid; BLOBs are shown summarised, not edited.

@@ -6,6 +6,7 @@
 import { EditorView } from '@codemirror/view';
 import { aiModels } from '../core/aimodels.svelte';
 import { api } from '../core/backend';
+import { commands } from '../core/commands';
 import { compareFiles } from '../core/compare';
 import { dropInto } from '../core/split';
 import { join } from '../core/paths';
@@ -13,11 +14,13 @@ import { settings } from '../core/settings.svelte';
 import { workspace, type Tab } from '../core/tabs.svelte';
 import { pasteInto, pngOf, readTransfer } from '../core/transfer.svelte';
 import { ui } from '../core/ui.svelte';
-import { WindowSetSize } from '../wailsjs/runtime/runtime';
+import { WindowSetPosition, WindowSetSize } from '../wailsjs/runtime/runtime';
+import logoMark from '../../../build/icon/logo-mark.svg?raw';
 import { log, press, sleep, waitFor } from './harness';
 
-const W = 1280;
-const H = 800;
+// The window (the promo scene records at 1080p).
+let W = 1280;
+let H = 800;
 
 // ------------------------------------------------------------- the pointer
 
@@ -179,6 +182,13 @@ async function tour(dir: string) {
   await openFromTree(dir, 'Landmark flights.csv', 1800);
   await openFromTree(dir, 'Mission profile.svg', 2200);
   const img = await openFromTree(dir, 'Discovery in orbit.jpg', 700);
+  await cutOutIntoReport(dir, img);
+  await sleep(3200);
+}
+
+/** Select subject on the photo (with the AI model when installed), copy, drag
+ * the report's tab beside it and paste the cut-out into the report. */
+async function cutOutIntoReport(dir: string, img: Tab) {
   const report = workspace.findByPath(join(dir, 'Report.docx'))!;
   const h = await waitFor(() => (img as unknown as { imageTest?: any }).imageTest, 'image editor');
   await waitFor(() => h.editor(), 'editor');
@@ -241,7 +251,6 @@ async function tour(dir: string) {
   const x = await readTransfer();
   if (x?.kind === 'image') await d.addPicture(await pngOf(x.image), 'png');
   await waitFor(() => page.querySelector('img'), 'the cut-out in the report', 15000);
-  await sleep(3200);
 }
 
 /** A key press, shown as a keycap for a moment. */
@@ -339,9 +348,135 @@ async function split() {
   await sleep(1400);
 }
 
+// ------------------------------------------------------- promo (1080p video)
+
+let captionBox: HTMLDivElement | null = null;
+
+/** A caption along the bottom, burned into the video for viewers without sound. */
+function caption(text: string) {
+  captionBox?.remove();
+  const box = document.createElement('div');
+  Object.assign(box.style, { position: 'fixed', left: '0', right: '0', bottom: '58px', display: 'flex', justifyContent: 'center', zIndex: '2147483645', pointerEvents: 'none' });
+  const chip = document.createElement('div');
+  chip.textContent = text;
+  Object.assign(chip.style, {
+    padding: '14px 28px',
+    borderRadius: '14px',
+    font: '600 31px Inter, system-ui, sans-serif',
+    letterSpacing: '-0.01em',
+    color: '#f6f1e6',
+    background: 'rgba(20, 19, 17, 0.9)',
+    border: '1px solid rgba(255, 255, 255, 0.09)',
+    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.45)',
+    animation: 'mf-rise 320ms cubic-bezier(0.16, 1, 0.3, 1)',
+  });
+  box.appendChild(chip);
+  document.body.appendChild(box);
+  captionBox = box;
+}
+
+/** A full-window card (title or end), faded in over the app and out again. */
+async function card(title: string, lines: string[], foot: string, hold: number) {
+  captionBox?.remove();
+  const c = document.createElement('div');
+  Object.assign(c.style, {
+    position: 'fixed', inset: '0', zIndex: '2147483646', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '22px',
+    background: 'radial-gradient(ellipse at 50% 38%, #2f2c26 0%, #191816 58%, #121110 100%)', color: '#ece2cb', font: '400 30px Inter, system-ui, sans-serif',
+    opacity: '0', transition: 'opacity 450ms ease',
+  });
+  const mark = document.createElement('div');
+  mark.innerHTML = logoMark;
+  Object.assign(mark.style, { width: '128px', height: '128px', animation: 'mf-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) both' });
+  mark.querySelector('svg')?.setAttribute('width', '128');
+  mark.querySelector('svg')?.setAttribute('height', '128');
+  const h = document.createElement('div');
+  h.textContent = title;
+  Object.assign(h.style, { font: '800 88px Inter, system-ui, sans-serif', letterSpacing: '-0.03em', animation: 'mf-rise 700ms 90ms cubic-bezier(0.16, 1, 0.3, 1) both' });
+  c.append(mark, h);
+  lines.forEach((l, i) => {
+    const d = document.createElement('div');
+    d.textContent = l;
+    Object.assign(d.style, { color: i ? '#b9b09d' : '#ece2cb', font: i ? '500 28px Inter, system-ui, sans-serif' : '600 38px Inter, system-ui, sans-serif', animation: `mf-rise 700ms ${180 + i * 90}ms cubic-bezier(0.16, 1, 0.3, 1) both` });
+    c.appendChild(d);
+  });
+  if (foot) {
+    const f = document.createElement('div');
+    f.textContent = foot;
+    Object.assign(f.style, { marginTop: '26px', padding: '12px 24px', borderRadius: '12px', background: 'rgba(224, 120, 70, 0.16)', color: '#f0a383', font: '600 30px ui-monospace, monospace', animation: 'mf-rise 700ms 460ms cubic-bezier(0.16, 1, 0.3, 1) both' });
+    c.appendChild(f);
+  }
+  document.body.appendChild(c);
+  await sleep(30);
+  c.style.opacity = '1';
+  await sleep(hold);
+  c.style.opacity = '0';
+  await sleep(480);
+  c.remove();
+}
+
+/** The promo: what Monoform is in about forty seconds, in the real app. */
+async function promo(dir: string) {
+  // The first note opens under the title card.
+  const title = card('Monoform', ['One window for your everyday files', 'Notes · PDF · images · Word & Excel · CSV · SVG · 3D · audio · video'], '', 2600);
+  await sleep(500);
+  const poster = (await workspace.openPath(join(dir, 'notes', 'Poster.md')))!;
+  await title;
+  await moveTo(200, 360, 300);
+  caption('Notes with a live preview — diagrams draw as you type');
+  await sleep(400);
+  const el = await waitFor(() => pane(poster)?.querySelector<HTMLElement>('.cm-editor'), 'editor');
+  const view = EditorView.findFromDOM(el)!;
+  const c = centre(el);
+  await moveTo(c.x, c.y + 160);
+  await ripple();
+  view.dispatch({ selection: { anchor: view.state.doc.length } });
+  await typeCode(view, '## The talk\n\n1. **launch**\n2. orbit and docking\n\n', 38);
+  const pos = view.state.selection.main.head;
+  const block = '```mermaid\nflowchart LR\n  Launch --> Orbit\n```\n';
+  view.dispatch({ changes: { from: pos, insert: block }, selection: { anchor: pos + block.length - 4 }, userEvent: 'input.paste', scrollIntoView: true });
+  await sleep(900);
+  await typeCode(view, '  Orbit --> Landing\n', 45);
+  await sleep(1500);
+
+  caption('Word, spreadsheets and PDFs — open and edit them in place');
+  await openFromTree(dir, 'Report.docx', 1500);
+  await openFromTree(dir, 'Landmark flights.csv', 1400);
+  await openFromTree(dir, 'Shuttle fact sheet.pdf', 1700);
+
+  caption('SVG, 3D models, video — the same window');
+  await openFromTree(dir, 'Mission profile.svg', 1500);
+  const model = await openFromTree(dir, '3DBenchy.stl', 0);
+  await cut(spin(model, 9));
+  await sleep(1900);
+  await openFromTree(dir, 'Atlantis landing.webm', 1800);
+
+  const img = await openFromTree(dir, 'Discovery in orbit.jpg', 0);
+  await waitFor(() => (img as unknown as { imageTest?: any }).imageTest?.editor(), 'image editor');
+  await sleep(200);
+  commands.execute('image.fit'); // the whole photo at this window size
+  caption('Cut out the subject in one click — offline AI');
+  await sleep(600);
+  await cutOutIntoReport(dir, img);
+  await sleep(1400);
+  caption('…and drop it into the report next to it');
+  await sleep(1900);
+
+  caption('Ctrl+K finds any command, file or text');
+  workspace.setSplit(null);
+  await sleep(300);
+  for (const f of ['Notes.md', 'Shuttle fact sheet.pdf', 'Discovery in orbit.jpg', '3DBenchy.stl']) await workspace.openPath(join(dir, f));
+  await sleep(300);
+  await palette('split four');
+  await sleep(600);
+  caption('Up to four files side by side');
+  await sleep(2600);
+
+  await card('Monoform', ['Free and open source (MIT) · Windows · macOS · Linux', 'Offline · no telemetry · no account — written by Claude, reviewed by a human'], 'github.com/caffeine-runtime/monoform', 3600);
+}
+
 const FILES = ['notes/Notes (draft).md', 'Notes.md', 'Report.docx', 'Landmark flights.csv', 'Mission profile.svg', 'Shuttle fact sheet.pdf', 'Discovery in orbit.jpg', 'Fleet.xlsx', 'Rocket.svg', '3DBenchy.stl', 'Goldberg Variation 1.ogg', 'Atlantis landing.webm', 'notes/Moodboard.md', 'notes/Poster.md'];
 
-const SCENES: Record<string, (dir: string) => Promise<void>> = { tour, image, markdown, split };
+const SCENES: Record<string, (dir: string) => Promise<void>> = { tour, image, markdown, split, promo };
 
 // Stills for the gallery ("still-<name>"): the folder open, one view staged.
 const open = (f: string) => (d: string) => workspace.openPath(join(d, f)).then(() => undefined);
@@ -376,11 +511,13 @@ const STILLS: Record<string, (dir: string) => Promise<void>> = {
 
 export default async function demo(arg: string) {
   const [scene, dir, theme] = arg.split('|');
+  if (scene === 'promo') [W, H] = [1920, 1080];
   settings.update((s) => {
     s.theme = (theme as 'light' | 'dark') || 'dark';
-    s.uiScale = 1.1;
+    s.uiScale = scene === 'promo' ? 1.6 : 1.1;
   });
   WindowSetSize(W, H);
+  WindowSetPosition(0, 0); // it was centred for its first size: fill the screen from the corner
   // "models": install the optional subject model into the cache once (the
   // script keeps that cache between runs), before any recording.
   if (scene === 'models') {
@@ -399,7 +536,7 @@ export default async function demo(arg: string) {
   }
   await sleep(1000);
   for (const t of [...workspace.tabs]) await workspace.close(t, { force: true });
-  if (scene === 'tour' || scene.startsWith('still-')) await workspace.openFolder(dir);
+  if (scene === 'tour' || scene === 'promo' || scene.startsWith('still-')) await workspace.openFolder(dir);
   if (scene.startsWith('still-')) {
     await STILLS[scene.slice(6)](dir);
     await sleep(3000);
@@ -416,6 +553,7 @@ export default async function demo(arg: string) {
   await sleep(1500);
   addCursor();
   await sleep(200);
+  log(`demo: window ${innerWidth}×${innerHeight}`);
   log('demo: rec');
   rec0 = performance.now();
   await sleep(500);
