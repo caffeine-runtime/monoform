@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Makes the Monoform ad (build/bin/monoform-ad.mp4, 1080p60, ~48 s).
+"""Makes the Monoform ad (build/bin/monoform-ad.mp4, 1080p60, ~49 s).
 
     scripts/readme-media.sh footage        # once: the app shots (build/bin/ad)
     python3 scripts/ad/make.py [--from S --to S] [--fps N] [--out FILE]
@@ -23,13 +23,15 @@ sys.path.insert(0, os.path.join(ROOT, 'scripts'))
 import demo_files  # noqa: E402  (the media cache: fetch('goldberg.ogg'))
 
 AD = os.path.join(ROOT, 'build', 'bin', 'ad')
-# shot: (first mark, last mark, the beat's start and end in ad.html — how long it is on screen)
+# shot: (its pieces of the footage as (mark, seconds after it) pairs, the beat's start and end in
+# ad.html — how long it is on screen). The pieces leave out what doesn't show the app at work:
+# the previous file still open, a view that is loading.
 SHOTS = {
-    'md': ('md', 'docs', 11.8, 16.2),
-    'docs': ('docs', 'more', 16.0, 20.4),
-    'ai': ('ai', 'split', 20.2, 25.8),
-    'more': ('more', 'ai', 25.6, 30.0),
-    'split': ('split', 'end', 29.8, 34.2),
+    'md': ([(('md', 0.2), ('docs', -0.1))], 11.8, 16.2),
+    'docs': ([(('docs', 1.5), ('docs', 5.4)), (('more', 0.0), ('more', 1.4))], 16.0, 20.4),  # report, CSV, the PDF
+    'ai': ([(('ai', 1.0), ('split', -2.3))], 20.2, 27.0),  # without the long hold after the paste
+    'more': ([(('more', 2.0), ('more', 3.4)), (('more', 4.4), ('ai', -0.3))], 26.8, 31.2),  # SVG; 3D and video
+    'split': ([(('split', 1.0), ('end', -0.3))], 31.0, 35.4),
 }
 
 
@@ -46,15 +48,17 @@ def main():
     marks = json.load(open(os.path.join(AD, 'marks.json')))
 
     shots = {}
-    for name, (m0, m1, a, b) in SHOTS.items():
-        start, end = marks[m0], marks[m1]
+    for name, (pieces, a, b) in SHOTS.items():
         out = os.path.join(AD, 'frames', name)
         shutil.rmtree(out, ignore_errors=True)
         os.makedirs(out)
-        subprocess.run(['ffmpeg', '-loglevel', 'error', '-ss', f'{start:.3f}', '-to', f'{end:.3f}', '-i', footage,
-                        '-vf', 'fps=30,scale=1600:-2:flags=lanczos', '-q:v', '2', os.path.join(out, '%04d.jpg')], check=True)
-        count = len(glob.glob(os.path.join(out, '*.jpg')))
-        visible = (b - a + 0.45) - 0.15
+        count = 0
+        for (m0, o0), (m1, o1) in pieces:
+            subprocess.run(['ffmpeg', '-loglevel', 'error', '-ss', f'{marks[m0] + o0:.3f}', '-to', f'{marks[m1] + o1:.3f}', '-i', footage,
+                            '-vf', 'fps=30,scale=1600:-2:flags=lanczos', '-q:v', '2', '-start_number', str(count + 1),
+                            os.path.join(out, '%04d.jpg')], check=True)
+            count = len(glob.glob(os.path.join(out, '*.jpg')))
+        visible = (b - a + 0.45) - 0.45  # from the window's entrance to the end of its exit
         speed = max(1.0, count / 30 / visible)
         shots[name] = {'dir': 'file://' + out, 'count': count, 'speed': round(speed, 3)}
         print(f'{name}: {count / 30:.1f} s of footage, shown at {speed:.2f}×')

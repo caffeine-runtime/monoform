@@ -731,6 +731,7 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 | github.com/jfreymuth/oggvorbis, jfreymuth/vorbis | MIT | Ogg Vorbis decoding |
 | github.com/dhowden/tag | BSD-2-Clause | audio tags and cover art |
 | Python tools for the demo folder and README banner — fontTools + brotli (MIT), openpyxl (MIT), python-docx (MIT), Pillow (MIT-CMU); ffmpeg and Chromium run as external programs — **dev only, not shipped** | permissive | `scripts/demo_files.py`, `scripts/readme_hero.py`, `scripts/readme-media.sh` |
+| Playwright (+ its Chromium) | Apache-2.0 | `scripts/ad`: renders the ad (`ad.html`) frame by frame for ffmpeg — **dev only, not shipped**; the system's Playwright, no npm dependency added |
 | github.com/pdfcpu/pdfcpu (+ hhrutter/tiff BSD-3, xdg-go/stringprep Apache-2.0, go.yaml.in/yaml Apache-2.0, mattn/go-runewidth MIT, clipperhouse/uax29 MIT) | Apache-2.0 | PDF page operations |
 
 `scripts/licenses.py` lists every Go module linked into the binary and every runtime npm package with its licence and fails on anything not on the permissive allow-list (MIT, BSD, Apache-2.0, ISC, CC0, OFL, PSF/Python, Unlicense, 0BSD). `argparse` (PSF-2.0) is only used by markdown-it's CLI and isn't bundled; `@napi-rs/canvas` is a Node-only optional dependency of pdfjs-dist and isn't bundled either.

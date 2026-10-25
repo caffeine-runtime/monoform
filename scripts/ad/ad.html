@@ -152,26 +152,26 @@ const s3win = shotWindow(1440, 810);
 const BEATS = [
   { shot: 'md', a: 11.8, b: 16.2, side: 1, head: 'Write.', sub: 'Markdown with a live preview.<br>Diagrams draw as you type.' },
   { shot: 'docs', a: 16.0, b: 20.4, side: -1, head: 'Read. Fill. Sign.', sub: 'PDFs, Word documents<br>and spreadsheets, in place.' },
-  { shot: 'ai', a: 20.2, b: 25.8, side: 1, head: 'Cut it out.', sub: 'Select subject with on-device AI.<br>Paste it anywhere.' },
-  { shot: 'more', a: 25.6, b: 30.0, side: -1, head: 'And the rest.', sub: 'SVG, 3D models, audio,<br>video and archives.' },
-  { shot: 'split', a: 29.8, b: 34.2, side: 1, head: 'Side by side.', sub: 'Ctrl+K, split, and keep<br>four files in view.' },
+  { shot: 'ai', a: 20.2, b: 27.0, side: 1, head: 'Cut it out.', sub: 'Select subject with on-device AI.<br>Paste it anywhere.' },
+  { shot: 'more', a: 26.8, b: 31.2, side: -1, head: 'And the rest.', sub: 'SVG, 3D models, audio,<br>video and archives.' },
+  { shot: 'split', a: 31.0, b: 35.4, side: 1, head: 'Side by side.', sub: 'Ctrl+K, split, and keep<br>four files in view.' },
 ].map((bt) => {
   const text = el('div', '');
-  Object.assign(text.style, { position: 'absolute', top: '0', bottom: '0', width: '640px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '28px',
-    left: bt.side > 0 ? '110px' : 'auto', right: bt.side > 0 ? 'auto' : '110px' });
+  Object.assign(text.style, { position: 'absolute', top: '0', bottom: '0', width: '600px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '28px',
+    left: bt.side > 0 ? '100px' : 'auto', right: bt.side > 0 ? 'auto' : '100px' });
   const h = el('div', 'h1', text);
   h.style.fontSize = bt.head.length > 12 ? '96px' : '120px';
   h.style.whiteSpace = 'normal';
   const hw = words(h, bt.head, 'warm');
   const sub = el('div', 'muted', text, bt.sub);
   Object.assign(sub.style, { fontSize: '36px', fontWeight: '500', lineHeight: '1.3', letterSpacing: '-0.01em' });
-  const win = shotWindow(1120, 630);
+  const win = shotWindow(1040, 585);
   return { ...bt, text, hw, sub, win };
 });
 
 // 5 · Private by design.
 const s5 = line('h1', { top: '330px', fontSize: '140px' });
-const s5w = [...words(s5, 'Private'), ...words(s5, 'by design.', 'warm')];
+const s5w = [...words(s5, 'Private '), ...words(s5, 'by design.', 'warm')];
 const s5pills = el('div', '');
 Object.assign(s5pills.style, { position: 'absolute', left: '0', right: '0', top: '600px', display: 'flex', justifyContent: 'center', gap: '26px' });
 const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="#f0a383" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.2 4.2L19 7"/></svg>';
@@ -179,7 +179,7 @@ const pills = ['Works offline', 'No telemetry', 'No account'].map((p) => el('div
 
 // 6 · Free. Open source.
 const s6a = line('h1', { top: '300px', fontSize: '150px' });
-const s6aw = [...words(s6a, 'Free.'), ...words(s6a, 'Open source.', 'warm')];
+const s6aw = [...words(s6a, 'Free. '), ...words(s6a, 'Open source.', 'warm')];
 const s6b = line('', { top: '520px', fontSize: '50px', fontWeight: '600', letterSpacing: '-0.02em' });
 s6b.textContent = 'Windows · macOS · Linux';
 const s6c = line('muted', { top: '620px', fontSize: '36px', fontWeight: '500' });
@@ -195,7 +195,9 @@ s7name.textContent = 'Monoform';
 const s7url = line('', { top: '720px' });
 s7url.innerHTML = '<span style="display:inline-block;padding:16px 30px;border-radius:16px;background:rgba(224,120,70,.14);color:#f0a383;font:600 36px ui-monospace,SFMono-Regular,Menlo,monospace">github.com/caffeine-runtime/monoform</span>';
 
-const DURATION = 48;
+// Scenes after the beats start this much later than first planned (the AI beat grew).
+const LATE = 1.6;
+const DURATION = 48 + LATE;
 
 // ================================================================ render
 window.DURATION = DURATION;
@@ -233,16 +235,17 @@ window.renderAt = async function renderAt(t) {
   const rise = outQuart(prog(t, 7.95, 9.7));
   const s3out = inOutCubic(prog(t, 11.35, 12.0));
   pose(s3win.d, { y: lerp(420, 60, rise) - s3out * 30, rx: lerp(34, 0, rise), s: lerp(0.86, 1, rise) * (1 - s3out * 0.08), o: clamp(rise * 2.2) * (1 - s3out), persp: 2600, blur: s3out * 10 });
-  if (t > 7.8 && t < 12.1) loads.push(showFrame(s3win, 'docs', 0));
+  if (t > 7.8 && t < 12.1) loads.push(showFrame(s3win, 'ai', 0.9)); // the photo loaded
   pose(s3head, textIn(t, 8.7, 11.3));
 
   // 4: beats
   for (const bt of BEATS) {
     const live = t > bt.a - 0.1 && t < bt.b + 0.7;
-    const inn = outQuart(prog(t, bt.a, bt.a + 1.0));
+    // The window waits for the last beat's to leave.
+    const inn = outQuart(prog(t, bt.a + 0.35, bt.a + 1.35));
     const out = inOutCubic(prog(t, bt.b, bt.b + 0.6));
     const drift = prog(t, bt.a, bt.b + 0.6);
-    const cx = bt.side * 330;
+    const cx = bt.side * 360;
     pose(bt.win.d, {
       x: cx + bt.side * (1 - inn) * 220 - bt.side * out * 120,
       y: 20,
@@ -252,12 +255,16 @@ window.renderAt = async function renderAt(t) {
       persp: 2400,
       blur: (1 - inn) * 8 + out * 8,
     });
-    if (live) loads.push(showFrame(bt.win, bt.shot, Math.max(0, t - bt.a - 0.15)));
-    bt.hw.forEach((w, i) => pose(w, textIn(t, bt.a + 0.25 + i * 0.16, bt.b, 0.9, 40)));
-    pose(bt.sub, textIn(t, bt.a + 0.6, bt.b, 0.9, 26));
+    if (live) loads.push(showFrame(bt.win, bt.shot, Math.max(0, t - bt.a - 0.45)));
+    // The words come in once the last beat's window has gone.
+    bt.hw.forEach((w, i) => pose(w, textIn(t, bt.a + 0.7 + i * 0.16, bt.b, 0.9, 40)));
+    pose(bt.sub, textIn(t, bt.a + 1.05, bt.b, 0.9, 26));
   }
 
-  // 5
+  // 5–7 (on the late clock)
+  {
+  const t0 = t;
+  t = t - LATE;
   s5w.forEach((w, i) => pose(w, textIn(t, 34.3 + i * 0.18, 38.2)));
   pills.forEach((p, i) => {
     const k = textIn(t, 35.3 + i * 0.22, 38.25, 0.8, 30);
@@ -275,8 +282,10 @@ window.renderAt = async function renderAt(t) {
   pose(s7glow, { x: 960 - 700, y: 290 - 700 + 60, s: lerp(0.4, 1, pop7), o: clamp(pop7) * 0.8 });
   pose(s7name, textIn(t, 43.65));
   pose(s7url, textIn(t, 44.3));
+  t = t0;
+  }
 
-  document.getElementById('fade').style.opacity = (prog(t, 0, 0.4) < 1 ? 1 - prog(t, 0, 0.4) : inOutCubic(prog(t, 46.8, 48))).toFixed(3);
+  document.getElementById('fade').style.opacity = (prog(t, 0, 0.4) < 1 ? 1 - prog(t, 0, 0.4) : inOutCubic(prog(t, 46.8 + LATE, 48 + LATE))).toFixed(3);
   await Promise.all(loads);
 };
 </script>

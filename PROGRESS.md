@@ -585,6 +585,11 @@
   1080p, recorded from the real app (the `promo` demo scene) with captions burned in — notes and a Mermaid diagram,
   Word/CSV/PDF, SVG/3D/video, Select subject with the AI model pasted into the report, Ctrl+K and a four-way split —
   between a title and an end card; the demo folder's Goldberg recording (CC0) underneath.
+- **Ad** (`scripts/ad`): ~50 s of motion graphics at 1080p60 — kinetic type, the file-type icons gathering into the
+  app icon, shots of the real app in tilted windows (recorded clean by `readme-media.sh footage` and cut into shots at
+  the demo's marks), private / open-source / logo cards. `ad.html` poses everything for a time `t`; `render.mjs` steps
+  it frame by frame with Playwright and pipes the frames to ffmpeg, so motion is exact however slow a frame is to draw.
+  `python3 scripts/ad/make.py` → `build/bin/monoform-ad.mp4` (not committed).
 - **Microsoft Store package (MSIX)**: CI packs it on Windows next to the installer — manifest generated from the
   setup program's file types (`internal/msix`, `cmd/msix`; Go tests), logos with scale and size variants
   (`scripts/icons.py --msix`) indexed by `makepri` — and test-installs a self-signed copy (alias, app start,
