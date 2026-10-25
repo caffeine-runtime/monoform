@@ -464,14 +464,17 @@
   characters (of the selection too), Obsidian-style. Word/OpenDocument documents get the same outline of their
   headings and the counts. The folder's links are indexed in Go (`internal/notes`, parallel, unchanged files
   remembered). Go tests, unit tests and self-test `m46`.
-- **Polish and Spanish.** The whole interface (about 2,400 strings, the Windows setup program included) is in English,
-  Polish and Spanish. On first start Monoform follows the system language (macOS/Windows language list, Linux
-  locale); the welcome screen's first step and *Settings › Appearance › Language* pick another ("Like my computer",
-  English, Polski, Español); changing it reloads the window with the tabs kept. Numbers and dates use the language's
-  format, Polish gets its plural forms, the code editor's own phrases (search, Go to line) are translated too. Unit
-  tests fail on any untranslated interface text or missing translation; self-test `m47` runs the app in Polish and in
-  Spanish over a file of every kind. Messages that come from the Go side (some errors) are still English. See
-  docs/TRANSLATING.md.
+- **Polish, Spanish, German and French.** The whole interface (about 2,900 strings, the Windows setup program
+  included) is in English, Polish, Spanish, German and French. On first start Monoform follows the system language
+  (macOS/Windows language list, Linux locale); the welcome screen's first step and *Settings › Appearance › Language*
+  pick another ("Like my computer", English, Polski, Español, Deutsch, Français); changing it reloads the window with
+  the tabs kept. Numbers and dates use the language's format, Polish gets its plural forms, the code editor's own
+  phrases (search, Go to line) are translated too. German uses „Sie“, French « vous » with the no-break spaces of
+  French typography; terms follow what Windows, Office, Photoshop and AutoCAD use in each language. Unit tests fail
+  on any untranslated interface text, missing translation or a string translated two ways in different files;
+  `scripts/check_catalog.py` checks a new catalog file against the Polish one (keys, placeholders, plural forms).
+  Self-test `m47` runs the app in each language over a file of every kind. Messages that come from the Go side (some
+  errors) are still English. See docs/TRANSLATING.md.
 - **Paste into an empty tab** makes a new document in the editor for its kind: a picture in the image editor (all
   its tools), a table copied from a spreadsheet in the grid, JSON in the data view, SVG in the SVG editor, Excalidraw/
   draw.io on the board, Mermaid/Graphviz as a diagram, Markdown as a note, certificates, plain text; copied files

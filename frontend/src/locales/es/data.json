@@ -307,7 +307,7 @@
   "Show tree": "Mostrar árbol",
   "Show warnings in the filtered list": "Mostrar las advertencias en la lista filtrada",
   "Show {n} more ({remaining} remaining)": "Mostrar {n} más (quedan {remaining})",
-  "Signature": "Firma",
+  "[certificate] Signature": "Firma",
   "Signed by the next certificate in this file": "Firmado por el siguiente certificado de este archivo",
   "Size": "Tamaño",
   "Some pasted columns didn’t fit and were left out.": "Algunas columnas pegadas no cabían y se omitieron.",

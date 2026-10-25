@@ -303,7 +303,7 @@
   "New layer from selection ({shortcut})": "Nouveau calque à partir de la sélection ({shortcut})",
   "To layer": "En calque",
   "Remove the selected object and fill the gap with what could be behind it": "Supprimer l’objet sélectionné et combler le vide avec ce qui pourrait se trouver derrière",
-  "Remove": "Supprimer",
+  "Remove": "Retirer",
   "Delete pixels (Delete)": "Supprimer les pixels (Suppr)",
   "Fill with colour": "Remplir avec une couleur",
   "Blur the selection: opens Adjust → Blur (Gaussian, motion, zoom, spin, lens, tilt-shift, surface, frosted glass)": "Flouter la sélection : ouvre Réglages → Flou (gaussien, mouvement, zoom, rotation, objectif, tilt-shift, surface, verre dépoli)",

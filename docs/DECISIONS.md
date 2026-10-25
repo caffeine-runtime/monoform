@@ -453,7 +453,11 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   macOS, the Windows display language list, LANGUAGE/LC_*/LANG elsewhere), because webviews report it unreliably.
   Unit tests find every `t()` key statically and scan markup and code for untranslated text, so nothing new can
   slip through untranslated; `m47` checks the running app. Self-tests run in English (`MF_SYSTEM_LANG=en`). Not
-  translated yet: error texts made in Go and in web workers (no catalog there).
+  translated yet: error texts made in Go and in web workers (no catalog there). Because the catalogs merge into
+  one map, a key used in two areas has one translation; where a language needs two words for one English word
+  (German *Signatur* for a certificate, *Unterschrift* for a signed PDF), the code gives it a context
+  (`t('Signature', {}, 'certificate')`). German and French follow the terms of the programs people know in those
+  languages (Windows, Office, Photoshop, Acrobat) rather than literal translations.
 - **Pasting into an empty tab makes a scratch document**: the content goes to a temp file and opens like any file
   of its kind, so every editor works on it unchanged; the tab carries `scratch` (its name), counts as unsaved, and
   isn't kept in the session. Its first Save asks where, lets the editor write its temp copy the way it always saves,

@@ -111,7 +111,7 @@
           {/if}
           {#if i.names?.length}<dt>{t('Names')}</dt><dd class="names">{#each i.names as nm (nm)}<span>{nm}</span>{/each}</dd>{/if}
           {#if i.key}<dt>{t('Key')}</dt><dd>{i.key}{i.encrypted ? ` (${t('encrypted')})` : ''}</dd>{/if}
-          {#if i.signature}<dt>{t('Signature')}</dt><dd>{i.signature}</dd>{/if}
+          {#if i.signature}<dt>{t('Signature', {}, 'certificate')}</dt><dd>{i.signature}</dd>{/if}
           {#if i.serial}<dt>{t('Serial')}</dt><dd class="mono">{i.serial}</dd>{/if}
           {#if i.keyUsage?.length}<dt>{t('Key usage')}</dt><dd>{i.keyUsage.join(', ')}</dd>{/if}
           {#if i.extKeyUsage?.length}<dt>{t('Purposes')}</dt><dd>{i.extKeyUsage.join(', ')}</dd>{/if}

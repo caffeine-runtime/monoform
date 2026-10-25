@@ -1340,16 +1340,18 @@
   .font {
     height: 28px;
     padding: 0 6px;
-    width: 150px;
+    width: 176px;
   }
+  /* As wide as the label they show when nothing is picked ("Size", "Line spacing"), in any language. */
   .size,
   .spacing {
     height: 28px;
     padding: 0 4px;
-    width: 64px;
+    width: auto;
+    min-width: 64px;
   }
   .spacing {
-    width: 110px;
+    min-width: 110px;
   }
   .split {
     position: relative;

@@ -90,7 +90,7 @@ export default async function m47(dir: string) {
   assert(lang !== 'en', `started in the system's language (got ${lang}; run with MF_SYSTEM_LANG=pl-PL, es-ES, de-DE or fr-FR)`);
   assertEq(settings.value.language ?? '', '', 'no language chosen: it follows the system');
   assertEq(document.documentElement.lang, lang, '<html lang>');
-  assertEq(pickLanguage('', ['de-DE', `${lang}-XX`]), lang, 'first known system language wins');
+  assertEq(pickLanguage('', ['ja-JP', `${lang}-XX`]), lang, 'first known system language wins');
   assertEq(pickLanguage('en', [lang]), 'en', 'a chosen language beats the system');
   // Numbers in the language's format.
   const n = num(12345.5);
