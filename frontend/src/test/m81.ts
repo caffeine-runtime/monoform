@@ -5,13 +5,16 @@
 // text); a file that is already there is named before it is replaced. A
 // picture becomes a JPEG (its editor's Save menu has the command too), a CSV becomes
 // an Excel workbook, and "Stop converting this file on save" ends the
-// updates.
+// updates. The sidebar's right-click menu offers Convert… on a file that
+// converts and not on one that doesn't.
 import { EditorView } from '@codemirror/view';
 import { api } from '../core/backend';
 import { commands } from '../core/commands';
 import { companions } from '../core/convert.svelte';
 import { settings } from '../core/settings.svelte';
 import { workspace, type Tab } from '../core/tabs.svelte';
+import type { TreeItem } from '../core/tree.svelte';
+import { treeMenuContributions } from '../shell/treeActions';
 import { assert, assertEq, log, measureJank, press, sleep, waitFor } from './harness';
 
 const pane = (tab: Tab) => document.querySelector<HTMLElement>(`.tabview[data-tab-id="${tab.id}"]`);
@@ -125,6 +128,13 @@ export default async function m81(dir: string) {
   await sleep(1500);
   assertEq((await api.Stat(pdf)).modTime, kept.modTime, 'the PDF is no longer written');
   log('stop converting on save');
+
+  // The sidebar: Convert… where it applies.
+  const treeItem = (p: string): TreeItem => ({ id: p, path: p, name: p.split('/').pop()!, isDir: false }) as TreeItem;
+  const labels = (p: string) => treeMenuContributions.flatMap((f) => f(treeItem(p))).map((m) => m.label);
+  assert(labels(`${c}/trip.md`).includes('Convert…'), 'Convert… on a note');
+  assert(!labels(`${dir}/archives/sample.7z`).includes('Convert…'), 'not on a 7z archive');
+  log('the sidebar offers Convert… on files that convert');
 
   for (const t of [...workspace.tabs]) await workspace.close(t, { force: true });
 }

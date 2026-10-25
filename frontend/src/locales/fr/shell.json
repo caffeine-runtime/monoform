@@ -226,7 +226,6 @@
   "Update search-by-meaning index": "Mettre à jour l’index de recherche par le sens",
   "Compute hash…": "Calculer l’empreinte…",
   "Verify checksums": "Vérifier les sommes de contrôle",
-  "Convert to {format}": "Convertir en {format}",
   "Couldn’t convert the image": "Impossible de convertir l’image",
   "image": "image",
   "text": "texte",
@@ -476,5 +475,28 @@
   "only the first {count} rows": "seulement les {count} premières lignes",
   "the PDF’s fonts have no letters for some of the text ({chars})": "les polices du PDF n’ont pas de lettres pour une partie du texte ({chars})",
   "{names} will no longer be updated on save.": "Ne sera plus mis à jour à l’enregistrement : {names}.",
-  "Text, tables and pictures laid out anew, not Word’s page layout": "Texte, tableaux et images remis en page, pas la mise en page de Word"
+  "Text, tables and pictures laid out anew, not Word’s page layout": "Texte, tableaux et images remis en page, pas la mise en page de Word",
+  "Cancelled": "Annulé",
+  "Converted": "Converti",
+  "Converting…": "Conversion…",
+  "Convert…": "Convertir…",
+  "Nothing to convert": "Rien à convertir",
+  "Show in folder": "Afficher dans le dossier",
+  "Some files weren’t converted": "Certains fichiers n’ont pas été convertis",
+  "Left out: {n} files already in this format or that can’t become it": {
+    "one": "Laissé de côté : {n} fichier déjà dans ce format ou qui ne peut pas le prendre",
+    "other": "Laissés de côté : {n} fichiers déjà dans ce format ou qui ne peuvent pas le prendre"
+  },
+  "Replaces {n} files that are there now.": {
+    "one": "Remplace {n} fichier existant.",
+    "other": "Remplace {n} fichiers existants."
+  },
+  "Saves {n} files, each next to its original": {
+    "one": "Enregistre {n} fichier à côté de son original",
+    "other": "Enregistre {n} fichiers, chacun à côté de son original"
+  },
+  "These files don’t convert to other formats here.": {
+    "one": "Ce fichier ne peut pas être converti ici dans d’autres formats.",
+    "other": "Ces fichiers ne peuvent pas être convertis ici dans d’autres formats."
+  }
 }

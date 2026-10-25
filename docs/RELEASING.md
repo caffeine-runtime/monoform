@@ -44,7 +44,7 @@ building.
    - `monoform-amd64-installer.exe` — Windows setup (our own, `cmd/setup`)
    - `monoform-windows-amd64-portable.zip` — Windows, no install
    - `monoform-macos-universal.zip` — macOS app (Apple Silicon + Intel)
-   - `monoform-linux-amd64.tar.gz` — Linux binary, the `monoform` command, `.desktop` files (app and Quick peek)
+   - `monoform-linux-amd64.tar.gz` — Linux binary, the `monoform` command, `.desktop` files (app, Quick peek, Convert)
      and `install.sh`
    - every package includes `monoform` (inside the macOS app bundle; next to the Windows exe)
    - `SHA256SUMS` — checksums of all of the above

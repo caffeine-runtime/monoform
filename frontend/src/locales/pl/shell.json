@@ -242,7 +242,6 @@
   "Update search-by-meaning index": "Zaktualizuj indeks wyszukiwania według znaczenia",
   "Compute hash…": "Oblicz skrót…",
   "Verify checksums": "Sprawdź sumy kontrolne",
-  "Convert to {format}": "Konwertuj do {format}",
   "Couldn’t convert the image": "Nie udało się przekonwertować obrazu",
   "image": "obraz",
   "text": "tekst",
@@ -500,5 +499,36 @@
   "only the first {count} rows": "tylko pierwsze {count} wierszy",
   "the PDF’s fonts have no letters for some of the text ({chars})": "czcionki PDF-a nie mają liter dla części tekstu ({chars})",
   "{names} will no longer be updated on save.": "Przy zapisie nie będą już aktualizowane: {names}.",
-  "Text, tables and pictures laid out anew, not Word’s page layout": "Tekst, tabele i obrazy ułożone od nowa, nie układ stron z Worda"
+  "Text, tables and pictures laid out anew, not Word’s page layout": "Tekst, tabele i obrazy ułożone od nowa, nie układ stron z Worda",
+  "Cancelled": "Anulowano",
+  "Converted": "Przekonwertowano",
+  "Converting…": "Konwertowanie…",
+  "Convert…": "Konwertuj…",
+  "Nothing to convert": "Nie ma czego konwertować",
+  "Show in folder": "Pokaż w folderze",
+  "Some files weren’t converted": "Nie wszystkie pliki przekonwertowano",
+  "Left out: {n} files already in this format or that can’t become it": {
+    "one": "Pominięto {n} plik: już jest w tym formacie albo nie da się go na niego przekonwertować",
+    "few": "Pominięto {n} pliki: są już w tym formacie albo nie da się ich na niego przekonwertować",
+    "many": "Pominięto {n} plików: są już w tym formacie albo nie da się ich na niego przekonwertować",
+    "other": "Pominięto {n} pliku: są już w tym formacie albo nie da się ich na niego przekonwertować"
+  },
+  "Replaces {n} files that are there now.": {
+    "one": "Zastąpi {n} istniejący plik.",
+    "few": "Zastąpi {n} istniejące pliki.",
+    "many": "Zastąpi {n} istniejących plików.",
+    "other": "Zastąpi {n} istniejącego pliku."
+  },
+  "Saves {n} files, each next to its original": {
+    "one": "Zapisze {n} plik obok oryginału",
+    "few": "Zapisze {n} pliki, każdy obok oryginału",
+    "many": "Zapisze {n} plików, każdy obok oryginału",
+    "other": "Zapisze {n} pliku, każdy obok oryginału"
+  },
+  "These files don’t convert to other formats here.": {
+    "one": "Tego pliku nie da się tu przekonwertować na inne formaty.",
+    "few": "Tych plików nie da się tu przekonwertować na inne formaty.",
+    "many": "Tych plików nie da się tu przekonwertować na inne formaty.",
+    "other": "Tych plików nie da się tu przekonwertować na inne formaty."
+  }
 }

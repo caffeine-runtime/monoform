@@ -74,6 +74,10 @@ export function ConfirmQuit() {
   return window['go']['app']['App']['ConfirmQuit']();
 }
 
+export function ConvertFamilies() {
+  return window['go']['app']['App']['ConvertFamilies']();
+}
+
 export function ConvertFile(arg1, arg2) {
   return window['go']['app']['App']['ConvertFile'](arg1, arg2);
 }

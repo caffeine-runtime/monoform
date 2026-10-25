@@ -57,7 +57,7 @@ if [ -f "$C" ]; then
   for want in "Trip plan" "Kraków" "Added before converting." "passport"; do
     [[ "$text" == *"$want"* ]] || fail "converted PDF lacks \"$want\""
   done
-  pdffonts "$C" | grep -q "Inter" || fail "converted PDF without its embedded font"
+  pdffonts "$C" | grep -qi "inter.*yes" || fail "converted PDF without its embedded font"
   pdfimages -list "$C" | grep -q "image" || fail "converted PDF lost the note's picture"
   echo "convert: trip.pdf passes qpdf, its text reads back in poppler, Inter embedded, the picture is in"
 fi

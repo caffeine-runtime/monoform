@@ -13,6 +13,9 @@ import (
 // converts to (extensions, in the order they are offered).
 func (a *App) ConvertFormats() map[string][]string { return convert.Formats() }
 
+// ConvertFamilies lists the formats of each family in the order offered.
+func (a *App) ConvertFamilies() [][]string { return convert.Families() }
+
 // ConvertFile writes src in dst's format as a background job; the job's
 // result is a convert.Result (what had to be left out, if anything).
 func (a *App) ConvertFile(src, dst string) (string, error) {

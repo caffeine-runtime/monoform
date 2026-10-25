@@ -36,6 +36,7 @@ Usage:
   monoform [FILE...]                 open files in the app (a running window takes them)
   monoform --peek FILE               a small preview window (Open in editor expands it)
   monoform --preview FILE...         open files in preview mode (read-only until you choose Edit)
+  monoform --convert FILE...         a small window to convert the files to another format
 
   monoform hash [-a ALGO[,ALGO]] FILE...   print checksums (sha256 by default; md5, sha1,
                                         sha256, sha512, blake3 or all), like sha256sum

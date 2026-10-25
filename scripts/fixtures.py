@@ -5,7 +5,7 @@ import os, sys, struct, zlib, shutil
 
 d = sys.argv[1]
 # Outputs written by earlier self-test runs; operations refuse to overwrite.
-for rel in ("audio", "video", "pdf/out", "archives/out", "newfiles", "img/out", "img/subject (edited).png", "img/red (edited).png", "convert"):
+for rel in ("audio", "video", "pdf/out", "archives/out", "newfiles", "img/out", "img/subject (edited).png", "img/red (edited).png", "convert", "img/anim.webp", "img/anim.png"):
     q = os.path.join(d, rel)
     if os.path.isdir(q): shutil.rmtree(q, ignore_errors=True)
     elif os.path.exists(q): os.remove(q)

@@ -8,6 +8,7 @@ import { semantic } from './semantic/semantic.svelte';
 import { treeMenuContributions } from '../shell/treeActions';
 import type { MenuItem } from './ui.svelte';
 import { t } from './i18n';
+import { convertPaths, knownTargets } from './convert.svelte';
 
 const CHECKSUM_EXT = ['sha256', 'sha1', 'md5', 'sha512', 'b3', 'sha256sum', 'md5sum', 'sha1sum', 'sha512sum'];
 
@@ -82,9 +83,8 @@ export function registerTools() {
     if (item.archive || item.isDir) return [];
     const items: MenuItem[] = [{ label: t('Compute hash…'), run: () => void workspace.openTool('hash', item.path) }];
     if (CHECKSUM_EXT.includes(extname(item.path)) || /sums$/i.test(item.name)) items.push({ label: t('Verify checksums'), run: () => void workspace.openPath(item.path, { moduleId: 'checksum' }) });
-    if (['heic', 'heif', 'avif'].includes(extname(item.path)))
-      for (const f of ['jpg', 'png'])
-        items.push({ label: t('Convert to {format}', { format: f.toUpperCase() }), run: () => void convertImage(item.path, f) });
+    // Convert without opening it: the Save and convert dialog for this file.
+    if (knownTargets(item.path).length) items.push({ label: t('Convert…'), run: () => void convertPaths([item.path]) });
     return items;
   });
 }

@@ -732,6 +732,19 @@
   - `monoform convert IN OUT` does every pair headless; TIFF can now be written everywhere.
   Go tests (`internal/convert`: every family, Markdown parsing, Markdown → Word → Markdown round trip, Word/ODT/.doc
   fixtures, ODT styles and lists, page breaking, cancelling), CLI test, self-test `m81`.
+- **Convert without opening.** Right-click files in the system's file manager → **Convert with Monoform…**: a small
+  window with just the format dialog (`monoform --convert FILE…`) converts them next to the originals, shows each
+  file's progress and closes itself when all went well (Show in folder before that; Cancel stops the running one
+  without leaving half a file). A selection of several files comes to one window: the file manager starts one
+  process per file and the first window gathers the others' (a single-instance lock of its own, apart from the
+  editor's). Several files get the formats any of them can become; a file already in the chosen format, or of
+  another kind, is left out and counted. Registered by the Windows setup on the 31 types that convert
+  (`SystemFileAssociations\.ext\shell\Monoform.Convert`, any number of selected files) and removed by its
+  uninstall; on Linux `install.sh` adds it to Open With everywhere, to Dolphin's right-click menu (a service menu),
+  Nautilus's Scripts menu and Nemo's actions. Inside the app, the sidebar's right-click menu has **Convert…** on
+  files that convert (replacing HEIC's Convert to JPG/PNG). Go tests (launch flag, lock, setup registry, the list of
+  types equals the converter's), setup demo test, Windows install check in CI, self-test `m82` (started with
+  `--convert`).
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -768,6 +781,8 @@ available here).
 - Save and convert: the PDF writer doesn't shape complex scripts (Arabic, Hebrew, Indic) and its fonts have no
   Chinese, Japanese or Korean letters or emoji (the result says so); table cells in PDFs are plain text (no bold or
   links inside cells); video doesn't convert (no permissively licensed encoder), nor do PDFs into other formats.
+- Convert with Monoform isn't in macOS Finder yet (needs a Quick Action / Services entry), nor in the Microsoft Store
+  package (an MSIX context-menu entry needs a COM shell extension); Thunar users find it under Open With.
 - Microsoft Store copy: the `monoform` command is the app itself (a GUI program), so in a terminal the prompt
   comes back before its output; `monoform … > file` and pipes work as usual. The installer's command doesn't have this.
 - Quick peek can't be opened with Space in Finder or Explorer: that takes a native Quick Look extension (Swift,

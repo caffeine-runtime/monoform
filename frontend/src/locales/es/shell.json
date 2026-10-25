@@ -226,7 +226,6 @@
   "Update search-by-meaning index": "Actualizar el índice de búsqueda por significado",
   "Compute hash…": "Calcular hash…",
   "Verify checksums": "Verificar sumas de comprobación",
-  "Convert to {format}": "Convertir a {format}",
   "Couldn’t convert the image": "No se pudo convertir la imagen",
   "image": "imagen",
   "text": "texto",
@@ -476,5 +475,28 @@
   "only the first {count} rows": "solo las primeras {count} filas",
   "the PDF’s fonts have no letters for some of the text ({chars})": "las fuentes del PDF no tienen letras para parte del texto ({chars})",
   "{names} will no longer be updated on save.": "Ya no se actualizará al guardar: {names}.",
-  "Text, tables and pictures laid out anew, not Word’s page layout": "Texto, tablas e imágenes maquetados de nuevo, no el diseño de página de Word"
+  "Text, tables and pictures laid out anew, not Word’s page layout": "Texto, tablas e imágenes maquetados de nuevo, no el diseño de página de Word",
+  "Cancelled": "Cancelado",
+  "Converted": "Convertido",
+  "Converting…": "Convirtiendo…",
+  "Convert…": "Convertir…",
+  "Nothing to convert": "Nada que convertir",
+  "Show in folder": "Mostrar en la carpeta",
+  "Some files weren’t converted": "Algunos archivos no se convirtieron",
+  "Left out: {n} files already in this format or that can’t become it": {
+    "one": "Se omite {n} archivo que ya está en este formato o que no puede convertirse a él",
+    "other": "Se omiten {n} archivos que ya están en este formato o que no pueden convertirse a él"
+  },
+  "Replaces {n} files that are there now.": {
+    "one": "Reemplaza {n} archivo que ya existe.",
+    "other": "Reemplaza {n} archivos que ya existen."
+  },
+  "Saves {n} files, each next to its original": {
+    "one": "Guarda {n} archivo junto a su original",
+    "other": "Guarda {n} archivos, cada uno junto a su original"
+  },
+  "These files don’t convert to other formats here.": {
+    "one": "Este archivo no se puede convertir aquí a otros formatos.",
+    "other": "Estos archivos no se pueden convertir aquí a otros formatos."
+  }
 }

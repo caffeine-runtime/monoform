@@ -1,24 +1,30 @@
 <script lang="ts">
   // The Save and convert dialog: pick a format (arrows, digits, click),
-  // optionally keep the copy updated on every save, see where it goes.
+  // optionally keep the copy updated on every save, see where it goes. With
+  // several files (a file manager's selection) each copy goes next to its
+  // original; standalone, it is the whole window.
   import Icon from './Icon.svelte';
   import { AlertTriangle } from '../core/icons';
   import { api } from '../core/backend';
-  import { companions, convertUI, defaultTarget, familyOf, formatInfo } from '../core/convert.svelte';
+  import { companions, convertUI, defaultTarget, familyOf, formatInfo, plan } from '../core/convert.svelte';
   import { basename, dirname, extname } from '../core/paths';
-  import { t } from '../core/i18n';
+  import { t, tn } from '../core/i18n';
 
   const req = $derived(convertUI.request!);
-  const family = $derived(familyOf(req.src));
-  const kept = $derived(companions(req.src));
+  const src = $derived(req.srcs[0]);
+  const many = $derived(req.srcs.length > 1);
+  // The family whose formats are listed: the first file that becomes any of them.
+  const family = $derived(familyOf(req.srcs.find((p) => req.targets.some((e) => plan([p], e).jobs.length)) ?? src));
+  const kept = $derived(many ? [] : companions(src));
   let selected = $state(0);
   let custom = $state<string | null>(null);
   let always = $state(false);
-  let exists = $state(false);
+  let replacing = $state(0);
   let listEl = $state<HTMLDivElement>();
 
-  const ext = $derived(req.targets[selected]);
-  const dst = $derived(custom ?? kept.find((d) => extname(d) === ext) ?? defaultTarget(req.src, ext));
+  const ext = $derived(req.targets[Math.min(selected, req.targets.length - 1)]);
+  const dst = $derived(custom ?? kept.find((d) => extname(d) === ext) ?? defaultTarget(src, ext));
+  const work = $derived(many ? plan(req.srcs, ext) : { jobs: [{ src, dst }], left: [] as string[] });
 
   // Start on a format kept up to date already, if any.
   $effect.pre(() => {
@@ -29,10 +35,10 @@
     always = kept.some((d) => extname(d) === ext);
   });
   $effect(() => {
-    const target = dst;
-    exists = false;
-    void api.Exists([target]).then((r) => {
-      if (target === dst) exists = !!r?.[0] && !kept.includes(target);
+    const targets = work.jobs.map((j) => j.dst);
+    replacing = 0;
+    void api.Exists(targets).then((r) => {
+      if (targets.join('\n') === work.jobs.map((j) => j.dst).join('\n')) replacing = targets.filter((d, i) => r?.[i] && !kept.includes(d)).length;
     });
   });
   $effect(() => {
@@ -45,11 +51,12 @@
   }
 
   function done() {
+    if (!work.jobs.length) return;
     req.resolve({ ext, dst, always: req.canRepeat && always });
   }
 
   async function choosePlace() {
-    const info = formatInfo(ext, family, req.src);
+    const info = formatInfo(ext, family, src);
     let p = await api.SaveFileDialog(t('Save the converted file as'), dst, [{ name: info.label, patterns: `*.${ext}` }]);
     if (!p) return;
     if (extname(p) !== ext) p += `.${ext}`;
@@ -76,13 +83,17 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
-<div class="overlay" onclick={() => req.resolve(null)} onkeydown={key}>
-  <div class="dialog" role="dialog" aria-modal="true" aria-label={t('Save and convert')} tabindex="-1" use:focus onclick={(e) => e.stopPropagation()}>
-    <h2>{t('Save and convert')}</h2>
-    <p class="src" title={req.src}>{basename(req.src)}</p>
+<div class="overlay" class:standalone={req.standalone} onclick={() => !req.standalone && req.resolve(null)} onkeydown={key}>
+  <div class="dialog" role="dialog" aria-modal="true" aria-label={req.standalone ? t('Convert') : t('Save and convert')} tabindex="-1" use:focus onclick={(e) => e.stopPropagation()}>
+    <h2>{req.standalone ? t('Convert') : t('Save and convert')}</h2>
+    {#if many}
+      <p class="src" title={req.srcs.join('\n')}>{tn('{n} file', '{n} files', req.srcs.length)}: {req.srcs.map((p) => basename(p)).join(', ')}</p>
+    {:else}
+      <p class="src" title={src}>{basename(src)}</p>
+    {/if}
     <div class="formats" role="listbox" aria-label={t('Format')} bind:this={listEl}>
       {#each req.targets as e, i (e)}
-        {@const info = formatInfo(e, family, req.src)}
+        {@const info = formatInfo(e, family, src)}
         <div class="fmt" class:sel={i === selected} role="option" tabindex="-1" aria-selected={i === selected} onclick={() => pick(i)} ondblclick={() => (pick(i), done())}>
           <span class="name">{info.label}</span>
           <span class="hint">{info.hint}</span>
@@ -97,15 +108,25 @@
       </label>
     {/if}
     <div class="dest">
-      <span class="to" title={dst}>{dirname(dst) === dirname(req.src) ? t('Saves {name} next to the original', { name: basename(dst) }) : t('Saves {path}', { path: dst })}</span>
-      <button class="btn ghost" onclick={choosePlace}>{t('Change…')}</button>
+      {#if many}
+        <span class="to">{tn('Saves {n} file next to its original', 'Saves {n} files, each next to its original', work.jobs.length)}</span>
+      {:else}
+        <span class="to" title={dst}>{dirname(dst) === dirname(src) ? t('Saves {name} next to the original', { name: basename(dst) }) : t('Saves {path}', { path: dst })}</span>
+        <button class="btn ghost" onclick={choosePlace}>{t('Change…')}</button>
+      {/if}
     </div>
-    {#if exists}
-      <p class="warn"><Icon icon={AlertTriangle} size={14} />{t('Replaces the {name} that is there now.', { name: basename(dst) })}</p>
+    {#if work.left.length}
+      <p class="note" title={work.left.join('\n')}>{tn('Left out: {n} file already in this format or that can’t become it', 'Left out: {n} files already in this format or that can’t become it', work.left.length)}</p>
+    {/if}
+    {#if replacing}
+      <p class="warn">
+        <Icon icon={AlertTriangle} size={14} />
+        {many ? tn('Replaces {n} file that is there now.', 'Replaces {n} files that are there now.', replacing) : t('Replaces the {name} that is there now.', { name: basename(dst) })}
+      </p>
     {/if}
     <div class="buttons">
       <button class="btn" onclick={() => req.resolve(null)}>{t('Cancel')}</button>
-      <button class="btn primary" onclick={done}>{t('Convert')}</button>
+      <button class="btn primary" disabled={!work.jobs.length} onclick={done}>{t('Convert')}</button>
     </div>
   </div>
 </div>
@@ -132,6 +153,23 @@
     border: 1px solid var(--border-soft);
     outline: none;
     animation: mf-rise var(--dur-2) var(--ease-out);
+  }
+  /* The whole window: no dimming, no card. */
+  .overlay.standalone {
+    background: var(--bg-elevated);
+  }
+  .standalone .dialog {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    animation: none;
+    padding: 22px 24px 18px;
+  }
+  .standalone .formats {
+    flex: 1;
   }
   h2 {
     margin: 0;
@@ -196,6 +234,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    min-height: calc(28px * var(--ui-scale));
     color: var(--text-muted);
     font-size: var(--fs-small);
   }
@@ -204,6 +243,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .note {
+    margin: 6px 0 0;
+    color: var(--text-muted);
+    font-size: var(--fs-small);
   }
   .warn {
     display: flex;

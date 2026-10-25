@@ -364,6 +364,18 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   at a time per file, so every editor's own save path (tool-bar buttons, Ctrl+S, Save all) is covered without each
   calling it. A revert also clears the flag; converting the unchanged file again then is harmless.
 
+- **Convert with Monoform is a launch mode, gathering a selection through its own single-instance lock.**
+  Explorer runs a static verb's command once per selected file (`MultiSelectModel=Player` only lifts the limit of
+  15), and Linux file managers may do the same; one window per file would be a mess. The first `--convert` process
+  takes the lock `dev.monoform.convert` and the others hand it their files (the editor's lock is separate, so the
+  editor can be open or not). It reuses the Save and convert dialog in a standalone layout. The Windows verb sits
+  on `SystemFileAssociations\.ext` for the 31 types that convert, so it shows whichever app opens them, and a Go
+  test keeps that list equal to the converter's. Not done: macOS (a Quick Action or NSServices entry needs native
+  code or an Automator bundle), the Store package (an MSIX shell context menu needs a COM extension), Thunar (its
+  custom actions live in the user's own uca.xml, which an installer shouldn't rewrite; Open With lists it). No
+  drag-and-drop wheel or global hotkey like FileWheel or OrbitDrop: those need system-wide hooks and overlay windows
+  that don't work on Wayland and sit against the calm shell.
+
 ## Look & feel
 
 - **Darker palette than the brief's starting tokens** (user request): dark `--bg #1f1e1c`, sidebar `#181716`; light `--bg #f6f4ee`.

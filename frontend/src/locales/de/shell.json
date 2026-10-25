@@ -226,7 +226,6 @@
   "Update search-by-meaning index": "Index für die Suche nach Bedeutung aktualisieren",
   "Compute hash…": "Hash berechnen…",
   "Verify checksums": "Prüfsummen überprüfen",
-  "Convert to {format}": "In {format} konvertieren",
   "Couldn’t convert the image": "Das Bild konnte nicht konvertiert werden",
   "image": "Bild",
   "text": "Text",
@@ -476,5 +475,28 @@
   "only the first {count} rows": "nur die ersten {count} Zeilen",
   "the PDF’s fonts have no letters for some of the text ({chars})": "den Schriften des PDFs fehlen Zeichen für einen Teil des Textes ({chars})",
   "{names} will no longer be updated on save.": "Beim Speichern nicht mehr aktualisiert: {names}.",
-  "Text, tables and pictures laid out anew, not Word’s page layout": "Text, Tabellen und Bilder neu gesetzt, nicht das Seitenlayout von Word"
+  "Text, tables and pictures laid out anew, not Word’s page layout": "Text, Tabellen und Bilder neu gesetzt, nicht das Seitenlayout von Word",
+  "Cancelled": "Abgebrochen",
+  "Converted": "Umgewandelt",
+  "Converting…": "Wird umgewandelt…",
+  "Convert…": "Umwandeln…",
+  "Nothing to convert": "Nichts umzuwandeln",
+  "Show in folder": "Im Ordner zeigen",
+  "Some files weren’t converted": "Einige Dateien wurden nicht umgewandelt",
+  "Left out: {n} files already in this format or that can’t become it": {
+    "one": "Ausgelassen: {n} Datei, die schon dieses Format hat oder es nicht annehmen kann",
+    "other": "Ausgelassen: {n} Dateien, die schon dieses Format haben oder es nicht annehmen können"
+  },
+  "Replaces {n} files that are there now.": {
+    "one": "Ersetzt {n} vorhandene Datei.",
+    "other": "Ersetzt {n} vorhandene Dateien."
+  },
+  "Saves {n} files, each next to its original": {
+    "one": "Speichert {n} Datei neben ihrem Original",
+    "other": "Speichert {n} Dateien, jede neben ihrem Original"
+  },
+  "These files don’t convert to other formats here.": {
+    "one": "Diese Datei lässt sich hier nicht in andere Formate umwandeln.",
+    "other": "Diese Dateien lassen sich hier nicht in andere Formate umwandeln."
+  }
 }

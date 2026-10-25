@@ -9,11 +9,39 @@ import { toastError, ui } from './ui.svelte';
 import { t } from './i18n';
 
 let table: Record<string, string[]> | null = null;
+let families: string[][] = [];
 
 /** The formats a file converts to (extensions, in the order offered). */
 export async function targetsFor(path: string): Promise<string[]> {
-  table ??= (await api.ConvertFormats()) ?? {};
+  if (!table) {
+    [table, families] = await Promise.all([api.ConvertFormats().then((t) => t ?? {}), api.ConvertFamilies().then((f) => f ?? [])]);
+  }
   return table[extname(path)] ?? [];
+}
+
+/**
+ * What several files can become together: the formats of the first
+ * convertible file's family, each offered when at least one file isn't in
+ * it already (a PNG and a JPEG can both become WebP; JPEG is for the PNG).
+ */
+export async function targetsForAll(paths: string[]): Promise<string[]> {
+  const lists = await Promise.all(paths.map(targetsFor));
+  const first = lists.find((l) => l.length);
+  if (!first) return [];
+  const family = families.find((f) => first.every((e) => f.includes(e))) ?? first;
+  const any = new Set(lists.filter((l) => l.length && l.every((e) => family.includes(e))).flat());
+  return family.filter((e) => any.has(e));
+}
+
+/** Which of the files become ext (and where), and which are left out. */
+export function plan(paths: string[], ext: string): { jobs: { src: string; dst: string }[]; left: string[] } {
+  const jobs: { src: string; dst: string }[] = [];
+  const left: string[] = [];
+  for (const p of paths) {
+    if ((table?.[extname(p)] ?? []).includes(ext)) jobs.push({ src: p, dst: defaultTarget(p, ext) });
+    else left.push(p);
+  }
+  return { jobs, left };
 }
 
 /** Same, once the table is loaded (menus are built synchronously). */
@@ -124,23 +152,27 @@ export interface ConvertChoice {
 }
 
 export interface ConvertRequest {
-  src: string;
+  /** The files; with more than one, each copy goes next to its original. */
+  srcs: string[];
   targets: string[];
-  /** Offer "also on every save" (the file is open in an editor). */
+  /** Offer "also on every save" (one file, open in an editor). */
   canRepeat: boolean;
+  /** The dialog is the whole window (Convert with Monoform from a file manager). */
+  standalone: boolean;
   resolve: (r: ConvertChoice | null) => void;
 }
 
 class ConvertUI {
   request = $state<ConvertRequest | null>(null);
 
-  choose(src: string, targets: string[], canRepeat: boolean): Promise<ConvertChoice | null> {
+  choose(srcs: string[], targets: string[], opts: { canRepeat?: boolean; standalone?: boolean } = {}): Promise<ConvertChoice | null> {
     this.request?.resolve(null);
     return new Promise((resolve) => {
       this.request = {
-        src,
+        srcs,
         targets,
-        canRepeat,
+        canRepeat: !!opts.canRepeat && srcs.length === 1,
+        standalone: !!opts.standalone,
         resolve: (r) => {
           this.request = null;
           resolve(r);
@@ -173,10 +205,20 @@ export async function saveAndConvert(tab: Tab | null = workspace.active): Promis
     ui.toast(t('.{ext} files can’t be converted to other formats here.', { ext: extname(src) }), 'info');
     return;
   }
-  const choice = await convertUI.choose(src, targets, true);
+  const choice = await convertUI.choose([src], targets, { canRepeat: true });
   if (!choice) return;
   setCompanion(src, choice.dst, choice.always);
   return convertFile(src, choice.dst);
+}
+
+/** Converts files without opening them (the sidebar's right-click menu). */
+export async function convertPaths(paths: string[]) {
+  const targets = await targetsForAll(paths);
+  if (!targets.length) return;
+  const choice = await convertUI.choose(paths, targets);
+  if (!choice) return;
+  if (paths.length === 1) return void convertFile(paths[0], choice.dst);
+  for (const j of plan(paths, choice.ext).jobs) await convertFile(j.src, j.dst);
 }
 
 /** Converts src into dst's format as a job; says so when it is done. */
@@ -230,3 +272,22 @@ afterSave.push((tab) => {
     }, 500),
   );
 });
+
+/**
+ * Convert with Monoform (`monoform --convert FILE…`, from a file manager's
+ * right-click menu): the files of this window. Files from launches that
+ * come while it is open (a file manager starts one per selected file) are
+ * added here.
+ */
+class ConvertWindow {
+  on = $state(false);
+  files = $state<string[]>([]);
+  /** Set while a self-test drives the window: it doesn't close itself. */
+  testing = false;
+
+  add(paths: string[]) {
+    for (const p of paths) if (!this.files.includes(p)) this.files.push(p);
+  }
+}
+
+export const convertWindow = new ConvertWindow();

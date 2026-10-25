@@ -80,6 +80,16 @@ func Targets(path string) []string {
 	return out
 }
 
+// Families lists the formats each family converts to, in the order offered
+// (to merge the lists of several files).
+func Families() [][]string {
+	out := make([][]string, len(families))
+	for i, f := range families {
+		out[i] = slices.Clone(f.outs)
+	}
+	return out
+}
+
 // Formats lists every input extension with its targets, for the interface.
 func Formats() map[string][]string {
 	m := map[string][]string{}

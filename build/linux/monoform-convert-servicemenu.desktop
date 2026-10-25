@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Service
+X-KDE-ServiceTypes=KonqPopupMenu/Plugin
+MimeType=image/png;image/jpeg;image/gif;image/webp;image/bmp;image/tiff;image/x-icon;image/vnd.microsoft.icon;image/x-icns;image/heic;image/heif;image/avif;audio/mpeg;audio/x-wav;audio/wav;audio/flac;audio/x-flac;audio/ogg;audio/x-vorbis+ogg;text/csv;text/tab-separated-values;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;application/vnd.ms-excel.sheet.macroEnabled.12;application/vnd.ms-excel;application/vnd.oasis.opendocument.spreadsheet;application/json;text/markdown;text/x-markdown;application/vnd.openxmlformats-officedocument.wordprocessingml.document;application/msword;application/vnd.oasis.opendocument.text;
+Actions=convert
+X-KDE-Priority=TopLevel
+
+[Desktop Action convert]
+Name=Convert with Monoform…
+Icon=monoform
+Exec=monoform --convert %F
