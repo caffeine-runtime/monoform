@@ -21,8 +21,8 @@
 **Monoform is one window for everyday files — instead of the pile of small apps you open them with.** It opens notes
 and Markdown, PDFs, images, SVG and web pages, 3D models, music and other audio, videos, JSON/YAML/CSV, Word, Excel
 and OpenDocument files, archives and file hashes. It runs on Windows, macOS and Linux, works offline, collects no
-telemetry, needs no account and saves everything as plain files. Free and open source (MIT); written by Claude,
-directed and reviewed by its maintainer, with tests and CI.
+telemetry, needs no account and saves everything as plain files. Free and open source (MIT), with automated
+tests and CI on every change.
 
 <p align="center"><img src="docs/readme/promo.webp" width="100%" alt="Monoform in under a minute: a Markdown note with a Mermaid diagram drawing as it is typed; a Word report, a CSV of shuttle flights and a PDF fact sheet; an SVG, a 3D model and NASA video; Select subject cutting the Space Shuttle out of a NASA photo and pasting it into the report beside it; Ctrl+K opening a four-way split; free, open source, offline"></p>
 
@@ -178,12 +178,11 @@ and can be removed from the app (Settings › AI models, which can also download
 - [docs/DECISIONS.md](docs/DECISIONS.md): design decisions and the license of every dependency (all permissive;
   `scripts/licenses.py` audits the built binary and the bundled npm packages)
 - [docs/TESTING.md](docs/TESTING.md): automated scenarios and the manual checklist
-- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): tools to install, commands, layout and rules for contributors and coding agents ([CLAUDE.md](CLAUDE.md) is the short version)
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): tools to install, commands, layout and rules for contributors
 
 ## Licence
 
-[MIT](LICENSE). Monoform is written by AI (Anthropic's Claude, directed and reviewed by its maintainer) and uses
-permissively licensed components only.
+[MIT](LICENSE). Monoform uses permissively licensed components only.
 
 ## Gallery
 

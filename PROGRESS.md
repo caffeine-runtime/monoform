@@ -405,8 +405,8 @@
   administrator rights; *For everyone* asks. It notices a running Monoform (and can close it). The uninstaller (Settings › Apps) is the same program: *Remove Monoform?* with an option to delete settings, history and the search index too; file defaults go back to what they were.
   `--quiet` installs/uninstalls without a window (used by CI on a real Windows runner). Off Windows it runs as a demo
   that installs into a test folder (`scripts/setup-selftest.sh`).
-- **Rename: Monoform.** Hold It All is now **Monoform** — free, open source (MIT, `LICENSE`) and
-  AI-written — with a new logo (a single rounded M) on the app icon, the sidebar, the setup and every file icon. Each
+- **Rename: Monoform.** Hold It All is now **Monoform** — free and open source (MIT, `LICENSE`) —
+  with a new logo (a single rounded M) on the app icon, the sidebar, the setup and every file icon. Each
   file type's icon now has one shared form (page, tile, symbol, M) and differs only in colour and symbol. The
   command is `monoform` (`monoform hash`, `verify`, `info`, `convert`).
 - **A shorter app menu.** Families of options are one row each: the theme is a System / Light / Dark toggle,

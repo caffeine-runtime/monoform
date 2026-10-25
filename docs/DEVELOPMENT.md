@@ -1,7 +1,6 @@
 # Developing Monoform
 
-Everything needed to edit, build and test the project — for people and for coding agents (Claude Code on the
-desktop or the web, etc.). The short version for agents is in [`../CLAUDE.md`](../CLAUDE.md).
+Everything needed to edit, build and test the project.
 
 ## Stack
 
@@ -182,7 +181,6 @@ These come from the original brief and are checked in review and CI:
 
 ## Commits and branches
 
-- Work and push on the branch you've been given (today the default branch is `claude/monoform-v1-er4dqs`).
-- Commit after each milestone with a message that explains the change and why; keep the repository's existing
-  commit trailers if you're an agent that adds them.
+- Work on a branch and merge into `main` when the checks pass.
+- Commit after each milestone with a message that explains the change and why.
 - Don't open pull requests or publish releases unless asked; releasing is described in [RELEASING.md](RELEASING.md).

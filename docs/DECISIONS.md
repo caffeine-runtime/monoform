@@ -12,7 +12,7 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 
 ## Architecture
 
-- **Renamed to Monoform (was Hold It All).** A free, open-source (MIT), AI-written app; the logo is a
+- **Renamed to Monoform (was Hold It All).** A free, open-source (MIT) app; the logo is a
   single rounded M, kept as vector paths in `scripts/icons.py` (`build/icon/logo.svg`, `logo-mark.svg`), which also
   draws every icon from it. Everything carries the new name — window and product, binaries (`monoform`,
   `monoform-cli` for the Windows/macOS console command; on Linux the app binary answers `monoform hash …` itself),

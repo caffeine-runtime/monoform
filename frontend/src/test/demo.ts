@@ -504,7 +504,7 @@ async function promo(dir: string) {
   await sleep(2600);
   mark('end');
 
-  await card('Monoform', ['Free and open source (MIT) · Windows · macOS · Linux', 'Offline · no telemetry · no account — written by Claude, reviewed by a human'], 'github.com/caffeine-runtime/monoform', 3600);
+  await card('Monoform', ['Free and open source (MIT) · Windows · macOS · Linux', 'Offline · no telemetry · no account'], 'github.com/caffeine-runtime/monoform', 3600);
 }
 
 const FILES = ['notes/Notes (draft).md', 'Notes.md', 'Report.docx', 'Landmark flights.csv', 'Mission profile.svg', 'Shuttle fact sheet.pdf', 'Discovery in orbit.jpg', 'Fleet.xlsx', 'Rocket.svg', '3DBenchy.stl', 'Goldberg Variation 1.ogg', 'Atlantis landing.webm', 'notes/Moodboard.md', 'notes/Poster.md'];
