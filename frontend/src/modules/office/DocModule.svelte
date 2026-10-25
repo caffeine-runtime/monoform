@@ -1340,7 +1340,7 @@
   .font {
     height: 28px;
     padding: 0 6px;
-    width: 176px;
+    width: 196px;
   }
   /* As wide as the label they show when nothing is picked ("Size", "Line spacing"), in any language. */
   .size,

@@ -435,7 +435,9 @@
     color: var(--text-muted);
   }
   .row span:first-child {
-    width: 52px;
+    flex: none;
+    min-width: 52px;
+    white-space: nowrap;
   }
   .row input[type='range'] {
     accent-color: var(--accent);
