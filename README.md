@@ -24,7 +24,7 @@ and OpenDocument files, archives and file hashes. It runs on Windows, macOS and 
 telemetry, needs no account and saves everything as plain files. Free and open source (MIT); written by Claude,
 directed and reviewed by its maintainer, with tests and CI.
 
-<p align="center"><img src="docs/readme/tour.webp" width="100%" alt="In the dark theme, clicking through a project folder: Markdown notes, a Word report, a CSV of shuttle flights and a mission-profile SVG; then a NASA photo where Select subject (with the optional AI model) finds the shuttle, which is copied and pasted into the Word report dragged beside it"></p>
+<p align="center"><img src="docs/readme/promo.webp" width="100%" alt="Monoform in under a minute: a Markdown note with a Mermaid diagram drawing as it is typed; a Word report, a CSV of shuttle flights and a PDF fact sheet; an SVG, a 3D model and NASA video; Select subject cutting the Space Shuttle out of a NASA photo and pasting it into the report beside it; Ctrl+K opening a four-way split; free, open source, offline"></p>
 
 ## One window, every file
 

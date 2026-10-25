@@ -8,7 +8,8 @@
 # WebP. Needs a built app (scripts/build.sh), Xvfb and ffmpeg with libwebp.
 # "promo" records the 1080p promo video instead (H.264 MP4 with the demo
 # folder's Goldberg recording, CC0, faded in and out) to $MF_PROMO_OUT
-# (default build/bin/monoform-promo.mp4; not committed: upload it where needed).
+# (default build/bin/monoform-promo.mp4; not committed: upload it where needed)
+# and an animated WebP of it for the README (docs/readme/promo.webp).
 # The tour and the promo use the optional subject model (Better subject selection): it is
 # downloaded once (~200 MB, with the ONNX Runtime library) into
 # $MF_DEMO_MODELS (default ~/.cache/monoform-demo/app) and kept there.
@@ -101,6 +102,10 @@ for s in "${SCENES[@]}"; do
     ffmpeg -loglevel error -y -i "$WORK/promo-video.mp4" -i "$DIR/Goldberg Variation 1.ogg" -map 0:v -map 1:a -c:v copy \
       -af "volume=0.55,afade=t=in:d=1.2,afade=t=out:st=$(echo "$DUR - 2.5" | bc):d=2.5" -c:a aac -b:a 160k -shortest -movflags +faststart "$PROMO"
     echo "promo: $PROMO $(du -h "$PROMO" | cut -f1), ${DUR%.*} s"
+    # The README's copy: an animated WebP (GitHub doesn't play videos from the repository).
+    ffmpeg -loglevel error -y -i "$PROMO" -vf "fps=15,scale=1000:-1:flags=lanczos" -c:v libwebp_anim -lossless 0 -quality 75 \
+      -compression_level 6 -loop 0 "$OUT/promo.webp"
+    echo "promo: $OUT/promo.webp $(du -h "$OUT/promo.webp" | cut -f1)"
     continue
   fi
   ffmpeg -loglevel error -y -i "$WORK/$s.mkv" -vf "${SEL}fps=20,scale=1000:-1:flags=lanczos" \
