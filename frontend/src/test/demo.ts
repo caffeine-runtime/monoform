@@ -351,9 +351,17 @@ async function split() {
 // ------------------------------------------------------- promo (1080p video)
 
 let captionBox: HTMLDivElement | null = null;
+// "footage": the promo without captions and cards (the ad's shots), with a
+// mark at each section so scripts/ad can cut it into shots.
+let clean = false;
+const marks: [string, number][] = [];
+function mark(name: string) {
+  marks.push([name, (performance.now() - rec0) / 1000]);
+}
 
 /** A caption along the bottom, burned into the video for viewers without sound. */
 function caption(text: string) {
+  if (clean) return;
   captionBox?.remove();
   const box = document.createElement('div');
   Object.assign(box.style, { position: 'fixed', left: '0', right: '0', bottom: '58px', display: 'flex', justifyContent: 'center', zIndex: '2147483645', pointerEvents: 'none' });
@@ -377,6 +385,7 @@ function caption(text: string) {
 
 /** A full-window card (title or end), faded in over the app and out again. */
 async function card(title: string, lines: string[], foot: string, hold: number) {
+  if (clean) return;
   captionBox?.remove();
   const c = document.createElement('div');
   Object.assign(c.style, {
@@ -424,6 +433,7 @@ async function promo(dir: string) {
   await moveTo(200, 360, 300);
   caption('Notes with a live preview — diagrams draw as you type');
   await sleep(400);
+  mark('md');
   const el = await waitFor(() => pane(poster)?.querySelector<HTMLElement>('.cm-editor'), 'editor');
   const view = EditorView.findFromDOM(el)!;
   const c = centre(el);
@@ -438,11 +448,13 @@ async function promo(dir: string) {
   await typeCode(view, '  Orbit --> Landing\n', 45);
   await sleep(1500);
 
+  mark('docs');
   caption('Word, spreadsheets and PDFs — open and edit them in place');
   await openFromTree(dir, 'Report.docx', 1500);
   await openFromTree(dir, 'Landmark flights.csv', 1400);
   await openFromTree(dir, 'Shuttle fact sheet.pdf', 1700);
 
+  mark('more');
   caption('SVG, 3D models, video — the same window');
   await openFromTree(dir, 'Mission profile.svg', 1500);
   const model = await openFromTree(dir, '3DBenchy.stl', 0);
@@ -450,6 +462,7 @@ async function promo(dir: string) {
   await sleep(1900);
   await openFromTree(dir, 'Atlantis landing.webm', 1800);
 
+  mark('ai');
   const img = await openFromTree(dir, 'Discovery in orbit.jpg', 0);
   await waitFor(() => (img as unknown as { imageTest?: any }).imageTest?.editor(), 'image editor');
   await sleep(200);
@@ -461,6 +474,7 @@ async function promo(dir: string) {
   caption('…and drop it into the report next to it');
   await sleep(1900);
 
+  mark('split');
   caption('Ctrl+K finds any command, file or text');
   workspace.setSplit(null);
   await sleep(300);
@@ -470,13 +484,14 @@ async function promo(dir: string) {
   await sleep(600);
   caption('Up to four files side by side');
   await sleep(2600);
+  mark('end');
 
   await card('Monoform', ['Free and open source (MIT) · Windows · macOS · Linux', 'Offline · no telemetry · no account — written by Claude, reviewed by a human'], 'github.com/caffeine-runtime/monoform', 3600);
 }
 
 const FILES = ['notes/Notes (draft).md', 'Notes.md', 'Report.docx', 'Landmark flights.csv', 'Mission profile.svg', 'Shuttle fact sheet.pdf', 'Discovery in orbit.jpg', 'Fleet.xlsx', 'Rocket.svg', '3DBenchy.stl', 'Goldberg Variation 1.ogg', 'Atlantis landing.webm', 'notes/Moodboard.md', 'notes/Poster.md'];
 
-const SCENES: Record<string, (dir: string) => Promise<void>> = { tour, image, markdown, split, promo };
+const SCENES: Record<string, (dir: string) => Promise<void>> = { tour, image, markdown, split, promo, footage: (d) => ((clean = true), promo(d)) };
 
 // Stills for the gallery ("still-<name>"): the folder open, one view staged.
 const open = (f: string) => (d: string) => workspace.openPath(join(d, f)).then(() => undefined);
@@ -511,10 +526,10 @@ const STILLS: Record<string, (dir: string) => Promise<void>> = {
 
 export default async function demo(arg: string) {
   const [scene, dir, theme] = arg.split('|');
-  if (scene === 'promo') [W, H] = [1920, 1080];
+  if (scene === 'promo' || scene === 'footage') [W, H] = [1920, 1080];
   settings.update((s) => {
     s.theme = (theme as 'light' | 'dark') || 'dark';
-    s.uiScale = scene === 'promo' ? 1.6 : 1.1;
+    s.uiScale = scene === 'promo' || scene === 'footage' ? 1.6 : 1.1;
   });
   WindowSetSize(W, H);
   WindowSetPosition(0, 0); // it was centred for its first size: fill the screen from the corner
@@ -536,7 +551,7 @@ export default async function demo(arg: string) {
   }
   await sleep(1000);
   for (const t of [...workspace.tabs]) await workspace.close(t, { force: true });
-  if (scene === 'tour' || scene === 'promo' || scene.startsWith('still-')) await workspace.openFolder(dir);
+  if (scene === 'tour' || scene === 'promo' || scene === 'footage' || scene.startsWith('still-')) await workspace.openFolder(dir);
   if (scene.startsWith('still-')) {
     await STILLS[scene.slice(6)](dir);
     await sleep(3000);
@@ -558,6 +573,6 @@ export default async function demo(arg: string) {
   rec0 = performance.now();
   await sleep(500);
   await SCENES[scene](dir);
-  log(`demo: end cuts=${cuts.map(([a, b]) => `${a.toFixed(2)}-${b.toFixed(2)}`).join(',')}`);
+  log(`demo: end cuts=${cuts.map(([a, b]) => `${a.toFixed(2)}-${b.toFixed(2)}`).join(',')} marks=${marks.map(([n, t]) => `${n}:${t.toFixed(2)}`).join(',')}`);
   await sleep(1500); // still on screen while the recorder stops
 }

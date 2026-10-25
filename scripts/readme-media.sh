@@ -36,7 +36,7 @@ XPID=$!
 sleep 1
 
 # Theme per scene: light or dark.
-declare -A THEME=([tour]=dark [promo]=dark [image]=dark [markdown]=light [split]=dark
+declare -A THEME=([tour]=dark [promo]=dark [footage]=dark [image]=dark [markdown]=light [split]=dark
   [still-pdf]=dark [still-model3d]=dark [still-audio]=dark [still-video]=dark [still-json]=dark [still-archive]=dark)
 
 waitlog() { # waitlog <file> <text> <seconds>
@@ -48,13 +48,13 @@ MODELS=${MF_DEMO_MODELS:-${XDG_CACHE_HOME:-$HOME/.cache}/monoform-demo/app}
 start() { # start <scene> [seconds]: the app running the scene, logging to $LOG
   LOG="$WORK/$1.log"
   local cache="$WORK/cache"
-  [[ $1 == tour || $1 == promo || $1 == models ]] && cache=$MODELS
+  [[ $1 == tour || $1 == promo || $1 == footage || $1 == models ]] && cache=$MODELS
   MF_TEST=demo MF_TEST_ARG="$1|$DIR|${THEME[$1]:-light}" MF_SETTINGS="$WORK/$1-settings.json" MF_CACHE="$cache" \
     timeout "${2:-180}" "$BIN" >"$LOG" 2>&1 &
   APP=$!
 }
 
-if [[ " ${SCENES[*]} " == *" tour "* || " ${SCENES[*]} " == *" promo "* ]]; then
+if [[ " ${SCENES[*]} " =~ " "(tour|promo|footage)" " ]]; then
   mkdir -p "$MODELS"
   start models 1800
   waitlog "$LOG" "demo: models ready" 1800
@@ -78,7 +78,7 @@ for s in "${SCENES[@]}"; do
     continue
   fi
   SIZE=1280x800
-  [[ $s == promo ]] && SIZE=1920x1080
+  [[ $s == promo || $s == footage ]] && SIZE=1920x1080
   start "$s" 240
   waitlog "$LOG" "demo: rec" 60
   ffmpeg -loglevel error -y -f x11grab -draw_mouse 0 -framerate 30 -video_size $SIZE -i :97 -c:v libx264rgb -crf 0 -preset ultrafast "$WORK/$s.mkv" &
@@ -93,6 +93,25 @@ for s in "${SCENES[@]}"; do
   if [ -n "$CUTS" ]; then
     EXPR=$(echo "$CUTS" | tr ',' '\n' | awk -F- '{printf "%sbetween(t,%s,%s)", (NR>1?"+":""), $1, $2}')
     SEL="select='not($EXPR)',setpts=N/30/TB,"
+  fi
+  if [[ $s == footage ]]; then
+    # The ad's shots (scripts/ad/make.py): the clean promo with the waits cut, near-lossless,
+    # and its section marks moved onto the cut timeline.
+    AD=${MF_AD_DIR:-build/bin/ad}
+    mkdir -p "$AD"
+    ffmpeg -loglevel error -y -i "$WORK/$s.mkv" -vf "${SEL}fps=30,format=yuv420p" -c:v libx264 -preset slow -crf 10 -an "$AD/footage.mp4"
+    MARKS=$(grep -o 'marks=[^ ]*' "$LOG" | cut -d= -f2)
+    python3 - "$CUTS" "$MARKS" > "$AD/marks.json" <<'PY'
+import json, sys
+cuts = [tuple(map(float, c.split('-'))) for c in sys.argv[1].split(',') if c]
+out = {}
+for m in sys.argv[2].split(','):
+    name, t = m.split(':'); t = float(t)
+    out[name] = round(t - sum(min(b, t) - a for a, b in cuts if a < t), 3)
+print(json.dumps(out))
+PY
+    echo "footage: $AD/footage.mp4, marks $(cat "$AD/marks.json")"
+    continue
   fi
   if [[ $s == promo ]]; then
     PROMO=${MF_PROMO_OUT:-build/bin/monoform-promo.mp4}

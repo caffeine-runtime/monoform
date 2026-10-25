@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Monoform ad</title>
+<!--
+  The Monoform ad as a function of time: renderAt(t) poses every element for
+  second t, so scripts/ad/render.mjs can step it frame by frame (1080p60)
+  however long a frame takes to draw. window.AD (set by the renderer) holds the
+  font, the icons and the app shots (JPEG frames recorded from the real app).
+-->
+<style>
+  @font-face { font-family: 'InterAd'; src: url('__FONT__') format('woff2'); font-weight: 100 900; }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #050506; }
+  body { font-family: 'InterAd', system-ui, sans-serif; color: #f5f2ec; -webkit-font-smoothing: antialiased; }
+  .layer { position: absolute; inset: 0; }
+  .center { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .glow { position: absolute; width: 1400px; height: 1400px; border-radius: 50%; left: 0; top: 0; }
+  .h1 { font-weight: 800; letter-spacing: -0.045em; line-height: 1; white-space: nowrap; }
+  .warm { background: linear-gradient(100deg, #fff4e8 0%, #f3b589 55%, #e07846 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .muted { color: #a9a39a; }
+  .word { display: inline-block; will-change: transform, opacity, filter; }
+  .win { position: absolute; border-radius: 22px; overflow: hidden; background: #111;
+         box-shadow: 0 50px 140px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.07); will-change: transform, opacity; }
+  .win img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .icon { position: absolute; left: 0; top: 0; will-change: transform, opacity; }
+  .icon svg { width: 100%; height: 100%; display: block; }
+  .pill { display: inline-flex; align-items: center; gap: 14px; padding: 18px 30px; border-radius: 999px; font-size: 34px; font-weight: 600;
+          background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); }
+  .pill svg { width: 30px; height: 30px; }
+  .vignette { background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%); pointer-events: none; }
+</style>
+</head>
+<body>
+<div class="layer" id="bg"></div>
+<div class="layer" id="stage"></div>
+<div class="layer vignette"></div>
+<div class="layer" id="fade" style="background:#000;opacity:0"></div>
+<script>
+'use strict';
+const AD = window.AD;
+document.head.querySelector('style').textContent = document.head.querySelector('style').textContent.replace('__FONT__', AD.font);
+
+// ---------------------------------------------------------------- easing
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const outQuart = (x) => 1 - Math.pow(1 - x, 4);
+const outExpo = (x) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x));
+const inOutCubic = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+// A spring that settles: overshoots a little, then rests at 1.
+const spring = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : 1 - Math.exp(-6.5 * x) * Math.cos(x * Math.PI * 2.2));
+const lerp = (a, b, k) => a + (b - a) * k;
+
+// --------------------------------------------------------------- helpers
+const stage = document.getElementById('stage');
+function el(tag, cls, parent = stage, html = '') {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html) e.innerHTML = html;
+  parent.appendChild(e);
+  return e;
+}
+function pose(e, { x = 0, y = 0, s = 1, o = 1, blur = 0, rx = 0, ry = 0, persp = 0 } = {}) {
+  e.style.opacity = o.toFixed(3);
+  e.style.transform = `${persp ? `perspective(${persp}px) ` : ''}translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) scale(${s.toFixed(4)})`;
+  e.style.filter = blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : 'none';
+  e.style.visibility = o < 0.002 ? 'hidden' : 'visible';
+}
+// In at a (rise, unblur), out at b (lift, blur): the house style for text.
+function textIn(t, a, b, dur = 0.9, dy = 34) {
+  const i = outQuart(prog(t, a, a + dur));
+  const o = b === undefined ? 0 : inOutCubic(prog(t, b, b + 0.55));
+  return { y: (1 - i) * dy - o * 24, o: i * (1 - o), blur: (1 - i) * 14 + o * 10, s: 1 - o * 0.03 };
+}
+// A line of words, each its own span (staggered reveals).
+function words(parent, text, cls = '') {
+  return text.split(' ').map((w, i, all) => el('span', `word ${cls}`, parent, w + (i < all.length - 1 ? '&nbsp;' : '')));
+}
+function line(cls, style) {
+  const d = el('div', cls);
+  Object.assign(d.style, { position: 'absolute', left: '0', right: '0', textAlign: 'center', ...style });
+  return d;
+}
+
+// ------------------------------------------------------------ background
+const bg = document.getElementById('bg');
+const glows = [
+  { c: 'rgba(224,120,70,.30)', x: 0.2, y: 0.25, sx: 0.07, sy: 0.05, ph: 0 },
+  { c: 'rgba(43,127,124,.26)', x: 0.78, y: 0.7, sx: 0.06, sy: 0.07, ph: 2 },
+  { c: 'rgba(120,96,200,.16)', x: 0.6, y: 0.18, sx: 0.08, sy: 0.04, ph: 4 },
+].map((g) => {
+  const d = el('div', 'glow', bg);
+  d.style.background = `radial-gradient(circle, ${g.c} 0%, transparent 62%)`;
+  return { d, ...g };
+});
+function background(t, warmth) {
+  for (const g of glows) {
+    const x = (g.x + Math.sin(t * 0.21 + g.ph) * g.sx) * 1920 - 700;
+    const y = (g.y + Math.cos(t * 0.17 + g.ph) * g.sy) * 1080 - 700;
+    g.d.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+    g.d.style.opacity = (0.55 + 0.45 * warmth).toFixed(3);
+  }
+}
+
+// ---------------------------------------------------------------- shots
+// A window showing an app shot; the frame for a time is picked by renderAt.
+function shotWindow(w, h) {
+  const d = el('div', 'win');
+  Object.assign(d.style, { width: `${w}px`, height: `${h}px`, left: `${(1920 - w) / 2}px`, top: `${(1080 - h) / 2}px` });
+  const img = el('img', '', d);
+  return { d, img, src: '' };
+}
+async function showFrame(win, shot, local) {
+  const s = AD.shots[shot];
+  const n = Math.max(0, Math.min(s.count - 1, Math.floor(local * 30 * s.speed)));
+  const src = `${s.dir}/${String(n + 1).padStart(4, '0')}.jpg`;
+  if (win.src !== src) {
+    win.src = src;
+    win.img.src = src;
+    await win.img.decode().catch(() => {});
+  }
+}
+
+// ================================================================ scenes
+// 1 · Every file. One window.
+const s1a = line('h1', { top: '360px', fontSize: '150px' });
+const s1aw = words(s1a, 'Every file.');
+const s1b = line('h1', { top: '540px', fontSize: '150px' });
+const s1bw = words(s1b, 'One window.', 'warm');
+
+// 2 · The file types gather into the app icon.
+const ICON = 190;
+const s2icons = AD.fileIcons.map((svg) => {
+  const d = el('div', 'icon', stage, svg);
+  Object.assign(d.style, { width: `${ICON}px`, height: `${ICON}px` });
+  return d;
+});
+const APP = 260;
+const s2glow = el('div', 'glow');
+s2glow.style.background = 'radial-gradient(circle, rgba(240,163,131,.45) 0%, transparent 60%)';
+const s2app = el('div', 'icon', stage, AD.appIcon);
+Object.assign(s2app.style, { width: `${APP}px`, height: `${APP}px` });
+const s2name = line('h1', { top: '700px', fontSize: '110px' });
+s2name.textContent = 'Monoform';
+
+// 3 · The window rises.
+const s3head = line('', { top: '70px', fontSize: '52px', fontWeight: '600', letterSpacing: '-0.02em' });
+s3head.innerHTML = '<span class="muted">Notes, PDFs, images, documents, 3D, audio, video.</span> One app.';
+const s3win = shotWindow(1440, 810);
+
+// 4 · Feature beats: a headline on one side, the app at work on the other.
+const BEATS = [
+  { shot: 'md', a: 11.8, b: 16.2, side: 1, head: 'Write.', sub: 'Markdown with a live preview.<br>Diagrams draw as you type.' },
+  { shot: 'docs', a: 16.0, b: 20.4, side: -1, head: 'Read. Fill. Sign.', sub: 'PDFs, Word documents<br>and spreadsheets, in place.' },
+  { shot: 'ai', a: 20.2, b: 25.8, side: 1, head: 'Cut it out.', sub: 'Select subject with on-device AI.<br>Paste it anywhere.' },
+  { shot: 'more', a: 25.6, b: 30.0, side: -1, head: 'And the rest.', sub: 'SVG, 3D models, audio,<br>video and archives.' },
+  { shot: 'split', a: 29.8, b: 34.2, side: 1, head: 'Side by side.', sub: 'Ctrl+K, split, and keep<br>four files in view.' },
+].map((bt) => {
+  const text = el('div', '');
+  Object.assign(text.style, { position: 'absolute', top: '0', bottom: '0', width: '640px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '28px',
+    left: bt.side > 0 ? '110px' : 'auto', right: bt.side > 0 ? 'auto' : '110px' });
+  const h = el('div', 'h1', text);
+  h.style.fontSize = bt.head.length > 12 ? '96px' : '120px';
+  h.style.whiteSpace = 'normal';
+  const hw = words(h, bt.head, 'warm');
+  const sub = el('div', 'muted', text, bt.sub);
+  Object.assign(sub.style, { fontSize: '36px', fontWeight: '500', lineHeight: '1.3', letterSpacing: '-0.01em' });
+  const win = shotWindow(1120, 630);
+  return { ...bt, text, hw, sub, win };
+});
+
+// 5 · Private by design.
+const s5 = line('h1', { top: '330px', fontSize: '140px' });
+const s5w = [...words(s5, 'Private'), ...words(s5, 'by design.', 'warm')];
+const s5pills = el('div', '');
+Object.assign(s5pills.style, { position: 'absolute', left: '0', right: '0', top: '600px', display: 'flex', justifyContent: 'center', gap: '26px' });
+const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="#f0a383" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.2 4.2L19 7"/></svg>';
+const pills = ['Works offline', 'No telemetry', 'No account'].map((p) => el('div', 'pill', s5pills, CHECK + `<span>${p}</span>`));
+
+// 6 · Free. Open source.
+const s6a = line('h1', { top: '300px', fontSize: '150px' });
+const s6aw = [...words(s6a, 'Free.'), ...words(s6a, 'Open source.', 'warm')];
+const s6b = line('', { top: '520px', fontSize: '50px', fontWeight: '600', letterSpacing: '-0.02em' });
+s6b.textContent = 'Windows · macOS · Linux';
+const s6c = line('muted', { top: '620px', fontSize: '36px', fontWeight: '500' });
+s6c.textContent = 'Written by Claude. Directed and reviewed by a human.';
+
+// 7 · Logo and address.
+const s7glow = el('div', 'glow');
+s7glow.style.background = 'radial-gradient(circle, rgba(240,163,131,.35) 0%, transparent 60%)';
+const s7app = el('div', 'icon', stage, AD.appIcon);
+Object.assign(s7app.style, { width: '200px', height: '200px' });
+const s7name = line('h1', { top: '560px', fontSize: '110px' });
+s7name.textContent = 'Monoform';
+const s7url = line('', { top: '720px' });
+s7url.innerHTML = '<span style="display:inline-block;padding:16px 30px;border-radius:16px;background:rgba(224,120,70,.14);color:#f0a383;font:600 36px ui-monospace,SFMono-Regular,Menlo,monospace">github.com/caffeine-runtime/monoform</span>';
+
+const DURATION = 48;
+
+// ================================================================ render
+window.DURATION = DURATION;
+window.renderAt = async function renderAt(t) {
+  background(t, t < 8 ? 0.6 : 1);
+  const loads = [];
+
+  // 1
+  s1aw.forEach((w, i) => pose(w, textIn(t, 0.3 + i * 0.22, 3.1)));
+  s1bw.forEach((w, i) => pose(w, textIn(t, 1.25 + i * 0.22, 3.15)));
+
+  // 2: icons on a turning, tilted ring, then gathered into the app icon
+  const gather = inOutCubic(prog(t, 5.5, 6.45));
+  s2icons.forEach((d, i) => {
+    const n = s2icons.length;
+    const appear = outExpo(prog(t, 3.5 + i * 0.07, 4.3 + i * 0.07));
+    const a = (i / n) * Math.PI * 2 + t * 0.32;
+    const depth = (Math.sin(a) + 1) / 2; // 0 back … 1 front
+    const r = 1 - gather;
+    const x = 960 + Math.cos(a) * 640 * r - ICON / 2;
+    const y = 540 + Math.sin(a) * 250 * r - ICON / 2 - 20;
+    const s = lerp(0.55, 1.08, depth) * appear * lerp(1, 0.35, gather);
+    const out = prog(t, 6.2, 6.5);
+    pose(d, { x, y, s, o: appear * lerp(0.45, 1, depth) * (1 - out), blur: (1 - depth) * 3 * (1 - gather) });
+    d.style.zIndex = String(Math.round(depth * 100));
+  });
+  const pop = spring(prog(t, 6.2, 7.3));
+  const s2out = inOutCubic(prog(t, 7.55, 8.1));
+  pose(s2app, { x: 960 - APP / 2, y: 470 - APP / 2 - s2out * 40, s: lerp(0.4, 1, pop) * (1 - s2out * 0.1), o: clamp(pop * 3) * (1 - s2out), blur: s2out * 12 });
+  s2app.style.zIndex = '200';
+  pose(s2glow, { x: 960 - 700, y: 470 - 700, s: lerp(0.3, 1, pop), o: clamp(pop) * 0.9 * (1 - s2out) });
+  pose(s2name, textIn(t, 6.75, 7.55));
+
+  // 3: the window rises and lays down flat
+  const rise = outQuart(prog(t, 7.95, 9.7));
+  const s3out = inOutCubic(prog(t, 11.35, 12.0));
+  pose(s3win.d, { y: lerp(420, 60, rise) - s3out * 30, rx: lerp(34, 0, rise), s: lerp(0.86, 1, rise) * (1 - s3out * 0.08), o: clamp(rise * 2.2) * (1 - s3out), persp: 2600, blur: s3out * 10 });
+  if (t > 7.8 && t < 12.1) loads.push(showFrame(s3win, 'docs', 0));
+  pose(s3head, textIn(t, 8.7, 11.3));
+
+  // 4: beats
+  for (const bt of BEATS) {
+    const live = t > bt.a - 0.1 && t < bt.b + 0.7;
+    const inn = outQuart(prog(t, bt.a, bt.a + 1.0));
+    const out = inOutCubic(prog(t, bt.b, bt.b + 0.6));
+    const drift = prog(t, bt.a, bt.b + 0.6);
+    const cx = bt.side * 330;
+    pose(bt.win.d, {
+      x: cx + bt.side * (1 - inn) * 220 - bt.side * out * 120,
+      y: 20,
+      ry: -bt.side * lerp(16, 6, inn) + bt.side * drift * 3,
+      s: lerp(0.9, 1, inn) * (1 + drift * 0.03),
+      o: inn * (1 - out),
+      persp: 2400,
+      blur: (1 - inn) * 8 + out * 8,
+    });
+    if (live) loads.push(showFrame(bt.win, bt.shot, Math.max(0, t - bt.a - 0.15)));
+    bt.hw.forEach((w, i) => pose(w, textIn(t, bt.a + 0.25 + i * 0.16, bt.b, 0.9, 40)));
+    pose(bt.sub, textIn(t, bt.a + 0.6, bt.b, 0.9, 26));
+  }
+
+  // 5
+  s5w.forEach((w, i) => pose(w, textIn(t, 34.3 + i * 0.18, 38.2)));
+  pills.forEach((p, i) => {
+    const k = textIn(t, 35.3 + i * 0.22, 38.25, 0.8, 30);
+    pose(p, { ...k, s: k.s * lerp(0.92, 1, outQuart(prog(t, 35.3 + i * 0.22, 36.1 + i * 0.22))) });
+  });
+
+  // 6
+  s6aw.forEach((w, i) => pose(w, textIn(t, 38.9 + (i ? 0.45 + i * 0.16 : 0), 42.6)));
+  pose(s6b, textIn(t, 40.0, 42.65));
+  pose(s6c, textIn(t, 40.7, 42.7));
+
+  // 7
+  const pop7 = spring(prog(t, 43.2, 44.3));
+  pose(s7app, { x: 960 - 100, y: 330 - 100 + 60, s: lerp(0.5, 1, pop7), o: clamp(pop7 * 3) });
+  pose(s7glow, { x: 960 - 700, y: 290 - 700 + 60, s: lerp(0.4, 1, pop7), o: clamp(pop7) * 0.8 });
+  pose(s7name, textIn(t, 43.65));
+  pose(s7url, textIn(t, 44.3));
+
+  document.getElementById('fade').style.opacity = (prog(t, 0, 0.4) < 1 ? 1 - prog(t, 0, 0.4) : inOutCubic(prog(t, 46.8, 48))).toFixed(3);
+  await Promise.all(loads);
+};
+</script>
+</body>
+</html>
