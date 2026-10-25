@@ -1,8 +1,9 @@
 ## What's new
 
-- Word documents: Ctrl+B makes the selection bold and Ctrl+K inserts a link (they hid the sidebar and opened the command palette).
-- Code editor: Ctrl+/ comments and uncomments lines (it showed the shortcut list).
-- The code editor's Ctrl+K Ctrl+U / Ctrl+K Ctrl+L case shortcuts are gone (Ctrl+K is the command palette); UPPERCASE and lowercase are in the palette and the right-click menu.
+- Smooth, quick animations across the interface: the command palette, menus, dialogs, notifications, side panels, switching and closing tabs. Settings › Appearance › Reduce motion turns them off (they are also off when your system asks for less motion).
+- The sidebar can be hidden from a button in its header (Ctrl+B as before, or drag its edge away); narrowed, it no longer spills its buttons over the tabs.
+- At large interface sizes a long file tree no longer pushes the status bar out of the window.
+- Word documents: Ctrl+B bolds and Ctrl+K inserts a link; code editor: Ctrl+/ comments lines.
 
 ## Downloads
 
