@@ -33,6 +33,9 @@ MEDIA = {
     'atlantis.jpg': (NASA + 'image/iss015e12854/iss015e12854~large.jpg',
                      'eba42825e564870b873f57472c2b87da771857243f28afc6d2574a3235f26126',
                      'Space Shuttle Atlantis seen from the ISS, STS-117, 10 June 2007 — NASA, ISS015-E-12854 (public domain)'),
+    'discovery.jpg': (NASA + 'image/iss018e043308/iss018e043308~orig.jpg',
+                      '4b3940abc2a42425f009d15b2597568834ce37ffb5d733f747adfbe79c90088f',
+                      'Space Shuttle Discovery after undocking from the ISS, STS-119, 25 March 2009 — NASA, ISS018-E-043308 (public domain)'),
     'launch.jpg': (NASA + 'image/jsc2011e067588/jsc2011e067588~large.jpg',
                    '8cce5cfb1ab20af8d4cfa67ec8714caaac5672da782870b0655aab52defb45e5',
                    'Atlantis lifts off on STS-135, 8 July 2011 — NASA, JSC2011-E-067588 (public domain)'),
@@ -224,7 +227,8 @@ FLIGHTS = [
     ('STS-71', 'Atlantis', '1995-06-27', '1995-07-07', 'First docking with Mir'),
     ('STS-88', 'Endeavour', '1998-12-04', '1998-12-15', 'First ISS assembly flight (Unity)'),
     ('STS-114', 'Discovery', '2005-07-26', '2005-08-09', 'Return to flight'),
-    ('STS-117', 'Atlantis', '2007-06-08', '2007-06-22', 'The photo in this folder'),
+    ('STS-117', 'Atlantis', '2007-06-08', '2007-06-22', 'The photo on the fact sheet'),
+    ('STS-119', 'Discovery', '2009-03-15', '2009-03-28', 'The photo in this folder'),
     ('STS-125', 'Atlantis', '2009-05-11', '2009-05-24', 'Last Hubble servicing'),
     ('STS-129', 'Atlantis', '2009-11-16', '2009-11-27', 'The landing video'),
     ('STS-133', 'Discovery', '2011-02-24', '2011-03-09', "Discovery's last flight"),
@@ -439,7 +443,8 @@ MISSIONS = {
         {'name': 'STS-1', 'orbiter': 'Columbia', 'launch': '1981-04-12', 'note': 'first flight'},
         {'name': 'STS-31', 'orbiter': 'Discovery', 'launch': '1990-04-24', 'note': 'carried the Hubble Space Telescope'},
         {'name': 'STS-88', 'orbiter': 'Endeavour', 'launch': '1998-12-04', 'note': 'first ISS assembly flight (Unity)'},
-        {'name': 'STS-117', 'orbiter': 'Atlantis', 'launch': '2007-06-08', 'note': 'the photo in this folder'},
+        {'name': 'STS-117', 'orbiter': 'Atlantis', 'launch': '2007-06-08', 'note': 'the photo on the fact sheet'},
+        {'name': 'STS-119', 'orbiter': 'Discovery', 'launch': '2009-03-15', 'note': 'the photo in this folder'},
         {'name': 'STS-129', 'orbiter': 'Atlantis', 'landing': '2009-11-27', 'note': 'the landing video'},
         {'name': 'STS-135', 'orbiter': 'Atlantis', 'launch': '2011-07-08', 'landing': '2011-07-21', 'note': 'last flight'},
     ],
@@ -482,8 +487,9 @@ def main():
     os.makedirs(os.path.join(root, 'notes'))
     put = lambda name: os.path.join(root, name)  # noqa: E731
 
-    # NASA's photos: the in-orbit one without the ID strip along its bottom.
-    Image.open(fetch('atlantis.jpg')).crop((0, 0, 1920, 1248)).save(put('Atlantis in orbit.jpg'), quality=92)
+    # NASA's photos: Discovery over the Earth's horizon (the image editor's demo: a clear
+    # outline against space and cloud tops) without the ID strip and the window's corner.
+    Image.open(fetch('discovery.jpg')).crop((0, 150, 2000, 2350)).save(put('Discovery in orbit.jpg'), quality=92)
     shutil.copy(fetch('launch.jpg'), put('STS-135 launch.jpg'))
     # 22 seconds of the landing: gliding in, the runway, touchdown (after the fade-in).
     subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-ss', str(LANDING_START), '-i', fetch('landing.mp4'), '-t', '22', '-c:v', 'libvpx-vp9', '-b:v', '1.6M',
@@ -495,7 +501,11 @@ def main():
     for name, text in (('Notes.md', NOTES), ('notes/Notes (draft).md', DRAFT), ('notes/Poster.md', POSTER), ('notes/Moodboard.md', MOODBOARD)):
         with open(put(name), 'w') as f:
             f.write(text)
-    fact_sheet(put('Shuttle fact sheet.pdf'), put('STS-135 launch.jpg'), put('Atlantis in orbit.jpg'), args.chromium)
+    # The fact sheet keeps Atlantis seen from the ISS (STS-117), without the ID strip along its bottom.
+    with tempfile.TemporaryDirectory() as tmp:
+        atlantis = os.path.join(tmp, 'atlantis.jpg')
+        Image.open(fetch('atlantis.jpg')).crop((0, 0, 1920, 1248)).save(atlantis, quality=92)
+        fact_sheet(put('Shuttle fact sheet.pdf'), put('STS-135 launch.jpg'), atlantis, args.chromium)
     fleet_xlsx(put('Fleet.xlsx'))
     flights_csv(put('Landmark flights.csv'))
     mission_svg(put('Mission profile.svg'))
@@ -505,7 +515,7 @@ def main():
     with open(put('museums.html'), 'w') as f:
         f.write(PAGE)
     with zipfile.ZipFile(put('photos.zip'), 'w', zipfile.ZIP_DEFLATED) as z:
-        for name in ('Atlantis in orbit.jpg', 'STS-135 launch.jpg', 'Rocket.svg'):
+        for name in ('Discovery in orbit.jpg', 'STS-135 launch.jpg', 'Rocket.svg'):
             z.write(put(name), name)
     with open(put('CREDITS.txt'), 'w') as f:
         f.writelines(f'{credit}\n' for _, _, credit in MEDIA.values())

@@ -569,6 +569,9 @@
   SVG, then Select subject with the optional BiRefNet model on the NASA photo and the cut-out pasted into the report
   dragged beside it. `scripts/demo_files.py` writes the CSV and the SVG (own drawing, schematic); `readme-media.sh`
   installs the subject model once into a kept cache (`MF_DEMO_MODELS`) for the tour.
+- **Demo photo: Discovery over the horizon** (NASA ISS018-E-043308) replaces Atlantis over clouds in the README's
+  image, split and tour clips: *Select subject* cut the shuttle poorly out of the cloud background with the built-in
+  model; against space and the bright Earth it finds the whole orbiter. The fact sheet keeps the Atlantis photo.
 - **Microsoft Store package (MSIX)**: CI packs it on Windows next to the installer — manifest generated from the
   setup program's file types (`internal/msix`, `cmd/msix`; Go tests), logos with scale and size variants
   (`scripts/icons.py --msix`) indexed by `makepri` — and test-installs a self-signed copy (alias, app start,

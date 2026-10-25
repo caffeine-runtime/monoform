@@ -31,11 +31,11 @@ directed and reviewed by its maintainer, with tests and CI.
 ### Edit pictures without a separate photo app
 
 Layers, selections that snap to edges, colour adjustments limited to what you selected, text, masks and one-click
-background removal. Below: *Select subject* finds Space Shuttle Atlantis in a NASA photo; copied and pasted into a
+background removal. Below: *Select subject* finds Space Shuttle Discovery in a NASA photo; copied and pasted into a
 note, it is saved next to the note as a cut-out. An optional, offline model makes subject selection sharper and can
 **remove objects and fill the gap**.
 
-<p align="center"><img src="docs/readme/image.webp" width="100%" alt="Selecting the Space Shuttle Atlantis in a NASA photo with Select subject, copying it and pasting the cut-out into a Markdown note"></p>
+<p align="center"><img src="docs/readme/image.webp" width="100%" alt="Selecting the Space Shuttle Discovery in a NASA photo with Select subject, copying it and pasting the cut-out into a Markdown note"></p>
 
 ### Write with a live preview
 
@@ -193,7 +193,7 @@ permissively licensed components only.
 <tr><td width="25%" align="center"><a href="docs/screenshots/json.png"><img src="docs/screenshots/json.png" alt="JSON tree"></a><br><sub>JSON tree</sub></td><td width="25%" align="center"><a href="docs/screenshots/html.png"><img src="docs/screenshots/html.png" alt="Web page preview"></a><br><sub>Web page preview</sub></td><td width="25%" align="center"><a href="docs/screenshots/archive.png"><img src="docs/screenshots/archive.png" alt="Inside a ZIP"></a><br><sub>Inside a ZIP</sub></td><td width="25%" align="center"><a href="docs/screenshots/settings.png"><img src="docs/screenshots/settings.png" alt="Settings and AI models"></a><br><sub>Settings and AI models</sub></td></tr>
 </table>
 
-<sub>Shown in the clips and screenshots: photos and footage of Space Shuttle Atlantis by NASA (public domain:
-ISS015-E-12854, JSC2011-E-067588, KSC-09-S-00143); [#3DBenchy](https://www.3dbenchy.com) by Creative Tools (public
+<sub>Shown in the clips and screenshots: photos and footage of Space Shuttles Atlantis and Discovery by NASA (public
+domain: ISS015-E-12854, ISS018-E-043308, JSC2011-E-067588, KSC-09-S-00143); [#3DBenchy](https://www.3dbenchy.com) by Creative Tools (public
 domain, CC0); Bach's Goldberg Variations played by Kimiko Ishizaka, *The Open Goldberg Variations* (CC0); the rocket
 from Microsoft's [Fluent Emoji](https://github.com/microsoft/fluentui-emoji) (MIT).</sub>

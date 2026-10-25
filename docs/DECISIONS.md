@@ -636,7 +636,7 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 
 - **The README's clips and screenshots are recorded from the real app**, not mocked, and show **real, freely
   licensed media**: `scripts/demo_files.py` builds a "Shuttle project" folder from NASA photos and footage of Space
-  Shuttle Atlantis (public domain, no people in them), the official #3DBenchy model (CC0 since 2025), Kimiko
+  Shuttles Atlantis and Discovery (public domain, no people in them), the official #3DBenchy model (CC0 since 2025), Kimiko
   Ishizaka's *Open Goldberg Variations* (CC0) and a Fluent Emoji icon (MIT). They are downloaded from their sources
   once, pinned by SHA-256, trimmed locally (never committed), and credited under the README's gallery; the notes,
   fact sheet, spreadsheet and report are written by the script. The

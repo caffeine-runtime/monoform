@@ -178,7 +178,7 @@ async function tour(dir: string) {
   await openFromTree(dir, 'Report.docx', 1900);
   await openFromTree(dir, 'Landmark flights.csv', 1800);
   await openFromTree(dir, 'Mission profile.svg', 2200);
-  const img = await openFromTree(dir, 'Atlantis in orbit.jpg', 700);
+  const img = await openFromTree(dir, 'Discovery in orbit.jpg', 700);
   const report = workspace.findByPath(join(dir, 'Report.docx'))!;
   const h = await waitFor(() => (img as unknown as { imageTest?: any }).imageTest, 'image editor');
   await waitFor(() => h.editor(), 'editor');
@@ -266,9 +266,9 @@ async function keycap(label: string) {
   k.remove();
 }
 
-/** NASA's photo of Atlantis: select the shuttle, copy it, paste it into a note. */
+/** NASA's photo of Discovery: select the shuttle, copy it, paste it into a note. */
 async function image(dir: string) {
-  const tab = workspace.findByPath(join(dir, 'Atlantis in orbit.jpg'))!;
+  const tab = workspace.findByPath(join(dir, 'Discovery in orbit.jpg'))!;
   const note = workspace.findByPath(join(dir, 'notes', 'Moodboard.md'))!;
   const h = await waitFor(() => (tab as unknown as { imageTest?: any }).imageTest, 'image editor');
   await waitFor(() => h.editor(), 'editor');
@@ -339,7 +339,7 @@ async function split() {
   await sleep(1400);
 }
 
-const FILES = ['notes/Notes (draft).md', 'Notes.md', 'Report.docx', 'Landmark flights.csv', 'Mission profile.svg', 'Shuttle fact sheet.pdf', 'Atlantis in orbit.jpg', 'Fleet.xlsx', 'Rocket.svg', '3DBenchy.stl', 'Goldberg Variation 1.ogg', 'Atlantis landing.webm', 'notes/Moodboard.md', 'notes/Poster.md'];
+const FILES = ['notes/Notes (draft).md', 'Notes.md', 'Report.docx', 'Landmark flights.csv', 'Mission profile.svg', 'Shuttle fact sheet.pdf', 'Discovery in orbit.jpg', 'Fleet.xlsx', 'Rocket.svg', '3DBenchy.stl', 'Goldberg Variation 1.ogg', 'Atlantis landing.webm', 'notes/Moodboard.md', 'notes/Poster.md'];
 
 const SCENES: Record<string, (dir: string) => Promise<void>> = { tour, image, markdown, split };
 
@@ -409,10 +409,10 @@ export default async function demo(arg: string) {
   }
   if (scene === 'image') {
     await workspace.openPath(join(dir, 'notes', 'Moodboard.md'));
-    await workspace.openPath(join(dir, 'Atlantis in orbit.jpg'));
+    await workspace.openPath(join(dir, 'Discovery in orbit.jpg'));
   }
   if (scene === 'markdown') await workspace.openPath(join(dir, 'notes', 'Poster.md'));
-  if (scene === 'split') for (const f of ['Notes.md', 'Shuttle fact sheet.pdf', 'Atlantis in orbit.jpg', '3DBenchy.stl']) await workspace.openPath(join(dir, f));
+  if (scene === 'split') for (const f of ['Notes.md', 'Shuttle fact sheet.pdf', 'Discovery in orbit.jpg', '3DBenchy.stl']) await workspace.openPath(join(dir, f));
   await sleep(1500);
   addCursor();
   await sleep(200);
