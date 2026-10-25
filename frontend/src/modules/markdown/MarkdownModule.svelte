@@ -5,6 +5,8 @@
   import ListTree from '@lucide/svelte/icons/list-tree';
   import Icon from '../../shell/Icon.svelte';
   import Code from '@lucide/svelte/icons/code';
+  import TextWrap from '@lucide/svelte/icons/text-wrap';
+  import { settings } from '../../core/settings.svelte';
   import { fitBar, isNarrow } from '../../core/fit';
   import { onMount, untrack } from 'svelte';
   import { markdown } from '@codemirror/lang-markdown';
@@ -48,6 +50,8 @@
   let html = $state('');
   let previewEl = $state<HTMLDivElement>();
   let ctl: TextController | null = null;
+  // Long lines wrap (the word wrap setting, on by default); the tool bar button turns it off and on.
+  const wrapOn = $derived(settings.value.wordWrap);
   let worker: Worker | null = null;
   let seq = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -159,7 +163,6 @@
     extensions: [assetHandlers(tab), linkClicks, watchSelection, EditorState.languageData.of(() => [{ autocomplete: completeNotes }])],
     onDocChanged: () => schedule(),
     onLoaded: () => render(),
-    wrap: true,
   };
 
   function schedule() {
@@ -377,6 +380,7 @@
     <button class="btn ghost" class:on={view === 'preview'} onclick={() => markdownViews.get(tab.id)?.set('preview')}><Icon icon={Eye} size={14} /> {t('Preview')}</button>
   </div>
   <span class="spacer"></span>
+  <button class="icon-btn" class:on={wrapOn} aria-pressed={wrapOn} title={t('Word wrap')} aria-label={t('Word wrap')} onclick={() => ctl?.toggleWrap()}><Icon icon={TextWrap} size={15} /></button>
   <button class="btn ghost" class:on={panelOpen} aria-pressed={panelOpen} title={t('Outline, backlinks and links')} onclick={() => setPanel(!panelOpen)}><Icon icon={ListTree} size={14} /> {t('Outline')}</button>
 </div>
 <div class="body" bind:clientWidth={bodyW}>

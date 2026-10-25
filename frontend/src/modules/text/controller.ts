@@ -272,6 +272,13 @@ export class TextController {
     gotoLine(this.view);
   }
 
+  /** The word wrap setting changed (here or in another tab): follow it, unless this editor sets its own. */
+  followWrap(on: boolean) {
+    if (this.opts.wrap !== undefined || on === this.wrap) return;
+    this.wrap = on;
+    this.view.dispatch({ effects: this.c.wrap.reconfigure(on ? EditorView.lineWrapping : []) });
+  }
+
   toggleWrap() {
     this.wrap = !this.wrap;
     this.view.dispatch({ effects: this.c.wrap.reconfigure(this.wrap ? EditorView.lineWrapping : []) });

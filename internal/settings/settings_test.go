@@ -124,3 +124,27 @@ func TestRecentsOffClearsLists(t *testing.T) {
 		t.Fatalf("recents kept while off: %+v", got)
 	}
 }
+
+// Word wrap became the default in version 2: new installs get it, files from
+// before (which saved the old default, off) get it once, and a choice made
+// since (off, version 2) is kept.
+func TestWordWrapDefault(t *testing.T) {
+	dir := t.TempDir()
+	if s, _ := Open(filepath.Join(dir, "none.json")); !s.Get().WordWrap {
+		t.Error("new install: word wrap off")
+	}
+	old := filepath.Join(dir, "old.json")
+	os.WriteFile(old, []byte(`{"version":1,"wordWrap":false,"theme":"dark"}`), 0o644)
+	s, _ := Open(old)
+	if got := s.Get(); !got.WordWrap || got.Theme != "dark" || got.Version != 2 {
+		t.Errorf("version 1 file: %+v", got)
+	}
+	v := s.Get()
+	v.WordWrap = false
+	if err := s.Set(v); err != nil {
+		t.Fatal(err)
+	}
+	if s2, _ := Open(old); s2.Get().WordWrap {
+		t.Error("word wrap turned off since: turned back on")
+	}
+}

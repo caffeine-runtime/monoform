@@ -464,6 +464,10 @@
   characters (of the selection too), Obsidian-style. Word/OpenDocument documents get the same outline of their
   headings and the counts. The folder's links are indexed in Go (`internal/notes`, parallel, unchanged files
   remembered). Go tests, unit tests and self-test `m46`.
+- **Word wrap on by default.** Long lines continue on the next row in every text editor (Markdown, code, plain
+  text); a button in the Markdown tool bar, Alt+Z, the ☰ menu or Settings turn it off and on, and every open editor
+  follows. Settings from before (version 1, which saved the old default) get it turned on once. Go test
+  `TestWordWrapDefault`, self-test `m80`.
 - **Polish, Spanish, German and French.** The whole interface (about 2,900 strings, the Windows setup program
   included) is in English, Polish, Spanish, German and French. On first start Monoform follows the system language
   (macOS/Windows language list, Linux locale); the welcome screen's first step and *Settings › Appearance › Language*

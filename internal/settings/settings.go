@@ -113,7 +113,7 @@ type Settings struct {
 
 func Defaults() Settings {
 	return Settings{
-		Version:        1,
+		Version:        2,
 		Theme:          "system",
 		Recents:        []string{},
 		RecentFolders:  []string{},
@@ -122,6 +122,7 @@ func Defaults() Settings {
 		OcrLangs:       []string{"eng"},
 		SidebarVisible: true,
 		SidebarWidth:   260,
+		WordWrap:       true,
 		FontSize:       14,
 		UIScale:        1,
 		Session:        Session{Tabs: []SessionTab{}, Expanded: []string{}},
@@ -160,6 +161,10 @@ func Open(path string) (*Store, error) {
 	if err := json.Unmarshal(data, &loaded); err != nil {
 		os.Rename(path, path+".bad")
 		return s, nil
+	}
+	// Version 2: word wrap became the default; files written before kept the old default (off).
+	if loaded.Version < 2 {
+		loaded.WordWrap = true
 	}
 	s.cur = normalize(loaded)
 	return s, nil

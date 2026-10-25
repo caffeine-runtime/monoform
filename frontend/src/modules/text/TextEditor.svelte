@@ -1,7 +1,7 @@
 <script lang="ts">
   // A CodeMirror editor bound to a tab. Used directly by the text module and
   // embedded by the markdown module.
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import type { Tab } from '../../core/tabs.svelte';
   import { toastError } from '../../core/ui.svelte';
   import { t } from '../../core/i18n';
@@ -66,6 +66,12 @@
     if (!ctl) return;
     // After App's effect has set the new CSS variables and the browser has applied them.
     requestAnimationFrame(() => ctl.view.requestMeasure());
+  });
+
+  // Word wrap turned on or off (tool bar button, Alt+Z, menu, Settings) in any tab.
+  $effect(() => {
+    const on = settings.value.wordWrap;
+    untrack(() => controllers.get(tab.id)?.followWrap(on));
   });
 
   // A search result clicked while the tab is already open.

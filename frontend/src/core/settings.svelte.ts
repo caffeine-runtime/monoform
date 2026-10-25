@@ -4,7 +4,7 @@ import { api, type Settings } from './backend';
 
 class SettingsState {
   value = $state<Settings>({
-    version: 1,
+    version: 2,
     theme: 'system',
     recents: [],
     recentFolders: [],
@@ -12,7 +12,7 @@ class SettingsState {
     sidebarVisible: true,
     sidebarWidth: 260,
     showHidden: false,
-    wordWrap: false,
+    wordWrap: true,
     fontSize: 14,
     uiScale: 1,
     minimapOff: false,
