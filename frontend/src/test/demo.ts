@@ -9,6 +9,7 @@ import { api } from '../core/backend';
 import { commands } from '../core/commands';
 import { compareFiles } from '../core/compare';
 import { dropInto } from '../core/split';
+import { t } from '../core/i18n';
 import { join } from '../core/paths';
 import { settings } from '../core/settings.svelte';
 import { workspace, type Tab } from '../core/tabs.svelte';
@@ -534,6 +535,30 @@ const STILLS: Record<string, (dir: string) => Promise<void>> = {
   },
   html: open('museums.html'),
   archive: open('photos.zip'),
+  // For the Store listing (any language: labels looked up translated).
+  ai: async (d) => {
+    const tab = (await workspace.openPath(join(d, 'Discovery in orbit.jpg')))!;
+    const h = await waitFor(() => (tab as unknown as { imageTest?: any }).imageTest, 'image editor');
+    await waitFor(() => h.editor(), 'editor');
+    await sleep(600);
+    (await waitFor(() => document.querySelector<HTMLElement>(`button[aria-label="${t('Select object')}"]`), 'object tool')).click();
+    await sleep(400);
+    (await waitFor(() => [...pane(tab)!.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes(t('Select subject'))), 'Select subject')).click();
+    await waitFor(() => (!h.busy() && h.editor().selection ? true : null), 'subject selected', 60000);
+    // The shuttle on a layer of its own, the photo hidden: the cut-out on transparency.
+    const ed = h.editor();
+    ed.layerFromSelection();
+    ed.deselect();
+    ed.setLayerProps(ed.state().layers[0].id, { visible: false });
+  },
+  split: async (d) => {
+    for (const f of ['Notes.md', 'Shuttle fact sheet.pdf', 'Discovery in orbit.jpg', '3DBenchy.stl']) await workspace.openPath(join(d, f));
+    await sleep(500);
+    commands.execute('view.splitGrid');
+    await sleep(1500);
+    await spin(workspace.tabs.at(-1)!, 0);
+  },
+  markdown: open('Notes.md'),
   settings: async () => {
     workspace.openTool('settings');
     const h = await waitFor(() => [...document.querySelectorAll('h2, h3')].find((e) => e.textContent?.includes('AI models')), 'AI models section');
@@ -542,11 +567,14 @@ const STILLS: Record<string, (dir: string) => Promise<void>> = {
 };
 
 export default async function demo(arg: string) {
-  const [scene, dir, theme] = arg.split('|');
+  const [scene, dir, theme, size] = arg.split('|');
   if (scene === 'promo' || scene === 'footage') [W, H] = [1920, 1080];
+  // Stills at another size (the Store's 1920×1080), a little larger so they read when scaled down.
+  if (size) [W, H] = size.split('x').map(Number);
   settings.update((s) => {
     s.theme = (theme as 'light' | 'dark') || 'dark';
-    s.uiScale = scene === 'promo' || scene === 'footage' ? 1.6 : 1.1;
+    s.uiScale = scene === 'promo' || scene === 'footage' ? 1.6 : size ? 1.4 : 1.1;
+    if (size) s.sidebarWidth = 360;
   });
   WindowSetSize(W, H);
   WindowSetPosition(0, 0); // it was centred for its first size: fill the screen from the corner
