@@ -578,6 +578,11 @@
   entrances only, transform and opacity only. Settings › Appearance › Reduce motion (also on when the system asks for
   less motion). Unit test (`motion.test.ts`), self-test `m78` (animations present, longest frames logged, reduce
   motion).
+- **Fix: a narrow sidebar spilled its header over the tab bar.** At the narrowest width (180 px) the header needed
+  ~230 px (the name never wrapped and nothing clipped it), so its buttons painted over the first tab. The header now
+  shows only the logo mark below 250 px (× the interface size), keeps its buttons whole and clips the rest; the folder
+  row's buttons don't shrink. **Hide sidebar** is a button in its header (the tab bar's button brings it back,
+  Ctrl+B as before), and dragging its edge well past the narrowest width hides it. Self-test `m79`.
 - **Fix: at a large interface size a long file tree pushed the status bar out of the window** (the app grid's first
   row was `1fr`, which never shrinks below its content). It is `minmax(0, 1fr)` now and the tree scrolls; `m16`
   checks the status bar stays inside the window at 200% with the whole fixtures folder open.

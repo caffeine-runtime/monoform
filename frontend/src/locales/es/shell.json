@@ -344,6 +344,7 @@
   "Compare with…": "Comparar con…",
   "Show history": "Mostrar historial",
   "Reveal in sidebar": "Mostrar en la barra lateral",
+  "Hide sidebar ({shortcut})": "Ocultar la barra lateral ({shortcut})",
   "Show sidebar": "Mostrar la barra lateral",
   "Shown in split view, pane {n}": "Se muestra en la vista dividida, panel {n}",
   "Unsaved changes — close": "Cambios sin guardar — cerrar",

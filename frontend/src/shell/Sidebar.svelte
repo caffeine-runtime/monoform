@@ -18,7 +18,10 @@
   import { newFolderIn, copyText } from './treeActions';
   import { newFileOfKind } from '../core/newfile';
   import { t } from '../core/i18n';
+  import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
 
+  // A narrow sidebar shows only the logo mark, so the buttons always fit.
+  const compact = $derived(settings.value.sidebarWidth < 250 * (settings.value.uiScale || 1));
   let pinnedOpen = $state(true);
   let recentsOpen = $state(true);
 
@@ -45,10 +48,20 @@
   let resizing = false;
   function startResize(e: PointerEvent) {
     resizing = true;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    try {
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      /* not an active pointer (a synthetic event): the moves still arrive here */
+    }
   }
   function moveResize(e: PointerEvent) {
     if (!resizing) return;
+    // Dragged well past the narrowest width: hide the sidebar (the tab bar's button brings it back).
+    if (e.clientX < 110 * (settings.value.uiScale || 1)) {
+      resizing = false;
+      settings.update((s) => (s.sidebarVisible = false));
+      return;
+    }
     settings.value.sidebarWidth = Math.max(180, Math.min(560, e.clientX));
   }
   function endResize() {
@@ -60,7 +73,7 @@
 
 <aside class="sidebar" style:width="{settings.value.sidebarWidth}px">
   <header class="head" class:mac={boot.platform === 'darwin'}>
-    <h1 class="title"><span class="mark" aria-hidden="true">{@html logoMark}</span>Monoform</h1>
+    <h1 class="title" title={compact ? 'Monoform' : undefined}><span class="mark" aria-hidden="true">{@html logoMark}</span>{#if !compact}<span class="word">Monoform</span>{/if}</h1>
     <div class="actions">
       <button class="icon-btn" class:on={sidebar.mode === 'search'} title={t('Find in folder ({shortcut})', { shortcut: formatShortcut('Mod+Shift+F') })} onclick={() => commands.execute('search.inFolder')}>
         <Icon icon={Search} />
@@ -69,6 +82,7 @@
         <Icon icon={FolderOpen} />
       </button>
       <button class="icon-btn" title={t('Menu')} onclick={appMenu}><Icon icon={Menu} /></button>
+      <button class="icon-btn" title={t('Hide sidebar ({shortcut})', { shortcut: formatShortcut('Mod+B') })} onclick={() => commands.execute('view.toggleSidebar')}><Icon icon={PanelLeftClose} /></button>
     </div>
   </header>
 
@@ -165,9 +179,12 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
     padding: 10px 10px 8px 16px;
     height: var(--tabbar-h);
     box-sizing: content-box;
+    /* Whatever the width, nothing in the header reaches over the tab bar. */
+    overflow: hidden;
     --wails-draggable: drag;
   }
   .head.mac {
@@ -175,6 +192,7 @@
   }
   .head .actions {
     display: flex;
+    flex: none;
     gap: 2px;
     --wails-draggable: no-drag;
   }
@@ -186,9 +204,12 @@
     font-size: calc(17px * var(--ui-scale));
     color: var(--text);
     white-space: nowrap;
+    min-width: 0;
+    overflow: hidden;
   }
   .mark {
     display: inline-flex;
+    flex: none;
     width: calc(22px * var(--ui-scale));
     color: var(--text);
   }
@@ -243,6 +264,7 @@
   }
   .label-actions {
     display: flex;
+    flex: none;
     opacity: 0;
     transition: opacity 0.12s;
   }
