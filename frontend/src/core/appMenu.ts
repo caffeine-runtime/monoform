@@ -36,6 +36,7 @@ const LAYOUT: Entry[] = [
   '-',
   'file.save',
   'file.saveAs',
+  'file.saveConvert',
   'file.saveAll',
   {
     label: t('This file'),
@@ -45,6 +46,7 @@ const LAYOUT: Entry[] = [
       'view.togglePreview',
       '-',
       'file.revert',
+      'file.stopConvert',
       'file.pin',
       'file.copyPath',
       'file.showInFolder',

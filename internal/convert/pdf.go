@@ -36,6 +36,13 @@ const (
 	ptMM      = 0.3528 // one point in mm
 )
 
+// Font families as named in the PDF.
+const (
+	sans  = "Inter"
+	serif = "SourceSerif4"
+	mono  = "JetBrainsMono"
+)
+
 type rgb struct{ r, g, b int }
 
 var (
@@ -70,8 +77,8 @@ func writePDF(ctx context.Context, dst string, d *Doc) (string, error) {
 	}
 	f := fpdf.New(orient, "mm", "A4", "")
 	for _, ft := range []struct{ family, style, file string }{
-		{"text", "", "Inter-Regular.ttf"}, {"text", "B", "Inter-Bold.ttf"}, {"text", "I", "Inter-Italic.ttf"}, {"text", "BI", "Inter-BoldItalic.ttf"},
-		{"serif", "", "SourceSerif4-Semibold.ttf"}, {"mono", "", "JetBrainsMono-Regular.ttf"},
+		{sans, "", "Inter-Regular.ttf"}, {sans, "B", "Inter-Bold.ttf"}, {sans, "I", "Inter-Italic.ttf"}, {sans, "BI", "Inter-BoldItalic.ttf"},
+		{serif, "", "SourceSerif4-Semibold.ttf"}, {mono, "", "JetBrainsMono-Regular.ttf"},
 	} {
 		b, err := fontFiles.ReadFile("fonts/" + ft.file)
 		if err != nil {
@@ -92,7 +99,7 @@ func writePDF(ctx context.Context, dst string, d *Doc) (string, error) {
 	w.tw = w.pw - 2*marginX
 	f.SetFooterFunc(func() {
 		f.SetY(-marginBot + 8)
-		f.SetFont("text", "", 8.5)
+		f.SetFont(sans, "", 8.5)
 		w.color(muted)
 		f.CellFormat(0, 5, fmt.Sprintf("%d / {nb}", f.PageNo()), "", 0, "C", false, 0, "")
 	})
@@ -152,13 +159,13 @@ func (w *pdfWriter) block(blk Block, prev *Block) {
 		w.outline = lv
 		f.Bookmark(runsText(blk.Runs), lv, -1)
 		f.SetX(marginX)
-		w.runs(blk.Runs, "serif", pt, lh, ink, true)
+		w.runs(blk.Runs, serif, pt, lh, ink, true)
 		f.Ln(lh)
 		w.space(pt * ptMM * 0.35)
 	case Para:
 		w.ensure(2 * bodyLH)
 		f.SetX(marginX)
-		w.runs(blk.Runs, "text", bodyPt, bodyLH, ink, false)
+		w.runs(blk.Runs, sans, bodyPt, bodyLH, ink, false)
 		f.Ln(bodyLH)
 		w.space(bodyLH * 0.55)
 	case Quote:
@@ -167,7 +174,7 @@ func (w *pdfWriter) block(blk Block, prev *Block) {
 		page, y0 := f.PageNo(), f.GetY()
 		f.SetLeftMargin(marginX + indent)
 		f.SetX(marginX + indent)
-		w.runs(blk.Runs, "text", bodyPt, bodyLH, muted, false)
+		w.runs(blk.Runs, sans, bodyPt, bodyLH, muted, false)
 		f.Ln(bodyLH)
 		f.SetLeftMargin(marginX)
 		w.bar(page, y0, f.PageNo(), f.GetY())
@@ -184,7 +191,7 @@ func (w *pdfWriter) block(blk Block, prev *Block) {
 			_, size := utf8.DecodeRuneInString(runs[0].Text)
 			runs[0].Text = runs[0].Text[size+1:]
 		}
-		f.SetFont("text", "", bodyPt)
+		f.SetFont(sans, "", bodyPt)
 		w.color(muted)
 		y := f.GetY()
 		switch {
@@ -210,7 +217,7 @@ func (w *pdfWriter) block(blk Block, prev *Block) {
 		}
 		f.SetLeftMargin(marginX + indent)
 		f.SetXY(marginX+indent, y)
-		w.runs(runs, "text", bodyPt, bodyLH, ink, false)
+		w.runs(runs, sans, bodyPt, bodyLH, ink, false)
 		f.Ln(bodyLH)
 		f.SetLeftMargin(marginX)
 		w.space(bodyLH * 0.18)
@@ -267,11 +274,11 @@ func (w *pdfWriter) runs(runs []Inline, family string, pt, lh float64, c rgb, he
 		if r.Italic {
 			style += "I"
 		}
-		if heading && family == "serif" {
+		if heading && family == serif {
 			style = "" // one face of the serif; headings are already bold
 		}
 		if r.Code {
-			fam, size, style = "mono", pt*0.9, ""
+			fam, size, style = mono, pt*0.9, ""
 		}
 		f.SetFont(fam, style, size)
 		text := strings.ReplaceAll(r.Text, "\t", "    ")
@@ -343,7 +350,7 @@ func (w *pdfWriter) code(text string) {
 	f := w.f
 	pad := 3.0
 	lh := codePt * ptMM * 1.45
-	f.SetFont("mono", "", codePt)
+	f.SetFont(mono, "", codePt)
 	var lines []string
 	for _, l := range strings.Split(strings.ReplaceAll(text, "\t", "    "), "\n") {
 		if l == "" {
@@ -360,7 +367,7 @@ func (w *pdfWriter) code(text string) {
 	for _, l := range lines {
 		if f.GetY()+lh > w.bottom() {
 			f.AddPage()
-			f.SetFont("mono", "", codePt)
+			f.SetFont(mono, "", codePt)
 			w.color(rgb{50, 50, 56})
 		}
 		f.CellFormat(w.tw, lh, l, "", 2, "L", true, 0, "")
@@ -394,11 +401,11 @@ func (w *pdfWriter) table(rows [][][]Inline) {
 		return ""
 	}
 	// Natural widths, from the first rows.
-	f.SetFont("text", "B", pt)
+	f.SetFont(sans, "B", pt)
 	natural := make([]float64, cols)
 	for i, r := range rows[:min(len(rows), 300)] {
 		if i == 1 {
-			f.SetFont("text", "", pt)
+			f.SetFont(sans, "", pt)
 		}
 		for c := range cols {
 			wd := 0.0
@@ -422,7 +429,7 @@ func (w *pdfWriter) table(rows [][][]Inline) {
 		if bold {
 			style = "B"
 		}
-		f.SetFont("text", style, pt)
+		f.SetFont(sans, style, pt)
 		cells := make([][]string, cols)
 		n := 1
 		for c := range cols {
@@ -437,7 +444,7 @@ func (w *pdfWriter) table(rows [][][]Inline) {
 			if header && !bold {
 				w.tableHeader(rows[0], widths, pt, pad, lh, text)
 			}
-			f.SetFont("text", style, pt)
+			f.SetFont(sans, style, pt)
 		}
 		y := f.GetY()
 		x := marginX
@@ -472,7 +479,7 @@ func (w *pdfWriter) table(rows [][][]Inline) {
 
 func (w *pdfWriter) tableHeader(r [][]Inline, widths []float64, pt, pad, lh float64, text func([][]Inline, int) string) {
 	f := w.f
-	f.SetFont("text", "B", pt)
+	f.SetFont(sans, "B", pt)
 	n := 1
 	cells := make([][]string, len(widths))
 	for c := range widths {

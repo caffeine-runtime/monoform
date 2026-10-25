@@ -10,6 +10,8 @@ import { peek } from './peek.svelte';
 import { moveToNewWindow } from './windows';
 import { copyTransfer, describe, isEmptyTab, pasteInto } from './transfer.svelte';
 import { workspace } from './tabs.svelte';
+import { companions, knownTargets, saveAndConvert, stopCompanion, targetsFor } from './convert.svelte';
+import { basename } from './paths';
 import { theme } from './theme.svelte';
 import { tree } from './tree.svelte';
 import { toastError, ui } from './ui.svelte';
@@ -41,6 +43,7 @@ const hasTab = () => !!workspace.active;
 const hasFile = () => !!workspace.active?.filePath;
 
 export function registerAppCommands() {
+  void targetsFor(''); // what converts to what, for the menus
   commands.register(
     { id: 'app.palette', title: t('Search files, text and commands'), category: t('View'), shortcut: ['Mod+K', 'Mod+Shift+P'], run: () => (ui.paletteOpen ? (ui.paletteOpen = false) : ui.openPalette()) },
     { id: 'file.quickOpen', title: t('Go to file…'), category: t('File'), shortcut: 'Mod+P', run: () => ui.openPalette('') },
@@ -55,6 +58,27 @@ export function registerAppCommands() {
     { id: 'file.imagesToPdf', title: t('Create PDF from images…'), category: t('File'), run: () => void import('../modules/pdf/tools').then((m) => m.imagesToPdf()) },
     { id: 'file.save', title: t('Save'), category: t('File'), shortcut: 'Mod+S', when: hasTab, run: () => workspace.save() },
     { id: 'file.saveAs', title: t('Save as…'), category: t('File'), shortcut: 'Mod+Shift+S', when: hasTab, run: () => workspace.save(workspace.active, true) },
+    {
+      id: 'file.saveConvert',
+      title: t('Save and convert…'),
+      category: t('File'),
+      shortcut: 'Mod+Alt+Shift+S',
+      // Untitled text can be saved first, so it qualifies too.
+      when: () => !!workspace.active && (workspace.active.source.kind === 'untitled' || knownTargets(workspace.active.filePath ?? workspace.active.scratch ?? undefined).length > 0),
+      run: () => void saveAndConvert(),
+    },
+    {
+      id: 'file.stopConvert',
+      title: t('Stop converting this file on save'),
+      category: t('File'),
+      when: () => !!workspace.active?.filePath && companions(workspace.active.filePath).length > 0,
+      run: () => {
+        const p = workspace.active!.filePath!;
+        const names = companions(p).map((d) => basename(d)).join(', ');
+        stopCompanion(p);
+        ui.toast(t('{names} will no longer be updated on save.', { names }), 'info');
+      },
+    },
     {
       id: 'file.saveAll',
       title: t('Save all'),

@@ -17,6 +17,7 @@
   import { theme } from '../core/theme.svelte';
   import { tree } from '../core/tree.svelte';
   import { ui } from '../core/ui.svelte';
+  import { convertUI } from '../core/convert.svelte';
   import { api } from '../core/backend';
   import { boot } from '../core/boot';
   import { t } from '../core/i18n';
@@ -114,6 +115,9 @@
 {/if}
 {#if ui.picker}
   <QuickPick />
+{/if}
+{#if convertUI.request}
+  {#await import('./ConvertDialog.svelte') then m}<m.default />{/await}
 {/if}
 <Overlays />
 

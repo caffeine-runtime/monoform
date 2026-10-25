@@ -5,7 +5,7 @@ import os, sys, struct, zlib, shutil
 
 d = sys.argv[1]
 # Outputs written by earlier self-test runs; operations refuse to overwrite.
-for rel in ("audio", "video", "pdf/out", "archives/out", "newfiles", "img/out", "img/subject (edited).png", "img/red (edited).png"):
+for rel in ("audio", "video", "pdf/out", "archives/out", "newfiles", "img/out", "img/subject (edited).png", "img/red (edited).png", "convert"):
     q = os.path.join(d, rel)
     if os.path.isdir(q): shutil.rmtree(q, ignore_errors=True)
     elif os.path.exists(q): os.remove(q)
@@ -963,6 +963,11 @@ Connections:  {{
 {c1}{c2}}}
 """.encode()
 w("models/waving.fbx", _fbx())
+
+# Save and convert (m81)
+w("convert/trip.md", "# Trip plan\n\nPack **light** and see [the map](https://example.com).\n\n- passport\n- charger\n\n| Day | City |\n|---|---|\n| Mon | Kraków |\n\n![The view](photo.png)\n".encode())
+w("convert/photo.png", png(64, 48, (40, 120, 200)))
+w("convert/sales.csv", b"region,q1,q2\nNorth,10,12\nSouth,7,9\n")
 
 # 50 MB+ log file
 big = os.path.join(d, "big.log")

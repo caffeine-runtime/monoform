@@ -1,5 +1,6 @@
 <script lang="ts">
   import { isNarrow } from '../../core/fit';
+  import { saveAndConvert } from '../../core/convert.svelte';
   import ImageIco from '@lucide/svelte/icons/image';
   import { fitBar } from '../../core/fit';
   import { onMount, tick } from 'svelte';
@@ -1348,6 +1349,7 @@
       { label: t('Save'), shortcut: formatShortcut('Mod+S'), run: () => void save() },
       { label: t('Save a copy (keep original)'), shortcut: formatShortcut('Mod+Alt+S'), run: () => void saveCopy() },
       { label: t('Save as…'), shortcut: formatShortcut('Mod+Shift+S'), run: () => void saveAs() },
+      { label: t('Save and convert…'), shortcut: formatShortcut('Mod+Alt+Shift+S'), run: () => void saveAndConvert(tab) },
       { label: t('Save with layers (.ora)…'), run: () => void saveWithLayers() },
       { separator: true },
       { label: settings.value.imageKeepOriginal ? `✓ ${t('Always keep originals')}` : t('Always keep originals'), run: () => settings.update((s) => (s.imageKeepOriginal = !s.imageKeepOriginal)) },

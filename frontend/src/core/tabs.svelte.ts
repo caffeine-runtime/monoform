@@ -51,6 +51,12 @@ export interface TabHandlers {
 
 let seq = 0;
 
+/**
+ * Called when a tab's changes are written (or dropped, by a revert): its
+ * editor clears the changes flag. Save and convert hooks in here.
+ */
+export const afterSave: ((tab: Tab) => void)[] = [];
+
 /** The start page shown as a tab ("new tab"). */
 const isStart = (t: Tab) => t.source.kind === 'tool' && t.source.tool === 'start';
 
@@ -69,7 +75,9 @@ export class Tab {
     return this.changed || !!this.scratch;
   }
   set dirty(v: boolean) {
+    const was = this.changed;
     this.changed = v;
+    if (was && !v) for (const h of afterSave) h(this);
   }
   readOnly = $state(false);
   /** Preview mode: a file on disk shown read-only until the user chooses Edit. */

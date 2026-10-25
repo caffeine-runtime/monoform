@@ -708,6 +708,30 @@
   release run).
 - **Fix: a CI self-test (`m6`) failed on a fast runner**: the 3 GiB hash finished inside the 2.5 s it watched
   progress for. It now watches while the hash runs and tests Cancel on a fresh run.
+- **Save and convert** (File menu and the image and audio editors' Save menus, Ctrl/Cmd+Alt+Shift+S): saves the
+  file, then a dialog lists the formats it becomes, each with what it is good for (arrows, digits 1–9 or a click;
+  Enter converts). The copy goes next to the original under the same name (**Change…** picks another place; a file
+  already there is named before it is replaced) and the original is never touched. **Also update it every time I
+  save** keeps that copy current: each later save writes it again (*File › This file › Stop converting this file
+  on save* ends it). Conversions run in Go (`internal/convert`), as a job with progress for long ones:
+  - pictures (PNG, JPEG, WebP, GIF, BMP, TIFF, ICO, ICNS; HEIC/AVIF in through the system's decoder) into each other
+    or a one-page PDF (a JPEG goes in without recompression);
+  - audio (MP3, OGG, FLAC, WAV) into FLAC or WAV, tags and cover kept;
+  - tables (CSV with its separator guessed, TSV, Excel, legacy .xls, OpenDocument, JSON lists of records) into
+    XLSX, CSV, TSV, JSON records (numbers stay numbers) or a PDF laid out for printing (landscape when wide, the
+    header repeated on every page); .xls/.ods → .xlsx keeps formulas and formatting;
+  - documents (Markdown, text, Word .docx/.doc, OpenDocument .odt) into PDF, Word, a web page (one file, pictures
+    inside, light and dark), Markdown (pictures from inside a Word file saved to a "<name> files" folder) or
+    text. All go through one document model: headings, paragraphs with bold/italic/strike/code/links, nested and
+    numbered lists, tasks, quotes, code, tables, pictures, rules.
+  - The **PDF is laid out by Monoform** (go-pdf/fpdf, MIT) on A4 with the app's own fonts — Inter for text,
+    Source Serif 4 for headings, JetBrains Mono for code, as in the Markdown preview — with page numbers, an
+    outline of the headings, clickable links, tables split across pages and pictures scaled to fit. The fonts
+    cover Latin, Greek and Cyrillic; text in other scripts is named in the result ("the PDF's fonts have no letters
+    for …").
+  - `monoform convert IN OUT` does every pair headless; TIFF can now be written everywhere.
+  Go tests (`internal/convert`: every family, Markdown parsing, Markdown → Word → Markdown round trip, Word/ODT/.doc
+  fixtures, ODT styles and lists, page breaking, cancelling), CLI test, self-test `m81`.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -741,6 +765,9 @@ GTK/WebKitGTK process start-up before our page loads. Not yet measured on Window
 available here).
 
 ## Known issues
+- Save and convert: the PDF writer doesn't shape complex scripts (Arabic, Hebrew, Indic) and its fonts have no
+  Chinese, Japanese or Korean letters or emoji (the result says so); table cells in PDFs are plain text (no bold or
+  links inside cells); video doesn't convert (no permissively licensed encoder), nor do PDFs into other formats.
 - Microsoft Store copy: the `monoform` command is the app itself (a GUI program), so in a terminal the prompt
   comes back before its output; `monoform … > file` and pipes work as usual. The installer's command doesn't have this.
 - Quick peek can't be opened with Space in Finder or Explorer: that takes a native Quick Look extension (Swift,

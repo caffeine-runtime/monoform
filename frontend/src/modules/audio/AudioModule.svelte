@@ -9,6 +9,7 @@
   import Pencil from '@lucide/svelte/icons/pencil';
   import MoveHorizontal from '@lucide/svelte/icons/move-horizontal';
   import { fitBar } from '../../core/fit';
+  import { saveAndConvert } from '../../core/convert.svelte';
   import { onMount } from 'svelte';
   import Icon from '../../shell/Icon.svelte';
   import Play from '@lucide/svelte/icons/play';
@@ -578,6 +579,7 @@
     menu.show({ clientX: r.left, clientY: r.bottom + 4 }, [
       { label: t('Save'), shortcut: formatShortcut('Mod+S'), run: () => void save() },
       { label: t('Save as…'), shortcut: formatShortcut('Mod+Shift+S'), run: () => void saveAs() },
+      { label: t('Save and convert…'), shortcut: formatShortcut('Mod+Alt+Shift+S'), run: () => void saveAndConvert(tab) },
     ]);
   }
 
