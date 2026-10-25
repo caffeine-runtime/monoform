@@ -65,7 +65,7 @@ func TestManifest(t *testing.T) {
 				names = append(names, f.Name)
 				exts = append(exts, f.Exts...)
 			}
-			if a := e.AppExecutionAlias; a != nil && app.Executable == "monoform-cli.exe" {
+			if a := e.AppExecutionAlias; a != nil && app.Executable == "monoform.exe" {
 				alias = a.ExecutionAlias.Alias
 			}
 		}
@@ -76,11 +76,9 @@ func TestManifest(t *testing.T) {
 	if pkg.Properties.PublisherDisplayName != "Example & Co" {
 		t.Errorf("publisher name %q (escaping)", pkg.Properties.PublisherDisplayName)
 	}
-	if len(pkg.Apps) != 2 || pkg.Apps[0].Executable != "monoform.exe" || pkg.Apps[1].Executable != "monoform-cli.exe" {
+	// One application, on the Start menu: the Store refuses hidden ones (AppListEntry="none").
+	if len(pkg.Apps) != 1 || pkg.Apps[0].Executable != "monoform.exe" || strings.Contains(string(data), "AppListEntry") {
 		t.Errorf("applications %+v", pkg.Apps)
-	}
-	if !strings.Contains(string(data), `Executable="monoform-cli.exe" EntryPoint="Windows.FullTrustApplication" desktop4:SupportsMultipleInstances="true"`) {
-		t.Error("the command's application must allow multiple instances (console alias)")
 	}
 	if alias != "monoform.exe" {
 		t.Errorf("alias %q", alias)

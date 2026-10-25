@@ -115,8 +115,9 @@ Copies from the Microsoft Store don't look: the Store updates them (see below).
 
 ## Microsoft Store
 
-Every CI run also packs the **Microsoft Store package** (MSIX) on Windows: the same `monoform.exe` and `monoform`
-command, with a manifest written by `cmd/msix` from the file types the setup program registers, the logos in
+Every CI run also packs the **Microsoft Store package** (MSIX) on Windows: the same `monoform.exe` (the `monoform`
+command is an alias for it: the Store refuses the hidden console application a separate `monoform-cli.exe` would
+need), with a manifest written by `cmd/msix` from the file types the setup program registers, the logos in
 `build/windows/msix/Assets` (`scripts/icons.py --msix`) and a `resources.pri` from `makepri`. CI signs a copy with a
 throwaway certificate, installs it, runs `monoform version` through its alias, starts the app and removes it again.
 The package itself is **unsigned** — the Store signs it — so it isn't a release file (users couldn't install it); it

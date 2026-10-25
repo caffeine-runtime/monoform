@@ -95,10 +95,9 @@ func Manifest(m Meta, assocs []setup.Assoc) ([]byte, error) {
 	w(`  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"`)
 	w(`  xmlns:uap2="http://schemas.microsoft.com/appx/manifest/uap/windows10/2"`)
 	w(`  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"`)
-	w(`  xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"`)
-	w(`  xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"`)
+	w(`  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"`)
 	w(`  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"`)
-	w(`  IgnorableNamespaces="uap uap2 uap3 uap5 desktop4 rescap">`)
+	w(`  IgnorableNamespaces="uap uap2 uap3 desktop rescap">`)
 	w(`  <Identity Name="%s" Publisher="%s" Version="%s" ProcessorArchitecture="x64"/>`, esc(m.Name), esc(m.Publisher), v)
 	w(`  <Properties>`)
 	w(`    <DisplayName>%s</DisplayName>`, setup.Product)
@@ -141,19 +140,15 @@ func Manifest(m Meta, assocs []setup.Assoc) ([]byte, error) {
 		w(`          </uap3:FileTypeAssociation>`)
 		w(`        </uap3:Extension>`)
 	}
-	w(`      </Extensions>`)
-	w(`    </Application>`)
-	// The monoform command (the console program): its own application, off
-	// the Start menu, as an execution alias (console aliases need multiple instances).
-	w(`    <Application Id="Command" Executable="%s" EntryPoint="Windows.FullTrustApplication" desktop4:SupportsMultipleInstances="true">`, setup.CLIExe)
-	w(`      <uap:VisualElements DisplayName="%s command" Description="The monoform command" BackgroundColor="transparent" AppListEntry="none"`, setup.Product)
-	w(`        Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png"/>`)
-	w(`      <Extensions>`)
-	w(`        <uap5:Extension Category="windows.appExecutionAlias">`)
-	w(`          <uap5:AppExecutionAlias desktop4:Subsystem="console">`)
-	w(`            <uap5:ExecutionAlias Alias="monoform.exe"/>`)
-	w(`          </uap5:AppExecutionAlias>`)
-	w(`        </uap5:Extension>`)
+	// The monoform command: an alias for the app itself, which runs commands
+	// (hash, convert, …) in the terminal it was started from. A separate console
+	// program would need a second application hidden from Start, which the Store
+	// refuses (AppListEntry="none" needs a waiver).
+	w(`        <uap3:Extension Category="windows.appExecutionAlias" Executable="%s" EntryPoint="Windows.FullTrustApplication">`, setup.Exe)
+	w(`          <uap3:AppExecutionAlias>`)
+	w(`            <desktop:ExecutionAlias Alias="monoform.exe"/>`)
+	w(`          </uap3:AppExecutionAlias>`)
+	w(`        </uap3:Extension>`)
 	w(`      </Extensions>`)
 	w(`    </Application>`)
 	w(`  </Applications>`)

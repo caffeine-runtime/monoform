@@ -237,7 +237,7 @@ jobs:
           "Windows SDK tools: $kit"
           $stage = Join-Path $env:RUNNER_TEMP 'msix'
           New-Item -ItemType Directory -Force $stage | Out-Null
-          Copy-Item build/bin/monoform.exe, build/bin/monoform-cli.exe $stage
+          Copy-Item build/bin/monoform.exe $stage
           Copy-Item -Recurse build/windows/msix/Assets (Join-Path $stage 'Assets')
           go run ./cmd/msix -version $env:MF_VERSION -name $env:MSIX_NAME -publisher $env:MSIX_PUBLISHER -publisher-name $env:MSIX_PUBLISHER_NAME -o (Join-Path $stage 'AppxManifest.xml')
           if ($LASTEXITCODE) { throw 'manifest' }
@@ -275,11 +275,15 @@ jobs:
           if (-not $p) { throw 'not installed' }
           $want = ($env:MF_VERSION -replace '[-+].*$', '') + '.0'
           if ($p.Version -ne $want) { throw "package version $($p.Version), want $want" }
-          # The monoform command, through its execution alias.
+          # The monoform command, through its execution alias (the app itself, a GUI program: wait for it).
           $alias = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\monoform.exe'
           if (-not (Test-Path $alias)) { throw 'no monoform alias' }
-          & $alias version
-          if ($LASTEXITCODE) { throw "monoform version exited $LASTEXITCODE" }
+          $out = Join-Path $env:RUNNER_TEMP 'monoform-version.txt'
+          $v = Start-Process $alias -ArgumentList 'version' -NoNewWindow -Wait -PassThru -RedirectStandardOutput $out
+          if ($v.ExitCode) { throw "monoform version exited $($v.ExitCode)" }
+          $text = Get-Content -Raw $out
+          if ($text -notmatch [regex]::Escape("Monoform $env:MF_VERSION")) { throw "monoform version printed '$text'" }
+          $text
           # The app starts inside the package and stays up.
           Start-Process "shell:AppsFolder\$($p.PackageFamilyName)!Monoform"
           Start-Sleep -Seconds 10

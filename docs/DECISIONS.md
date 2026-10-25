@@ -209,8 +209,10 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   (no GitHub request at all). The manifest is generated (`internal/msix`) from `setup.Assocs`, so the package and the
   setup program register the same file types; extensions Windows reserves for packages are left out, pictures open in
   quick view like the setup program makes them, and other types get a *Quick peek* verb. The `monoform` command is an
-  execution alias for `monoform-cli.exe`, which refuses to start itself should the alias ever resolve to the CLI. The
-  package identity is Partner Center's, read from repository variables. The unsigned package is a CI artifact, not a
+  execution alias for `monoform.exe` itself, which runs commands (hash, convert, …) in the terminal it was started
+  from: a console alias needs its own application for `monoform-cli.exe`, hidden from Start, and the Store refuses
+  hidden applications (`AppListEntry="none"`) without a waiver. The cost: being a GUI program, the command doesn't
+  hold the prompt while it runs (redirected output, `> file` or a pipe, works as usual). The package identity is Partner Center's, read from repository variables. The unsigned package is a CI artifact, not a
   release file.
   - **Windows:** our own setup program (`cmd/setup`, M41; replaced the customised NSIS installer, still in git history). **"Open supported files with Monoform by default" is unchecked**; the app always registers under `Applications\monoform.exe\SupportedTypes` and each type's `OpenWithProgids`, so it shows in *Open with*. Defaults that are taken are backed up (`<ProgID>_backup`) and given back on uninstall. Desktop shortcut is opt-in too. Executable and setup use `monoform` (no spaces). Also a portable zip.
   - **macOS:** universal `.app` (zipped with `ditto`), bundle id `dev.monoform.app`, `CFBundleDocumentTypes` from `wails.json` with **`LSHandlerRank` = `Alternate`** — listed in *Open With*, never made default automatically (macOS has no installer step to ask). Unsigned: signing/notarization needs an Apple Developer account.

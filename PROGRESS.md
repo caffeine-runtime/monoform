@@ -605,7 +605,7 @@
 - **Microsoft Store package (MSIX)**: CI packs it on Windows next to the installer — manifest generated from the
   setup program's file types (`internal/msix`, `cmd/msix`; Go tests), logos with scale and size variants
   (`scripts/icons.py --msix`) indexed by `makepri` — and test-installs a self-signed copy (alias, app start,
-  removal). Running packaged, the app leaves updates to the Store: no GitHub request, no *Check for updates*, and
+  removal). The `monoform` command there is an alias for the app itself (the Store refuses hidden apps). Running packaged, the app leaves updates to the Store: no GitHub request, no *Check for updates*, and
   Settings › About says so (Go test `TestUpdateStoreBuild`, self-test `m77`). The package is the run's `store-msix`
   artifact (the Store signs it); identity from Partner Center via repository variables — see docs/RELEASING.md.
 - **Rulers, guides, grid and snapping** (image editor, the ▦ button in the tool bar): rulers in picture pixels
@@ -737,6 +737,8 @@ GTK/WebKitGTK process start-up before our page loads. Not yet measured on Window
 available here).
 
 ## Known issues
+- Microsoft Store copy: the `monoform` command is the app itself (a GUI program), so in a terminal the prompt
+  comes back before its output; `monoform … > file` and pipes work as usual. The installer's command doesn't have this.
 - Quick peek can't be opened with Space in Finder or Explorer: that takes a native Quick Look extension (Swift,
   signed) or a Windows preview handler (COM, C++), both outside this app's no-native-code rules; it's in Open With /
   the context menu instead. A running app shows peeked files as preview tabs (one window per app in Wails v2).

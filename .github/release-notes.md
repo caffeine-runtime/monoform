@@ -1,6 +1,7 @@
 ## What's new
 
-- Monoform is on its way to the Microsoft Store: this version is the first one built as a Store package. Nothing else changes; 1.4.0 brought German and French.
+- Windows: `monoform.exe hash … > sums.txt` (and other commands run through the app itself) writes to the file or pipe instead of the console.
+- The Microsoft Store package is accepted by the Store: the `monoform` command is now part of the app instead of a hidden second app.
 
 ## Downloads
 
