@@ -1,9 +1,7 @@
 ## What's new
 
-- Smooth, quick animations across the interface: the command palette, menus, dialogs, notifications, side panels, switching and closing tabs. Settings › Appearance › Reduce motion turns them off (they are also off when your system asks for less motion).
-- The sidebar can be hidden from a button in its header (Ctrl+B as before, or drag its edge away); narrowed, it no longer spills its buttons over the tabs.
-- At large interface sizes a long file tree no longer pushes the status bar out of the window.
-- Word documents: Ctrl+B bolds and Ctrl+K inserts a link; code editor: Ctrl+/ comments lines.
+- Monoform now speaks German and French, next to English, Polish and Spanish: the whole interface, the welcome screen and the setup program. It follows your system language on first start; Settings › Appearance › Language picks another.
+- Word documents: the font, size and line-spacing fields in the toolbar no longer cut off their labels.
 
 ## Downloads
 
