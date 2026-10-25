@@ -130,6 +130,7 @@ export namespace app {
 	    testScript: string;
 	    testArg: string;
 	    systemLanguages: string[];
+	    store: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new BootInfo(source);
@@ -148,6 +149,7 @@ export namespace app {
 	        this.testScript = source["testScript"];
 	        this.testArg = source["testArg"];
 	        this.systemLanguages = source["systemLanguages"];
+	        this.store = source["store"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

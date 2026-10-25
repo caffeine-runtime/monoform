@@ -60,6 +60,7 @@
   "Monoform restarts to install the new version.": "Monoform uruchomi się ponownie, aby zainstalować nową wersję.",
   "Save and restart": "Zapisz i uruchom ponownie",
   "One request to GitHub when Monoform starts; nothing about you or this computer is sent.": "Jedno zapytanie do GitHuba przy uruchomieniu Monoform; nie są wysyłane żadne dane o tobie ani o tym komputerze.",
+  "The Microsoft Store keeps Monoform up to date.": "Microsoft Store dba o aktualizacje Monoform.",
   "Look for a new version when Monoform starts": "Sprawdzaj nową wersję przy uruchomieniu",
   "Version {version} is available.": "Dostępna jest wersja {version}.",
   "Monoform is up to date.": "Monoform jest aktualny.",

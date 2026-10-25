@@ -127,8 +127,8 @@ class Updates {
 
 export const updates = new Updates();
 
-/** At startup (main window only, not in self-tests): look quietly after a few seconds, unless turned off. */
+/** At startup (main window only, not in self-tests or the Store build): look quietly after a few seconds, unless turned off. */
 export function checkAtStartup(info: BootInfo, mainWindow: boolean): void {
-  if (!mainWindow || info.testScript || settings.value.updateCheckOff) return;
+  if (!mainWindow || info.testScript || info.store || settings.value.updateCheckOff) return;
   setTimeout(() => void updates.check(true), 4000);
 }

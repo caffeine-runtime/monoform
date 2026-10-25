@@ -99,6 +99,9 @@ func Icons(assocs []Assoc) []string {
 // panels or tools until Edit): pictures, like the system's photo viewer.
 var quickView = map[string]bool{"png": true, "jpg": true, "jpeg": true, "gif": true, "webp": true, "bmp": true, "svg": true}
 
+// QuickView says files with this extension open in the quick-view window.
+func QuickView(ext string) bool { return quickView[ext] }
+
 // Options are the user's choices.
 type Options struct {
 	Dir      string `json:"dir"`

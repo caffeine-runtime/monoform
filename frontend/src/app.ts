@@ -83,7 +83,7 @@ function wireEvents() {
 
 export async function start(info: BootInfo, tScript: number, tBoot: number) {
   setToken(info.token);
-  Object.assign(boot, { platform: info.platform, home: info.home, version: info.version, token: info.token, extraWindow: info.launchMode === 'window', systemLanguages: info.systemLanguages ?? [] });
+  Object.assign(boot, { platform: info.platform, home: info.home, version: info.version, token: info.token, extraWindow: info.launchMode === 'window', systemLanguages: info.systemLanguages ?? [], store: !!info.store });
   settings.init(info.settings);
   theme.apply();
 

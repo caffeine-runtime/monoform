@@ -111,6 +111,33 @@ release** (pre-releases are never offered) and download the asset for their syst
 `monoform-macos-universal.zip`, `monoform-linux-amd64.tar.gz` — checked against `SHA256SUMS`. Keep those names and
 the checksum file in every release. A normal (non-pre-release) version reaches everyone on their next start; test a
 release as a pre-release first if unsure. The release notes' "What's new" part is shown in the update popup.
+Copies from the Microsoft Store don't look: the Store updates them (see below).
+
+## Microsoft Store
+
+Every CI run also packs the **Microsoft Store package** (MSIX) on Windows: the same `monoform.exe` and `monoform`
+command, with a manifest written by `cmd/msix` from the file types the setup program registers, the logos in
+`build/windows/msix/Assets` (`scripts/icons.py --msix`) and a `resources.pri` from `makepri`. CI signs a copy with a
+throwaway certificate, installs it, runs `monoform version` through its alias, starts the app and removes it again.
+The package itself is **unsigned** — the Store signs it — so it isn't a release file (users couldn't install it); it
+is the run's `store-msix` artifact.
+
+Inside the package the app knows it runs packaged (`update.InStore`): it never asks GitHub for updates, offers no
+*Check for updates*, and Settings › About says the Store keeps it up to date.
+
+Once, in Partner Center:
+1. **Apps and games → New product → MSIX or PWA app**, reserve the name **Monoform**.
+2. **Product management → Product identity**: copy *Package/Identity/Name*, *Package/Identity/Publisher* (`CN=…`)
+   and *Package/Properties/PublisherDisplayName* into the repository's **Settings → Secrets and variables → Actions →
+   Variables** as `MSIX_IDENTITY_NAME`, `MSIX_PUBLISHER` and `MSIX_PUBLISHER_NAME`. Until they are set CI uses
+   stand-ins (`Monoform.Dev`, `CN=Monoform Dev`), which the Store rejects.
+3. The Store listing: description, screenshots (`docs/screenshots/`), and a privacy policy URL — the README's
+   *Privacy* section (`https://github.com/caffeine-runtime/monoform#privacy`) says what the app sends (nothing; the
+   Store build doesn't even check for updates; optional models only when asked).
+
+For each version: after the release run, open it (**Actions → Build → the run**), download the `store-msix` artifact,
+unzip it and upload `monoform-store-x64.msix` in a new Partner Center submission (**Packages**). The package version
+is the release's `x.y.z` plus `.0`, so each upload needs a new release version.
 
 ## Deleting releases
 

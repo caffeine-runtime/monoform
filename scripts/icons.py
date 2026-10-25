@@ -4,6 +4,8 @@
 Writes the SVG sources to build/icon/, 1024/512 px PNGs to build/ (Wails
 derives the macOS .icns from them) and multi-size .ico files to
 build/windows/ (each size rendered on its own, so 16-32 px stay crisp).
+With --msix it writes only the Microsoft Store package's logos
+(build/windows/msix/Assets).
 
 Needs Pillow and a Chromium headless shell to render the SVGs:
     python3 scripts/icons.py [--chromium PATH]
@@ -164,7 +166,8 @@ def doc_svg(kind, small=False):
 
 def find_chromium():
     base = os.environ.get('PLAYWRIGHT_BROWSERS_PATH', '/opt/pw-browsers')
-    found = sorted(glob.glob(os.path.join(base, 'chromium_headless_shell-*', '*', 'headless_shell')))
+    found = sorted(glob.glob(os.path.join(base, 'chromium_headless_shell-*', '*', 'headless_shell'))
+                   + glob.glob(os.path.join(base, 'chromium_headless_shell-*', '*', 'chrome-headless-shell')))
     return found[-1] if found else None
 
 
@@ -177,9 +180,9 @@ def render(chromium, svg, size, tmp):
         f.write(f'<html><body style="margin:0;background:transparent"><img src="icon.svg" width="{size}" height="{size}"></body></html>')
     out = os.path.join(tmp, 'out.png')
     subprocess.run([chromium, '--no-sandbox', '--disable-gpu', '--hide-scrollbars', '--force-device-scale-factor=1',
-                    '--default-background-color=00000000', f'--window-size={size},{size}', f'--screenshot={out}', 'file://' + page],
-                   check=True, capture_output=True)
-    im = Image.open(out).convert('RGBA')
+                    '--default-background-color=00000000', f'--window-size={max(size, 256)},{max(size, 256)}', f'--screenshot={out}',
+                    'file://' + page], check=True, capture_output=True)
+    im = Image.open(out).convert('RGBA').crop((0, 0, size, size))
     im.load()
     return im
 
@@ -191,12 +194,57 @@ def write_ico(path, images):
     largest.save(path, format='ICO', sizes=[(im.width, im.height) for im in images], append_images=images[:-1])
 
 
+def msix_assets(chromium, tmp):
+    """The Microsoft Store package's logos (build/windows/msix/Assets): the
+    names the manifest uses plus scale and target-size variants, which
+    makepri indexes so Windows picks a crisp one for each place."""
+    out = os.path.join(ROOT, 'build', 'windows', 'msix', 'Assets')
+    os.makedirs(out, exist_ok=True)
+    app = {}
+
+    def icon(size):
+        if size not in app:
+            app[size] = render(chromium, app_svg(small=size <= 32), size, tmp)
+        return app[size]
+
+    def save(im, name):
+        im.save(os.path.join(out, name), optimize=True)
+
+    def square(name, base, scales=(100, 125, 150, 200, 400)):
+        save(icon(base), f'{name}.png')
+        for sc in scales:
+            save(icon(round(base * sc / 100)), f'{name}.scale-{sc}.png')
+
+    square('Square44x44Logo', 44)
+    for ts in (16, 24, 32, 48, 256):
+        save(icon(ts), f'Square44x44Logo.targetsize-{ts}.png')
+        save(icon(ts), f'Square44x44Logo.targetsize-{ts}_altform-unplated.png')
+    square('Square150x150Logo', 150, (100, 200, 400))
+    square('StoreLogo', 50, (100, 200, 400))
+    for sc, (w, h) in ((None, (310, 150)), (100, (310, 150)), (200, (620, 300))):
+        wide = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+        mark = icon(round(h * 0.66))
+        wide.alpha_composite(mark, ((w - mark.width) // 2, (h - mark.height) // 2))
+        save(wide, 'Wide310x150Logo.png' if sc is None else f'Wide310x150Logo.scale-{sc}.png')
+    for kind in TYPES:
+        name = f'file-{kind}'
+        save(render(chromium, doc_svg(kind), 44, tmp), name + '.png')
+        for ts in (16, 24, 32, 48, 256):
+            save(render(chromium, doc_svg(kind, small=ts <= 24), ts, tmp), f'{name}.targetsize-{ts}.png')
+    print('msix assets')
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--chromium', default=find_chromium())
+    ap.add_argument('--msix', action='store_true', help='only the Microsoft Store package logos')
     args = ap.parse_args()
     if not args.chromium:
         sys.exit('no Chromium headless shell found; pass --chromium')
+    if args.msix:
+        with tempfile.TemporaryDirectory() as tmp:
+            msix_assets(args.chromium, tmp)
+        return
     icon_dir = os.path.join(ROOT, 'build', 'icon')
     win_dir = os.path.join(ROOT, 'build', 'windows')
     with tempfile.TemporaryDirectory() as tmp:

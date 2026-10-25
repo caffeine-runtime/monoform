@@ -8,4 +8,6 @@ export const boot = {
   extraWindow: false,
   /** The system's languages, most preferred first ("pl-PL", …). */
   systemLanguages: [] as string[],
+  /** The Microsoft Store build: the Store updates it, so the app never looks for updates. */
+  store: false,
 };

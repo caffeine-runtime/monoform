@@ -27,8 +27,9 @@ type UpdateInfo struct {
 	URL       string `json:"url"`
 	Size      int64  `json:"size"`
 	// Install says how it would be installed: "installer" (Windows setup),
-	// "portable", "app" (macOS bundle), "binary" (Linux) or "manual" (this
-	// copy can't replace itself: download it from the release page).
+	// "portable", "app" (macOS bundle), "binary" (Linux), "manual" (this
+	// copy can't replace itself: download it from the release page) or
+	// "store" (the Microsoft Store updates it; nothing is checked).
 	Install string `json:"install"`
 }
 
@@ -44,6 +45,8 @@ func fakeUpdates() bool { return os.Getenv("MF_UPDATE_FAKE") != "" }
 // installKind says how this copy updates itself.
 func installKind(exe string) string {
 	switch {
+	case update.InStore():
+		return "store"
 	case fakeUpdates():
 		return "binary"
 	case update.GOOS == "windows" && installedBySetup(exe):
@@ -78,6 +81,9 @@ func (a *App) UpdateCheck() (UpdateInfo, error) {
 	info := UpdateInfo{Current: Version}
 	exe, _ := os.Executable()
 	info.Install = installKind(exe)
+	if info.Install == "store" {
+		return info, nil // no request: the Store updates this copy
+	}
 	var rel update.Release
 	if fakeUpdates() {
 		rel = update.Release{Version: "99.0.0", Notes: "## What's new\n- Something new\n- A fix", URL: "https://github.com/" + update.Repo + "/releases", Asset: "fake-update.bin", AssetURL: "fake", AssetSize: 1 << 20}
@@ -115,7 +121,7 @@ func (a *App) UpdateDownload() (string, error) {
 	updateMu.Lock()
 	rel := updateRel
 	updateMu.Unlock()
-	if rel == nil {
+	if rel == nil || update.InStore() {
 		return "", errors.New("no update to download")
 	}
 	r := *rel
@@ -139,6 +145,9 @@ func (a *App) UpdateDownload() (string, error) {
 // UpdateInstall puts the downloaded package in place and restarts into the
 // new version (the frontend has already dealt with unsaved work).
 func (a *App) UpdateInstall(pkg string) error {
+	if update.InStore() {
+		return errors.New("the Microsoft Store updates this copy")
+	}
 	exe, err := os.Executable()
 	if err != nil {
 		return err

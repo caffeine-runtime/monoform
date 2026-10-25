@@ -28,6 +28,7 @@ import (
 	"github.com/caffeine-runtime/monoform/internal/search"
 	"github.com/caffeine-runtime/monoform/internal/server"
 	"github.com/caffeine-runtime/monoform/internal/settings"
+	"github.com/caffeine-runtime/monoform/internal/update"
 )
 
 var Version = "1.0.0-dev"
@@ -172,6 +173,8 @@ type BootInfo struct {
 	TestArg     string            `json:"testArg"`
 	// SystemLanguages are the system's preferred languages ("pl-PL", …), for "like my computer".
 	SystemLanguages []string `json:"systemLanguages"`
+	// Store: the Microsoft Store build (an MSIX package), which the Store updates.
+	Store bool `json:"store"`
 }
 
 // Boot returns startup info. Called once by the frontend before first paint.
@@ -195,6 +198,7 @@ func (a *App) Boot() BootInfo {
 		TestScript:      os.Getenv("MF_TEST"),
 		TestArg:         os.Getenv("MF_TEST_ARG"),
 		SystemLanguages: a.langs(),
+		Store:           update.InStore(),
 	}
 }
 

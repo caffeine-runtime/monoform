@@ -1,6 +1,7 @@
 // Core commands: files, tabs, view and tools. Modules add their own when loaded.
 import { newFileOfKind } from './newfile';
 import { api } from './backend';
+import { boot } from './boot';
 import { commands } from './commands';
 import { formatShortcut } from './keys';
 import { settings } from './settings.svelte';
@@ -194,7 +195,7 @@ export function registerAppCommands() {
       category: t('Help'),
       run: () => (ui.firstRun = true),
     },
-    { id: 'help.updates', title: t('Check for updates…'), category: t('Help'), run: () => void import('./updates.svelte').then((m) => m.updates.check(false)) },
+    { id: 'help.updates', title: t('Check for updates…'), category: t('Help'), when: () => !boot.store, run: () => void import('./updates.svelte').then((m) => m.updates.check(false)) },
     {
       id: 'help.shortcuts',
       title: t('Keyboard shortcuts'),

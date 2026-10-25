@@ -231,20 +231,24 @@
 
   <section class="card">
     <h3>{t('About')}</h3>
-    <label class="row check">
-      <span class="lbl" title={t('One request to GitHub when Monoform starts; nothing about you or this computer is sent.')}>{t('Look for a new version when Monoform starts')}</span>
-      <input type="checkbox" checked={!s.updateCheckOff} onchange={(e) => settings.update((x) => (x.updateCheckOff = !(e.target as HTMLInputElement).checked))} />
-    </label>
-    <div class="row">
-      <span class="lbl">
-        {#if updates.checking}{t('Checking…')}{:else if updates.info?.available}{t('Version {version} is available.', { version: updates.info.version })}{:else if updates.info}{t('Monoform is up to date.')}{:else if updates.error}{t('Couldn’t check: {error}', { error: updates.error })}{/if}
-      </span>
-      {#if updates.info?.available}
-        <button class="btn primary" onclick={() => updates.offer(updates.info!)}>{t('Update…')}</button>
-      {:else}
-        <button class="btn" disabled={updates.checking} onclick={() => updates.check(false)}>{t('Check now')}</button>
-      {/if}
-    </div>
+    {#if boot.store}
+      <div class="row"><span class="lbl">{t('The Microsoft Store keeps Monoform up to date.')}</span></div>
+    {:else}
+      <label class="row check">
+        <span class="lbl" title={t('One request to GitHub when Monoform starts; nothing about you or this computer is sent.')}>{t('Look for a new version when Monoform starts')}</span>
+        <input type="checkbox" checked={!s.updateCheckOff} onchange={(e) => settings.update((x) => (x.updateCheckOff = !(e.target as HTMLInputElement).checked))} />
+      </label>
+      <div class="row">
+        <span class="lbl">
+          {#if updates.checking}{t('Checking…')}{:else if updates.info?.available}{t('Version {version} is available.', { version: updates.info.version })}{:else if updates.info}{t('Monoform is up to date.')}{:else if updates.error}{t('Couldn’t check: {error}', { error: updates.error })}{/if}
+        </span>
+        {#if updates.info?.available}
+          <button class="btn primary" onclick={() => updates.offer(updates.info!)}>{t('Update…')}</button>
+        {:else}
+          <button class="btn" disabled={updates.checking} onclick={() => updates.check(false)}>{t('Check now')}</button>
+        {/if}
+      </div>
+    {/if}
     <div class="grid">
       <span class="muted">{t('Version')}</span><span class="selectable">{boot.version}</span>
       <span class="muted">{t('Settings file')}</span><span class="selectable mono">{locations ? tildify(locations.settings, boot.home) : '…'}</span>

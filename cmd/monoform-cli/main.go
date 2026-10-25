@@ -26,6 +26,13 @@ func main() {
 		fmt.Fprintf(os.Stderr, "monoform: the Monoform app wasn't found next to monoform (%s)\n", app)
 		os.Exit(2)
 	}
+	// Under an MSIX alias both are monoform.exe: never start ourselves again.
+	if self, err := os.Executable(); err == nil {
+		if a, b := statOf(app), statOf(self); a != nil && b != nil && os.SameFile(a, b) {
+			fmt.Fprintf(os.Stderr, "monoform: %s is this program, not the app\n", app)
+			os.Exit(2)
+		}
+	}
 	// Files become absolute: the app (or a window already open) may run elsewhere.
 	pass := make([]string, 0, len(args))
 	for _, a := range args {
@@ -43,4 +50,15 @@ func main() {
 		os.Exit(2)
 	}
 	_ = cmd.Process.Release()
+}
+
+func statOf(p string) os.FileInfo {
+	if r, err := filepath.EvalSymlinks(p); err == nil {
+		p = r
+	}
+	fi, err := os.Stat(p)
+	if err != nil {
+		return nil
+	}
+	return fi
 }

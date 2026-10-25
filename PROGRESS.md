@@ -569,6 +569,12 @@
   SVG, then Select subject with the optional BiRefNet model on the NASA photo and the cut-out pasted into the report
   dragged beside it. `scripts/demo_files.py` writes the CSV and the SVG (own drawing, schematic); `readme-media.sh`
   installs the subject model once into a kept cache (`MF_DEMO_MODELS`) for the tour.
+- **Microsoft Store package (MSIX)**: CI packs it on Windows next to the installer — manifest generated from the
+  setup program's file types (`internal/msix`, `cmd/msix`; Go tests), logos with scale and size variants
+  (`scripts/icons.py --msix`) indexed by `makepri` — and test-installs a self-signed copy (alias, app start,
+  removal). Running packaged, the app leaves updates to the Store: no GitHub request, no *Check for updates*, and
+  Settings › About says so (Go test `TestUpdateStoreBuild`, self-test `m77`). The package is the run's `store-msix`
+  artifact (the Store signs it); identity from Partner Center via repository variables — see docs/RELEASING.md.
 - **Rulers, guides, grid and snapping** (image editor, the ▦ button in the tool bar): rulers in picture pixels
   along the top and left (Mod+R) with a mark where the pointer is; drag out of a ruler for a guide, drag a guide
   (move or hand tool) back onto a ruler to remove it, or Clear guides; a grid (Mod+', a round size or one you set);
