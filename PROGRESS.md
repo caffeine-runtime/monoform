@@ -595,6 +595,10 @@
   the demo's marks), private / open-source / logo cards. `ad.html` poses everything for a time `t`; `render.mjs` steps
   it frame by frame with Playwright and pipes the frames to ffmpeg, so motion is exact however slow a frame is to draw.
   `python3 scripts/ad/make.py` → `build/bin/monoform-ad.mp4` (not committed).
+- **Smooth 3D in the recordings**: the software-rendered VM draws the turning model at ~5 fps, which showed as a
+  stutter in the promo and the ad. The demo now turns it 8× slower for 8× as long and the editing speeds that
+  stretch back up (`scripts/demo_timeline.py`: cuts and slow-motion stretches into one ffmpeg filter, marks moved onto
+  the edited timeline), so it plays at full frame rate; in split views the model stands still.
 - **Microsoft Store package (MSIX)**: CI packs it on Windows next to the installer — manifest generated from the
   setup program's file types (`internal/msix`, `cmd/msix`; Go tests), logos with scale and size variants
   (`scripts/icons.py --msix`) indexed by `makepri` — and test-installs a self-signed copy (alias, app start,

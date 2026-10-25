@@ -150,17 +150,18 @@ const s3win = shotWindow(1440, 810);
 
 // 4 · Feature beats: a headline on one side, the app at work on the other.
 const BEATS = [
-  { shot: 'md', a: 11.8, b: 16.2, side: 1, head: 'Write.', sub: 'Markdown with a live preview.<br>Diagrams draw as you type.' },
-  { shot: 'docs', a: 16.0, b: 20.4, side: -1, head: 'Read. Fill. Sign.', sub: 'PDFs, Word documents<br>and spreadsheets, in place.' },
-  { shot: 'ai', a: 20.2, b: 27.0, side: 1, head: 'Cut it out.', sub: 'Select subject with on-device AI.<br>Paste it anywhere.' },
-  { shot: 'more', a: 26.8, b: 31.2, side: -1, head: 'And the rest.', sub: 'SVG, 3D models, audio,<br>video and archives.' },
-  { shot: 'split', a: 31.0, b: 35.4, side: 1, head: 'Side by side.', sub: 'Ctrl+K, split, and keep<br>four files in view.' },
+  { shot: 'md', a: 11.8, b: 16.2, side: 1, head: 'Notes that draw themselves.', sub: 'Write Markdown.<br>The diagram appears as you type.' },
+  { shot: 'docs', a: 16.0, b: 20.4, side: -1, head: 'Word, Excel, PDF. No suite required.', sub: 'Edit the report, check the numbers,<br>read the fact sheet.' },
+  { shot: 'ai', a: 20.2, b: 27.0, side: 1, head: 'The shuttle, without the sky.', sub: 'On-device AI finds the subject.<br>Drop it into your report.' },
+  { shot: 'more', a: 26.8, b: 31.2, side: -1, head: 'From vectors to video.', sub: 'SVG, 3D models, audio and film,<br>all in one window.' },
+  { shot: 'split', a: 31.0, b: 35.4, side: 1, head: 'Everything, side by side.', sub: 'Press Ctrl+K, split the window,<br>keep four files in view.' },
 ].map((bt) => {
   const text = el('div', '');
   Object.assign(text.style, { position: 'absolute', top: '0', bottom: '0', width: '600px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '28px',
     left: bt.side > 0 ? '100px' : 'auto', right: bt.side > 0 ? 'auto' : '100px' });
   const h = el('div', 'h1', text);
-  h.style.fontSize = bt.head.length > 12 ? '96px' : '120px';
+  h.style.fontSize = bt.head.length > 24 ? '84px' : bt.head.length > 12 ? '96px' : '120px';
+  h.style.lineHeight = '1.04';
   h.style.whiteSpace = 'normal';
   const hw = words(h, bt.head, 'warm');
   const sub = el('div', 'muted', text, bt.sub);

@@ -87,36 +87,28 @@ for s in "${SCENES[@]}"; do
   sleep 0.2
   kill -INT $REC; wait $REC || true
   wait $APP || true
-  # Drop the waits the scene marked, then 20 fps at 1000 px wide.
+  # Drop the waits the scene marked and speed its slow-motion stretches back up
+  # (scripts/demo_timeline.py), then encode.
   CUTS=$(grep -o 'cuts=[0-9.,-]*' "$LOG" | cut -d= -f2)
-  SEL=""
-  if [ -n "$CUTS" ]; then
-    EXPR=$(echo "$CUTS" | tr ',' '\n' | awk -F- '{printf "%sbetween(t,%s,%s)", (NR>1?"+":""), $1, $2}')
-    SEL="select='not($EXPR)',setpts=N/30/TB,"
-  fi
+  SPEEDS=$(grep -o 'speeds=[0-9.,:-]*' "$LOG" | cut -d= -f2)
+  MARKS=$(grep -o 'marks=[^ ]*' "$LOG" | cut -d= -f2)
+  RAW=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$WORK/$s.mkv")
+  python3 scripts/demo_timeline.py "$CUTS" "$SPEEDS" "$RAW" "$MARKS" > "$WORK/$s-timeline.json"
+  FC=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["filter"])' "$WORK/$s-timeline.json")
   if [[ $s == footage ]]; then
-    # The ad's shots (scripts/ad/make.py): the clean promo with the waits cut, near-lossless,
-    # and its section marks moved onto the cut timeline.
+    # The ad's shots (scripts/ad/make.py): the clean promo, edited, near-lossless, and its
+    # section marks on the edited timeline.
     AD=${MF_AD_DIR:-build/bin/ad}
     mkdir -p "$AD"
-    ffmpeg -loglevel error -y -i "$WORK/$s.mkv" -vf "${SEL}fps=30,format=yuv420p" -c:v libx264 -preset slow -crf 10 -an "$AD/footage.mp4"
-    MARKS=$(grep -o 'marks=[^ ]*' "$LOG" | cut -d= -f2)
-    python3 - "$CUTS" "$MARKS" > "$AD/marks.json" <<'PY'
-import json, sys
-cuts = [tuple(map(float, c.split('-'))) for c in sys.argv[1].split(',') if c]
-out = {}
-for m in sys.argv[2].split(','):
-    name, t = m.split(':'); t = float(t)
-    out[name] = round(t - sum(min(b, t) - a for a, b in cuts if a < t), 3)
-print(json.dumps(out))
-PY
+    ffmpeg -loglevel error -y -i "$WORK/$s.mkv" -filter_complex "$FC;[cut]fps=30,format=yuv420p[o]" -map "[o]" -c:v libx264 -preset slow -crf 10 -an "$AD/footage.mp4"
+    python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1]))["marks"]))' "$WORK/$s-timeline.json" > "$AD/marks.json"
     echo "footage: $AD/footage.mp4, marks $(cat "$AD/marks.json")"
     continue
   fi
   if [[ $s == promo ]]; then
     PROMO=${MF_PROMO_OUT:-build/bin/monoform-promo.mp4}
     mkdir -p "$(dirname "$PROMO")"
-    ffmpeg -loglevel error -y -i "$WORK/$s.mkv" -vf "${SEL}fps=30,format=yuv420p" -c:v libx264 -preset slow -crf 18 -an "$WORK/promo-video.mp4"
+    ffmpeg -loglevel error -y -i "$WORK/$s.mkv" -filter_complex "$FC;[cut]fps=30,format=yuv420p[o]" -map "[o]" -c:v libx264 -preset slow -crf 18 -an "$WORK/promo-video.mp4"
     DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$WORK/promo-video.mp4")
     ffmpeg -loglevel error -y -i "$WORK/promo-video.mp4" -i "$DIR/Goldberg Variation 1.ogg" -map 0:v -map 1:a -c:v copy \
       -af "volume=0.55,afade=t=in:d=1.2,afade=t=out:st=$(echo "$DUR - 2.5" | bc):d=2.5" -c:a aac -b:a 160k -shortest -movflags +faststart "$PROMO"
@@ -127,7 +119,7 @@ PY
     echo "promo: $OUT/promo.webp $(du -h "$OUT/promo.webp" | cut -f1)"
     continue
   fi
-  ffmpeg -loglevel error -y -i "$WORK/$s.mkv" -vf "${SEL}fps=20,scale=1000:-1:flags=lanczos" \
+  ffmpeg -loglevel error -y -i "$WORK/$s.mkv" -filter_complex "$FC;[cut]fps=20,scale=1000:-1:flags=lanczos[o]" -map "[o]" \
     -c:v libwebp_anim -lossless 0 -quality 80 -compression_level 6 -loop 0 "$OUT/$s.webp"
   echo "$s: $(du -h "$OUT/$s.webp" | cut -f1)"
 done

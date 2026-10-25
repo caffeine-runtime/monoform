@@ -144,20 +144,36 @@ async function spin(tab: Tab, rpm = 6) {
   await sleep(400); // the view frames the model once laid out
   const viewer = v.viewer();
   const c = viewer.controls;
-  const t0 = performance.now();
-  const start = Math.atan2(viewer.camera.position.x - c.target.x, viewer.camera.position.z - c.target.z);
   const r = Math.hypot(viewer.camera.position.x - c.target.x, viewer.camera.position.z - c.target.z);
+  let a = Math.atan2(viewer.camera.position.x - c.target.x, viewer.camera.position.z - c.target.z);
+  let last = performance.now();
+  const ctl = { rpm, stopped: false, stop: () => (ctl.stopped = true) };
   const turn = () => {
-    if (!viewer.renderer.domElement.isConnected) return;
-    const a = start + ((performance.now() - t0) / 60000) * rpm * 2 * Math.PI;
+    if (ctl.stopped || !viewer.renderer.domElement.isConnected) return;
+    const now = performance.now();
+    a += ((now - last) / 60000) * ctl.rpm * 2 * Math.PI;
+    last = now;
     viewer.camera.position.x = c.target.x + r * Math.sin(a);
     viewer.camera.position.z = c.target.z + r * Math.cos(a);
     viewer.camera.lookAt(c.target);
     viewer.kick();
     requestAnimationFrame(turn);
   };
-  requestAnimationFrame(turn);
+  if (rpm) requestAnimationFrame(turn);
+  return ctl;
 }
+
+// Slow motion for what software rendering draws slowly (the turning model,
+// ~5 fps on the VM): the scene runs `k` times slower for `k` times as long and
+// the recording speeds that stretch up again (scripts/demo_timeline.py), so it
+// plays smooth. Nothing else may move meanwhile.
+const speeds: [number, number, number][] = [];
+async function slowMotion(k: number, ms: number) {
+  const t0 = (performance.now() - rec0) / 1000;
+  await sleep(ms * k);
+  speeds.push([t0, (performance.now() - rec0) / 1000, k]);
+}
+const SLOW = 8;
 
 async function palette(query: string) {
   press('Mod+K');
@@ -337,7 +353,7 @@ async function split() {
   await sleep(600);
   await palette('split four');
   await sleep(500);
-  await spin(model, 6);
+  await spin(model, 0);
   await sleep(1200);
   // Move between the views.
   for (const t of workspace.tabs.slice(0, 3)) {
@@ -458,8 +474,9 @@ async function promo(dir: string) {
   caption('SVG, 3D models, video — the same window');
   await openFromTree(dir, 'Mission profile.svg', 1500);
   const model = await openFromTree(dir, '3DBenchy.stl', 0);
-  await cut(spin(model, 9));
-  await sleep(1900);
+  const turning = await cut(spin(model, 9 / SLOW));
+  await slowMotion(SLOW, 1900);
+  turning.stop();
   await openFromTree(dir, 'Atlantis landing.webm', 1800);
 
   mark('ai');
@@ -573,6 +590,6 @@ export default async function demo(arg: string) {
   rec0 = performance.now();
   await sleep(500);
   await SCENES[scene](dir);
-  log(`demo: end cuts=${cuts.map(([a, b]) => `${a.toFixed(2)}-${b.toFixed(2)}`).join(',')} marks=${marks.map(([n, t]) => `${n}:${t.toFixed(2)}`).join(',')}`);
+  log(`demo: end cuts=${cuts.map(([a, b]) => `${a.toFixed(2)}-${b.toFixed(2)}`).join(',')} speeds=${speeds.map(([a, b, k]) => `${a.toFixed(2)}-${b.toFixed(2)}:${k}`).join(',')} marks=${marks.map(([n, t]) => `${n}:${t.toFixed(2)}`).join(',')}`);
   await sleep(1500); // still on screen while the recorder stops
 }

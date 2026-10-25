@@ -30,7 +30,7 @@ SHOTS = {
     'md': ([(('md', 0.2), ('docs', -0.1))], 11.8, 16.2),
     'docs': ([(('docs', 1.5), ('docs', 5.4)), (('more', 0.0), ('more', 1.4))], 16.0, 20.4),  # report, CSV, the PDF
     'ai': ([(('ai', 1.0), ('split', -2.3))], 20.2, 27.0),  # without the long hold after the paste
-    'more': ([(('more', 2.0), ('more', 3.4)), (('more', 4.4), ('ai', -0.3))], 26.8, 31.2),  # SVG; 3D and video
+    'more': ([(('more', 2.0), ('more', 3.3)), (('more', 4.1), ('more', 6.6)), (('more', 7.4), ('ai', -0.2))], 26.8, 31.2),  # SVG, 3D, video
     'split': ([(('split', 1.0), ('end', -0.3))], 31.0, 35.4),
 }
 
