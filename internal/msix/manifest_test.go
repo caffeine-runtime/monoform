@@ -38,30 +38,36 @@ func TestManifest(t *testing.T) {
 		Properties struct {
 			PublisherDisplayName string
 		}
-		Extensions []struct {
-			FileTypeAssociation *struct {
-				Name string   `xml:",attr"`
-				Exts []string `xml:"SupportedFileTypes>FileType"`
-			}
-			AppExecutionAlias *struct {
-				ExecutionAlias struct {
-					Alias string `xml:",attr"`
+		Apps []struct {
+			ID         string `xml:"Id,attr"`
+			Executable string `xml:",attr"`
+			Extensions []struct {
+				FileTypeAssociation *struct {
+					Name string   `xml:",attr"`
+					Exts []string `xml:"SupportedFileTypes>FileType"`
 				}
-			}
-		} `xml:"Applications>Application>Extensions>Extension"`
+				AppExecutionAlias *struct {
+					ExecutionAlias struct {
+						Alias string `xml:",attr"`
+					}
+				}
+			} `xml:"Extensions>Extension"`
+		} `xml:"Applications>Application"`
 	}
 	if err := xml.Unmarshal(data, &pkg); err != nil {
 		t.Fatalf("not XML: %v\n%s", err, data)
 	}
 	var exts, names []string
 	alias := ""
-	for _, e := range pkg.Extensions {
-		if f := e.FileTypeAssociation; f != nil {
-			names = append(names, f.Name)
-			exts = append(exts, f.Exts...)
-		}
-		if a := e.AppExecutionAlias; a != nil {
-			alias = a.ExecutionAlias.Alias
+	for _, app := range pkg.Apps {
+		for _, e := range app.Extensions {
+			if f := e.FileTypeAssociation; f != nil {
+				names = append(names, f.Name)
+				exts = append(exts, f.Exts...)
+			}
+			if a := e.AppExecutionAlias; a != nil && app.Executable == "monoform-cli.exe" {
+				alias = a.ExecutionAlias.Alias
+			}
 		}
 	}
 	if pkg.Identity.Name != meta.Name || pkg.Identity.Publisher != meta.Publisher || pkg.Identity.Version != "1.3.2.0" {
@@ -69,6 +75,12 @@ func TestManifest(t *testing.T) {
 	}
 	if pkg.Properties.PublisherDisplayName != "Example & Co" {
 		t.Errorf("publisher name %q (escaping)", pkg.Properties.PublisherDisplayName)
+	}
+	if len(pkg.Apps) != 2 || pkg.Apps[0].Executable != "monoform.exe" || pkg.Apps[1].Executable != "monoform-cli.exe" {
+		t.Errorf("applications %+v", pkg.Apps)
+	}
+	if !strings.Contains(string(data), `Executable="monoform-cli.exe" EntryPoint="Windows.FullTrustApplication" desktop4:SupportsMultipleInstances="true"`) {
+		t.Error("the command's application must allow multiple instances (console alias)")
 	}
 	if alias != "monoform.exe" {
 		t.Errorf("alias %q", alias)

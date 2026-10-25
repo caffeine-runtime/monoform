@@ -141,8 +141,15 @@ func Manifest(m Meta, assocs []setup.Assoc) ([]byte, error) {
 		w(`          </uap3:FileTypeAssociation>`)
 		w(`        </uap3:Extension>`)
 	}
-	// The monoform command (the console program) as an execution alias.
-	w(`        <uap5:Extension Category="windows.appExecutionAlias" Executable="%s" EntryPoint="Windows.FullTrustApplication">`, setup.CLIExe)
+	w(`      </Extensions>`)
+	w(`    </Application>`)
+	// The monoform command (the console program): its own application, off
+	// the Start menu, as an execution alias (console aliases need multiple instances).
+	w(`    <Application Id="Command" Executable="%s" EntryPoint="Windows.FullTrustApplication" desktop4:SupportsMultipleInstances="true">`, setup.CLIExe)
+	w(`      <uap:VisualElements DisplayName="%s command" Description="The monoform command" BackgroundColor="transparent" AppListEntry="none"`, setup.Product)
+	w(`        Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png"/>`)
+	w(`      <Extensions>`)
+	w(`        <uap5:Extension Category="windows.appExecutionAlias">`)
 	w(`          <uap5:AppExecutionAlias desktop4:Subsystem="console">`)
 	w(`            <uap5:ExecutionAlias Alias="monoform.exe"/>`)
 	w(`          </uap5:AppExecutionAlias>`)
