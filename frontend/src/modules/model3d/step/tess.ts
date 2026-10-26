@@ -363,7 +363,10 @@ export function tessellateFace(f: FaceInput, tol: number, out: MeshOut, maxTris 
       contour = closed[best];
       holes = closed.filter((_, i) => i !== best);
     } else {
-      // No bounds (a whole sphere or torus): the full parameter domain.
+      // No bounds (a whole sphere or torus): the full parameter domain. On a
+      // plane or a cylinder that is a stand-in: such a face (two edges
+      // between the same two points) encloses nothing.
+      if (!s.whole) return false;
       const n = 24;
       const rect: Vtx[] = [];
       const corner = (u: number, v: number) => ({ u, v, p: s.at(u, v) });

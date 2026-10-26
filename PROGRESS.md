@@ -543,7 +543,10 @@
   spheres, tori, B-spline and swept surfaces), assemblies with their placements (parts shared between
   instances, named after their products), colours on parts and faces, drawn edges, read in the load worker with
   progress. Own reader and tessellator (no permissive STEP kernel exists). Checked on the as1 test assembly
-  (AP203 and AP214). Unit tests (parser, band and pole faces, the fixture assembly), self-test `m57`.
+  (AP203 and AP214) and a SolidWorks 2022 assembly (a radiator fan, 20 parts). Faces that enclose nothing (two
+  edges between the same two points, left in by SolidWorks) are skipped: they were drawn as the whole plane, a
+  2 km square the view zoomed out to. Unit tests (parser, band, pole and empty faces, the fixture assembly),
+  self-test `m57`.
 - **After 1.1.2 (image editor)**: **move, resize and turn a selection's outline** — with the rectangle, ellipse or
   lasso select tool a selection gets handles: drag inside it to move it, a side or corner to resize it, the round
   handle to turn it (any angle, shown by the pointer; Shift for 15° steps), so a tilted area can be selected; the pixels don't move (the earlier

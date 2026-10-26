@@ -329,9 +329,12 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   others), and `tess.ts` triangulates each face in its (u, v) parameters. Each edge is sampled once and shared by
   the faces on both sides, so the mesh is watertight. Periodic faces are cut open along a seam sampled on the
   surface (a single straight cut would chord through a sphere), loops round the surface become a band or are
-  closed at the pole on the face's side (from the loop's orientation). Curved faces get grid points inside, ear
-  clipping (three's earcut, the inner points as Steiner points) then Delaunay edge flips — ear clipping alone
-  joins three neighbouring boundary samples of a circle into a triangle across the cap — and edges whose
+  closed at the pole on the face's side (from the loop's orientation). A face whose bounds enclose nothing is
+  the whole surface only where the parameter domain is the whole surface (`Surface.whole`: spheres, tori,
+  B-spline patches, revolved finite curves); a plane's or cylinder's domain is a stand-in, so such a face there
+  (SolidWorks leaves zero-width ones: two lines between the same two vertices) is dropped. Curved faces get grid
+  points inside, ear clipping (three's earcut, the inner points as Steiner points) then Delaunay edge flips — ear
+  clipping alone joins three neighbouring boundary samples of a circle into a triangle across the cap — and edges whose
   midpoints leave the surface or whose normals turn more than 20° are split. A tiny warp keeps boundary samples on
   one (u, v) line from being dropped as collinear. The product structure is kept: representations linked without
   a transformation are one group, `REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION` and `MAPPED_ITEM` place child

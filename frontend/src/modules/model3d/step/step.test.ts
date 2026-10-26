@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { parseStep, partOf } from './p21';
 import { stepToScene } from './step';
-import { cylinderSurface, frame, sphereSurface } from './geom';
+import { cylinderSurface, frame, planeSurface, sphereSurface } from './geom';
 import { tessellateFace, type MeshOut } from './tess';
 import assembly from './testdata/assembly.step?raw';
 
@@ -81,6 +81,19 @@ describe('STEP faces', () => {
     const down: MeshOut = { positions: [], normals: [], indices: [] };
     tessellateFace({ surface: s, sameSense: true, loops: [{ pts: [...pts].reverse() }] }, 0.005, down);
     for (let i = 2; i < down.positions.length; i += 3) expect(down.positions[i]).toBeLessThan(1e-6);
+  });
+
+  it('draws nothing for a plane face that encloses nothing, but all of a sphere without bounds', () => {
+    // Two straight edges between the same two points (left in by SolidWorks):
+    // not the whole plane, which reaches a kilometre out.
+    const sliver: MeshOut = { positions: [], normals: [], indices: [] };
+    const loop = { pts: [[115, -97.5, 40], [115, -97.5, 15]] as [number, number, number][] };
+    expect(tessellateFace({ surface: planeSurface(frame([115, -97.5, 40], [0, -1, 0], [0, 0, -1])), sameSense: true, loops: [loop] }, 0.01, sliver)).toBe(false);
+    expect(sliver.indices).toHaveLength(0);
+    // A sphere's bounds can be a lone vertex: then it is the whole sphere.
+    const ball: MeshOut = { positions: [], normals: [], indices: [] };
+    tessellateFace({ surface: sphereSurface(frame([0, 0, 0]), 2), sameSense: true, loops: [{ pts: [[0, 0, 2]] }] }, 0.005, ball);
+    expect(Math.abs(outArea(ball) - 16 * Math.PI) / (16 * Math.PI)).toBeLessThan(0.02);
   });
 });
 

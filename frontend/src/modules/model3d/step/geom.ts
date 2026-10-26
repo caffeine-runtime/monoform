@@ -258,6 +258,12 @@ export interface Surface {
   planar?: boolean;
   /** v values where u is meaningless (poles of spheres, a cone's apex). */
   poles?: number[];
+  /**
+   * The domain is the whole surface (a sphere, a torus, a B-spline patch), so a
+   * face without usable bounds is all of it. A plane's or a cylinder's domain
+   * only stands in for an unbounded surface.
+   */
+  whole?: boolean;
 }
 
 /** Partial derivatives by central differences (for normals of numeric surfaces). */
@@ -401,6 +407,7 @@ export function sphereSurface(f: Frame, r: number): Surface {
     su: r,
     sv: r,
     poles: [-Math.PI / 2, Math.PI / 2],
+    whole: true,
   };
 }
 
@@ -422,6 +429,7 @@ export function torusSurface(f: Frame, R: number, r: number): Surface {
     v1: TAU,
     su: R,
     sv: r,
+    whole: true,
   };
 }
 
@@ -476,6 +484,7 @@ export function bsplineSurface(bu: BSpline, bv: BSpline, pts: V3[][], uClosed: b
     v1,
     su: Math.max(1e-9, lu / Math.max(1e-12, u1 - u0)),
     sv: Math.max(1e-9, lv / Math.max(1e-12, v1 - v0)),
+    whole: true,
   };
   void uClosed;
   void vClosed;
@@ -514,6 +523,7 @@ export function revolutionSurface(c: Curve, axisO: V3, axisD: V3): Surface {
     v1: t1,
     su: Math.max(1e-6, maxR),
     sv: Math.max(1e-9, dist(c.at(t0), c.at(t1)) / Math.max(1e-12, t1 - t0)),
+    whole: Number.isFinite(c.t0) && Number.isFinite(c.t1),
   };
   s.uv = numericUV(s);
   return s;
