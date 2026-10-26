@@ -206,7 +206,7 @@
   </section>
 
   <section class="card ai">
-    <h3>{t('AI models')}</h3>
+    <h3>{t('Add-ons')}</h3>
     <p class="muted small">{t('Optional downloads for the image editor. They run on this computer only, and only while you use them.')}</p>
     {#if aiModels.missing.length > 1}
       <div class="row all">

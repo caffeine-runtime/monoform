@@ -561,7 +561,7 @@ const STILLS: Record<string, (dir: string) => Promise<void>> = {
   markdown: open('Notes.md'),
   settings: async () => {
     workspace.openTool('settings');
-    const h = await waitFor(() => [...document.querySelectorAll('h2, h3')].find((e) => e.textContent?.includes('AI models')), 'AI models section');
+    const h = await waitFor(() => [...document.querySelectorAll('h2, h3')].find((e) => e.textContent?.includes('Add-ons')), 'Add-ons section');
     h.scrollIntoView({ block: 'start' });
   },
 };

@@ -41,7 +41,7 @@
     },
     {
       title: t('Free, open and offline'),
-      text: t('Open source and free, built with AI. No account, no cloud, no tracking: your files stay on this computer, and the app works without the internet.'),
+      text: t('Open source and free. No account, no cloud, no tracking: your files stay on this computer, and the app works without the internet.'),
       icons: [ShieldCheck, WifiOff, HardDrive],
     },
   ];

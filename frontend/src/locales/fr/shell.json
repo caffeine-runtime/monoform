@@ -1,7 +1,7 @@
 {
   "{name} isn't available on this computer's system.": "{name} n’est pas disponible sur le système de cet ordinateur.",
   "Download {name}?": "Télécharger {name} ?",
-  "It's a one-time download of {size} ({disk} on disk) from huggingface.co and nuget.org; after that everything runs on this computer, offline. You can remove it in Settings › AI models.": "Il s’agit d’un téléchargement unique de {size} ({disk} sur le disque) depuis huggingface.co et nuget.org ; ensuite, tout fonctionne sur cet ordinateur, hors ligne. Vous pouvez le supprimer dans Paramètres › Modèles d’IA.",
+  "It's a one-time download of {size} ({disk} on disk) from huggingface.co and nuget.org; after that everything runs on this computer, offline. You can remove it in Settings › Add-ons.": "Il s’agit d’un téléchargement unique de {size} ({disk} sur le disque) depuis huggingface.co et nuget.org ; ensuite, tout fonctionne sur cet ordinateur, hors ligne. Vous pouvez le supprimer dans Paramètres › Extensions.",
   "Model: {model} ({license}) — {source}": "Modèle : {model} ({license}) — {source}",
   "Runs with ONNX Runtime (MIT, Microsoft)": "Fonctionne avec ONNX Runtime (MIT, Microsoft)",
   "Not now": "Pas maintenant",
@@ -422,8 +422,8 @@
   "Its settings and history are gone too.": "Ses paramètres et son historique ont également été supprimés.",
   "Your settings stay, in case you install it again.": "Vos paramètres sont conservés, au cas où vous le réinstalleriez.",
   "That didn’t work": "Cela n’a pas fonctionné",
-  "Download all AI models?": "Télécharger tous les modèles d’IA ?",
-  "It's a one-time download of {size} from huggingface.co and nuget.org; after that everything runs on this computer, offline. You can remove them in Settings › AI models.": "Il s’agit d’un téléchargement unique de {size} depuis huggingface.co et nuget.org ; ensuite, tout fonctionne sur cet ordinateur, hors ligne. Vous pouvez les supprimer dans Paramètres › Modèles d’IA.",
+  "Download all add-ons?": "Télécharger toutes les extensions ?",
+  "It's a one-time download of {size} from huggingface.co and nuget.org; after that everything runs on this computer, offline. You can remove them in Settings › Add-ons.": "Il s’agit d’un téléchargement unique de {size} depuis huggingface.co et nuget.org ; ensuite, tout fonctionne sur cet ordinateur, hors ligne. Vous pouvez les supprimer dans Paramètres › Extensions.",
   "{n} models aren’t downloaded yet.": {
     "one": "{n} modèle n’est pas encore téléchargé.",
     "other": "{n} modèles ne sont pas encore téléchargés."

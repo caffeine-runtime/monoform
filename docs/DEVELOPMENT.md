@@ -134,7 +134,7 @@ These come from the original brief and are checked in review and CI:
   license, and `scripts/licenses.py` must report 0 problems.
 - **No cgo** beyond what Wails needs. Prefer pure-Go libraries.
 - **Offline and private:** no network calls, telemetry or accounts. The exceptions: the opt-in model downloads
-  (search by meaning, image AI models), after explicit consent, and the update check at startup (one request to
+  (search by meaning, image editor add-ons), after explicit consent, and the update check at startup (one request to
   GitHub's releases API, off in Settings › About; an update is downloaded only when the user chooses to).
 - **Translated:** every interface string goes through `t()`/`tn()` with Polish, Spanish, German and French catalog entries
   (docs/TRANSLATING.md); `npm test` checks it.

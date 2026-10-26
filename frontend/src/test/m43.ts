@@ -1,10 +1,10 @@
 // M43: optional AI models (with MF_AI_FAKE=1 the Go side swaps the models
 // for stand-ins: an ellipse for the subject, the surrounding colour for a
 // removal — the downloads and pipelines are covered by Go tests). Settings ›
-// AI models lists both packs; Install asks first (size, sources) and shows
+// Add-ons lists both packs; Install asks first (size, sources) and shows
 // progress. In the image editor the AI tools below Select object are greyed
 // out until their model is installed and lead to its row in Settings; once
-// installed, Select subject (AI) uses the model; Remove object
+// installed, Select subject (add-on) uses the model; Remove object
 // without its model offers the download ("Not now" changes nothing), and
 // with it removes the selected blue square through a background job, undoably;
 // Remove in Settings uninstalls; Download all asks once and downloads both
@@ -48,7 +48,7 @@ export default async function m43(dir: string) {
   const aiTool = (id: string) => document.querySelector<HTMLButtonElement>(`.tabview[data-tab-id="${t.id}"] .tools .ai[data-pack="${id}"]`);
   await waitFor(() => aiTool('subject') && aiTool('eraser'), 'AI tools below Select object');
   const order = [...document.querySelectorAll(`.tabview[data-tab-id="${t.id}"] .tools button`)].map((b) => b.getAttribute('aria-label'));
-  assertEq(order.slice(order.indexOf('Select object'), order.indexOf('Select object') + 3).join(' | '), 'Select object | Select subject (AI) | Remove object (AI)', 'right below Select object');
+  assertEq(order.slice(order.indexOf('Select object'), order.indexOf('Select object') + 3).join(' | '), 'Select object | Select subject (add-on) | Remove object (add-on)', 'right below Select object');
   assert(aiTool('subject')!.classList.contains('locked') && aiTool('eraser')!.classList.contains('locked'), 'greyed out while not downloaded');
   assert(aiTool('subject')!.title.includes('Settings'), `says where to get it (${aiTool('subject')!.title})`);
   aiTool('subject')!.click();
@@ -66,7 +66,7 @@ export default async function m43(dir: string) {
   d.resolve({ button: 'ok' });
   await waitFor(() => (row('subject')?.textContent?.includes('Installed') ? true : null), 'subject installed', 10000);
 
-  // Back in the image: Select subject (AI) is live and uses it (the stand-in finds a centred ellipse, not the red circle).
+  // Back in the image: Select subject (add-on) is live and uses it (the stand-in finds a centred ellipse, not the red circle).
   workspace.activate(t);
   await waitFor(() => (aiTool('subject')?.classList.contains('locked') === false ? true : null), 'the AI tool is live once installed');
   assert(aiTool('eraser')!.classList.contains('locked'), 'the other one still needs its download');
@@ -127,7 +127,7 @@ export default async function m43(dir: string) {
   assert(all.textContent!.includes('2 models'), `says how many (${all.textContent})`);
   all.querySelector('button')!.click();
   const da = await waitFor(() => ui.dialog, 'one question for both');
-  assertEq(da.title, 'Download all AI models?', da.title);
+  assertEq(da.title, 'Download all add-ons?', da.title);
   assert(da.details!.length === 3 && da.message!.includes('huggingface.co'), `names both models and the source (${da.details})`);
   da.resolve({ button: 'ok' });
   await waitFor(() => (aiModels.busy('subject') && aiModels.busy('eraser') ? true : null), 'both downloading at once', 5000);

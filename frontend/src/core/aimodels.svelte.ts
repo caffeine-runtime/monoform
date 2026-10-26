@@ -62,7 +62,7 @@ class AIModels {
     }
     const r = await ui.ask({
       title: t('Download {name}?', { name: p.name }),
-      message: `${why ? why + ' ' : ''}${p.purpose} ${t("It's a one-time download of {size} ({disk} on disk) from huggingface.co and nuget.org; after that everything runs on this computer, offline. You can remove it in Settings › AI models.", { size: formatBytes(p.download), disk: formatBytes(p.disk) })}`,
+      message: `${why ? why + ' ' : ''}${p.purpose} ${t("It's a one-time download of {size} ({disk} on disk) from huggingface.co and nuget.org; after that everything runs on this computer, offline. You can remove it in Settings › Add-ons.", { size: formatBytes(p.download), disk: formatBytes(p.disk) })}`,
       details: [t('Model: {model} ({license}) — {source}', { model: p.model, license: p.license, source: p.source.split('@')[0] }), t('Runs with ONNX Runtime (MIT, Microsoft)')],
       buttons: [
         { id: 'cancel', label: t('Not now') },
@@ -80,8 +80,8 @@ class AIModels {
     if (!todo.length) return true;
     const size = formatBytes(this.downloadSize(todo));
     const r = await ui.ask({
-      title: t('Download all AI models?'),
-      message: `${todo.map((p) => p.purpose).join(' ')} ${t("It's a one-time download of {size} from huggingface.co and nuget.org; after that everything runs on this computer, offline. You can remove them in Settings › AI models.", { size })}`,
+      title: t('Download all add-ons?'),
+      message: `${todo.map((p) => p.purpose).join(' ')} ${t("It's a one-time download of {size} from huggingface.co and nuget.org; after that everything runs on this computer, offline. You can remove them in Settings › Add-ons.", { size })}`,
       details: [...todo.map((p) => t('Model: {model} ({license}) — {source}', { model: p.model, license: p.license, source: p.source.split('@')[0] })), t('Runs with ONNX Runtime (MIT, Microsoft)')],
       buttons: [
         { id: 'cancel', label: t('Not now') },

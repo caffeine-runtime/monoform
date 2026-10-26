@@ -413,7 +413,7 @@
   interface size and text size are sliders (double-click resets), split view is a row of layout buttons; on/off
   options (sidebar, side panels, path bar, hidden files, word wrap, minimap, spaces and tabs, preview mode) are
   checked items with short names. The individual commands stay in the command palette with their shortcuts.
-- **M43 — Optional AI models: better subject selection, object removal.** *Settings › AI models* lists two optional
+- **M43 — Optional models (add-ons): better subject selection, object removal.** *Settings › Add-ons* lists two optional
   downloads, each with its size, model and licence: **Better subject selection** (BiRefNet; *Select subject* and
   *Remove background* find people, hair and objects far more precisely — the bundled model stays the default) and
   **Object removal** (Moebius; select something, *Remove* in the selection bar or *Image › Remove object*, and the gap
@@ -484,9 +484,9 @@
   draw.io on the board, Mermaid/Graphviz as a diagram, Markdown as a note, certificates, plain text; copied files
   open as themselves; dragging something from another tab onto an empty one works the same. It is unsaved ("Not
   saved yet") until Save, which asks where; closing asks first. Unit tests and self-test `m48`.
-- **AI tools in the image editor's tool column**: below Select object, *Select subject (AI)* and *Remove object (AI)*
+- **Add-on tools in the image editor's tool column**: below Select object, *Select subject (add-on)* and *Remove object (add-on)*
   are always there — greyed out with a download mark until their model is installed, when a click opens *Settings ›
-  AI models* at that model (highlighted); once installed they work in place (the standard Select subject uses the
+  Add-ons* at that model (highlighted); once installed they work in place (the standard Select subject uses the
   bundled model). Self-test `m43`.
 - **Updates.** At startup Monoform asks GitHub for the newest release (on by default; *Settings › About* turns it
   off; Help › Check for updates asks by hand). A new version shows a popup with what's new: *Download and install*
@@ -504,14 +504,14 @@
   **paint bucket** (G): a click fills the area of similar colour on the active layer with the current colour, only
   inside the selection when there is one, with Tolerance and Contiguous in the toolbar (the magic wand's fill, off
   the main thread). Self-test `m51`.
-- **AI models download side by side**, and *Settings › AI models* offers *Download all* (one question, the shared
+- **Add-ons download side by side**, and *Settings › Add-ons* offers *Download all* (one question, the shared
   runtime counted once) when more than one is missing; each row shows its percentage. Go test (two installs at once
   fetch the shared runtime once) and self-test `m43`.
 - **Watermark removal** in the image editor (*Image › Remove a watermark…* opens *Adjust › Clean up*): *Light
   marks* turns pale marks white — a light watermark, scanner shading — and keeps dark lines and text, also where
   they cross the mark; *A colour* (picked in the image with the eyedropper) turns one colour white, with a
   tolerance. Both preview live on the GPU, work inside a selection and undo. For a watermark over a photo, the new
-  **selection brush** paints over it, then *Remove object (AI)* fills it in (the button is on the brush's toolbar).
+  **selection brush** paints over it, then *Remove object (add-on)* fills it in (the button is on the brush's toolbar).
 - **Plain background removal without AI**: *Remove background* first checks the picture's border; when it is one
   colour (a drawing, a scan, a product on white) that colour turns transparent the way "colour to alpha" does —
   soft edges fade instead of keeping a white fringe, solid parts stay solid in their own colour. In a drawing
@@ -595,7 +595,7 @@
   checks the status bar stays inside the window at 200% with the whole fixtures folder open.
 - **Promo video** (`scripts/readme-media.sh promo` → `build/bin/monoform-promo.mp4`, not committed): about 55 s at
   1080p, recorded from the real app (the `promo` demo scene) with captions burned in — notes and a Mermaid diagram,
-  Word/CSV/PDF, SVG/3D/video, Select subject with the AI model pasted into the report, Ctrl+K and a four-way split —
+  Word/CSV/PDF, SVG/3D/video, Select subject with the add-on pasted into the report, Ctrl+K and a four-way split —
   between a title and an end card; the demo folder's Goldberg recording (CC0) underneath.
 - **Ad** (`scripts/ad`): ~50 s of motion graphics at 1080p60 — kinetic type, the file-type icons gathering into the
   app icon, shots of the real app in tilted windows (recorded clean by `readme-media.sh footage` and cut into shots at

@@ -30,13 +30,13 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 - **Side panels hide with one switch** (`panelsHidden`): panels carry `data-sidepanel` and the app hides them all with
   one CSS rule, so every editor's panel follows the same toggle without each module wiring it; asking the image editor
   for a panel (its toolbar buttons) turns them back on, so a hidden panel is never a dead button.
-- **Optional AI models run natively, not in the web view** (`internal/ai`). The better subject finder (BiRefNet) and
+- **Optional models (add-ons) run natively, not in the web view** (`internal/ai`). The better subject finder (BiRefNet) and
   object removal (Moebius) are too big for onnxruntime-web: WebAssembly's 4 GB limit and one-thread speed rule them
   out (BiRefNet needs ~2 GB working memory, Moebius 1.2 GB of weights). Go loads Microsoft's ONNX Runtime shared
   library at run time and calls its C API through **purego** — no cgo, so the app still builds and runs without it.
   Only the functions used are bound (`ort.go`: table indices from `onnxruntime_c_api.h`, which only grows at the end);
   model paths go as UTF-16 on Windows; telemetry events are switched off; a run can be stopped (`RunOptionsSetTerminate`).
-  - **Opt-in downloads** (Settings › AI models, or offered the first time a feature needs one): a dialog names the
+  - **Opt-in downloads** (Settings › Add-ons, or offered the first time a feature needs one): a dialog names the
     size and the hosts first. Files are pinned by revision, size and SHA-256 (`catalog.go`) and fetched with
     `internal/download` (shared with search by meaning). The runtime comes from the official NuGet package: only this
     platform's library is read out of it with **HTTP Range requests** (6 MB for Windows instead of the 160 MB package;
@@ -467,7 +467,7 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   classified by content (`core/pasteKind.ts`) rather than asked about.
 - **AI tools always visible** in the image editor (greyed until downloaded) rather than appearing after a download:
   people learn they exist where they'd use them, and the click leads to the one place they are installed (Settings ›
-  AI models, `core/settingsLink.ts` scrolls to and highlights the row). They are actions next to Select object, not
+  Add-ons, `core/settingsLink.ts` scrolls to and highlights the row). They are actions next to Select object, not
   new tool modes. The standard Select subject keeps the bundled model so the two can be compared.
 - **Paint bucket reuses the magic wand's flood fill** (in the vision worker, so a large picture doesn't stall the
   window) on the active layer's pixels and fills through that mask with the same blend the selection tools use, so

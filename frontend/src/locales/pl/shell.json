@@ -1,7 +1,7 @@
 {
   "{name} isn't available on this computer's system.": "Niedostępne w systemie tego komputera: {name}.",
   "Download {name}?": "Pobrać {name}?",
-  "It's a one-time download of {size} ({disk} on disk) from huggingface.co and nuget.org; after that everything runs on this computer, offline. You can remove it in Settings › AI models.": "To jednorazowe pobranie {size} ({disk} na dysku) z huggingface.co i nuget.org; potem wszystko działa na tym komputerze, offline. Możesz to usunąć w Ustawienia › Modele AI.",
+  "It's a one-time download of {size} ({disk} on disk) from huggingface.co and nuget.org; after that everything runs on this computer, offline. You can remove it in Settings › Add-ons.": "To jednorazowe pobranie {size} ({disk} na dysku) z huggingface.co i nuget.org; potem wszystko działa na tym komputerze, offline. Możesz to usunąć w Ustawienia › Dodatki.",
   "Model: {model} ({license}) — {source}": "Model: {model} ({license}) — {source}",
   "Runs with ONNX Runtime (MIT, Microsoft)": "Działa z ONNX Runtime (MIT, Microsoft)",
   "Not now": "Nie teraz",
@@ -444,8 +444,8 @@
   "Its settings and history are gone too.": "Jego ustawienia i historia również zostały usunięte.",
   "Your settings stay, in case you install it again.": "Twoje ustawienia zostają na wypadek ponownej instalacji.",
   "That didn’t work": "Nie udało się",
-  "Download all AI models?": "Pobrać wszystkie modele AI?",
-  "It's a one-time download of {size} from huggingface.co and nuget.org; after that everything runs on this computer, offline. You can remove them in Settings › AI models.": "To jednorazowe pobranie {size} z huggingface.co i nuget.org; potem wszystko działa na tym komputerze, offline. Możesz je usunąć w Ustawienia › Modele AI.",
+  "Download all add-ons?": "Pobrać wszystkie dodatki?",
+  "It's a one-time download of {size} from huggingface.co and nuget.org; after that everything runs on this computer, offline. You can remove them in Settings › Add-ons.": "To jednorazowe pobranie {size} z huggingface.co i nuget.org; potem wszystko działa na tym komputerze, offline. Możesz je usunąć w Ustawienia › Dodatki.",
   "{n} models aren’t downloaded yet.": {
     "one": "{n} model nie jest jeszcze pobrany.",
     "few": "{n} modele nie są jeszcze pobrane.",

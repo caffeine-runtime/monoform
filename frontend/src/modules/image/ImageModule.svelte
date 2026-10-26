@@ -43,6 +43,7 @@
   import Blend from '@lucide/svelte/icons/blend';
   import UserRoundSearch from '@lucide/svelte/icons/user-round-search';
   import Download from '@lucide/svelte/icons/download';
+  import Puzzle from '@lucide/svelte/icons/puzzle';
   import { flashAt, openSettingsAt } from '../../core/settingsLink';
   import Copy from '@lucide/svelte/icons/copy';
   import Scissors from '@lucide/svelte/icons/scissors';
@@ -1333,7 +1334,7 @@
       { label: t('Remove a watermark…'), run: () => void openCleanup() },
       { label: t('Remove background'), run: () => void removeBackground() },
       { label: t('Remove a plain background (one colour)'), run: () => void removeBackground('plain') },
-      { label: t('Remove background with AI'), run: () => void removeBackground('ai') },
+      { label: t('Remove background (add-on)'), run: () => void removeBackground('ai') },
       { label: t('Select subject'), run: () => void selectSubject(!!aiModels.pack('subject')?.installed) },
       { label: t('Remove object (fill the gap)'), disabled: !es?.pixelSelection, run: () => void removeObject() },
       { separator: true },
@@ -1420,7 +1421,7 @@
       { id: 'select', icon: SquareDashed, label: t('Rectangle select'), help: t('Drag to select a rectangle. Hold Ctrl for a square, Shift to add, Alt to subtract. Drag inside a selection to move it; its handles resize and turn it.'), key: 'M' },
       { id: 'ellipse', icon: CircleDashed, label: t('Ellipse select'), help: t('Drag to select an ellipse. Hold Ctrl for a circle, Shift to add, Alt to subtract. Drag inside a selection to move it; its handles resize and turn it.') },
       { id: 'lasso', icon: Lasso, label: t('Lasso select'), help: t('Drag around an area to select it freehand. Shift adds, Alt subtracts. Drag inside a selection to move it; its handles resize and turn it.'), key: 'L' },
-      { id: 'selbrush', icon: Highlighter, label: t('Selection brush'), help: t('Paint over what to select — e.g. a watermark on a photo, then Remove object (AI) fills it in. Each stroke adds; Alt-drag takes away. Set the size in the toolbar.') },
+      { id: 'selbrush', icon: Highlighter, label: t('Selection brush'), help: t('Paint over what to select — e.g. a watermark on a photo, then Remove object (add-on) fills it in. Each stroke adds; Alt-drag takes away. Set the size in the toolbar.') },
       { id: 'wand', icon: Wand, label: t('Magic wand'), help: t('Click to select pixels of a similar colour. Set Tolerance in the toolbar; Shift adds, Alt subtracts.'), key: 'W' },
       { id: 'object', icon: ScanEye, label: t('Select object'), help: t('Click an object to select it, with edges snapped to the pixels. Shift-click adds, Alt-click excludes a part.'), key: 'O' },
     ],
@@ -1448,7 +1449,7 @@
       { id: 'pixelate', icon: Grid, label: t('Pixelate region'), help: t('Drag over an area, adjust it, then press Enter to pixelate it.'), key: 'P' },
     ],
   ];
-  // Tools that use the optional AI models (Settings › AI models), below Select
+  // Tools that use the optional models (Settings › Add-ons), below Select
   // object. Until their model is downloaded they show greyed out and lead to
   // the download in Settings.
   type AITool = { pack: string; icon: any; label: string; help: string; run: () => void };
@@ -1456,14 +1457,14 @@
     {
       pack: 'subject',
       icon: UserRoundSearch,
-      label: t('Select subject (AI)'),
+      label: t('Select subject (add-on)'),
       help: t('Selects the main subject — people, hair, objects — precisely, with the downloaded model. Shift adds, Alt subtracts.'),
       run: () => void selectSubjectAI(),
     },
     {
       pack: 'eraser',
       icon: Eraser2,
-      label: t('Remove object (AI)'),
+      label: t('Remove object (add-on)'),
       help: t('Removes the selected object and fills the gap with what could be behind it. Select it first, e.g. by clicking it with Select object.'),
       run: () => void removeObjectAI(),
     },
@@ -1473,7 +1474,7 @@
     if (aiReady(a.pack)) return `${a.label} — ${a.help}`;
     const p = aiModels.pack(a.pack);
     if (p && !p.supported) return `${a.label} — ${t('Not available on this system')}`;
-    return `${a.label} — ${t('Needs an optional download: click to get it in Settings › AI models.')}`;
+    return `${a.label} — ${t('Needs an optional download: click to get it in Settings › Add-ons.')}`;
   }
   function aiToolClick(a: AITool) {
     if (aiReady(a.pack)) a.run();
@@ -1486,7 +1487,7 @@
   async function removeObjectAI() {
     if (!editor?.selection) {
       setTool('object');
-      ui.toast(t('Click the object to remove (Shift-click adds a part), then press Remove object (AI) again.'), 'info', undefined, 6000);
+      ui.toast(t('Click the object to remove (Shift-click adds a part), then press Remove object (add-on) again.'), 'info', undefined, 6000);
       return;
     }
     await removeObject();
@@ -1547,7 +1548,7 @@
     {:else if tool === 'selbrush'}
       <label class="opt">{t('Size')} <input type="range" min="2" max="300" value={opts.brushSize || 24} oninput={(e) => setOpt('brushSize', +(e.target as HTMLInputElement).value)} /><span class="v">{opts.brushSize || 24}</span></label>
       <span class="hint">{t('Paint to add · Alt-drag to take away')}</span>
-      {#if es?.pixelSelection}<button class="btn ghost" title={t('Remove what is selected and fill the gap (optional AI model)')} onclick={() => void removeObject()}><Icon icon={Sparkles} size={14} /> {t('Remove object (AI)')}</button>{/if}
+      {#if es?.pixelSelection}<button class="btn ghost" title={t('Remove what is selected and fill the gap (optional add-on)')} onclick={() => void removeObject()}><Icon icon={Sparkles} size={14} /> {t('Remove object (add-on)')}</button>{/if}
       <span class="sep"></span>
     {:else if SELECT_TOOLS.includes(tool)}
       <div class="seg" role="radiogroup" aria-label={t('Selection mode')}>
@@ -1765,7 +1766,7 @@
             {#each aiTools as a (a.pack)}
               <button class="icon-btn ai" class:locked={!aiReady(a.pack)} data-pack={a.pack} title={aiToolTitle(a)} aria-label={a.label} aria-disabled={!aiReady(a.pack)} onclick={() => aiToolClick(a)}>
                 <Icon icon={a.icon} />
-                <span class="badge" aria-hidden="true">{#if aiReady(a.pack)}AI{:else}<Icon icon={Download} size={9} />{/if}</span><!-- i18n-ignore -->
+                <span class="badge" aria-hidden="true"><Icon icon={aiReady(a.pack) ? Puzzle : Download} size={9} /></span>
               </button>
             {/each}
           {/if}
