@@ -43,7 +43,6 @@
   import Blend from '@lucide/svelte/icons/blend';
   import UserRoundSearch from '@lucide/svelte/icons/user-round-search';
   import Download from '@lucide/svelte/icons/download';
-  import Puzzle from '@lucide/svelte/icons/puzzle';
   import { flashAt, openSettingsAt } from '../../core/settingsLink';
   import Copy from '@lucide/svelte/icons/copy';
   import Scissors from '@lucide/svelte/icons/scissors';
@@ -1766,7 +1765,7 @@
             {#each aiTools as a (a.pack)}
               <button class="icon-btn ai" class:locked={!aiReady(a.pack)} data-pack={a.pack} title={aiToolTitle(a)} aria-label={a.label} aria-disabled={!aiReady(a.pack)} onclick={() => aiToolClick(a)}>
                 <Icon icon={a.icon} />
-                <span class="badge" aria-hidden="true"><Icon icon={aiReady(a.pack) ? Puzzle : Download} size={9} /></span>
+                <span class="badge" aria-hidden="true">{#if aiReady(a.pack)}AI{:else}<Icon icon={Download} size={9} />{/if}</span><!-- i18n-ignore -->
               </button>
             {/each}
           {/if}
