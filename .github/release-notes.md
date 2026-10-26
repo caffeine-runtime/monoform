@@ -4,8 +4,10 @@
 - **Convert without opening**: right-click files in Explorer, Dolphin, Nautilus (Scripts) or Nemo → **Convert with Monoform…** opens a small window with just the formats; a whole selection converts at once. In the app, the sidebar's right-click menu has **Convert…**.
 - `monoform convert IN OUT` converts every one of these pairs from a terminal.
 - **Write on PDFs like in a notebook**: a marker (highlight anywhere, by hand), lines, arrows, rectangles and ellipses (Shift keeps them straight or even), a stroke eraser, colour swatches with thin/medium/thick, and blank, lined, squared or dotted pages to insert (Page operations). Everything is saved as standard annotations other PDF readers show. Pen, text and highlight colours apply again.
-
-A nightly is a test build: installed copies are offered it only when **Settings › About › Also offer nightly builds** is ticked (off by default), and the next normal release replaces it.
+- **Word wrap is on by default**: long lines continue on the next row in every text editor. The Markdown tool bar has a **Word wrap** button; it, Alt+Z, the menu and Settings all change the same setting.
+- **Add-ons**: the optional models some image tools use are now called add-ons; download or remove them in **Settings › Add-ons**.
+- **Nightly builds, if you want them**: tick **Settings › About › Also offer nightly builds** (off by default) to be offered test builds between releases. The next normal release replaces a nightly.
+- Longer labels fit: the image editor's layer properties in German and the Word tool bar's font field in Polish.
 
 ## Downloads
 
