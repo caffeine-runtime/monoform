@@ -5,7 +5,7 @@
 - `monoform convert IN OUT` converts every one of these pairs from a terminal.
 - **Write on PDFs like in a notebook**: a marker (highlight anywhere, by hand), lines, arrows, rectangles and ellipses (Shift keeps them straight or even), a stroke eraser, colour swatches with thin/medium/thick, and blank, lined, squared or dotted pages to insert (Page operations). Everything is saved as standard annotations other PDF readers show. Pen, text and highlight colours apply again.
 
-A nightly is a test build: installed copies are never offered it as an update, and the next normal release replaces it.
+A nightly is a test build: installed copies are offered it only when **Settings › About › Also offer nightly builds** is ticked (off by default), and the next normal release replaces it.
 
 ## Downloads
 

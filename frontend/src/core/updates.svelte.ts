@@ -67,7 +67,7 @@ class Updates {
   async offer(info: Info): Promise<void> {
     const manual = info.install === 'manual';
     const r = await ui.ask({
-      title: t('Monoform {version} is available', { version: info.version }),
+      title: info.nightly ? t('Nightly build {version} is available', { version: info.version }) : t('Monoform {version} is available', { version: info.version }),
       message: manual
         ? t('You have {current}. This copy can’t update itself where it is installed — get the new version from its download page.', { current: info.current })
         : t('You have {current}. It downloads ({size}), checks the download, and restarts Monoform — your tabs come back.', { current: info.current, size: formatBytes(info.size) }),

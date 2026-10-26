@@ -386,6 +386,11 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   top of pdf.js). Inserted paper pages are drawn with fpdf (already a dependency) at the current page's size and
   moved into place with pdfcpu's merge + collect, as one page operation.
 
+- **Nightly builds are opt-in, from the same request.** Off (the default) the check reads `releases/latest`, which
+  GitHub never points at a pre-release, exactly as before. On, it reads `releases?per_page=30` instead — still one
+  request at startup — and takes the newest normal release or `-nightly.` pre-release built for this system. Only
+  the nightly suffix counts, so a beta published for a few testers never reaches nightly users by accident.
+
 ## Look & feel
 
 - **Darker palette than the brief's starting tokens** (user request): dark `--bg #1f1e1c`, sidebar `#181716`; light `--bg #f6f4ee`.

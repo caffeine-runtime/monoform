@@ -237,3 +237,59 @@ func TestPackagesCantEscapeTheirFolder(t *testing.T) {
 		t.Error("the running copy was touched")
 	}
 }
+
+// With nightlies chosen, the newest of releases and nightlies built for this
+// system is offered; betas and drafts never are.
+func TestLatestWithNightlies(t *testing.T) {
+	rel := func(tag string, pre, draft bool, assets ...string) string {
+		var as []string
+		for _, a := range assets {
+			as = append(as, fmt.Sprintf(`{"name":%q,"browser_download_url":"https://dl/%s/%s","size":5}`, a, tag, a))
+		}
+		return fmt.Sprintf(`{"tag_name":%q,"body":"notes %s","html_url":"https://rel/%s","prerelease":%v,"draft":%v,"assets":[%s]}`, tag, tag, tag, pre, draft, strings.Join(as, ","))
+	}
+	lin, win := "monoform-linux-amd64.tar.gz", "monoform-amd64-installer.exe"
+	list := []string{
+		rel("v9.0.0", false, true, lin, win),                  // draft
+		rel("v1.6.0-beta.1", true, false, lin, win),           // a beta, not a nightly
+		rel("v1.5.0-nightly.20261026", true, false, win),      // not built for Linux
+		rel("v1.5.0-nightly.20261025", true, false, lin, win), //
+		rel("v1.4.2", false, false, lin, win, "SHA256SUMS"),
+	}
+	serve := func(items []string) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/repos/"+Repo+"/releases" || r.URL.Query().Get("per_page") == "" {
+				http.NotFound(w, r)
+				return
+			}
+			fmt.Fprint(w, "["+strings.Join(items, ",")+"]")
+		}))
+		t.Cleanup(srv.Close)
+		API = srv.URL
+	}
+	serve(list)
+	ctx := context.Background()
+	if r, err := LatestWithNightlies(ctx, "linux", false); err != nil || r.Version != "1.5.0-nightly.20261025" || r.Asset != lin || r.Notes != "notes v1.5.0-nightly.20261025" {
+		t.Errorf("linux: %+v %v", r, err)
+	}
+	if r, err := LatestWithNightlies(ctx, "windows", false); err != nil || r.Version != "1.5.0-nightly.20261026" {
+		t.Errorf("windows: %+v %v", r, err)
+	}
+	// The release a nightly leads up to wins over it.
+	serve(append([]string{rel("v1.5.0", false, false, lin, win)}, list...))
+	if r, _ := LatestWithNightlies(ctx, "linux", false); r.Version != "1.5.0" {
+		t.Errorf("release after nightlies: %q", r.Version)
+	}
+	serve([]string{rel("v2.0.0-beta.1", true, false, lin)})
+	if _, err := LatestWithNightlies(ctx, "linux", false); err == nil {
+		t.Error("a beta was offered")
+	}
+	for v, want := range map[string]bool{"1.5.0-nightly.20261026": true, "v1.5.0-nightly": true, "1.5.0": false, "1.5.0-beta.1": false, "1.5.0-nightlyish": false} {
+		if IsNightly(v) != want {
+			t.Errorf("IsNightly(%q) = %v", v, !want)
+		}
+	}
+	if !Newer("1.5.0-nightly.20261026", "1.5.0-nightly.20261025") || !Newer("1.5.0", "1.5.0-nightly.20261026") || !Newer("1.5.0-nightly.1", "1.4.2") {
+		t.Error("nightly ordering")
+	}
+}

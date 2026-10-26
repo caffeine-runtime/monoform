@@ -31,6 +31,8 @@ type UpdateInfo struct {
 	// copy can't replace itself: download it from the release page) or
 	// "store" (the Microsoft Store updates it; nothing is checked).
 	Install string `json:"install"`
+	// Nightly: the version offered is a nightly build (nightlies chosen in Settings › About).
+	Nightly bool `json:"nightly"`
 }
 
 var (
@@ -97,7 +99,11 @@ func (a *App) UpdateCheck() (UpdateInfo, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 		var err error
-		rel, err = update.Latest(ctx, update.GOOS, info.Install == "portable")
+		if a.Settings.Get().NightlyUpdates {
+			rel, err = update.LatestWithNightlies(ctx, update.GOOS, info.Install == "portable")
+		} else {
+			rel, err = update.Latest(ctx, update.GOOS, info.Install == "portable")
+		}
 		if err != nil {
 			return info, err
 		}
@@ -112,6 +118,7 @@ func (a *App) UpdateCheck() (UpdateInfo, error) {
 	updateRel = &rel
 	updateMu.Unlock()
 	info.Available, info.Version, info.Notes, info.URL, info.Size = true, rel.Version, rel.Notes, rel.URL, rel.AssetSize
+	info.Nightly = update.IsNightly(rel.Version)
 	return info, nil
 }
 

@@ -759,6 +759,12 @@
   Fix: colour, width and text size never reached pdf.js (this pdf.js has no `annotationEditorParams` setter; they go
   through its event bus now), so pen, text and highlight colours apply again. Unit tests (`ink.test.ts`: shapes,
   Shift, densify, hit testing), Go test (paper pages in place and size), self-test `m83` with qpdf/poppler checks.
+- **Nightly builds, opt-in** (Settings › About › *Also offer nightly builds*, off by default): with it ticked the
+  startup check (still one request to GitHub's releases API) lists the releases and offers the newest of the normal
+  releases and the `-nightly.` pre-releases that have a package for this system; the popup says "Nightly build …
+  is available". Off, nothing changes: pre-releases are never offered. Betas stay out either way; the release a
+  nightly leads to replaces it. Go test (`TestLatestWithNightlies`: drafts, betas, other systems' builds, ordering),
+  self-test `m49` (the switch, off by default, saved at once).
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

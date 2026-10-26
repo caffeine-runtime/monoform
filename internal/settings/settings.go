@@ -104,6 +104,9 @@ type Settings struct {
 	Language string `json:"language"`
 	// UpdateCheckOff stops looking for a new version at startup.
 	UpdateCheckOff bool `json:"updateCheckOff"`
+	// NightlyUpdates also offers nightly builds (test versions from work in
+	// progress) as updates. Off by default: they are never offered otherwise.
+	NightlyUpdates bool `json:"nightlyUpdates"`
 	// UpdateSkip is a version the user chose to skip (not offered again).
 	UpdateSkip string `json:"updateSkip"`
 	// BoardStyle is the drawing style new shapes get on the board (stroke,

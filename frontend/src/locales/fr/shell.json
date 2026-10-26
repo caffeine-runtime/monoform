@@ -498,5 +498,8 @@
   "These files don’t convert to other formats here.": {
     "one": "Ce fichier ne peut pas être converti ici dans d’autres formats.",
     "other": "Ces fichiers ne peuvent pas être convertis ici dans d’autres formats."
-  }
+  },
+  "Also offer nightly builds": "Proposer aussi les versions nightly",
+  "Nightly build {version} is available": "La version nightly {version} est disponible",
+  "Test versions built from work in progress: the newest features, tested less. Off, you get normal releases only; a nightly you have stays until the next release.": "Versions de test issues du travail en cours : les dernières fonctions, moins testées. Désactivé, vous ne recevez que les versions normales ; une nightly installée reste jusqu’à la prochaine version."
 }

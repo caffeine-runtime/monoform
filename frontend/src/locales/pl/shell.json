@@ -530,5 +530,8 @@
     "few": "Tych plików nie da się tu przekonwertować na inne formaty.",
     "many": "Tych plików nie da się tu przekonwertować na inne formaty.",
     "other": "Tych plików nie da się tu przekonwertować na inne formaty."
-  }
+  },
+  "Also offer nightly builds": "Proponuj też wersje nightly",
+  "Nightly build {version} is available": "Dostępna jest wersja nightly {version}",
+  "Test versions built from work in progress: the newest features, tested less. Off, you get normal releases only; a nightly you have stays until the next release.": "Wersje testowe z bieżących prac: najnowsze funkcje, mniej przetestowane. Gdy to wyłączone, dostajesz tylko zwykłe wydania; zainstalowana wersja nightly zostaje do następnego wydania."
 }

@@ -450,6 +450,7 @@ export namespace app {
 	    url: string;
 	    size: number;
 	    install: string;
+	    nightly: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new UpdateInfo(source);
@@ -464,6 +465,7 @@ export namespace app {
 	        this.url = source["url"];
 	        this.size = source["size"];
 	        this.install = source["install"];
+	        this.nightly = source["nightly"];
 	    }
 	}
 	export class VideoOpened {
@@ -1820,6 +1822,7 @@ export namespace settings {
 	    reduceMotion: boolean;
 	    language: string;
 	    updateCheckOff: boolean;
+	    nightlyUpdates: boolean;
 	    updateSkip: string;
 	    boardStyle?: Record<string, any>;
 	    convertOnSave?: Record<string, Array<string>>;
@@ -1860,6 +1863,7 @@ export namespace settings {
 	        this.reduceMotion = source["reduceMotion"];
 	        this.language = source["language"];
 	        this.updateCheckOff = source["updateCheckOff"];
+	        this.nightlyUpdates = source["nightlyUpdates"];
 	        this.updateSkip = source["updateSkip"];
 	        this.boardStyle = source["boardStyle"];
 	        this.convertOnSave = source["convertOnSave"];
