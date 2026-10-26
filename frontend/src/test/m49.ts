@@ -4,6 +4,7 @@
 // and shows the popup with the release notes; Skip this version keeps the
 // startup check quiet about it; Download and install shows progress, asks to
 // save unsaved work first, then installs; Settings › About has the switch.
+import { api } from '../core/backend';
 import { workspace } from '../core/tabs.svelte';
 import { settings } from '../core/settings.svelte';
 import { ui } from '../core/ui.svelte';
@@ -70,6 +71,14 @@ export default async function m49(dir: string) {
   await sleep(50);
   assert(!settings.value.updateCheckOff, 'and on again');
   assert([...document.querySelectorAll('button')].some((b) => b.textContent?.includes('Update…')), 'Settings offers the found version');
+  // Nightly builds: off unless chosen, and the choice reaches the settings file the check reads.
+  const nightly = [...document.querySelectorAll<HTMLLabelElement>('label.row.check')].find((l) => l.textContent?.includes('Also offer nightly builds'))!.querySelector('input')!;
+  assert(!nightly.checked && !settings.value.nightlyUpdates, 'nightly builds off by default');
+  nightly.click();
+  await waitFor(async () => ((await api.Boot()).settings.nightlyUpdates ? true : null), 'nightly builds chosen, saved at once');
+  nightly.click();
+  await waitFor(async () => (!(await api.Boot()).settings.nightlyUpdates ? true : null), 'and off again');
+  log('Settings: the startup check and nightly builds switch');
   for (const t of [...workspace.tabs]) await workspace.close(t, { force: true });
   settings.update((s) => (s.updateSkip = ''));
 }

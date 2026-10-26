@@ -82,13 +82,17 @@ func TestWebPIsLossless(t *testing.T) {
 }
 
 func TestNormalizeAndErrors(t *testing.T) {
-	if Normalize(".JPEG") != "jpg" || !Supported("Png") || Supported("tiff") {
+	if Normalize(".JPEG") != "jpg" || Normalize("TIF") != "tiff" || !Supported("Png") || !Supported("tif") || Supported("heic") {
 		t.Fatal("normalize/supported")
 	}
 	if _, err := TranscodeBytes([]byte("nope"), Options{Format: "png"}); err == nil {
 		t.Fatal("garbage decoded")
 	}
-	if _, err := TranscodeBytes(samplePNG(t, false), Options{Format: "tiff"}); err == nil {
-		t.Fatal("tiff accepted")
+	if _, err := TranscodeBytes(samplePNG(t, false), Options{Format: "heic"}); err == nil {
+		t.Fatal("heic accepted")
+	}
+	b, err := TranscodeBytes(samplePNG(t, false), Options{Format: "tiff"})
+	if err != nil || !bytes.HasPrefix(b, []byte("II*\x00")) && !bytes.HasPrefix(b, []byte("MM\x00*")) {
+		t.Fatalf("tiff: %v", err)
 	}
 }

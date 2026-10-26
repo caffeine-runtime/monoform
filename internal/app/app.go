@@ -54,7 +54,7 @@ type App struct {
 	dirty       int
 	forceQuit   bool
 	launchFiles []string
-	launchMode  string  // "peek", "preview", "window" or ""
+	launchMode  string  // "peek", "preview", "convert", "window" or ""
 	startAt     *[2]int // screen point to place the window at (see SetStartPosition)
 	lastDir     string  // folder of the last file dialog answer (see saveDir, openDir)
 }
@@ -146,7 +146,7 @@ func (a *App) OpenFilesMode(paths []string, mode string) {
 		return
 	}
 	a.mu.Unlock()
-	a.emit("app:open-files", OpenRequest{Paths: paths, Preview: mode != ""})
+	a.emit("app:open-files", OpenRequest{Paths: paths, Preview: mode == "peek" || mode == "preview"})
 	if a.ctx != nil {
 		wruntime.WindowUnminimise(a.ctx)
 		wruntime.Show(a.ctx)
@@ -166,7 +166,7 @@ type BootInfo struct {
 	Platform    string            `json:"platform"`
 	Version     string            `json:"version"`
 	LaunchFiles []string          `json:"launchFiles"`
-	LaunchMode  string            `json:"launchMode"` // "peek", "preview", "window" or ""
+	LaunchMode  string            `json:"launchMode"` // "peek", "preview", "convert", "window" or ""
 	Home        string            `json:"home"`
 	PathSep     string            `json:"pathSep"`
 	TestScript  string            `json:"testScript"`
@@ -227,7 +227,7 @@ func (a *App) Quit(code int) {
 // --- settings ---
 
 func (a *App) SaveSettings(s settings.Settings) error {
-	if a.launchMode == "window" {
+	if a.launchMode == "window" || a.launchMode == "convert" {
 		s = keepSession(s, a.Settings.Path())
 	}
 	if err := a.Settings.Set(s); err != nil {

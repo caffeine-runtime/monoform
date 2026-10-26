@@ -708,6 +708,63 @@
   release run).
 - **Fix: a CI self-test (`m6`) failed on a fast runner**: the 3 GiB hash finished inside the 2.5 s it watched
   progress for. It now watches while the hash runs and tests Cancel on a fresh run.
+- **Save and convert** (File menu and the image and audio editors' Save menus, Ctrl/Cmd+Alt+Shift+S): saves the
+  file, then a dialog lists the formats it becomes, each with what it is good for (arrows, digits 1–9 or a click;
+  Enter converts). The copy goes next to the original under the same name (**Change…** picks another place; a file
+  already there is named before it is replaced) and the original is never touched. **Also update it every time I
+  save** keeps that copy current: each later save writes it again (*File › This file › Stop converting this file
+  on save* ends it). Conversions run in Go (`internal/convert`), as a job with progress for long ones:
+  - pictures (PNG, JPEG, WebP, GIF, BMP, TIFF, ICO, ICNS; HEIC/AVIF in through the system's decoder) into each other
+    or a one-page PDF (a JPEG goes in without recompression);
+  - audio (MP3, OGG, FLAC, WAV) into FLAC or WAV, tags and cover kept;
+  - tables (CSV with its separator guessed, TSV, Excel, legacy .xls, OpenDocument, JSON lists of records) into
+    XLSX, CSV, TSV, JSON records (numbers stay numbers) or a PDF laid out for printing (landscape when wide, the
+    header repeated on every page); .xls/.ods → .xlsx keeps formulas and formatting;
+  - documents (Markdown, text, Word .docx/.doc, OpenDocument .odt) into PDF, Word, a web page (one file, pictures
+    inside, light and dark), Markdown (pictures from inside a Word file saved to a "<name> files" folder) or
+    text. All go through one document model: headings, paragraphs with bold/italic/strike/code/links, nested and
+    numbered lists, tasks, quotes, code, tables, pictures, rules.
+  - The **PDF is laid out by Monoform** (go-pdf/fpdf, MIT) on A4 with the app's own fonts — Inter for text,
+    Source Serif 4 for headings, JetBrains Mono for code, as in the Markdown preview — with page numbers, an
+    outline of the headings, clickable links, tables split across pages and pictures scaled to fit. The fonts
+    cover Latin, Greek and Cyrillic; text in other scripts is named in the result ("the PDF's fonts have no letters
+    for …").
+  - `monoform convert IN OUT` does every pair headless; TIFF can now be written everywhere.
+  Go tests (`internal/convert`: every family, Markdown parsing, Markdown → Word → Markdown round trip, Word/ODT/.doc
+  fixtures, ODT styles and lists, page breaking, cancelling), CLI test, self-test `m81`.
+- **Convert without opening.** Right-click files in the system's file manager → **Convert with Monoform…**: a small
+  window with just the format dialog (`monoform --convert FILE…`) converts them next to the originals, shows each
+  file's progress and closes itself when all went well (Show in folder before that; Cancel stops the running one
+  without leaving half a file). A selection of several files comes to one window: the file manager starts one
+  process per file and the first window gathers the others' (a single-instance lock of its own, apart from the
+  editor's). Several files get the formats any of them can become; a file already in the chosen format, or of
+  another kind, is left out and counted. Registered by the Windows setup on the 31 types that convert
+  (`SystemFileAssociations\.ext\shell\Monoform.Convert`, any number of selected files) and removed by its
+  uninstall; on Linux `install.sh` adds it to Open With everywhere, to Dolphin's right-click menu (a service menu),
+  Nautilus's Scripts menu and Nemo's actions. Inside the app, the sidebar's right-click menu has **Convert…** on
+  files that convert (replacing HEIC's Convert to JPG/PNG). Go tests (launch flag, lock, setup registry, the list of
+  types equals the converter's), setup demo test, Windows install check in CI, self-test `m82` (started with
+  `--convert`).
+- **Drawing on PDFs like in a notebook** (Xournal++-style). The PDF tool bar has, next to the pen, text comment and
+  highlight: a **marker** (freehand highlight anywhere, also over text: pdf.js's own freehand highlight with the
+  text layer stepping aside), **shapes** (line, arrow, rectangle, ellipse; Shift keeps lines at 45° steps and makes
+  squares and circles) and a **stroke eraser** (removes the drawings and marker strokes it touches, each an undo
+  step; a ring shows its size). The active tool's options sit in a bar under the tool bar: eight colour swatches
+  (light, see-through ones for the marker and highlight, so text under them stays readable in any reader) plus any
+  colour, and thin / medium / thick (or the shape, or the text size); with a drawing selected, a swatch recolours
+  it. Shapes become ordinary pdf.js ink drawings (select, move, recolour, undo, saved as Ink annotations other
+  readers show and can delete), their points 2 px apart so pdf.js's smoothing keeps corners straight. Page
+  operations › **Insert a page after page N**: blank, lined (8 mm rules, red margin), squared or dotted (5 mm), the
+  size of the current page, drawn with go-pdf/fpdf and put in place with pdfcpu; palette commands for each.
+  Fix: colour, width and text size never reached pdf.js (this pdf.js has no `annotationEditorParams` setter; they go
+  through its event bus now), so pen, text and highlight colours apply again. Unit tests (`ink.test.ts`: shapes,
+  Shift, densify, hit testing), Go test (paper pages in place and size), self-test `m83` with qpdf/poppler checks.
+- **Nightly builds, opt-in** (Settings › About › *Also offer nightly builds*, off by default): with it ticked the
+  startup check (still one request to GitHub's releases API) lists the releases and offers the newest of the normal
+  releases and the `-nightly.` pre-releases that have a package for this system; the popup says "Nightly build …
+  is available". Off, nothing changes: pre-releases are never offered. Betas stay out either way; the release a
+  nightly leads to replaces it. Go test (`TestLatestWithNightlies`: drafts, betas, other systems' builds, ordering),
+  self-test `m49` (the switch, off by default, saved at once).
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -741,6 +798,14 @@ GTK/WebKitGTK process start-up before our page loads. Not yet measured on Window
 available here).
 
 ## Known issues
+- Save and convert: the PDF writer doesn't shape complex scripts (Arabic, Hebrew, Indic) and its fonts have no
+  Chinese, Japanese or Korean letters or emoji (the result says so); table cells in PDFs are plain text (no bold or
+  links inside cells); video doesn't convert (no permissively licensed encoder), nor do PDFs into other formats.
+- PDF drawing: no pressure-sensitive pen and no lasso to move several strokes at once (pdf.js's pen draws at one
+  width; selecting and moving one drawing works). The eraser knows a marker stroke already in the file only by its
+  box, so it can take one it merely passes near.
+- Convert with Monoform isn't in macOS Finder yet (needs a Quick Action / Services entry), nor in the Microsoft Store
+  package (an MSIX context-menu entry needs a COM shell extension); Thunar users find it under Open With.
 - Microsoft Store copy: the `monoform` command is the app itself (a GUI program), so in a terminal the prompt
   comes back before its output; `monoform … > file` and pipes work as usual. The installer's command doesn't have this.
 - Quick peek can't be opened with Space in Finder or Explorer: that takes a native Quick Look extension (Swift,

@@ -71,30 +71,73 @@ type ghRelease struct {
 
 // Latest returns the newest published (non-pre-release) version with its package for goos.
 func Latest(ctx context.Context, goos string, portable bool) (Release, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, API+"/repos/"+Repo+"/releases/latest", nil)
-	if err != nil {
-		return Release{}, err
-	}
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "Monoform-update-check")
-	resp, err := client.Do(req)
-	if err != nil {
-		return Release{}, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusNotFound {
-		return Release{}, errors.New("no published release")
-	}
-	if resp.StatusCode != http.StatusOK {
-		return Release{}, fmt.Errorf("GitHub answered %s", resp.Status)
-	}
 	var gr ghRelease
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 4<<20)).Decode(&gr); err != nil {
+	if err := getJSON(ctx, "/repos/"+Repo+"/releases/latest", &gr); err != nil {
 		return Release{}, err
 	}
 	if gr.Draft || gr.Prerelease {
 		return Release{}, errors.New("no published release")
 	}
+	return toRelease(gr, goos, portable), nil
+}
+
+// LatestWithNightlies is Latest for someone who chose nightly builds (Settings
+// › About): the newest of the published releases and the nightly pre-releases
+// ("1.5.0-nightly.20261026") that have a package for goos. Other pre-releases
+// (betas, release candidates) are still left out. Still one request.
+func LatestWithNightlies(ctx context.Context, goos string, portable bool) (Release, error) {
+	var list []ghRelease
+	if err := getJSON(ctx, "/repos/"+Repo+"/releases?per_page=30", &list); err != nil {
+		return Release{}, err
+	}
+	var best *Release
+	for _, gr := range list {
+		v := strings.TrimPrefix(gr.TagName, "v")
+		if gr.Draft || gr.Prerelease && !IsNightly(v) {
+			continue
+		}
+		r := toRelease(gr, goos, portable)
+		if r.AssetURL == "" {
+			continue // not built for this system
+		}
+		if best == nil || Newer(r.Version, best.Version) {
+			best = &r
+		}
+	}
+	if best == nil {
+		return Release{}, errors.New("no published release")
+	}
+	return *best, nil
+}
+
+// IsNightly reports a nightly build's version ("1.5.0-nightly.20261026").
+func IsNightly(v string) bool {
+	_, pre := split(v)
+	return pre == "nightly" || strings.HasPrefix(pre, "nightly.")
+}
+
+func getJSON(ctx context.Context, path string, v any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, API+path, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("User-Agent", "Monoform-update-check")
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return errors.New("no published release")
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("GitHub answered %s", resp.Status)
+	}
+	return json.NewDecoder(io.LimitReader(resp.Body, 8<<20)).Decode(v)
+}
+
+func toRelease(gr ghRelease, goos string, portable bool) Release {
 	r := Release{Version: strings.TrimPrefix(gr.TagName, "v"), Notes: gr.Body, URL: gr.HTMLURL}
 	want := AssetName(goos, portable)
 	for _, a := range gr.Assets {
@@ -105,7 +148,7 @@ func Latest(ctx context.Context, goos string, portable bool) (Release, error) {
 			r.SumsURL = a.URL
 		}
 	}
-	return r, nil
+	return r
 }
 
 // Newer reports whether version a is newer than b (semantic versions; a

@@ -1,7 +1,11 @@
 ## What's new
 
-- Windows: `monoform.exe hash … > sums.txt` (and other commands run through the app itself) writes to the file or pipe instead of the console.
-- The Microsoft Store package is accepted by the Store: the `monoform` command is now part of the app instead of a hidden second app.
+- **Save and convert** (File menu, the image and audio editors' Save menus, Ctrl/Cmd+Alt+Shift+S): save a file and also get it in another format next to it. Notes and Word documents as PDF (laid out by Monoform with its own fonts, page numbers and an outline), Word, a web page or text; pictures as JPEG, PNG, WebP, TIFF, icons or PDF; audio as FLAC or WAV; CSV, Excel, OpenDocument and JSON tables as Excel, CSV, JSON or a printable PDF. **Also update it every time I save** keeps the copy current.
+- **Convert without opening**: right-click files in Explorer, Dolphin, Nautilus (Scripts) or Nemo → **Convert with Monoform…** opens a small window with just the formats; a whole selection converts at once. In the app, the sidebar's right-click menu has **Convert…**.
+- `monoform convert IN OUT` converts every one of these pairs from a terminal.
+- **Write on PDFs like in a notebook**: a marker (highlight anywhere, by hand), lines, arrows, rectangles and ellipses (Shift keeps them straight or even), a stroke eraser, colour swatches with thin/medium/thick, and blank, lined, squared or dotted pages to insert (Page operations). Everything is saved as standard annotations other PDF readers show. Pen, text and highlight colours apply again.
+
+A nightly is a test build: installed copies are offered it only when **Settings › About › Also offer nightly builds** is ticked (off by default), and the next normal release replaces it.
 
 ## Downloads
 

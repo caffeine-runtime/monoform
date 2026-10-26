@@ -49,4 +49,29 @@ if [ -d "$T" ]; then
   pdfimages -list -f 2 -l 2 "$T/tools-done.pdf" | grep -q "smask" || fail "signature image with transparency missing on page 2"
   echo "tools: redaction removes text (poppler), signature image has a soft mask, images.pdf has 4 pages"
 fi
+# M83 drawing: marker, arrow, rectangle and pen saved as Ink annotations (pdf.js saves freehand
+# highlights as ink), the marker green; a lined page inserted after page 1.
+D=$OUT/drawn.pdf
+if [ -f "$D" ]; then
+  qpdf --check "$D" >/dev/null 2>&1 || { qpdf --check "$D" | tail -3; fail "qpdf --check $D"; }
+  qdf=$(qpdf --qdf --object-streams=disable "$D" - 2>/dev/null)
+  inks=$(grep -ac "/Subtype /Ink" <<<"$qdf")
+  echo "drawn.pdf: $inks Ink annotations"
+  [ "$inks" = 4 ] || fail "drawn.pdf: expected 4 Ink annotations (marker, arrow, rectangle, pen)"
+  grep -aq "0.5490196" <<<"$qdf" || fail "drawn.pdf: the marker isn't light green (#8ce99a)"
+  [ "$(pdfinfo "$D" | awk '/^Pages:/{print $2}')" = 4 ] || fail "drawn.pdf pages"
+  [ -z "$(pdftotext -f 2 -l 2 "$D" - | tr -d '[:space:]')" ] || fail "the inserted page has text"
+fi
+# M81 Save and convert: the PDF Monoform lays out itself.
+C=$1/convert/trip.pdf
+if [ -f "$C" ]; then
+  qpdf --check "$C" >/dev/null 2>&1 || { qpdf --check "$C" | tail -3; fail "qpdf --check $C"; }
+  text=$(pdftotext "$C" - | tr -d "\f")
+  for want in "Trip plan" "Kraków" "Added before converting." "passport"; do
+    [[ "$text" == *"$want"* ]] || fail "converted PDF lacks \"$want\""
+  done
+  pdffonts "$C" | grep -qi "inter.*yes" || fail "converted PDF without its embedded font"
+  pdfimages -list "$C" | grep -q "image" || fail "converted PDF lost the note's picture"
+  echo "convert: trip.pdf passes qpdf, its text reads back in poppler, Inter embedded, the picture is in"
+fi
 echo "PASS verify-pdf"

@@ -22,6 +22,7 @@ import { registerCompare } from './core/compare';
 import { semantic } from './core/semantic/semantic.svelte';
 import { OnFileDrop } from './wailsjs/runtime/runtime';
 import { installContextMenu } from './core/contextMenu';
+import { convertWindow } from './core/convert.svelte';
 
 function inEditable(t: EventTarget | null): boolean {
   const el = t as HTMLElement | null;
@@ -86,6 +87,23 @@ export async function start(info: BootInfo, tScript: number, tBoot: number) {
   Object.assign(boot, { platform: info.platform, home: info.home, version: info.version, token: info.token, extraWindow: info.launchMode === 'window', systemLanguages: info.systemLanguages ?? [], store: !!info.store });
   settings.init(info.settings);
   theme.apply();
+
+  if (info.launchMode === 'convert') {
+    // Convert with Monoform (a file manager's right-click menu): only the
+    // format dialog, for these files and those of launches that follow.
+    convertWindow.on = true;
+    convertWindow.testing = !!info.testScript;
+    convertWindow.add(info.launchFiles ?? []);
+    on<string[] | { paths: string[] }>('app:open-files', (req) => convertWindow.add(Array.isArray(req) ? req : (req.paths ?? [])));
+    const { default: ConvertWindow } = await import('./shell/ConvertWindow.svelte');
+    mount(ConvertWindow, { target: document.getElementById('app')! });
+    requestAnimationFrame(() => setTimeout(() => void api.MarkReady(performance.now())));
+    if (info.testScript) {
+      const { runSelfTest } = await import('./test/selftest');
+      void runSelfTest(info.testScript);
+    }
+    return;
+  }
 
   registerBuiltinModules();
   registerAppCommands();

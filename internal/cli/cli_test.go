@@ -129,7 +129,14 @@ func TestInfoAndConvert(t *testing.T) {
 	if _, _, code := run(t, "convert", src); code != 2 {
 		t.Error("missing argument accepted")
 	}
-	if _, errs, code := run(t, "convert", write(t, dir, "x.txt", "not an image"), filepath.Join(dir, "x.png")); code != 2 || errs == "" {
+	if _, errs, code := run(t, "convert", write(t, dir, "x.txt", "not an image"), filepath.Join(dir, "x.png")); code != 2 || !strings.Contains(errs, "converts to pdf, docx") {
 		t.Errorf("text converted: %q", errs)
+	}
+	// Documents and tables too.
+	if out, errs, code := run(t, "convert", write(t, dir, "n.md", "# Hello\n\nWorld"), filepath.Join(dir, "n.pdf")); code != 0 || !strings.Contains(out, "n.md → ") {
+		t.Errorf("md → pdf: %q %q", out, errs)
+	}
+	if out, errs, code := run(t, "convert", write(t, dir, "o.json", `{"a": 1}`), filepath.Join(dir, "o.csv")); code != 2 || !strings.Contains(errs, "isn't a table") {
+		t.Errorf("object → csv: %q %q", out, errs)
 	}
 }

@@ -2,6 +2,7 @@ package pdf
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -168,5 +169,39 @@ func TestSplit(t *testing.T) {
 	}
 	if total != 5 {
 		t.Fatalf("total pages %d", total)
+	}
+}
+
+// A page of paper goes in after the given page, the size of that page.
+func TestInsertPaper(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	src := write(t, dir, "src.pdf", 3)
+	for _, after := range []int{0, 2, 3} {
+		for _, paper := range Papers {
+			dst := filepath.Join(dir, fmt.Sprintf("%s-%d.pdf", paper, after))
+			if err := Apply(ctx, src, dst, Op{Kind: "paper", Paper: paper, After: after}); err != nil {
+				t.Fatalf("%s after %d: %v", paper, after, err)
+			}
+			texts := pageTexts(t, dst)
+			want := []string{"Page 1", "Page 2", "Page 3"}
+			want = append(want[:after], append([]string{""}, want[after:]...)...)
+			if strings.Join(texts, ",") != strings.Join(want, ",") {
+				t.Errorf("%s after %d: %q", paper, after, texts)
+			}
+			dims, err := api.PageDimsFile(ctx, dst)
+			if err != nil || dims[after].Width != 612 || dims[after].Height != 792 {
+				t.Errorf("%s: paper size %v %v", paper, dims, err)
+			}
+		}
+	}
+	if err := Apply(ctx, src, filepath.Join(dir, "x.pdf"), Op{Kind: "paper", Paper: "lined", After: 4}); err == nil {
+		t.Error("after a page past the end")
+	}
+	if err := Apply(ctx, src, filepath.Join(dir, "y.pdf"), Op{Kind: "paper", Paper: "music", After: 1}); err == nil {
+		t.Error("unknown paper")
+	}
+	if left, _ := filepath.Glob(filepath.Join(dir, ".paper-*")); len(left) > 0 {
+		t.Errorf("temp files left: %v", left)
 	}
 }

@@ -26,9 +26,10 @@ d = json.load(open(sys.argv[1]))
 r = d["registry"]
 assert r[r"HKCU\microsoft\windows\currentversion\uninstall\monoform"]["DisplayName"] == "Monoform", "uninstall entry"
 assert r[r"HKCU\classes\*\shell\monoform.peek\command"][""].endswith('--peek "%1"'), "quick peek verb"
+assert r[r"HKCU\classes\systemfileassociations\.docx\shell\monoform.convert\command"][""].endswith('--convert "%1"'), "convert verb"
 assert d["shortcuts"].get(r"HKCU Programs\Monoform"), "start menu shortcut"
 assert d["shims"].get("monoform.cmd"), "monoform command"
-print("setup: installed files, uninstall entry, quick peek, shortcut and command")
+print("setup: installed files, uninstall entry, quick peek, convert verb, shortcut and command")
 PY
 timeout 60 "$OUT/setup" --uninstall 2>&1 | grep -E "SETUP (PASS|FAIL)" | tee "$OUT/log"
 grep -q "SETUP PASS uninstall" "$OUT/log"

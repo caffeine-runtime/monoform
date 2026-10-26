@@ -1,7 +1,8 @@
 // Package setup installs and removes Monoform on Windows: the program
 // files, Start menu and desktop shortcuts, the monoform command, the "Open
 // with" entry, optionally the default-app registrations, the "Quick peek"
-// right-click verb and the entry in Settings › Apps. It does what the NSIS
+// and "Convert with Monoform…" right-click verbs and the entry in Settings ›
+// Apps. It does what the NSIS
 // script (build/windows/installer/project.nsi) did, for the app's own setup
 // program (cmd/setup).
 //
@@ -97,6 +98,17 @@ func Icons(assocs []Assoc) []string {
 
 // quickView are the types that open in a quick-view window (no session,
 // panels or tools until Edit): pictures, like the system's photo viewer.
+// ConvertExts are the types "Convert with Monoform…" is offered on: those
+// internal/convert converts (a test keeps the lists the same).
+var ConvertExts = []string{"png", "jpg", "jpeg", "gif", "webp", "bmp", "tif", "tiff", "ico", "icns", "heic", "heif", "avif",
+	"mp3", "wav", "flac", "ogg", "oga", "csv", "tsv", "xlsx", "xlsm", "xls", "ods", "json", "md", "markdown", "txt", "docx", "doc", "odt"}
+
+// convertVerb is the right-click verb on one type (on the type itself, not
+// its class, so it shows whichever app opens it).
+func convertVerb(ext string) string {
+	return `Classes\SystemFileAssociations\.` + ext + `\shell\Monoform.Convert`
+}
+
 var quickView = map[string]bool{"png": true, "jpg": true, "jpeg": true, "gif": true, "webp": true, "bmp": true, "svg": true}
 
 // QuickView says files with this extension open in the quick-view window.
@@ -230,6 +242,17 @@ func registrations(o Options, assocs []Assoc) []regWrite {
 		{key: peekVerb, name: "Icon", value: fmt.Sprintf(`"%s"`, exe)},
 		{key: peekVerb + `\command`, value: peek},
 	}
+	// Convert without opening: one window gathers a whole selection
+	// (Explorer starts the command once per file; "Player" lifts its limit
+	// of 15 selected files).
+	for _, ext := range ConvertExts {
+		w = append(w,
+			regWrite{key: convertVerb(ext), value: "Convert with " + Product + "…"},
+			regWrite{key: convertVerb(ext), name: "Icon", value: fmt.Sprintf(`"%s"`, exe)},
+			regWrite{key: convertVerb(ext), name: "MultiSelectModel", value: "Player"},
+			regWrite{key: convertVerb(ext) + `\command`, value: fmt.Sprintf(`"%s" --convert "%%1"`, exe)},
+		)
+	}
 	for _, a := range assocs {
 		icon := join(o.Dir, a.Icon+".ico")
 		if a.Icon == "" {
@@ -360,6 +383,9 @@ func Uninstall(sys System, in Installed, assocs []Assoc, progress Progress) erro
 	}
 	_ = sys.DeleteKey(root, openWithKey)
 	_ = sys.DeleteKey(root, `Classes\*\shell\Monoform.Peek`)
+	for _, ext := range ConvertExts {
+		_ = sys.DeleteKey(root, convertVerb(ext))
+	}
 	if in.Defaults {
 		sys.AssocChanged()
 	}

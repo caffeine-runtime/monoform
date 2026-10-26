@@ -450,6 +450,7 @@ export namespace app {
 	    url: string;
 	    size: number;
 	    install: string;
+	    nightly: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new UpdateInfo(source);
@@ -464,6 +465,7 @@ export namespace app {
 	        this.url = source["url"];
 	        this.size = source["size"];
 	        this.install = source["install"];
+	        this.nightly = source["nightly"];
 	    }
 	}
 	export class VideoOpened {
@@ -1468,6 +1470,8 @@ export namespace pdf {
 	    degrees: number;
 	    order: number[];
 	    others: string[];
+	    paper?: string;
+	    after?: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Op(source);
@@ -1480,6 +1484,8 @@ export namespace pdf {
 	        this.degrees = source["degrees"];
 	        this.order = source["order"];
 	        this.others = source["others"];
+	        this.paper = source["paper"];
+	        this.after = source["after"];
 	    }
 	}
 	export class PageImage {
@@ -1816,8 +1822,10 @@ export namespace settings {
 	    reduceMotion: boolean;
 	    language: string;
 	    updateCheckOff: boolean;
+	    nightlyUpdates: boolean;
 	    updateSkip: string;
 	    boardStyle?: Record<string, any>;
+	    convertOnSave?: Record<string, Array<string>>;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -1855,8 +1863,10 @@ export namespace settings {
 	        this.reduceMotion = source["reduceMotion"];
 	        this.language = source["language"];
 	        this.updateCheckOff = source["updateCheckOff"];
+	        this.nightlyUpdates = source["nightlyUpdates"];
 	        this.updateSkip = source["updateSkip"];
 	        this.boardStyle = source["boardStyle"];
+	        this.convertOnSave = source["convertOnSave"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

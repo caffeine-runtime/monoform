@@ -56,17 +56,24 @@ func main() {
 	case "window":
 		// A tab moved out: a little smaller than the main window, so both fit.
 		width, height = 1100, 720
+	case "convert":
+		// Convert with Monoform (a file manager's right-click menu): just the format dialog.
+		width, height = 560, 640
+	}
+	minW, minH, title := 640, 400, "Monoform"
+	if mode == "convert" {
+		minW, minH, title = 420, 420, "Convert with Monoform"
 	}
 	if dist, err := fs.Sub(assets, "frontend/dist"); err == nil {
 		a.Assets = dist
 	}
 
 	err := wails.Run(&options.App{
-		Title:            "Monoform",
+		Title:            title,
 		Width:            width,
 		Height:           height,
-		MinWidth:         640,
-		MinHeight:        400,
+		MinWidth:         minW,
+		MinHeight:        minH,
 		BackgroundColour: &options.RGBA{R: 31, G: 30, B: 28, A: 255},
 		AssetServer: &assetserver.Options{
 			Assets:     assets,
@@ -111,6 +118,11 @@ func singleInstance(mode string, onLaunch func(options.SecondInstanceData)) *opt
 	if mode == "window" || mode == "peek" {
 		return nil
 	}
+	// Converting: a file manager starts one process per selected file; the
+	// first window gathers the others' files (and leaves the editor alone).
+	if mode == "convert" {
+		return &options.SingleInstanceLock{UniqueId: "dev.monoform.convert", OnSecondInstanceLaunch: onLaunch}
+	}
 	return &options.SingleInstanceLock{UniqueId: "dev.monoform.app", OnSecondInstanceLaunch: onLaunch}
 }
 
@@ -130,7 +142,8 @@ func parseAt(args []string) (int, int, bool) {
 
 // parseLaunch splits the command line into files to open (existing paths,
 // made absolute) and the mode: "peek" (--peek), "preview" (--preview),
-// "window" (--new-window: a tab moved to a window of its own) or "".
+// "convert" (--convert), "window" (--new-window: a tab moved to a window of
+// its own) or "".
 func parseLaunch(args []string, wd string) ([]string, string) {
 	mode := ""
 	var rest []string
@@ -144,6 +157,8 @@ func parseLaunch(args []string, wd string) ([]string, string) {
 			}
 		case "--new-window":
 			mode = "window"
+		case "--convert":
+			mode = "convert"
 		default:
 			if !strings.HasPrefix(a, "-") { // ignore other flags (macOS adds -psn_…)
 				rest = append(rest, a)

@@ -104,11 +104,17 @@ type Settings struct {
 	Language string `json:"language"`
 	// UpdateCheckOff stops looking for a new version at startup.
 	UpdateCheckOff bool `json:"updateCheckOff"`
+	// NightlyUpdates also offers nightly builds (test versions from work in
+	// progress) as updates. Off by default: they are never offered otherwise.
+	NightlyUpdates bool `json:"nightlyUpdates"`
 	// UpdateSkip is a version the user chose to skip (not offered again).
 	UpdateSkip string `json:"updateSkip"`
 	// BoardStyle is the drawing style new shapes get on the board (stroke,
 	// fill, width, dash, fillStyle, roughness, edges): the last one chosen.
 	BoardStyle map[string]any `json:"boardStyle,omitempty"`
+	// ConvertOnSave: files whose converted copies are written again on every
+	// save (the file's path → the copies' paths).
+	ConvertOnSave map[string][]string `json:"convertOnSave,omitempty"`
 }
 
 func Defaults() Settings {
@@ -304,6 +310,13 @@ func clone(v Settings) Settings {
 	v.Pinned = append([]string{}, v.Pinned...)
 	v.Session.Tabs = append([]SessionTab{}, v.Session.Tabs...)
 	v.Session.Expanded = append([]string{}, v.Session.Expanded...)
+	if v.ConvertOnSave != nil {
+		m := make(map[string][]string, len(v.ConvertOnSave))
+		for k, dsts := range v.ConvertOnSave {
+			m[k] = append([]string{}, dsts...)
+		}
+		v.ConvertOnSave = m
+	}
 	if v.Session.Split != nil {
 		sp := *v.Session.Split
 		sp.Panes = append([]int{}, sp.Panes...)

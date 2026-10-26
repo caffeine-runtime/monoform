@@ -44,7 +44,7 @@ building.
    - `monoform-amd64-installer.exe` — Windows setup (our own, `cmd/setup`)
    - `monoform-windows-amd64-portable.zip` — Windows, no install
    - `monoform-macos-universal.zip` — macOS app (Apple Silicon + Intel)
-   - `monoform-linux-amd64.tar.gz` — Linux binary, the `monoform` command, `.desktop` files (app and Quick peek)
+   - `monoform-linux-amd64.tar.gz` — Linux binary, the `monoform` command, `.desktop` files (app, Quick peek, Convert)
      and `install.sh`
    - every package includes `monoform` (inside the macOS app bundle; next to the Windows exe)
    - `SHA256SUMS` — checksums of all of the above
@@ -106,12 +106,21 @@ To change what the release page says, edit `.github/release-notes.md`.
 ## Updates
 
 Installed copies look for a new version at startup (`internal/update`): they read the repository's **latest
-release** (pre-releases are never offered) and download the asset for their system by its file name —
+release** (pre-releases are never offered, unless the user ticks *Settings › About › Also offer nightly builds*:
+then the same one request lists the releases and the newest of the normal releases and **nightlies** wins) and download the asset for their system by its file name —
 `monoform-amd64-installer.exe` (Windows, installed with the setup program), `monoform-windows-amd64-portable.zip`,
 `monoform-macos-universal.zip`, `monoform-linux-amd64.tar.gz` — checked against `SHA256SUMS`. Keep those names and
 the checksum file in every release. A normal (non-pre-release) version reaches everyone on their next start; test a
 release as a pre-release first if unsure. The release notes' "What's new" part is shown in the update popup.
 Copies from the Microsoft Store don't look: the Store updates them (see below).
+
+### Nightly builds
+
+A nightly is a pre-release with a version `x.y.z-nightly.YYYYMMDD` (the next version's number and the build date),
+published like any release (option A or C with that version) from the branch being tried out. Only copies whose
+users chose nightly builds are offered it; everyone else, and the README's download link (`releases/latest`), keeps
+the last normal release. Nightlies sort after each other by date and before their `x.y.z` release, so the release
+replaces them. Betas and release candidates (`-beta.N`, `-rc.N`) are never offered, nightly users included.
 
 ## Microsoft Store
 

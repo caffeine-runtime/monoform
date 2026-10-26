@@ -95,7 +95,7 @@ jobs:
           M0=$RUNNER_TEMP/m0 && mkdir -p "$M0" && printf a >"$M0/a.txt" && printf b >"$M0/b.md" && printf c >"$M0/c.txt"
           scripts/selftest.sh m0-setup "$M0" "$RUNNER_TEMP/m0.json"
           scripts/selftest.sh m0-restore "$M0" "$RUNNER_TEMP/m0.json"
-          for s in m1 m2 m3 m4 m4b m5 m6 m8 m10 m11 m12 m13 m14 m15 m16 m18 m19 m20 m21 m22 m23 m24 m25 m26 m27 m28 m29 m30 m31 m32 m33 m34 m35 m36 m37 m38 m39 m40 m42 m44 m45 m46 m48 m50 m51 m52 m53 m54 m55 m56 m57 m58 m59 m60 m61 m62 m63 m64 m65 m66 m67 m68 m69 m70 m71 m72 m73 m74 m75 m76 m78 m79 m80; do scripts/selftest.sh "$s" "$FX"; done
+          for s in m1 m2 m3 m4 m4b m5 m6 m8 m10 m11 m12 m13 m14 m15 m16 m18 m19 m20 m21 m22 m23 m24 m25 m26 m27 m28 m29 m30 m31 m32 m33 m34 m35 m36 m37 m38 m39 m40 m42 m44 m45 m46 m48 m50 m51 m52 m53 m54 m55 m56 m57 m58 m59 m60 m61 m62 m63 m64 m65 m66 m67 m68 m69 m70 m71 m72 m73 m74 m75 m76 m78 m79 m80 m81 m83; do scripts/selftest.sh "$s" "$FX"; done
           # The interface in Polish and Spanish, picked from the system language.
           MF_SYSTEM_LANG=pl-PL scripts/selftest.sh m47 "$FX"
           MF_SYSTEM_LANG=es-ES scripts/selftest.sh m47 "$FX"
@@ -103,6 +103,8 @@ jobs:
           MF_SYSTEM_LANG=fr-FR scripts/selftest.sh m47 "$FX"
           # Quick peek: started with --peek FILE.
           scripts/selftest.sh m32peek "$FX" "" --peek "$FX/diagrams/notes.md"
+          # Convert with Monoform (a file manager's right-click menu): started with --convert FILE….
+          scripts/selftest.sh m82 "$FX" "" --convert "$FX/convert/photo.png" "$FX/convert/sales.csv"
           MF_AI_FAKE=1 MF_CACHE="$(mktemp -d)" scripts/selftest.sh m43 "$FX"
           # Updates: a made-up newer release, installed by logging (the real path is Go-tested).
           MF_UPDATE_FAKE=1 MF_CACHE="$(mktemp -d)" scripts/selftest.sh m49 "$FX"
@@ -161,7 +163,7 @@ jobs:
           sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
           wails build -tags webkit2_41 -platform linux/amd64 -trimpath -ldflags "$MF_LDFLAGS"
           mkdir -p stage/monoform dist
-          cp build/bin/monoform build/linux/monoform.desktop build/linux/monoform-peek.desktop build/linux/install.sh stage/monoform/
+          cp build/bin/monoform build/linux/monoform.desktop build/linux/monoform-peek.desktop build/linux/monoform-convert.desktop build/linux/monoform-convert-servicemenu.desktop build/linux/install.sh stage/monoform/
           cp build/appicon.png stage/monoform/monoform.png
           tar -C stage -czf dist/monoform-linux-amd64.tar.gz monoform
 
@@ -206,6 +208,7 @@ jobs:
           if ((Get-ItemProperty 'HKCU:\Software\Classes\.md').'(default)' -ne 'Monoform.md') { throw '.md not associated' }
           if ((Get-ItemProperty 'HKCU:\Software\Classes\Monoform.png\DefaultIcon').'(default)' -notlike '*file-image.ico') { throw 'png has no picture icon' }
           if ((Get-ItemProperty 'HKCU:\Software\Classes\Monoform.png\shell\open\command').'(default)' -notlike '*--peek*') { throw 'png does not open in quick view' }
+          if ((Get-ItemProperty 'HKCU:\Software\Classes\SystemFileAssociations\.docx\shell\Monoform.Convert\command').'(default)' -notlike '*--convert*') { throw 'no Convert with Monoform on .docx' }
           if (-not (Test-Path (Join-Path ([Environment]::GetFolderPath('Programs')) 'Monoform.lnk'))) { throw 'no Start menu shortcut' }
           if (-not (Test-Path "$env:LOCALAPPDATA\Microsoft\WindowsApps\monoform.cmd")) { throw 'no monoform command' }
           & (Join-Path $dir 'monoform-cli.exe') version
@@ -216,6 +219,7 @@ jobs:
           if (Test-Path $dir) { throw "folder left after uninstall: $((Get-ChildItem $dir).Name -join ', ')" }
           if (Test-Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Monoform') { throw 'uninstall entry left' }
           if (Test-Path 'HKCU:\Software\Classes\Monoform.md') { throw 'file class left' }
+          if (Test-Path 'HKCU:\Software\Classes\SystemFileAssociations\.docx\shell\Monoform.Convert') { throw 'convert verb left' }
           if (Test-Path (Join-Path ([Environment]::GetFolderPath('Programs')) 'Monoform.lnk')) { throw 'shortcut left' }
           "setup: quiet install and uninstall OK"
 

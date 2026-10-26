@@ -242,6 +242,17 @@
         <span class="lbl" title={t('One request to GitHub when Monoform starts; nothing about you or this computer is sent.')}>{t('Look for a new version when Monoform starts')}</span>
         <input type="checkbox" checked={!s.updateCheckOff} onchange={(e) => settings.update((x) => (x.updateCheckOff = !(e.target as HTMLInputElement).checked))} />
       </label>
+      <label class="row check">
+        <span class="lbl" title={t('Test versions built from work in progress: the newest features, tested less. Off, you get normal releases only; a nightly you have stays until the next release.')}>{t('Also offer nightly builds')}</span>
+        <input
+          type="checkbox"
+          checked={!!s.nightlyUpdates}
+          onchange={(e) => {
+            settings.update((x) => (x.nightlyUpdates = (e.target as HTMLInputElement).checked));
+            void settings.flush(); // the next check reads it from the settings file
+          }}
+        />
+      </label>
       <div class="row">
         <span class="lbl">
           {#if updates.checking}{t('Checking…')}{:else if updates.info?.available}{t('Version {version} is available.', { version: updates.info.version })}{:else if updates.info}{t('Monoform is up to date.')}{:else if updates.error}{t('Couldn’t check: {error}', { error: updates.error })}{/if}

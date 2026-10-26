@@ -341,6 +341,56 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   the worker imports the worker's own entry again, a second three.js whose `Color` the transfer code doesn't
   recognise (colours came out white).
 
+- **Save and convert writes next to the original, in Go, and never in place.** A conversion is a job like any
+  long Go operation (`ConvertFile`, cancellable, progress for audio); the copy goes beside the file under its name
+  unless the user picks another place, and a file already there is named in the dialog before it is replaced
+  (the copy kept up to date on save is known to be ours, so it isn't). Each format pair lives in Go so the app and
+  `monoform convert` do the same thing, and Go tests cover every pair without a webview.
+- **Formats convert within their family only**: pictures, audio, tables, documents. Crossing families (a table
+  into Word, a picture into Markdown) would mostly produce something nobody wants, and every listed pair has to
+  round-trip well. Not offered: video (no permissively licensed encoder; remuxing stays in the video editor),
+  MP3/AAC/Opus encoding (same), PDFs into other formats (a PDF has no structure to recover reliably), Word into a
+  Word-faithful PDF (that needs a full layout engine like LibreOffice's; the PDF is laid out from the document's
+  structure instead, and for a Word or OpenDocument file the dialog says so: "Text, tables and pictures laid out
+  anew, not Word's page layout").
+- **PDFs are laid out by Monoform, not printed by the webview.** Wails v2 has no print-to-PDF, and doing it per
+  system (WebView2's PrintToPdf, WKWebView's createPDF, WebKitGTK's print operation) means native code — cgo on
+  Linux — and three slightly different results. go-pdf/fpdf (MIT, pure Go) with the app's own fonts gives the
+  same file everywhere and is testable in Go; the cost is no shaping of complex scripts, and no glyphs beyond
+  Latin/Greek/Cyrillic in the bundled fonts, which the result reports. fpdf's strikeout sits too high with these
+  fonts, so struck text is drawn word by word with our own line; task boxes are drawn (Inter has no ☐/☑).
+- **"Also update it every time I save"** is stored per file in settings (`convertOnSave`: source → copies) and runs
+  when an editor clears its changes flag (`Tab.dirty` true → false, `afterSave` hooks), half a second later and one
+  at a time per file, so every editor's own save path (tool-bar buttons, Ctrl+S, Save all) is covered without each
+  calling it. A revert also clears the flag; converting the unchanged file again then is harmless.
+
+- **Convert with Monoform is a launch mode, gathering a selection through its own single-instance lock.**
+  Explorer runs a static verb's command once per selected file (`MultiSelectModel=Player` only lifts the limit of
+  15), and Linux file managers may do the same; one window per file would be a mess. The first `--convert` process
+  takes the lock `dev.monoform.convert` and the others hand it their files (the editor's lock is separate, so the
+  editor can be open or not). It reuses the Save and convert dialog in a standalone layout. The Windows verb sits
+  on `SystemFileAssociations\.ext` for the 31 types that convert, so it shows whichever app opens them, and a Go
+  test keeps that list equal to the converter's. Not done: macOS (a Quick Action or NSServices entry needs native
+  code or an Automator bundle), the Store package (an MSIX shell context menu needs a COM extension), Thunar (its
+  custom actions live in the user's own uca.xml, which an installer shouldn't rewrite; Open With lists it). No
+  drag-and-drop wheel or global hotkey like FileWheel or OrbitDrop: those need system-wide hooks and overlay windows
+  that don't work on Wayland and sit against the calm shell.
+
+- **The PDF notebook tools build on pdf.js's annotation editors, not a drawing layer of our own.** The marker is
+  pdf.js's freehand highlight (it starts where a press lands on the text layer itself, so in marker mode the words
+  inside it ignore the pointer); shapes are created as pdf.js ink editors from point lists through its
+  editor-manager command path (undoable, selectable, saved as Ink annotations); the eraser hit-tests each drawing's
+  own strokes (`serialize`d points, its width plus the eraser's radius) and removes it the same undoable way. Anything
+  drawn stays a standard annotation other readers show and can delete — no private format, unlike Xournal++'s
+  .xopp. Not done, by choice for now: a pressure-sensitive pen and a lasso (both would need a layer of our own on
+  top of pdf.js). Inserted paper pages are drawn with fpdf (already a dependency) at the current page's size and
+  moved into place with pdfcpu's merge + collect, as one page operation.
+
+- **Nightly builds are opt-in, from the same request.** Off (the default) the check reads `releases/latest`, which
+  GitHub never points at a pre-release, exactly as before. On, it reads `releases?per_page=30` instead — still one
+  request at startup — and takes the newest normal release or `-nightly.` pre-release built for this system. Only
+  the nightly suffix counts, so a beta published for a few testers never reaches nightly users by accident.
+
 ## Look & feel
 
 - **Darker palette than the brief's starting tokens** (user request): dark `--bg #1f1e1c`, sidebar `#181716`; light `--bg #f6f4ee`.
@@ -685,6 +735,9 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 | github.com/remyoudompheng/bigfft | BSD-3-Clause | dependency of modernc.org/libc |
 | (own code) animated GIF/WebP, ICO/ICNS, font metadata | — | M24: Go's image/gif and golang.org/x/image/webp decode single images; frame compositing, animated-WebP demuxing (frames re-wrapped as stills), a median-cut quantiser, ICO/ICNS reading and writing (incl. Apple's RLE) and the OpenType name/cmap/fvar reader are small and well specified, so they're own code. Animated WebP is written with nativewebp (MIT, already used) |
 | HEIC/HEIF | — (system) | M24: not decoded by the app. Every HEVC decoder is LGPL (libde265, libheif, ffmpeg) or patent-encumbered, so the OS decoder is used at run time (sips, WIC via PowerShell, heif-convert/ImageMagick/ffmpeg) and nothing is linked or shipped. CI installs libheif-examples to exercise the path |
+| github.com/go-pdf/fpdf | MIT | Save and convert: lays out the PDFs made from documents and tables (text flow with mixed styles, UTF-8 TrueType fonts embedded as subsets, links, outline, page numbers). Only its main package is linked: no further dependencies |
+| Inter 4.1 (static TTFs), Source Serif 4 4.005 Semibold, JetBrains Mono 2.304 (`internal/convert/fonts/`) | OFL-1.1 | fonts embedded in converted PDFs. Inter and JetBrains Mono are subset to Latin, Greek and Cyrillic (no reserved font names, so a cut-down copy may keep its name); Source Serif reserves "Source", so its file is the unmodified original. License texts and the subsetting command are next to them |
+| (own code) `internal/convert` | — | Save and convert: one document model with readers for Markdown (the app's flavour: GFM tables, tasks, wiki links, front matter), text, .docx (styles, numbering, links, pictures, tables), .odt and .doc, and writers for Markdown, text, HTML, .docx (through `office.WriteDocx`, with its own styles and list definitions) and PDF; table and picture conversions reuse `office`, `imaging`, `audio` and `pdf` |
 | (own code) `monoform` console program | — | M32: a Windows GUI-subsystem exe can't print reliably to the console it was started from (the prompt returns at once), so the command line is a separate small console program (same `internal/cli` code) that runs `hash`/`verify`/`info`/`convert` itself and hands files to the app; the app binary also accepts the commands (attaching to the parent console on Windows). Quick peek is a launch mode of the one Wails window rather than a second window (Wails v2 has one window per process); the per-OS "spacebar" hooks (Quick Look extensions, Explorer preview handlers) need native code and signing, so peek is offered through Open With and the context menu |
 | github.com/godbus/dbus/v5 | BSD-2-Clause | M31: talks to the desktop's screenshot portal (xdg-desktop-portal) in pure Go — the only way to take screenshots on Wayland, and it shows the desktop's own area/window picker. Was already an indirect dependency |
 | (own code) screenshots | — | M31: no capture library: kbinani/screenshot needs cgo on macOS and can't see Wayland, so each OS uses what it ships (screencapture, the portal or a screenshot tool, .NET via PowerShell) and annotation reuses the image editor |

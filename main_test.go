@@ -33,6 +33,12 @@ func TestParseNewWindow(t *testing.T) {
 	if x, y, ok := parseAt(args); !ok || x != 120 || y != -40 {
 		t.Errorf("at: %d %d %v", x, y, ok)
 	}
+	if files, mode := parseLaunch([]string{"--convert", f, f}, "/"); mode != "convert" || len(files) != 2 {
+		t.Errorf("convert: %v %q", files, mode)
+	}
+	if l := singleInstance("convert", nil); l == nil || l.UniqueId == "dev.monoform.app" {
+		t.Error("convert windows gather files in their own instance, apart from the editor")
+	}
 	if _, _, ok := parseAt([]string{"--at=nope"}); ok {
 		t.Error("bad --at accepted")
 	}

@@ -55,6 +55,12 @@ export function CommandLineStatus():Promise<app.CommandLine>;
 
 export function ConfirmQuit():Promise<void>;
 
+export function ConvertFamilies():Promise<Array<any>>;
+
+export function ConvertFile(arg1:string,arg2:string):Promise<string>;
+
+export function ConvertFormats():Promise<Record<string, Array<string>>>;
+
 export function ConvertImage(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function CopyAsset(arg1:string,arg2:string):Promise<server.AssetResult>;

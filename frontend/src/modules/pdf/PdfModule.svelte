@@ -13,6 +13,13 @@
   import Highlighter from '@lucide/svelte/icons/highlighter';
   import MessageSquare from '@lucide/svelte/icons/message-square-text';
   import PenLine from '@lucide/svelte/icons/pen-line';
+  import Brush from '@lucide/svelte/icons/brush';
+  import ShapesIcon from '@lucide/svelte/icons/shapes';
+  import EraserIcon from '@lucide/svelte/icons/eraser';
+  import Slash from '@lucide/svelte/icons/slash';
+  import ArrowIcon from '@lucide/svelte/icons/move-up-right';
+  import SquareIcon from '@lucide/svelte/icons/square';
+  import CircleIcon from '@lucide/svelte/icons/circle';
   import Search from '@lucide/svelte/icons/search';
   import ChevronUp from '@lucide/svelte/icons/chevron-up';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
@@ -21,6 +28,8 @@
   import SignatureIcon from '@lucide/svelte/icons/signature';
   import Redact from '@lucide/svelte/icons/square-slash';
   import PdfMarks from './PdfMarks.svelte';
+  import PdfDraw, { type EditorManager } from './PdfDraw.svelte';
+  import { SHAPES, type Shape } from './ink';
   import SignaturePad from './SignaturePad.svelte';
   import { markPolygon, matchRects, stampMatrix, type Mark, type TextRun } from './marks';
   import { buildFromImages, IMAGE_PATTERNS, pickPageSize, renderPage, scaleFor, toBlob } from './tools';
@@ -42,13 +51,28 @@
   let { tab }: { tab: Tab } = $props();
 
   const { AnnotationEditorType, AnnotationMode, AnnotationEditorParamsType } = pdfjs;
-  type ToolId = 'none' | 'highlight' | 'freetext' | 'ink';
+  type ToolId = 'none' | 'highlight' | 'marker' | 'freetext' | 'ink' | 'shape' | 'eraser';
+  // The marker is pdf.js's freehand highlight (the text layer is switched
+  // off so it draws over text too); shapes and the eraser work on top of its
+  // ink mode (PdfDraw.svelte).
   const MODES: Record<ToolId, number> = {
     none: AnnotationEditorType.NONE,
     highlight: AnnotationEditorType.HIGHLIGHT,
+    marker: AnnotationEditorType.HIGHLIGHT,
     freetext: AnnotationEditorType.FREETEXT,
     ink: AnnotationEditorType.INK,
+    shape: AnnotationEditorType.INK,
+    eraser: AnnotationEditorType.INK,
   };
+  /** A notebook's colours: ink, blue, red, green, orange, yellow, magenta, white. */
+  const SWATCHES = ['#1d1d1f', '#1e5bd8', '#d0021b', '#1f8a3b', '#f08c00', '#ffd43b', '#c026d3', '#ffffff'];
+  /** Highlighter colours: light, so the text under them stays readable in any reader. */
+  const MARKER_SWATCHES = ['#ffe066', '#8ce99a', '#74c0fc', '#faa2c1', '#ffc078', '#d0bfff', '#ffa8a8', '#ced4da'];
+  const swatchesFor = (t: ToolId) => (t === 'marker' || t === 'highlight' ? MARKER_SWATCHES : SWATCHES);
+  /** Thin, medium and thick for each tool (pdf.js line widths; the eraser's radius in screen pixels). */
+  const WIDTHS: Record<'ink' | 'shape' | 'marker' | 'eraser', number[]> = { ink: [1.5, 3, 6], shape: [1.5, 3, 6], marker: [10, 16, 24], eraser: [6, 14, 28] };
+  type Sized = keyof typeof WIDTHS;
+  const sized = (t: ToolId): t is Sized => t in WIDTHS;
 
   let container = $state<HTMLDivElement>();
   let viewerEl = $state<HTMLDivElement>();
@@ -90,10 +114,14 @@
   let signOpen = $state(false);
   let layout = $state(0);
   let busy = $state('');
-  // Colour and size for text boxes, drawing and highlights.
-  let inkColor = $state('#d0021b');
+  // Colour and size for each tool (text boxes, pen, shapes, highlights).
+  let colors = $state<Record<string, string>>({ highlight: '#ffe066', marker: '#ffe066', freetext: '#d0021b', ink: '#d0021b', shape: '#1e5bd8' });
+  let sizes = $state<Record<Sized, number>>({ ink: 1, shape: 1, marker: 1, eraser: 1 });
   let textSize = $state(14);
-  let inkWidth = $state(2);
+  let shape = $state<Shape>('rect');
+  const widthOf = (k: Sized) => WIDTHS[k][sizes[k]];
+  /** pdf.js's editor manager (shapes, eraser): a new one for each document. */
+  let editors: EditorManager | null = null;
   /** Time from load start to first page drawn (performance budget). */
   let firstPageMs = 0;
 
@@ -157,10 +185,12 @@
       if (e.matchesCount) matches = e.matchesCount;
     });
     eventBus.on('annotationeditormodechanged', (e: { mode: number }) => {
-      const t = (Object.keys(MODES) as ToolId[]).find((k) => MODES[k] === e.mode);
+      // Several tools share a pdf.js mode: keep ours when it matches.
+      const t = MODES[tool] === e.mode ? tool : (Object.keys(MODES) as ToolId[]).find((k) => MODES[k] === e.mode);
       if (t) tool = t;
       applyParams();
     });
+    eventBus.on('annotationeditoruimanager', (e: { uiManager: EditorManager }) => (editors = e.uiManager));
   }
 
   // pdf.js works out "Fit width" / "Fit page" once; refit when the view
@@ -247,17 +277,26 @@
     return working;
   }
 
-  async function pageOp(op: { kind: string; pages?: number[]; degrees?: number; order?: number[]; others?: string[] }) {
+  async function pageOp(op: { kind: string; pages?: number[]; degrees?: number; order?: number[]; others?: string[]; paper?: string; after?: number }) {
     if (tab.readOnly && tab.source.kind !== 'archive-entry') return;
     try {
       const src = await materialize();
-      const out = await api.PdfOp(src, '', { kind: op.kind, pages: op.pages ?? [], degrees: op.degrees ?? 0, order: op.order ?? [], others: op.others ?? [] });
+      const out = await api.PdfOp(src, '', { kind: op.kind, pages: op.pages ?? [], degrees: op.degrees ?? 0, order: op.order ?? [], others: op.others ?? [], paper: op.paper ?? '', after: op.after ?? 0 });
       working = out;
       opsDirty = true;
       await load(fileUrl(out), keepView());
     } catch (e) {
       toastError(e, t('Page operation failed'));
     }
+  }
+
+  /** A page of notebook paper after the current page, its size; the view goes to it. */
+  async function insertPaper(paper: 'blank' | 'lined' | 'grid' | 'dotted') {
+    if (!doc || tab.readOnly) return;
+    const after = page;
+    await pageOp({ kind: 'paper', paper, after });
+    if (pages > after && viewer) viewer.currentPageNumber = after + 1;
+    ui.toast(t('Added a page after page {page}. Save to keep it.', { page: after }), 'success');
   }
 
   function targetPages(): number[] {
@@ -315,20 +354,31 @@
   /** Colour/size for the active pdf.js editor (new text boxes, drawings and highlights use them). */
   function applyParams() {
     if (!viewer || tool === 'none') return;
-    const set = (type: number, value: unknown) => {
-      try {
-        (viewer as unknown as { annotationEditorParams: unknown }).annotationEditorParams = { type, value };
-      } catch {
-        /* not in this mode */
-      }
-    };
+    // pdf.js takes them as an event (its viewer has no setter for them): they
+    // become the defaults for new drawings, or change the selected ones.
+    const set = (type: number, value: unknown) => eventBus.dispatch('switchannotationeditorparams', { source: null, type, value });
     if (tool === 'freetext') {
-      set(AnnotationEditorParamsType.FREETEXT_COLOR, inkColor);
+      set(AnnotationEditorParamsType.FREETEXT_COLOR, colors.freetext);
       set(AnnotationEditorParamsType.FREETEXT_SIZE, textSize);
     } else if (tool === 'ink') {
-      set(AnnotationEditorParamsType.INK_COLOR, inkColor);
-      set(AnnotationEditorParamsType.INK_THICKNESS, inkWidth);
-    } else if (tool === 'highlight') set(AnnotationEditorParamsType.HIGHLIGHT_COLOR, inkColor);
+      set(AnnotationEditorParamsType.INK_COLOR, colors.ink);
+      set(AnnotationEditorParamsType.INK_THICKNESS, widthOf('ink'));
+    } else if (tool === 'highlight') set(AnnotationEditorParamsType.HIGHLIGHT_COLOR, colors.highlight);
+    else if (tool === 'marker') {
+      set(AnnotationEditorParamsType.HIGHLIGHT_COLOR, colors.marker);
+      set(AnnotationEditorParamsType.HIGHLIGHT_THICKNESS, widthOf('marker'));
+    }
+  }
+
+  function pickColor(c: string) {
+    colors[tool] = c;
+    applyParams();
+  }
+
+  function pickSize(i: number) {
+    if (!sized(tool)) return;
+    sizes[tool] = i;
+    applyParams();
   }
 
   // ---------- signatures and redaction ----------
@@ -750,6 +800,15 @@
         },
       },
       { separator: true },
+      {
+        label: t('Insert a page after page {page}', { page }),
+        items: [
+          { label: t('Blank'), run: () => void insertPaper('blank') },
+          { label: t('Lined'), run: () => void insertPaper('lined') },
+          { label: t('Squared'), run: () => void insertPaper('grid') },
+          { label: t('Dotted'), run: () => void insertPaper('dotted') },
+        ],
+      },
       { label: t('Append PDFs…'), run: merge },
       { label: t('Add images as pages…'), run: insertImages },
       { label: t('Split into files…'), run: split },
@@ -801,6 +860,7 @@
     redact: startRedact,
     compress: () => void compress(),
     exportImages: () => void exportImages(),
+    insertPaper: (p) => void insertPaper(p),
   });
 
   // Hooks for the self-test harness.
@@ -823,6 +883,10 @@
     setMarks: (m: Mark[]) => (marks = m),
     applyMarks,
     redactMatches,
+    tool: () => tool,
+    setTool,
+    editors: () => editors,
+    insertPaper,
     signaturePicked,
     startSign,
     signOpen: () => signOpen,
@@ -871,9 +935,15 @@
   const tools: { id: ToolId; icon: any; label: string }[] = [
     { id: 'none', icon: MousePointer, label: t('Select text') },
     { id: 'highlight', icon: Highlighter, label: t('Highlight (select text)') },
+    { id: 'marker', icon: Brush, label: t('Marker: highlight anywhere, by hand') },
     { id: 'freetext', icon: MessageSquare, label: t('Text comment (click to place)') },
     { id: 'ink', icon: PenLine, label: t('Draw') },
+    { id: 'shape', icon: ShapesIcon, label: t('Shapes: line, arrow, rectangle, ellipse (Shift keeps them straight or even)') },
+    { id: 'eraser', icon: EraserIcon, label: t('Eraser: removes the drawings and marker strokes it touches') },
   ];
+  const SHAPE_ICONS = { line: Slash, arrow: ArrowIcon, rect: SquareIcon, ellipse: CircleIcon };
+  const SHAPE_NAMES: Record<Shape, string> = { line: t('Line'), arrow: t('Arrow'), rect: t('Rectangle'), ellipse: t('Ellipse') };
+  const SIZE_NAMES = [t('Thin'), t('Medium'), t('Thick')];
 </script>
 
 <div class="toolbar" use:fitBar>
@@ -899,20 +969,43 @@
   {/each}
   <button class="icon-btn" class:on={markMode === 'sign' || signOpen} title={t('Sign — draw, type or import your signature and place it on the page')} disabled={tab.readOnly} onclick={startSign}><Icon icon={SignatureIcon} /></button>
   <button class="icon-btn" class:on={markMode === 'redact'} title={t('Redact — drag black boxes over what must go, then Apply (the content underneath is removed, not just covered)')} disabled={tab.readOnly} onclick={startRedact}><Icon icon={Redact} /></button>
-  {#if tool !== 'none'}
-    <span class="sep"></span>
-    <input class="color" type="color" title={tool === 'freetext' ? t('Colour for new text') : tool === 'ink' ? t('Colour for new drawings') : t('Colour for new highlights')} bind:value={inkColor} onchange={applyParams} />
-    {#if tool === 'freetext'}
-      <label class="opt" title={t('Text size')}>{t('Size')} <input class="input num" type="number" min="4" max="100" bind:value={textSize} onchange={applyParams} /></label>
-    {:else if tool === 'ink'}
-      <label class="opt" title={t('Line thickness')}>{t('Width')} <input type="range" min="1" max="20" bind:value={inkWidth} onchange={applyParams} /></label>
-    {/if}
-  {/if}
   <span class="spacer"></span>
   <button class="icon-btn" class:on={ocrOpen} title={t('Recognise text (OCR) — copy text from scanned pages, or make the PDF searchable')} aria-label={t('Recognise text')} onclick={() => (ocrOpen ? (ocrOpen = false) : openOcr(pages > 1 ? 'page' : 'all'))}><Icon icon={ScanText} /></button>
   <button class="icon-btn" class:on={findOpen} title={t('Find ({shortcut})', { shortcut: formatShortcut('Mod+F') })} onclick={() => (findOpen ? closeFind() : openFind())}><Icon icon={Search} /></button>
   <button class="icon-btn" title={t('Page operations')} disabled={tab.readOnly} onclick={opsMenu}><Icon icon={Ellipsis} /></button>
 </div>
+
+{#if tool !== 'none'}
+  <!-- The active tool's colour, width and shape, under the tool bar. -->
+  <div class="toolopts" role="toolbar" aria-label={t('Tool options')}>
+    {#if tool === 'shape'}
+      <span class="seg" role="radiogroup" aria-label={t('Shape')}>
+        {#each SHAPES as sh (sh)}
+          <button class="icon-btn" class:on={shape === sh} role="radio" aria-checked={shape === sh} title={SHAPE_NAMES[sh]} aria-label={SHAPE_NAMES[sh]} onclick={() => (shape = sh)}><Icon icon={SHAPE_ICONS[sh]} /></button>
+        {/each}
+      </span>
+      <span class="sep"></span>
+    {/if}
+    {#if tool !== 'eraser'}
+      <span class="swatches" role="radiogroup" aria-label={t('Colour')}>
+        {#each swatchesFor(tool) as c (c)}
+          <button class="swatch" class:on={colors[tool] === c} role="radio" aria-checked={colors[tool] === c} aria-label={c} title={c} style:background={c} onclick={() => pickColor(c)}></button>
+        {/each}
+        <input class="color" type="color" title={t('Another colour…')} value={colors[tool]} onchange={(e) => pickColor((e.target as HTMLInputElement).value)} />
+      </span>
+    {/if}
+    {#if tool !== 'eraser'}<span class="sep"></span>{/if}
+    {#if tool === 'freetext'}
+      <label class="opt" title={t('Text size')}>{t('Size')} <input class="input num" type="number" min="4" max="100" bind:value={textSize} onchange={applyParams} /></label>
+    {:else if sized(tool)}
+      <span class="seg" role="radiogroup" aria-label={t('Width')}>
+        {#each SIZE_NAMES as name, i (name)}
+          <button class="icon-btn" class:on={sizes[tool as Sized] === i} role="radio" aria-checked={sizes[tool as Sized] === i} title={name} aria-label={name} onclick={() => pickSize(i)}><span class="dot" style:width="{4 + i * 4}px" style:height="{4 + i * 4}px"></span></button>
+        {/each}
+      </span>
+    {/if}
+  </div>
+{/if}
 
 {#if findOpen}
   <div class="findbar">
@@ -975,9 +1068,23 @@
   {/if}
   <div class="wrap">
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="container" bind:this={container} onwheel={wheel} onclick={linkClick}>
+    <div class="container" class:marker={tool === 'marker'} bind:this={container} onwheel={wheel} onclick={linkClick}>
       <div class="pdfViewer selectable" bind:this={viewerEl}></div>
       {#if container && doc}<PdfMarks {container} bind:marks mode={markMode} {placing} {layout} onplaced={() => ((placing = null), (markMode = null))} />{/if}
+      {#if container && doc && (tool === 'shape' || tool === 'eraser')}
+        <PdfDraw
+          {container}
+          mode={tool}
+          {shape}
+          color={colors.shape}
+          width={widthOf('shape')}
+          eraser={widthOf('eraser')}
+          {layout}
+          manager={() => editors}
+          viewport={(i) => (viewer?.getPageView(i) as { viewport: { scale: number; convertToPdfPoint(x: number, y: number): number[] } } | undefined)?.viewport}
+          inkType={AnnotationEditorType.INK}
+        />
+      {/if}
     </div>
     {#if error}<div class="empty-state overlay">{error}</div>{/if}
     {#if loading && !doc}<div class="empty-state overlay"><span class="spinner"></span></div>{/if}
@@ -1009,6 +1116,40 @@
     background: none;
     cursor: pointer;
   }
+  /* The marker draws over text: the words don't take the pointer, the text
+     layer behind them does (where pdf.js starts a freehand highlight). */
+  .container.marker :global(.textLayer *) {
+    pointer-events: none !important;
+  }
+  .container.marker :global(.textLayer) {
+    cursor: crosshair;
+  }
+  .seg,
+  .swatches {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .swatches {
+    gap: 4px;
+  }
+  .swatch {
+    width: calc(18px * var(--ui-scale));
+    height: calc(18px * var(--ui-scale));
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .swatch.on {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .dot {
+    display: block;
+    border-radius: 50%;
+    background: currentColor;
+  }
   .opt {
     display: inline-flex;
     align-items: center;
@@ -1028,6 +1169,15 @@
     min-width: 58px;
     justify-content: center;
     font-variant-numeric: tabular-nums;
+  }
+  .toolopts {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 5px 10px;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--bg-sidebar);
   }
   .findbar {
     display: flex;

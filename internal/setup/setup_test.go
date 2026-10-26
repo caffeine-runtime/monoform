@@ -6,8 +6,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/caffeine-runtime/monoform/internal/convert"
 )
 
 func payload(names ...string) []File {
@@ -64,6 +67,9 @@ func TestInstallAndUninstall(t *testing.T) {
 	}
 	if get(`Classes\Monoform.md\shell\edit\command`, "") != "" {
 		t.Error("edit verb on a type that opens in the editor anyway")
+	}
+	if get(`Classes\SystemFileAssociations\.docx\shell\Monoform.Convert\command`, "") != `"`+join(dir, Exe)+`" --convert "%1"` || get(`Classes\SystemFileAssociations\.png\shell\Monoform.Convert`, "") != "Convert with Monoform…" {
+		t.Errorf("convert verb %q", get(`Classes\SystemFileAssociations\.docx\shell\Monoform.Convert\command`, ""))
 	}
 	if get(`Classes\*\shell\Monoform.Peek\command`, "") == "" || get(`Classes\Applications\monoform.exe\SupportedTypes`, ".md") != "" {
 		t.Error("peek verb / open with")
@@ -165,5 +171,19 @@ func TestIcons(t *testing.T) {
 		} else if _, err := os.Stat(filepath.Join("..", "..", "build", "windows", a.Icon+".ico")); err != nil {
 			t.Errorf("%s: %v (run scripts/icons.py)", a.Ext, err)
 		}
+	}
+}
+
+// "Convert with Monoform…" is offered on exactly the types that convert.
+func TestConvertExtsMatchConverter(t *testing.T) {
+	var want []string
+	for ext := range convert.Formats() {
+		want = append(want, ext)
+	}
+	got := slices.Clone(ConvertExts)
+	slices.Sort(want)
+	slices.Sort(got)
+	if !slices.Equal(got, want) {
+		t.Errorf("ConvertExts %v, convert.Formats %v", got, want)
 	}
 }
