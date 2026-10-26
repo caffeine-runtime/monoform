@@ -745,6 +745,20 @@
   files that convert (replacing HEIC's Convert to JPG/PNG). Go tests (launch flag, lock, setup registry, the list of
   types equals the converter's), setup demo test, Windows install check in CI, self-test `m82` (started with
   `--convert`).
+- **Drawing on PDFs like in a notebook** (Xournal++-style). The PDF tool bar has, next to the pen, text comment and
+  highlight: a **marker** (freehand highlight anywhere, also over text: pdf.js's own freehand highlight with the
+  text layer stepping aside), **shapes** (line, arrow, rectangle, ellipse; Shift keeps lines at 45° steps and makes
+  squares and circles) and a **stroke eraser** (removes the drawings and marker strokes it touches, each an undo
+  step; a ring shows its size). The active tool's options sit in a bar under the tool bar: eight colour swatches
+  (light, see-through ones for the marker and highlight, so text under them stays readable in any reader) plus any
+  colour, and thin / medium / thick (or the shape, or the text size); with a drawing selected, a swatch recolours
+  it. Shapes become ordinary pdf.js ink drawings (select, move, recolour, undo, saved as Ink annotations other
+  readers show and can delete), their points 2 px apart so pdf.js's smoothing keeps corners straight. Page
+  operations › **Insert a page after page N**: blank, lined (8 mm rules, red margin), squared or dotted (5 mm), the
+  size of the current page, drawn with go-pdf/fpdf and put in place with pdfcpu; palette commands for each.
+  Fix: colour, width and text size never reached pdf.js (this pdf.js has no `annotationEditorParams` setter; they go
+  through its event bus now), so pen, text and highlight colours apply again. Unit tests (`ink.test.ts`: shapes,
+  Shift, densify, hit testing), Go test (paper pages in place and size), self-test `m83` with qpdf/poppler checks.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -781,6 +795,9 @@ available here).
 - Save and convert: the PDF writer doesn't shape complex scripts (Arabic, Hebrew, Indic) and its fonts have no
   Chinese, Japanese or Korean letters or emoji (the result says so); table cells in PDFs are plain text (no bold or
   links inside cells); video doesn't convert (no permissively licensed encoder), nor do PDFs into other formats.
+- PDF drawing: no pressure-sensitive pen and no lasso to move several strokes at once (pdf.js's pen draws at one
+  width; selecting and moving one drawing works). The eraser knows a marker stroke already in the file only by its
+  box, so it can take one it merely passes near.
 - Convert with Monoform isn't in macOS Finder yet (needs a Quick Action / Services entry), nor in the Microsoft Store
   package (an MSIX context-menu entry needs a COM shell extension); Thunar users find it under Open With.
 - Microsoft Store copy: the `monoform` command is the app itself (a GUI program), so in a terminal the prompt

@@ -376,6 +376,16 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   drag-and-drop wheel or global hotkey like FileWheel or OrbitDrop: those need system-wide hooks and overlay windows
   that don't work on Wayland and sit against the calm shell.
 
+- **The PDF notebook tools build on pdf.js's annotation editors, not a drawing layer of our own.** The marker is
+  pdf.js's freehand highlight (it starts where a press lands on the text layer itself, so in marker mode the words
+  inside it ignore the pointer); shapes are created as pdf.js ink editors from point lists through its
+  editor-manager command path (undoable, selectable, saved as Ink annotations); the eraser hit-tests each drawing's
+  own strokes (`serialize`d points, its width plus the eraser's radius) and removes it the same undoable way. Anything
+  drawn stays a standard annotation other readers show and can delete — no private format, unlike Xournal++'s
+  .xopp. Not done, by choice for now: a pressure-sensitive pen and a lasso (both would need a layer of our own on
+  top of pdf.js). Inserted paper pages are drawn with fpdf (already a dependency) at the current page's size and
+  moved into place with pdfcpu's merge + collect, as one page operation.
+
 ## Look & feel
 
 - **Darker palette than the brief's starting tokens** (user request): dark `--bg #1f1e1c`, sidebar `#181716`; light `--bg #f6f4ee`.

@@ -30,11 +30,15 @@ func conf() *model.Configuration {
 
 // Op describes one page operation. Page numbers are 1-based.
 type Op struct {
-	Kind    string   `json:"kind"`    // rotate | delete | reorder | extract | merge
+	Kind    string   `json:"kind"`    // rotate | delete | reorder | extract | merge | paper
 	Pages   []int    `json:"pages"`   // rotate, delete, extract
 	Degrees int      `json:"degrees"` // rotate: ±90, 180
 	Order   []int    `json:"order"`   // reorder: new page sequence (a permutation)
 	Others  []string `json:"others"`  // merge: files appended after src
+	// paper: insert a page of this paper (blank, lined, grid, dotted) after
+	// page After (0: before the first page).
+	Paper string `json:"paper,omitempty"`
+	After int    `json:"after,omitempty"`
 }
 
 func selection(pages []int) []string {
@@ -59,7 +63,7 @@ func Apply(ctx context.Context, src, dst string, op Op) error {
 	if err != nil {
 		return fmt.Errorf("reading PDF: %w", err)
 	}
-	if err := checkPages(op.Pages, n); err != nil && op.Kind != "merge" && op.Kind != "reorder" {
+	if err := checkPages(op.Pages, n); err != nil && op.Kind != "merge" && op.Kind != "reorder" && op.Kind != "paper" {
 		return err
 	}
 	switch op.Kind {
@@ -97,6 +101,8 @@ func Apply(ctx context.Context, src, dst string, op Op) error {
 		}
 		files := append([]string{src}, op.Others...)
 		return api.MergeCreateFile(ctx, files, dst, false, conf())
+	case "paper":
+		return insertPaper(ctx, src, dst, op.Paper, op.After, n)
 	default:
 		return fmt.Errorf("unknown operation %q", op.Kind)
 	}

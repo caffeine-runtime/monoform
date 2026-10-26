@@ -3,7 +3,7 @@ import { workspace } from '../../core/tabs.svelte';
 export interface PdfController {
   zoom(dir: 1 | -1 | 0): void;
   fit(mode: 'page-width' | 'page-fit'): void;
-  tool(t: 'none' | 'highlight' | 'freetext' | 'ink'): void;
+  tool(t: 'none' | 'highlight' | 'marker' | 'freetext' | 'ink' | 'shape' | 'eraser'): void;
   find(): void;
   findNext(prev: boolean): void;
   goto(): void;
@@ -18,6 +18,7 @@ export interface PdfController {
   redact(): void;
   compress(): void;
   exportImages(): void;
+  insertPaper(paper: 'blank' | 'lined' | 'grid' | 'dotted'): void;
 }
 
 export const pdfControllers = new Map<string, PdfController>();

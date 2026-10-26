@@ -1468,6 +1468,8 @@ export namespace pdf {
 	    degrees: number;
 	    order: number[];
 	    others: string[];
+	    paper?: string;
+	    after?: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Op(source);
@@ -1480,6 +1482,8 @@ export namespace pdf {
 	        this.degrees = source["degrees"];
 	        this.order = source["order"];
 	        this.others = source["others"];
+	        this.paper = source["paper"];
+	        this.after = source["after"];
 	    }
 	}
 	export class PageImage {
