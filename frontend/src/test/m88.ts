@@ -61,13 +61,13 @@ async function recorderWindow() {
   assert(!$('.sidebar') && !$('.tabbar'), 'no sidebar or tab bar');
   await waitFor(() => (recorder.folder ? true : null), 'the recordings folder');
   assert(/monoform-selftest|Screen Recordings/.test(recorder.folder), `recordings go to ${recorder.folder}`);
-  assertEq($('.where span')?.textContent, 'Saved to ' + recorder.folder.split(/[\\/]/).slice(-2).join(' › '), 'the folder is shown');
 
   if (!recorder.available) {
     assert($('.notice')?.textContent?.includes('isn’t available'), 'says recording isn’t available here');
     log('this webview can’t record the screen: the panel says so');
     return;
   }
+  assertEq($('.where span')?.textContent, 'Saved to ' + recorder.folder.split(/[\\/]/).slice(-2).join(' › '), 'the folder is shown');
   // The window fits the panel.
   await waitFor(() => (Math.abs(window.innerHeight - panel.offsetHeight) <= 2 ? true : null), `the window fits the panel (${window.innerHeight} vs ${panel.offsetHeight})`);
   assert(Math.abs(window.innerWidth - panel.offsetWidth) <= 2, `the window is as wide as the panel (${window.innerWidth} vs ${panel.offsetWidth})`);
@@ -128,8 +128,8 @@ async function recorderWindow() {
   const list = await recordings();
   assertEq(list.length, before + 1, 'one new recording');
   assert(list.some((e) => e.path === path), `${path} is in the folder`);
-  const opened = await api.VideoOpen(path);
-  const info = opened!.info;
+  const info = (await api.VideoOpen(path))?.info;
+  assert(info, 'the recording can be opened');
   const ext = recorder.format!.ext;
   assert(path.endsWith(`.${ext}`), `saved as ${ext}`);
   assert(info.editable && info.hasVideo && info.hasAudio, `an editable recording with sound: ${JSON.stringify(info)}`);
