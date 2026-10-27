@@ -118,6 +118,11 @@ func singleInstance(mode string, onLaunch func(options.SecondInstanceData)) *opt
 	if mode == "window" || mode == "peek" {
 		return nil
 	}
+	// A self-test runs on its own: handed to a copy that is already open, it
+	// would exit at once with success.
+	if os.Getenv("MF_TEST") != "" {
+		return nil
+	}
 	// Converting: a file manager starts one process per selected file; the
 	// first window gathers the others' files (and leaves the editor alone).
 	if mode == "convert" {
