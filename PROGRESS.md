@@ -777,6 +777,20 @@
   and closing a tab puts *Don't save* apart too. The update popup is short: the version, that Monoform restarts
   and the tabs come back, the current version and download size, and a *What's new* link instead of the release
   notes. Self-test `m84`, `m49` updated.
+- **Parts of 3D models** (the Parts panel, beside the view): a STEP file's assemblies and parts, a glTF's, OBJ's or
+  FBX's named objects, and an STL's separate bodies (one mesh with no names is split where its pieces don't touch:
+  "Body 1", "Body 2"…). Click a part in the view (or its row) to select it — tinted, its name and size in the status
+  bar, its row revealed; Shift/Ctrl adds; hovering shows its name. Each row has an eye; with a selection: **Hide**
+  (H), **Show only this** (I), **See-through others** (X: the rest as faint glass), **Zoom to selection** (F,
+  or double-click the row), **Show all** (Alt+H), Esc deselects — on the panel, in the right-click menu and as
+  commands. Reset view and screenshots go by what is shown (the selection's tint stays out of screenshots). What
+  is hidden is kept with the session (it comes back after a restart, not when the tab is closed and opened again).
+  A search box when there are many parts. **Parts list** (Tree / List at the top of the panel): each part once with
+  how many there are and its size (in its own frame, longest side first, so turned copies count together) — a bill
+  of materials; a row selects every copy; *Copy list* (tab-separated, for a spreadsheet) and *Export CSV…*. Unit
+  tests (`parts.test.ts`: the STEP tree, splitting, bounds, the list and its CSV), self-test `m85`. Self-tests now
+  run in a process of their own even when Monoform is already open (they were handed to it and exited with
+  success).
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

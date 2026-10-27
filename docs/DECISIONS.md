@@ -714,6 +714,20 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   tabs come back), the current version and download size, and *What's new* as a link to the release page. Most
   people don't read change lists in a popup; the notes (written for GitHub, with the downloads table and install
   hints) made it a wall of text.
+- **3D parts come from the scene graph, not a second model** (`modules/model3d/parts.ts`): a node is an object that
+  draws something itself or holds parts; a wrapper with nothing of its own and one child folds into it (STEP's
+  upright group, file root and top assembly become one row), and unnamed meshes (a STEP part has one per colour)
+  and its `edges` lines are the part itself. Ids are child-index paths, so the session can bring back what was
+  hidden. Hiding works on the drawn objects (`visible`), never on groups, so an assembly's eye is shown, hidden or
+  partly hidden from its parts. An STL is one triangle soup: in the load worker it is split into bodies by joining
+  triangles through corners at the same place (positions quantised to 1/100 000 of the model; union–find), up to
+  256 bodies — more is scattered fragments, kept whole. The selection is a tinted copy drawn over each mesh (shared
+  geometry, a child of the mesh so it follows it and hides with it), so materials shared between instances aren't
+  touched; see-through swaps in one shared faint material. Picking is three's raycaster on shown, solid meshes, on
+  a click (not a drag) and when the pointer rests (90 ms), never on every move. A right-click that didn't pan opens
+  the app's menu from the stage, since OrbitControls cancels the canvas's own contextmenu event. The parts list
+  counts copies by name and size, the size measured in the part's own frame (its object's inverse world matrix)
+  and sorted longest first: a turned copy is the same part, and the file's axes (Z or Y up) don't matter.
 
 ## Project page
 

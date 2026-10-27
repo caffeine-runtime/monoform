@@ -1,5 +1,7 @@
 // three.js viewer: orbit controls, studio lighting from a baked room
-// environment, wireframe / unlit / grid toggles and animation playback.
+// environment, wireframe / unlit / grid toggles, animation playback, and
+// parts: picking under the pointer, a highlight on the selected ones, hiding
+// and see-through (the Parts panel decides which; see parts.ts).
 // Frames are rendered only while something changes (camera damping,
 // animation) and the tab is visible, so an idle model costs no CPU.
 //
@@ -13,6 +15,7 @@ import { roomEnvironment } from './env';
 import { t } from '../../core/i18n';
 import { FloorGrid } from './grid';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { boundsOf, drawn, showing } from './parts';
 
 export interface ModelStats {
   meshes: number;
@@ -92,10 +95,22 @@ export class ModelViewer {
   private dirty = true;
   private ro: ResizeObserver;
   private unlit = new Map<THREE.Mesh | THREE.Points | THREE.Line, THREE.Material | THREE.Material[]>();
+  /** Drawn objects the file itself hides (they stay hidden whatever the panel says). */
+  private fileHidden = new Set<THREE.Object3D>();
+  private ghosted = new Set<THREE.Object3D>();
+  private ghostMats: Record<'lit' | 'flat' | 'line', THREE.Material> | null = null;
+  private overlays: THREE.Object3D[] = [];
+  private highlight: THREE.MeshBasicMaterial | null = null;
+  private down: { x: number; y: number; button: number } | null = null;
+  private hoverTimer: ReturnType<typeof setTimeout> | undefined;
   wireframe = false;
   lighting = true;
   anim: AnimState = { index: -1, playing: false, time: 0, duration: 0, speed: 1 };
   onAnim: (a: AnimState) => void = () => {};
+  /** A click (not a drag) on the model: what was under the pointer, or null for empty space. */
+  onPick: (o: THREE.Object3D | null, e: PointerEvent) => void = () => {};
+  /** The pointer rested over something (or nothing). */
+  onHover: (o: THREE.Object3D | null, e: PointerEvent) => void = () => {};
 
   constructor(private host: HTMLElement) {
     this.shared = acquire();
@@ -113,7 +128,105 @@ export class ModelViewer {
     this.setBackground('dark');
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(host);
+    host.addEventListener('pointerdown', this.pointerDown);
+    host.addEventListener('pointerup', this.pointerUp);
+    host.addEventListener('pointermove', this.pointerMove);
+    host.addEventListener('pointerleave', this.pointerLeave);
     this.attach();
+  }
+
+  // ---------- parts: picking ----------
+
+  private pointerDown = (e: PointerEvent) => {
+    this.down = { x: e.clientX, y: e.clientY, button: e.button };
+  };
+
+  private pointerUp = (e: PointerEvent) => {
+    const d = this.down;
+    this.down = null;
+    // A click, not the end of a turn or a pan.
+    if (!d || d.button !== e.button || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 4 || !this.attached || !this.model) return;
+    if (e.button === 0) this.onPick(this.pick(e.clientX, e.clientY), e);
+    // A right-click that didn't pan: the app's menu. (The controls cancel the
+    // canvas's own contextmenu event, so it comes from the stage instead.)
+    else if (e.button === 2) this.host.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY, button: 2 }));
+  };
+
+  private pointerMove = (e: PointerEvent) => {
+    clearTimeout(this.hoverTimer);
+    if (e.buttons || !this.attached || !this.model) return this.onHover(null, e);
+    // Only when the pointer rests: a pick on a big model takes a few milliseconds.
+    this.hoverTimer = setTimeout(() => this.onHover(this.pick(e.clientX, e.clientY), e), 90);
+  };
+
+  private pointerLeave = (e: PointerEvent) => {
+    clearTimeout(this.hoverTimer);
+    this.onHover(null, e);
+  };
+
+  /** The drawn object under a point of the window (shown, solid meshes only), or null. */
+  pick(clientX: number, clientY: number): THREE.Object3D | null {
+    if (!this.model || !this.attached) return null;
+    const r = this.renderer.domElement.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    const ndc = new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+    const targets: THREE.Object3D[] = [];
+    this.model.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh && drawn(o) && !this.ghosted.has(o) && showing(o)) targets.push(o);
+    });
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(ndc, this.camera);
+    return ray.intersectObjects(targets, false)[0]?.object ?? null;
+  }
+
+  // ---------- parts: what is shown, and how ----------
+
+  /** Hide these drawn objects; show every other one (unless the file hides it). */
+  setHidden(hidden: ReadonlySet<THREE.Object3D>) {
+    this.model?.traverse((o) => {
+      if (drawn(o)) o.visible = !hidden.has(o) && !this.fileHidden.has(o);
+    });
+    this.kick();
+  }
+
+  /** Draw these objects as faint glass (the parts around the ones being looked at). */
+  setGhosted(objs: ReadonlySet<THREE.Object3D>) {
+    this.ghosted = new Set(objs);
+    this.applyMaterials();
+  }
+
+  /** Tint these drawn objects in the accent colour (the selection). */
+  setSelected(objs: readonly THREE.Object3D[]) {
+    for (const o of this.overlays) o.removeFromParent();
+    this.overlays = [];
+    if (!this.highlight) {
+      const accent = getComputedStyle(this.host).getPropertyValue('--accent').trim() || '#d97757';
+      let colour: THREE.Color;
+      try {
+        colour = new THREE.Color(accent);
+      } catch {
+        colour = new THREE.Color(0xd97757);
+      }
+      // Drawn over the part (a little in front of it), seen through by half.
+      this.highlight = new THREE.MeshBasicMaterial({ color: colour, transparent: true, opacity: 0.45, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    }
+    for (const o of objs) {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) continue;
+      const skinned = m as THREE.SkinnedMesh;
+      let tint: THREE.Mesh;
+      if (skinned.isSkinnedMesh) {
+        const s = new THREE.SkinnedMesh(m.geometry, this.highlight);
+        s.bind(skinned.skeleton, skinned.bindMatrix);
+        tint = s;
+      } else tint = new THREE.Mesh(m.geometry, this.highlight);
+      tint.userData.mfOverlay = true;
+      tint.renderOrder = 10;
+      tint.raycast = () => {};
+      m.add(tint); // inherits the part's place and visibility
+      this.overlays.push(tint);
+    }
+    this.kick();
   }
 
   private get attached(): boolean {
@@ -197,6 +310,9 @@ export class ModelViewer {
     }
     this.model = model;
     this.clips = clips;
+    model.traverse((o) => {
+      if (drawn(o) && !o.visible) this.fileHidden.add(o);
+    });
     this.scene.add(model);
     if (clips.length) this.mixer = new THREE.AnimationMixer(model);
     this.applyMaterials();
@@ -204,10 +320,12 @@ export class ModelViewer {
     this.kick();
   }
 
-  /** Put the camera where the whole model is visible. */
-  frame() {
+  /** Put the camera where the model — what is showing of it, or of these objects — is in view. */
+  frame(objects?: THREE.Object3D[]) {
     if (!this.model) return;
-    const box = new THREE.Box3().setFromObject(this.model);
+    let box = boundsOf(objects?.length ? objects : [this.model]);
+    if (box.isEmpty()) box = boundsOf([this.model]);
+    if (box.isEmpty()) box = boundsOf([this.model], true);
     if (box.isEmpty()) return;
     const size = box.getSize(new THREE.Vector3());
     const centre = box.getCenter(new THREE.Vector3());
@@ -219,9 +337,13 @@ export class ModelViewer {
     this.camera.updateProjectionMatrix();
     this.controls.target.copy(centre);
     this.controls.update();
-    // Grid on the model's floor: cells of a round size, fading out around it.
-    const g = Math.pow(10, Math.ceil(Math.log10(Math.max(size.x, size.z, 1e-6) * 2)));
-    this.grid.fit(centre.x, box.min.y, centre.z, g / 20, g * 0.75);
+    // Grid on the whole model's floor (it stays put when parts are hidden):
+    // cells of a round size, fading out around it.
+    const whole = boundsOf([this.model], true);
+    const ws = whole.getSize(new THREE.Vector3());
+    const wc = whole.getCenter(new THREE.Vector3());
+    const g = Math.pow(10, Math.ceil(Math.log10(Math.max(ws.x, ws.z, 1e-6) * 2)));
+    this.grid.fit(wc.x, whole.min.y, wc.z, g / 20, g * 0.75);
     this.kick();
   }
 
@@ -233,7 +355,7 @@ export class ModelViewer {
     this.model.traverse((o) => {
       if ((o as THREE.Bone).isBone) s.bones++;
       const m = o as THREE.Mesh;
-      if (!m.geometry) return;
+      if (!m.geometry || o.userData.mfOverlay) return;
       const g = m.geometry;
       const n = g.getAttribute('position')?.count ?? 0;
       if ((o as THREE.Points).isPoints) s.points += n;
@@ -251,7 +373,7 @@ export class ModelViewer {
     s.materials = mats.size;
     s.textures = texs.size;
     s.triangles = Math.round(s.triangles);
-    const size = new THREE.Box3().setFromObject(this.model).getSize(new THREE.Vector3());
+    const size = boundsOf([this.model], true).getSize(new THREE.Vector3());
     s.size = [size.x, size.y, size.z];
     return s;
   }
@@ -330,7 +452,7 @@ export class ModelViewer {
     this.lights.visible = this.lighting;
     this.model.traverse((o) => {
       const m = o as THREE.Mesh;
-      if (!m.material || !(m.isMesh || (o as THREE.Points).isPoints || (o as THREE.Line).isLine)) return;
+      if (!m.material || o.userData.mfOverlay || !(m.isMesh || (o as THREE.Points).isPoints || (o as THREE.Line).isLine)) return;
       if (!this.unlit.has(m)) this.unlit.set(m, m.material);
       const original = this.unlit.get(m)!;
       const toBasic = (mat: THREE.Material): THREE.Material => {
@@ -340,7 +462,7 @@ export class ModelViewer {
         basic.userData.mfUnlit = true;
         return basic;
       };
-      const current = this.lighting ? original : Array.isArray(original) ? original.map(toBasic) : toBasic(original);
+      const current = this.ghosted.has(m) ? this.ghost(m) : this.lighting ? original : Array.isArray(original) ? original.map(toBasic) : toBasic(original);
       // Free the unlit copies we made earlier.
       const prev = m.material;
       for (const p of Array.isArray(prev) ? prev : [prev]) if (p.userData.mfUnlit && !(Array.isArray(current) ? current.includes(p) : current === p)) p.dispose();
@@ -351,6 +473,16 @@ export class ModelViewer {
       }
     });
     this.kick();
+  }
+
+  /** The faint material of a see-through part (shared; lit like the rest unless lighting is off). */
+  private ghost(o: THREE.Object3D): THREE.Material {
+    this.ghostMats ??= {
+      lit: new THREE.MeshStandardMaterial({ color: 0xb8bcc4, roughness: 0.4, metalness: 0, transparent: true, opacity: 0.14, depthWrite: false, side: THREE.DoubleSide }),
+      flat: new THREE.MeshBasicMaterial({ color: 0xb8bcc4, transparent: true, opacity: 0.1, depthWrite: false, side: THREE.DoubleSide }),
+      line: new THREE.LineBasicMaterial({ color: 0x8a8f98, transparent: true, opacity: 0.15, depthWrite: false }),
+    };
+    return (o as THREE.Mesh).isMesh ? (this.lighting ? this.ghostMats.lit : this.ghostMats.flat) : this.ghostMats.line;
   }
 
   /** Render frames until nothing moves. */
@@ -392,7 +524,11 @@ export class ModelViewer {
   /** PNG of the current view. */
   screenshot(): Promise<Blob> {
     this.attach();
+    // The picture of the model, without the selection's tint.
+    for (const o of this.overlays) o.visible = false;
     this.renderer.render(this.scene, this.camera);
+    for (const o of this.overlays) o.visible = true;
+    this.kick();
     return new Promise((res, rej) => this.renderer.domElement.toBlob((b) => (b ? res(b) : rej(new Error(t('screenshot failed')))), 'image/png'));
   }
 
@@ -407,6 +543,9 @@ export class ModelViewer {
       for (const p of Array.isArray(cur) ? cur : [cur]) if (p.userData.mfUnlit) p.dispose();
     }
     this.unlit.clear();
+    this.overlays = [];
+    this.fileHidden.clear();
+    this.ghosted.clear();
     this.model = null;
     this.mixer = null;
     this.clips = [];
@@ -414,8 +553,15 @@ export class ModelViewer {
 
   destroy() {
     cancelAnimationFrame(this.raf);
+    clearTimeout(this.hoverTimer);
     this.ro.disconnect();
+    this.host.removeEventListener('pointerdown', this.pointerDown);
+    this.host.removeEventListener('pointerup', this.pointerUp);
+    this.host.removeEventListener('pointermove', this.pointerMove);
+    this.host.removeEventListener('pointerleave', this.pointerLeave);
     this.clear();
+    this.highlight?.dispose();
+    if (this.ghostMats) for (const m of Object.values(this.ghostMats)) m.dispose();
     this.controls.dispose();
     this.grid.dispose();
     if (this.attached) {

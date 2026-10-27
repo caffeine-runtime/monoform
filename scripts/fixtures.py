@@ -810,6 +810,17 @@ def _stl(scale=(20, 20, 20)):
 w("models/cube.stl", _stl())
 # Tall along Z, the "up" of STL files from CAD and 3D printing: it should stand.
 w("models/tower.stl", _stl((10, 10, 40)))
+# Two blocks that don't touch, in one STL: the viewer splits them into two bodies.
+_two = bytearray(_stl())
+_more = _stl((10, 10, 10))
+for i in range(len(_more[84:]) // 50):
+    rec = bytearray(_more[84 + i * 50: 84 + (i + 1) * 50])
+    for v in range(3):
+        x = struct.unpack_from("<f", rec, 12 + v * 12)[0]
+        struct.pack_into("<f", rec, 12 + v * 12, x + 40)
+    _two += rec
+struct.pack_into("<I", _two, 80, (len(_two) - 84) // 50)
+w("models/two-blocks.stl", bytes(_two))
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import stepfixture

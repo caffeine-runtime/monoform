@@ -24,6 +24,7 @@ import { VTKLoader } from 'three/examples/jsm/loaders/VTKLoader.js';
 // Not a dynamic import: in the worker a split-off chunk would import the
 // worker's own entry again — a second three.js whose classes don't match.
 import { stepToScene } from './step/step';
+import { splitBodies } from './parts';
 
 /** Extensions the viewer opens. */
 export const MODEL_EXTS = ['glb', 'gltf', 'fbx', 'obj', 'stl', 'ply', '3mf', 'dae', '3ds', 'usdz', 'usd', 'usda', 'usdc', 'wrl', 'vrml', 'amf', 'pcd', 'xyz', 'vtk', 'vtp', 'step', 'stp'];
@@ -232,5 +233,7 @@ export async function loadModel(ext: string, data: ArrayBuffer, base: string, na
     scene = upright;
   }
   scene.name ||= name;
+  // One mesh with no names (an STL): its separate bodies become parts.
+  if (!animations.length) scene = splitBodies(scene);
   return { scene, animations };
 }
