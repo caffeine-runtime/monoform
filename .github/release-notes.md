@@ -4,6 +4,7 @@
 - **Parts list**: each part once, with how many there are and its size; copy it into a spreadsheet or export it as CSV.
 - **The sidebar keeps the name "Monoform"** when it's narrow or the interface is larger: header buttons move into the ☰ menu instead.
 - **"Save your changes?"** shows the file on its own card, with its folder, so it's clear which file it's about.
+- **Record the screen** (Windows): Tools › *Record the screen…*. Choose a window or the whole screen, with your microphone and the computer's sound; a small bar (left out of the video) pauses and stops. The recording is saved as an MP4 in Videos › Screen Recordings and opens in the video editor, ready to trim.
 - **Quick view for more files**: PDFs, Word documents, Markdown notes, songs, videos and 3D models now open in the quick view, like pictures, when Monoform is their default app. Click **Edit** for the full editor.
 
 ## Downloads

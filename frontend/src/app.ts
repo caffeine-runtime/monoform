@@ -23,6 +23,7 @@ import { semantic } from './core/semantic/semantic.svelte';
 import { OnFileDrop } from './wailsjs/runtime/runtime';
 import { installContextMenu } from './core/contextMenu';
 import { convertWindow } from './core/convert.svelte';
+import { openRecordings } from './core/tools';
 
 function inEditable(t: EventTarget | null): boolean {
   const el = t as HTMLElement | null;
@@ -58,8 +59,9 @@ function wireEvents() {
     if (ev.dir) void tree.refreshDir(ev.path);
     else workspace.onExternalChange(ev.path, ev.op);
   });
-  on<string[] | { paths: string[]; preview: boolean }>('app:open-files', (req) => {
-    const { paths, preview } = Array.isArray(req) ? { paths: req, preview: false } : req;
+  on<string[] | { paths: string[]; preview: boolean; recorded?: boolean }>('app:open-files', (req) => {
+    const { paths, preview, recorded } = Array.isArray(req) ? { paths: req, preview: false, recorded: false } : req;
+    if (recorded) return void openRecordings(paths ?? []);
     for (const p of paths ?? []) void workspace.openPath(p, preview ? { preview: true } : {});
   });
   on('app:confirm-quit', () => void confirmQuit());
@@ -84,6 +86,22 @@ export async function start(info: BootInfo, tScript: number, tBoot: number) {
     on<string[] | { paths: string[] }>('app:open-files', (req) => convertWindow.add(Array.isArray(req) ? req : (req.paths ?? [])));
     const { default: ConvertWindow } = await import('./shell/ConvertWindow.svelte');
     mount(ConvertWindow, { target: document.getElementById('app')! });
+    requestAnimationFrame(() => setTimeout(() => void api.MarkReady(performance.now())));
+    if (info.testScript) {
+      const { runSelfTest } = await import('./test/selftest');
+      void runSelfTest(info.testScript);
+    }
+    return;
+  }
+
+  if (info.launchMode === 'record') {
+    // The screen recorder: a window of its own (see shell/RecordWindow.svelte).
+    const { recorder } = await import('./core/recorder.svelte');
+    recorder.testing = !!info.testScript;
+    // Closing the window while recording saves the recording first.
+    on('app:confirm-quit', () => void recorder.stop());
+    const { default: RecordWindow } = await import('./shell/RecordWindow.svelte');
+    mount(RecordWindow, { target: document.getElementById('app')! });
     requestAnimationFrame(() => setTimeout(() => void api.MarkReady(performance.now())));
     if (info.testScript) {
       const { runSelfTest } = await import('./test/selftest');
@@ -121,7 +139,8 @@ export async function start(info: BootInfo, tScript: number, tBoot: number) {
     for (const p of info.launchFiles ?? []) await workspace.openPath(p, { quiet: true });
   } else {
     await workspace.restore(info.settings.session);
-    for (const p of info.launchFiles ?? []) await workspace.openPath(p, info.launchMode === 'preview' ? { preview: true } : {});
+    if (info.launchMode === 'recorded') await openRecordings(info.launchFiles ?? []);
+    else for (const p of info.launchFiles ?? []) await workspace.openPath(p, info.launchMode === 'preview' ? { preview: true } : {});
   }
   // Search by meaning indexes from the main window only (one writer per index).
   if (!boot.extraWindow) semantic.start();

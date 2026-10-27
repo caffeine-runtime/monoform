@@ -274,6 +274,10 @@ export function OpenInEditor(arg1) {
   return window['go']['app']['App']['OpenInEditor'](arg1);
 }
 
+export function OpenMicrophoneSettings() {
+  return window['go']['app']['App']['OpenMicrophoneSettings']();
+}
+
 export function PageRoot(arg1) {
   return window['go']['app']['App']['PageRoot'](arg1);
 }
@@ -316,6 +320,34 @@ export function QuickFiles(arg1, arg2) {
 
 export function Quit(arg1) {
   return window['go']['app']['App']['Quit'](arg1);
+}
+
+export function RecordBegin(arg1) {
+  return window['go']['app']['App']['RecordBegin'](arg1);
+}
+
+export function RecordDiscard() {
+  return window['go']['app']['App']['RecordDiscard']();
+}
+
+export function RecordFinish() {
+  return window['go']['app']['App']['RecordFinish']();
+}
+
+export function RecordOpen(arg1) {
+  return window['go']['app']['App']['RecordOpen'](arg1);
+}
+
+export function RecordScreen() {
+  return window['go']['app']['App']['RecordScreen']();
+}
+
+export function RecorderLayout(arg1, arg2, arg3) {
+  return window['go']['app']['App']['RecorderLayout'](arg1, arg2, arg3);
+}
+
+export function RecordingsFolder() {
+  return window['go']['app']['App']['RecordingsFolder']();
 }
 
 export function RelPath(arg1, arg2) {

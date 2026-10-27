@@ -156,6 +156,8 @@ func Manifest(m Meta, assocs []setup.Assoc) ([]byte, error) {
 	w(`  </Applications>`)
 	w(`  <Capabilities>`)
 	w(`    <rescap:Capability Name="runFullTrust"/>`)
+	// The screen recorder's microphone (Windows asks the user, as for any app).
+	w(`    <DeviceCapability Name="microphone"/>`)
 	w(`  </Capabilities>`)
 	w(`</Package>`)
 	return []byte(b.String()), nil

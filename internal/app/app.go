@@ -54,9 +54,11 @@ type App struct {
 	dirty       int
 	forceQuit   bool
 	launchFiles []string
-	launchMode  string  // "peek", "preview", "convert", "window" or ""
-	startAt     *[2]int // screen point to place the window at (see SetStartPosition)
-	lastDir     string  // folder of the last file dialog answer (see saveDir, openDir)
+	// recorderLayout is the recorder window's current shape ("panel" or "bar").
+	recorderLayout string
+	launchMode     string  // "peek", "preview", "convert", "window", "record", "recorded" or ""
+	startAt        *[2]int // screen point to place the window at (see SetStartPosition)
+	lastDir        string  // folder of the last file dialog answer (see saveDir, openDir)
 }
 
 // New creates the app. start is the process start time used for the
@@ -85,6 +87,7 @@ func New(start time.Time, launchFiles []string, launchMode string) *App {
 		}
 	}
 	a.registerRoutes()
+	a.registerRecordRoutes()
 	a.registerModelRoute()
 	a.registerAudioRoutes()
 	return a
@@ -146,7 +149,7 @@ func (a *App) OpenFilesMode(paths []string, mode string) {
 		return
 	}
 	a.mu.Unlock()
-	a.emit("app:open-files", OpenRequest{Paths: paths, Preview: mode == "peek" || mode == "preview"})
+	a.emit("app:open-files", OpenRequest{Paths: paths, Preview: mode == "peek" || mode == "preview", Recorded: mode == "recorded"})
 	if a.ctx != nil {
 		wruntime.WindowUnminimise(a.ctx)
 		wruntime.Show(a.ctx)
@@ -157,6 +160,9 @@ func (a *App) OpenFilesMode(paths []string, mode string) {
 type OpenRequest struct {
 	Paths   []string `json:"paths"`
 	Preview bool     `json:"preview"`
+	// Recorded: a screen recording that just finished (opened with a note
+	// where it was saved).
+	Recorded bool `json:"recorded"`
 }
 
 // BootInfo is everything the frontend needs to paint the shell.
@@ -166,7 +172,7 @@ type BootInfo struct {
 	Platform    string            `json:"platform"`
 	Version     string            `json:"version"`
 	LaunchFiles []string          `json:"launchFiles"`
-	LaunchMode  string            `json:"launchMode"` // "peek", "preview", "convert", "window" or ""
+	LaunchMode  string            `json:"launchMode"` // "peek", "preview", "convert", "window", "record", "recorded" or ""
 	Home        string            `json:"home"`
 	PathSep     string            `json:"pathSep"`
 	TestScript  string            `json:"testScript"`
@@ -227,7 +233,7 @@ func (a *App) Quit(code int) {
 // --- settings ---
 
 func (a *App) SaveSettings(s settings.Settings) error {
-	if a.launchMode == "window" || a.launchMode == "convert" {
+	if a.launchMode == "window" || a.launchMode == "convert" || a.launchMode == "record" {
 		s = keepSession(s, a.Settings.Path())
 	}
 	if err := a.Settings.Set(s); err != nil {

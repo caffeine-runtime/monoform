@@ -9,6 +9,7 @@ import { treeMenuContributions } from '../shell/treeActions';
 import type { MenuItem } from './ui.svelte';
 import { t } from './i18n';
 import { convertPaths, knownTargets } from './convert.svelte';
+import { boot } from './boot';
 
 const CHECKSUM_EXT = ['sha256', 'sha1', 'md5', 'sha512', 'b3', 'sha256sum', 'md5sum', 'sha1sum', 'sha512sum'];
 
@@ -24,6 +25,19 @@ export async function takeScreenshot(mode: 'region' | 'screen', delay = 0) {
   } catch (e) {
     toastError(e, t('Screenshot failed'));
   }
+}
+
+/** A screen recording that just finished: opened in the video editor, with where it was saved. */
+export async function openRecordings(paths: string[]) {
+  for (const p of paths) {
+    await workspace.openPath(p);
+    ui.toast(t('Screen recording saved to {folder}. Trim or cut it here.', { folder: dirname(p) }), 'success', { label: t('Show in folder'), run: () => void api.ShowInFolder(p) });
+  }
+}
+
+/** Screen recording runs in a window of its own (Windows: the webview can record the screen there). */
+export function canRecordScreen(): boolean {
+  return boot.platform === 'windows' && !!navigator.mediaDevices?.getDisplayMedia && typeof MediaRecorder !== 'undefined';
 }
 
 /** Pick a colour anywhere on the screen: a temporary shot opened with the colour picker. */
@@ -43,6 +57,7 @@ export function registerTools() {
     { id: 'screenshot.region', title: t('Take a screenshot of an area…'), category: t('Tools'), shortcut: 'Mod+Shift+X', run: () => void takeScreenshot('region') },
     { id: 'screenshot.screen', title: t('Take a screenshot of the whole screen'), category: t('Tools'), run: () => void takeScreenshot('screen') },
     { id: 'screenshot.delayed', title: t('Take a screenshot of the whole screen in 3 seconds'), category: t('Tools'), run: () => void takeScreenshot('screen', 3) },
+    { id: 'screenshot.record', title: t('Record the screen…'), category: t('Tools'), when: canRecordScreen, run: () => void api.RecordScreen().catch((e) => toastError(e, t('Couldn’t start the recorder'))) },
     { id: 'tools.pickColour', title: t('Pick a colour from the screen'), category: t('Tools'), run: () => void pickScreenColour() },
     {
       id: 'tools.hash',

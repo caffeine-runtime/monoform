@@ -108,6 +108,9 @@ jobs:
           scripts/selftest.sh m86 pdf "" --peek "$FX/pdf/three.pdf"
           # Convert with Monoform (a file manager's right-click menu): started with --convert FILE….
           scripts/selftest.sh m82 "$FX" "" --convert "$FX/convert/photo.png" "$FX/convert/sales.csv"
+          # Recording the screen: the recorder window (--record), and a finished recording handed to the main window (--recorded FILE).
+          scripts/selftest.sh m88 record "" --record
+          scripts/selftest.sh m88 main "" --recorded "$FX/video/clip.webm"
           MF_AI_FAKE=1 MF_CACHE="$(mktemp -d)" scripts/selftest.sh m43 "$FX"
           # Updates: a made-up newer release, installed by logging (the real path is Go-tested).
           MF_UPDATE_FAKE=1 MF_CACHE="$(mktemp -d)" scripts/selftest.sh m49 "$FX"

@@ -59,10 +59,16 @@ func main() {
 	case "convert":
 		// Convert with Monoform (a file manager's right-click menu): just the format dialog.
 		width, height = 560, 640
+	case "record":
+		// The recorder: its options, then a small bar while recording (it sizes itself).
+		width, height = 420, 360
 	}
 	minW, minH, title := 640, 400, "Monoform"
-	if mode == "convert" {
+	switch mode {
+	case "convert":
 		minW, minH, title = 420, 420, "Convert with Monoform"
+	case "record":
+		minW, minH, title = 120, 40, "Monoform recorder"
 	}
 	if dist, err := fs.Sub(assets, "frontend/dist"); err == nil {
 		a.Assets = dist
@@ -74,6 +80,8 @@ func main() {
 		Height:           height,
 		MinWidth:         minW,
 		MinHeight:        minH,
+		Frameless:        mode == "record",
+		DisableResize:    mode == "record",
 		BackgroundColour: &options.RGBA{R: 31, G: 30, B: 28, A: 255},
 		AssetServer: &assetserver.Options{
 			Assets:     assets,
@@ -128,6 +136,10 @@ func singleInstance(mode string, onLaunch func(options.SecondInstanceData)) *opt
 	if mode == "convert" {
 		return &options.SingleInstanceLock{UniqueId: "dev.monoform.convert", OnSecondInstanceLaunch: onLaunch}
 	}
+	// One recorder at a time: starting another brings it forward.
+	if mode == "record" {
+		return &options.SingleInstanceLock{UniqueId: "dev.monoform.record", OnSecondInstanceLaunch: onLaunch}
+	}
 	return &options.SingleInstanceLock{UniqueId: "dev.monoform.app", OnSecondInstanceLaunch: onLaunch}
 }
 
@@ -164,7 +176,8 @@ func parseAt(args []string) (int, int, bool) {
 // parseLaunch splits the command line into files to open (existing paths,
 // made absolute) and the mode: "peek" (--peek), "preview" (--preview),
 // "convert" (--convert), "window" (--new-window: a tab moved to a window of
-// its own) or "".
+// its own), "record" (--record: the screen recorder), "recorded"
+// (--recorded FILE: a finished recording for the main window) or "".
 func parseLaunch(args []string, wd string) ([]string, string) {
 	mode := ""
 	var rest []string
@@ -180,6 +193,10 @@ func parseLaunch(args []string, wd string) ([]string, string) {
 			mode = "window"
 		case "--convert":
 			mode = "convert"
+		case "--record":
+			mode = "record"
+		case "--recorded":
+			mode = "recorded"
 		default:
 			if !strings.HasPrefix(a, "-") { // ignore other flags (macOS adds -psn_…)
 				rest = append(rest, a)

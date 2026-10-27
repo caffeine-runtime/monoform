@@ -808,6 +808,19 @@
 - **"Save your changes?" shows the file on a card**: its icon, the name in bold and its folder ("Not saved yet" for
   a new document) under a short question, instead of the name inside the title's sentence. Also when quitting or
   restarting with one unsaved file. Self-tests `m48`, `m84`, `m49` updated.
+- **Record the screen** (Windows; Tools › *Record the screen…*). A small recorder window of its own: microphone (with
+  a choice of device and a level meter), a 3-second countdown and 30 or 60 frames per second, remembered; then
+  Windows' *Choose what to share* step (a window or a whole screen, with the computer's sound for a screen). While
+  recording, a bar at the bottom of the screen — above other windows and left out of the recording itself — shows
+  the time, mutes the microphone, pauses, stops or discards (it asks first); it can be dragged. The recording is
+  written to disk as it goes (a crash loses seconds, not the recording), finished on Stop into an ordinary MP4
+  (H.264 and AAC; WebM where MP4 can't be recorded) in *Videos › Screen Recordings*, and opened in the video editor
+  to trim or cut. Closing the window while recording saves first; a closed recorded window stops and saves. The
+  video editor now also reads fragmented MP4 files (as browsers and some cameras write them). Go tests
+  (`record_test.go`, fragmented and WebM recordings in `internal/video`, the launch modes, the Store package's
+  microphone capability), unit tests (`record.test.ts`), self-test `m88` (the recorder with a drawn picture and a
+  tone in place of the share step; a finished recording opened by the main window). macOS and Linux: not offered
+  yet (their webviews' screen capture is untested).
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

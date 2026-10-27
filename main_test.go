@@ -39,6 +39,18 @@ func TestParseNewWindow(t *testing.T) {
 	if l := singleInstance("convert", nil); l == nil || l.UniqueId == "dev.monoform.app" {
 		t.Error("convert windows gather files in their own instance, apart from the editor")
 	}
+	if _, mode := parseLaunch([]string{"--record"}, "/"); mode != "record" {
+		t.Errorf("record: %q", mode)
+	}
+	if files, mode := parseLaunch([]string{"--recorded", f}, "/"); mode != "recorded" || len(files) != 1 {
+		t.Errorf("recorded: %v %q", files, mode)
+	}
+	if l := singleInstance("record", nil); l == nil || l.UniqueId == "dev.monoform.app" || l.UniqueId == singleInstance("convert", nil).UniqueId {
+		t.Error("one recorder at a time, apart from the editor")
+	}
+	if l := singleInstance("recorded", nil); l == nil || l.UniqueId != "dev.monoform.app" {
+		t.Error("a finished recording goes to the editor")
+	}
 	if _, _, ok := parseAt([]string{"--at=nope"}); ok {
 		t.Error("bad --at accepted")
 	}

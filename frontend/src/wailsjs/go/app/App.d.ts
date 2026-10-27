@@ -155,6 +155,8 @@ export function OpenInBrowser(arg1:string):Promise<void>;
 
 export function OpenInEditor(arg1:Array<string>):Promise<void>;
 
+export function OpenMicrophoneSettings():Promise<void>;
+
 export function PageRoot(arg1:string):Promise<string>;
 
 export function PdfAddTextLayer(arg1:string,arg2:Array<app.OcrPage>):Promise<string>;
@@ -176,6 +178,20 @@ export function PdfStamp(arg1:string,arg2:Array<pdf.Stamp>):Promise<string>;
 export function QuickFiles(arg1:string,arg2:number):Promise<Array<string>>;
 
 export function Quit(arg1:number):Promise<void>;
+
+export function RecordBegin(arg1:string):Promise<string>;
+
+export function RecordDiscard():Promise<void>;
+
+export function RecordFinish():Promise<string>;
+
+export function RecordOpen(arg1:string):Promise<void>;
+
+export function RecordScreen():Promise<void>;
+
+export function RecorderLayout(arg1:string,arg2:number,arg3:number):Promise<void>;
+
+export function RecordingsFolder():Promise<string>;
 
 export function RelPath(arg1:string,arg2:string):Promise<string>;
 

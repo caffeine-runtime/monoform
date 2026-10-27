@@ -94,10 +94,6 @@ func openMP4(path string) (*os.File, *mp4.File, []*mp4Track, error) {
 		fh.Close()
 		return nil, nil, nil, fmt.Errorf("%w: no movie header", ErrNotEditable)
 	}
-	if f.IsFragmented() || f.Moov.Mvex != nil {
-		fh.Close()
-		return nil, nil, nil, fmt.Errorf("%w: fragmented MP4 files can't be edited yet", ErrNotEditable)
-	}
 	var tracks []*mp4Track
 	for _, trak := range f.Moov.Traks {
 		t, err := loadTrack(trak)
@@ -107,7 +103,104 @@ func openMP4(path string) (*os.File, *mp4.File, []*mp4Track, error) {
 		}
 		tracks = append(tracks, t)
 	}
+	if f.IsFragmented() || f.Moov.Mvex != nil {
+		if err := loadFragments(f, tracks); err != nil {
+			fh.Close()
+			return nil, nil, nil, fmt.Errorf("%w: %v", ErrNotEditable, err)
+		}
+	}
 	return fh, f, tracks, nil
+}
+
+// loadFragments appends the samples of a fragmented file's moofs to its
+// tracks (screen recordings are fragmented MP4). Each fragment's decode
+// time (tfdt) is trusted over the sample durations before it: a recorder
+// only guesses the last sample's duration, so durations are taken from the
+// next sample's decode time and a fragment that starts earlier than the
+// guess doesn't overlap anything.
+func loadFragments(f *mp4.File, tracks []*mp4Track) error {
+	byID := map[uint32]*mp4Track{}
+	trex := map[uint32]*mp4.TrexBox{}
+	for _, t := range tracks {
+		byID[t.trak.Tkhd.TrackID] = t
+	}
+	if f.Moov.Mvex != nil {
+		for _, x := range f.Moov.Mvex.Trexs {
+			trex[x.TrackID] = x
+		}
+	}
+	for _, seg := range f.Segments {
+		for _, frag := range seg.Fragments {
+			moof := frag.Moof
+			if moof == nil {
+				continue
+			}
+			for ti, traf := range moof.Trafs {
+				tfhd := traf.Tfhd
+				t := byID[tfhd.TrackID]
+				if t == nil {
+					continue
+				}
+				if traf.Senc != nil || traf.UUIDSenc != nil || traf.Saiz != nil {
+					return errors.New("encrypted video")
+				}
+				next := t.end()
+				if traf.Tfdt != nil {
+					next = traf.Tfdt.BaseMediaDecodeTime()
+				}
+				if n := t.n(); n > 0 && next > t.dts[n-1] && next-t.dts[n-1] <= math.MaxUint32 {
+					t.dur[n-1] = uint32(next - t.dts[n-1])
+				}
+				base := moof.StartPos
+				switch {
+				case tfhd.HasBaseDataOffset():
+					base = tfhd.BaseDataOffset
+				case !tfhd.DefaultBaseIfMoof() && ti > 0:
+					return errors.New("unsupported fragment layout")
+				}
+				off := base
+				for _, trun := range traf.Truns {
+					trun.AddSampleDefaultValues(tfhd, trex[tfhd.TrackID])
+					if trun.HasDataOffset() {
+						off = uint64(int64(base) + int64(trun.DataOffset))
+					}
+					for _, s := range trun.Samples {
+						if n := t.n(); n > 0 && next < t.dts[n-1] {
+							return errors.New("fragments go back in time")
+						}
+						t.dts = append(t.dts, next)
+						t.dur = append(t.dur, s.Dur)
+						t.size = append(t.size, s.Size)
+						t.off = append(t.off, off)
+						if s.CompositionTimeOffset != 0 && t.cto == nil {
+							t.cto = make([]int32, t.n()-1, t.n())
+						}
+						if t.cto != nil {
+							t.cto = append(t.cto, s.CompositionTimeOffset)
+						}
+						sync := mp4.IsSyncSampleFlags(s.Flags)
+						if !sync && t.sync == nil {
+							t.sync = make([]bool, t.n()-1, t.n())
+							for i := range t.sync {
+								t.sync[i] = true
+							}
+						}
+						if t.sync != nil {
+							t.sync = append(t.sync, sync)
+						}
+						off += uint64(s.Size)
+						next += uint64(s.Dur)
+					}
+				}
+			}
+		}
+	}
+	for _, t := range tracks {
+		if t.handler == "vide" && t.n() > 0 && !t.isSync(0) {
+			return errors.New("the video doesn't start with a keyframe")
+		}
+	}
+	return nil
 }
 
 func loadTrack(trak *mp4.TrakBox) (*mp4Track, error) {
@@ -600,15 +693,18 @@ func remuxMP4(ctx context.Context, src string, plan Plan, w io.WriteSeeker, prog
 			}
 			traks = append(traks, tr)
 		}
+		if c.Type() == "mvex" { // the output isn't fragmented
+			continue
+		}
 		moovChildren = append(moovChildren, c)
 	}
-	f.Moov.Children, f.Moov.Traks, f.Moov.Trak = moovChildren, traks, traks[0]
+	f.Moov.Children, f.Moov.Traks, f.Moov.Trak, f.Moov.Mvex = moovChildren, traks, traks[0], nil
 	f.Moov.Mvhd.Duration = movieDur
 
 	// Layout: ftyp, moov, mdat. Offsets depend on the moov size, which
 	// doesn't change when offsets are filled in (fixed-width entries).
 	var head bytes.Buffer
-	if f.Ftyp != nil {
+	if f.Ftyp != nil && !f.IsFragmented() {
 		if err := f.Ftyp.Encode(&head); err != nil {
 			return nil, err
 		}

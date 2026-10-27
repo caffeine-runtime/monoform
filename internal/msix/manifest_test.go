@@ -53,9 +53,18 @@ func TestManifest(t *testing.T) {
 				}
 			} `xml:"Extensions>Extension"`
 		} `xml:"Applications>Application"`
+		Devices []struct {
+			Name string `xml:",attr"`
+		} `xml:"Capabilities>DeviceCapability"`
 	}
 	if err := xml.Unmarshal(data, &pkg); err != nil {
 		t.Fatalf("not XML: %v\n%s", err, data)
+	}
+	// The screen recorder may use the microphone; device capabilities come
+	// after the others.
+	if len(pkg.Devices) != 1 || pkg.Devices[0].Name != "microphone" || !strings.Contains(string(data), `runFullTrust"/>
+    <DeviceCapability`) {
+		t.Errorf("microphone capability: %+v", pkg.Devices)
 	}
 	var exts, names []string
 	alias := ""

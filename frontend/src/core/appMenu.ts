@@ -73,6 +73,7 @@ const LAYOUT: Entry[] = [
       'screenshot.region',
       'screenshot.screen',
       'screenshot.delayed',
+      'screenshot.record',
       'tools.pickColour',
       '-',
       'semantic.settings',

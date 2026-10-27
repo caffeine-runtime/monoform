@@ -3,11 +3,14 @@ package video
 import (
 	"context"
 	"math"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/Eyevinn/mp4ff/mp4"
 )
 
 func near(a, b, tol float64) bool { return math.Abs(a-b) <= tol }
@@ -143,5 +146,62 @@ func TestMuteAudioOnlyRotate(t *testing.T) {
 	}
 	if _, err := Export(context.Background(), filepath.Join("testdata", "clip.webm"), Plan{Keep: [][2]float64{{0, 6}}, Rotate: 90}, filepath.Join(dir, "r.webm"), nil); err == nil {
 		t.Error("WebM rotation should be refused")
+	}
+}
+
+// A screen recording as the webview's recorder writes it: a fragmented MP4
+// whose fragments start slightly before the guessed end of the one before.
+// It is read through its fragments and written as an ordinary MP4.
+func TestFragmentedRecording(t *testing.T) {
+	src := filepath.Join("testdata", "recorded.mp4")
+	info, err := Probe(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !info.Editable || info.VideoCodec != "H.264" || info.AudioCodec != "AAC" || info.Width != 320 || info.Height != 180 {
+		t.Fatalf("%+v", info)
+	}
+	if !near(info.Duration, 1.6, 0.25) || len(info.Keyframes) == 0 || info.Keyframes[0] > 0.05 {
+		t.Fatalf("duration %.3f keyframes %v", info.Duration, info.Keyframes)
+	}
+	dst := filepath.Join(t.TempDir(), "out.mp4")
+	if _, err := Export(context.Background(), src, Plan{Keep: [][2]float64{{0, 1e9}}}, dst, nil); err != nil {
+		t.Fatal(err)
+	}
+	fh, err := os.Open(dst)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := mp4.DecodeFile(fh)
+	fh.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.IsFragmented() || f.Moov.Mvex != nil || f.Moov.Mvhd.Duration == 0 {
+		t.Fatalf("still fragmented or without a duration: fragmented %v, mvex %v, duration %d", f.IsFragmented(), f.Moov.Mvex != nil, f.Moov.Mvhd.Duration)
+	}
+	out, err := Probe(dst)
+	if err != nil || !near(out.Duration, info.Duration, 0.1) || !out.HasAudio {
+		t.Fatalf("%+v %v", out, err)
+	}
+	if msg, n := ffmpegCheck(t, dst); msg != "" && !strings.Contains(msg, "non monotonically increasing dts") || n == 0 {
+		t.Errorf("ffmpeg: %d frames, %s", n, msg)
+	}
+	// A cut works too.
+	if _, err := Export(context.Background(), src, Plan{Keep: [][2]float64{{0, 0.8}}}, dst, nil); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// The WebM recording (where MP4 can't be recorded) gets its duration and cues.
+func TestWebMRecording(t *testing.T) {
+	src := filepath.Join("testdata", "recorded.webm")
+	dst := filepath.Join(t.TempDir(), "out.webm")
+	if _, err := Export(context.Background(), src, Plan{Keep: [][2]float64{{0, 1e9}}}, dst, nil); err != nil {
+		t.Fatal(err)
+	}
+	info, err := Probe(dst)
+	if err != nil || !info.Editable || !near(info.Duration, 1.6, 0.25) || !info.HasAudio {
+		t.Fatalf("%+v %v", info, err)
 	}
 }

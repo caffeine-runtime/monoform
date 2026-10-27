@@ -718,6 +718,24 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   ☰ and Hide sidebar don't fit either does it show just the logo mark. It is decided by measuring (the title's
   content against its box, on resize, font load and interface size), not by a fixed width: a 250 px cut-off hid the
   name on some computers (larger interface size) and clipped it just above ("Monoforn").
+- **Screen recording runs in the webview, in a window of its own** (`monoform --record`, `core/recorder.svelte.ts`,
+  `internal/app/record.go`). WebView2 has the browser's screen capture (`getDisplayMedia`) and recorder
+  (`MediaRecorder`), which records H.264/AAC MP4 with the GPU's encoder — no capture or encoding library, nothing
+  bundled. The cost is the system's *Choose what to share* step, which can't be skipped or replaced: it can't be told
+  which source to take (`chromeMediaSourceId` and `--auto-select-desktop-capture-source` don't work in WebView2), and
+  it names the page ("…with http://wails.localhost"). A native recorder (Windows Graphics Capture and Media
+  Foundation through COM) would have its own picker, but is far more code; the share step is also the familiar,
+  safe one. Monoform's own panel comes first (microphone, countdown, frame rate) and says what the share step is for.
+  The recorder is a separate process (Wails v2 has one window per process): it can turn into a small always-on-top
+  bar without touching the editor, and has its own single-instance lock so a second start brings it forward. The bar
+  is left out of what is recorded (`SetWindowDisplayAffinity`, `WDA_EXCLUDEFROMCAPTURE`). The picture and the
+  computer's sound and microphone (mixed into one track in an AudioContext, the microphone through a gain for mute)
+  are recorded in one-second pieces streamed to a hidden file next to the final one, so a crash loses seconds; on
+  Stop the pieces — a fragmented MP4 whose fragments start a little before the end the previous one guessed — are
+  read by their fragments' decode times (`loadFragments`; mp4ff's defragmenter rejects that overlap) and written as
+  an ordinary MP4 with the existing remuxer. If that fails the pieces are kept as they are (they play). Recordings
+  go to *Videos › Screen Recordings* (where the Snipping Tool saves them) and open in the video editor. Offered on
+  Windows only for now; the Store package declares the microphone (Windows asks the user).
 - **The update popup doesn't show the release notes**: the version, one sentence on what happens (it restarts, the
   tabs come back), the current version and download size, and *What's new* as a link to the release page. Most
   people don't read change lists in a popup; the notes (written for GitHub, with the downloads table and install
