@@ -489,7 +489,8 @@
   Add-ons* at that model (highlighted); once installed they work in place (the standard Select subject uses the
   bundled model). Self-test `m43`.
 - **Updates.** At startup Monoform asks GitHub for the newest release (on by default; *Settings › About* turns it
-  off; Help › Check for updates asks by hand). A new version shows a popup with what's new: *Download and install*
+  off; Help › Check for updates asks by hand). A new version shows a short popup (what changed is a *What's new*
+  link to the release page): *Download and install*
   downloads it with progress, checks it against the release's SHA256SUMS, saves unsaved work (after asking) and
   restarts as the new version — Windows installs through the setup program (`--update`: same folder and choices),
   a portable copy, the macOS app bundle and the Linux binary replace themselves; a copy in a folder it can't write
@@ -768,6 +769,14 @@
   is available". Off, nothing changes: pre-releases are never offered. Betas stay out either way; the release a
   nightly leads to replaces it. Go test (`TestLatestWithNightlies`: drafts, betas, other systems' builds, ordering),
   self-test `m49` (the switch, off by default, saved at once).
+- **Quitting with unsaved work asks to save** instead of only offering to lose it: "Save changes before quitting?"
+  lists the files and their folders (a new document is "Not saved yet"; clicking one goes to its tab), *Save all
+  and quit* is the main button (Enter), *Quit without saving* stands apart on the left. Saving goes tab by tab; a
+  new document asks where, and if one isn't saved (cancelled or failed) Monoform stays open on it. With one file
+  the question names it (*Save and quit*). Restarting for an update asks the same way (*Save all and restart*),
+  and closing a tab puts *Don't save* apart too. The update popup is short: the version, that Monoform restarts
+  and the tabs come back, the current version and download size, and a *What's new* link instead of the release
+  notes. Self-test `m84`, `m49` updated.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

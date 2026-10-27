@@ -1,7 +1,8 @@
 // M49: updates (run with MF_UPDATE_FAKE=1: Go offers a made-up 99.0.0 and
 // "installs" by logging — the real download, checksum and replacement are
 // covered by Go tests in internal/update). Help › Check for updates finds it
-// and shows the popup with the release notes; Skip this version keeps the
+// and shows the popup (what changed is a link, not the notes themselves);
+// Skip this version, set apart, keeps the
 // startup check quiet about it; Download and install shows progress, asks to
 // save unsaved work first, then installs; Settings › About has the switch.
 import { api } from '../core/backend';
@@ -25,10 +26,16 @@ export default async function m49(dir: string) {
   commands.execute('help.updates');
   let d = await dialog('the update popup');
   assertEq(d.title, 'Monoform 99.0.0 is available', 'names the version');
-  assert(d.message!.includes('You have') && d.message!.includes('restarts Monoform'), d.message!);
-  assert(d.details?.some((l) => l.includes('Something new')), `release notes shown (${d.details})`);
+  assertEq(d.message, 'A restart is required, but your tabs will come back.', 'what happens, in a sentence');
+  assert(/^Current version \S+ · 1\.0 MB download$/.test(d.footnote ?? ''), d.footnote ?? '');
+  assertEq(d.link?.label, 'What’s new', 'what changed is a link to the release page, not in the popup');
+  assert(!d.details?.length && !(d.items?.length), 'no release notes in the popup');
   assertEq(d.buttons.map((b) => b.id).join(','), 'skip,later,go', 'Skip, Later, Download and install');
   assertEq(d.buttons.find((b) => b.primary)?.label, 'Download and install', 'install is the main button');
+  const shown = await waitFor(() => document.querySelector<HTMLElement>('.overlay .dialog'), 'the popup on screen');
+  assert(!shown.textContent!.includes('Something new'), 'the notes aren’t shown');
+  assertEq(shown.querySelector('.footnote .link')?.textContent, 'What’s new', 'the link on screen');
+  assertEq(shown.querySelector('.buttons .aside button')?.textContent, 'Skip this version', 'skipping is set apart');
 
   // Skip this version: the startup check says nothing about it again.
   d.resolve({ button: 'skip' });
@@ -48,8 +55,8 @@ export default async function m49(dir: string) {
   d.resolve({ button: 'go' });
   await waitFor(() => (updates.downloaded ? true : null), 'downloaded', 10000);
   const save = await dialog('asked to save before restarting');
-  assertEq(save.title, 'Save your changes before restarting?', save.title);
-  assert(save.details?.includes('index.md'), `lists the unsaved tab (${save.details})`);
+  assertEq(save.title, 'Save changes to index.md before restarting?', save.title);
+  assertEq(save.buttons.find((b) => b.primary)?.label, 'Save and restart', 'saving is the main button');
   save.resolve({ button: 'cancel' });
   await sleep(50);
   assert(tab.dirty, 'cancel: nothing saved, nothing installed');

@@ -17,6 +17,17 @@ export interface DialogButton {
   label: string;
   primary?: boolean;
   danger?: boolean;
+  /** Shown apart, on the left: a choice that throws something away, kept away from the main one. */
+  aside?: boolean;
+}
+
+/** A row in a dialog's list of things it is about (a file and where it is). */
+export interface DialogItem {
+  id: string;
+  label: string;
+  detail?: string;
+  /** Tooltip (e.g. the full path). */
+  tip?: string;
 }
 
 export interface DialogRequest {
@@ -28,6 +39,12 @@ export interface DialogRequest {
   input?: { value: string; placeholder?: string; selectStem?: boolean };
   /** Optional list shown under the message (e.g. file names). */
   details?: string[];
+  /** Rows to click: the dialog resolves with button "item" and the row's id as the value. */
+  items?: DialogItem[];
+  /** A small line above the buttons. */
+  footnote?: string;
+  /** A link after the footnote (opens something elsewhere; the dialog stays). */
+  link?: { label: string; run: () => void };
   resolve: (r: { button: string; value?: string }) => void;
 }
 

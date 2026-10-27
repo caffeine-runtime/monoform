@@ -702,6 +702,18 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
 - **Side panels float in narrow panes** (< 600 px, `isNarrow`): over the content with a shadow, closed when the
   pane becomes narrow, opened from the toolbar — a 260 px panel beside a 400 px pane would leave the canvas or
   table unusable.
+- **Questions about unsaved work make saving the answer** (`core/unsaved.ts`): quitting with unsaved tabs asks
+  "Save changes before quitting?", names the files (and their folders; a new document is "Not saved yet"; a name
+  goes to its tab), and *Save all and quit* is the main button, focused, so Enter keeps the work. *Quit without
+  saving* is set apart on the left (`DialogButton.aside`), as is *Don't save* when closing a tab and *Skip this
+  version* in the update popup: a choice that loses something isn't next to the default. The old question only
+  offered to lose the changes or cancel, and with no main button Enter pressed the last one — *Quit without
+  saving*. Saving goes tab by tab; a new document asks where, and if one isn't saved Monoform stays open on it.
+  Restarting for an update asks the same way (*Save all and restart*). One file: its name is in the question.
+- **The update popup doesn't show the release notes**: the version, one sentence on what happens (it restarts, the
+  tabs come back), the current version and download size, and *What's new* as a link to the release page. Most
+  people don't read change lists in a popup; the notes (written for GitHub, with the downloads table and install
+  hints) made it a wall of text.
 
 ## Project page
 

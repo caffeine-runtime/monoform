@@ -427,7 +427,7 @@ class Workspace {
         title: t('Save changes to {name}?', { name: tab.title }),
         message: t('Your changes will be lost if you don’t save them.'),
         buttons: [
-          { id: 'discard', label: t('Don’t save'), danger: true },
+          { id: 'discard', label: t('Don’t save'), danger: true, aside: true },
           { id: 'cancel', label: t('Cancel') },
           { id: 'save', label: t('Save'), primary: true },
         ],

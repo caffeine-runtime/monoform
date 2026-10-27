@@ -2,7 +2,7 @@
   // Dialog, toasts and context menu.
   import Icon from './Icon.svelte';
   import MenuList from './MenuList.svelte';
-  import { AlertTriangle, Check, Info, X } from '../core/icons';
+  import { AlertTriangle, Check, ExternalLink, Info, X } from '../core/icons';
   import { menu, ui } from '../core/ui.svelte';
   import { formatShortcut } from '../core/keys';
   import { t } from '../core/i18n';
@@ -23,7 +23,9 @@
         if (d.input?.selectStem && dot > 0) inputEl.setSelectionRange(0, dot);
         else inputEl.select();
       } else {
-        dialogEl?.querySelector<HTMLButtonElement>('button.primary, button:last-child')?.focus();
+        // The main button, or the last of the right-hand ones: never one set aside.
+        const main = [...(dialogEl?.querySelectorAll<HTMLButtonElement>('.buttons .main button') ?? [])];
+        (main.find((b) => b.classList.contains('primary')) ?? main.at(-1))?.focus();
       }
     });
   });
@@ -36,7 +38,7 @@
       d.resolve({ button: 'cancel' });
     } else if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') {
       e.preventDefault();
-      const primary = d.buttons.find((b) => b.primary) ?? d.buttons[d.buttons.length - 1];
+      const primary = d.buttons.find((b) => b.primary) ?? d.buttons.filter((b) => !b.aside).at(-1) ?? d.buttons[d.buttons.length - 1];
       d.resolve({ button: primary.id, value: inputValue });
     }
   }
@@ -63,12 +65,33 @@
           {#each d.details as line}<li>{line}</li>{/each}
         </ul>
       {/if}
+      {#if d.items?.length}
+        <ul class="items">
+          {#each d.items as it (it.id)}
+            <li>
+              <button class="item" title={it.tip} onclick={() => d.resolve({ button: 'item', value: it.id })}>
+                <span class="dot"></span><span class="name">{it.label}</span>{#if it.detail}<span class="where">{it.detail}</span>{/if}
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
       {#if d.input}
         <input class="input" bind:this={inputEl} bind:value={inputValue} placeholder={d.input.placeholder} spellcheck="false" />
       {/if}
+      {#if d.footnote || d.link}
+        <p class="footnote">
+          {#if d.footnote}<span>{d.footnote}</span>{/if}
+          {#if d.link}<button class="link" onclick={() => d.link!.run()}>{d.link.label}<Icon icon={ExternalLink} size={12} /></button>{/if}
+        </p>
+      {/if}
       <div class="buttons">
-        {#each d.buttons as b (b.id)}
-          <button class="btn" class:primary={b.primary} class:danger={b.danger} onclick={() => d.resolve({ button: b.id, value: inputValue })}>{b.label}</button>
+        {#each [d.buttons.filter((b) => b.aside), d.buttons.filter((b) => !b.aside)] as group, side}
+          <div class={side ? 'main' : 'aside'}>
+            {#each group as b (b.id)}
+              <button class="btn" class:primary={b.primary} class:danger={b.danger} class:ghost={b.aside} onclick={() => d.resolve({ button: b.id, value: inputValue })}>{b.label}</button>
+            {/each}
+          </div>
         {/each}
       </div>
     </div>
@@ -134,14 +157,95 @@
     color: var(--text-muted);
     font-size: var(--fs-small);
   }
+  .items {
+    list-style: none;
+    margin: -6px 0 14px;
+    padding: 4px;
+    max-height: 200px;
+    overflow: auto;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+  }
+  .item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 6px 8px;
+    border: none;
+    border-radius: var(--radius);
+    background: none;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .item:hover,
+  .item:focus-visible {
+    background: var(--bg-hover);
+  }
+  .item .dot {
+    flex: none;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+  .item .name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .item .where {
+    flex: none;
+    max-width: 45%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-muted);
+    font-size: var(--fs-small);
+  }
+  .footnote {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    margin: 0 0 16px;
+    color: var(--text-muted);
+    font-size: var(--fs-small);
+  }
+  .footnote .link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    cursor: pointer;
+  }
+  .footnote .link:hover {
+    text-decoration: underline;
+  }
   .dialog .input {
     width: 100%;
     margin-bottom: 14px;
   }
   .buttons {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     gap: 8px;
+  }
+  .buttons .aside,
+  .buttons .main {
+    display: flex;
+    gap: 8px;
+  }
+  .buttons .main {
+    margin-left: auto;
   }
   .menu-catcher {
     position: fixed;

@@ -2,7 +2,7 @@
 import { mount } from 'svelte';
 import App from './shell/App.svelte';
 import { api, errorMessage, on, setToken, type BootInfo } from './core/backend';
-import { t, tn } from './core/i18n';
+import { confirmQuit } from './core/unsaved';
 import { boot } from './core/boot';
 import { commands } from './core/commands';
 import { registerAppCommands } from './core/appCommands';
@@ -62,20 +62,7 @@ function wireEvents() {
     const { paths, preview } = Array.isArray(req) ? { paths: req, preview: false } : req;
     for (const p of paths ?? []) void workspace.openPath(p, preview ? { preview: true } : {});
   });
-  on<number>('app:confirm-quit', async (n) => {
-    const r = await ui.ask({
-      title: tn('You have unsaved changes', 'You have unsaved changes in {n} tabs', n),
-      message: t('Quit anyway and lose them?'),
-      buttons: [
-        { id: 'cancel', label: t('Cancel') },
-        { id: 'quit', label: t('Quit without saving'), danger: true },
-      ],
-    });
-    if (r.button === 'quit') {
-      await settings.flush();
-      void api.ConfirmQuit();
-    }
-  });
+  on('app:confirm-quit', () => void confirmQuit());
   OnFileDrop((x, y, paths) => {
     for (const h of dropHandlers) if (h(x, y, paths)) return;
     for (const p of paths) void workspace.openPath(p);

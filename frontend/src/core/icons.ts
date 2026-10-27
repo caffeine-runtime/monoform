@@ -49,3 +49,4 @@ export { default as Type } from '@lucide/svelte/icons/type';
 export { default as History } from '@lucide/svelte/icons/history';
 export { default as Diff } from '@lucide/svelte/icons/diff';
 export { default as ArrowDownToLine } from '@lucide/svelte/icons/arrow-down-to-line';
+export { default as ExternalLink } from '@lucide/svelte/icons/external-link';
