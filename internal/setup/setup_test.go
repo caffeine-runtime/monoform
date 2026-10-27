@@ -22,7 +22,7 @@ func payload(names ...string) []File {
 	return out
 }
 
-var testAssocs = []Assoc{{Ext: "md", ProgID: "Monoform.md", Description: "Markdown document", Icon: "file-markdown"}, {Ext: "png", ProgID: "Monoform.png", Description: "PNG image", Icon: "file-image"}}
+var testAssocs = []Assoc{{Ext: "md", ProgID: "Monoform.md", Description: "Markdown document", Icon: "file-markdown"}, {Ext: "png", ProgID: "Monoform.png", Description: "PNG image", Icon: "file-image"}, {Ext: "json", ProgID: "Monoform.json", Description: "JSON document", Icon: "file-data"}}
 
 func TestInstallAndUninstall(t *testing.T) {
 	root := t.TempDir()
@@ -55,17 +55,20 @@ func TestInstallAndUninstall(t *testing.T) {
 	if get(`Classes\.png`, "") != "Monoform.png" || get(`Classes\.png`, "Monoform.png_backup") != "Photos.png" {
 		t.Errorf("png default %q backup %q", get(`Classes\.png`, ""), get(`Classes\.png`, "Monoform.png_backup"))
 	}
-	if get(`Classes\Monoform.md\shell\open\command`, "") != `"`+join(dir, Exe)+`" "%1"` {
-		t.Errorf("open command %q", get(`Classes\Monoform.md\shell\open\command`, ""))
+	if get(`Classes\Monoform.json\shell\open\command`, "") != `"`+join(dir, Exe)+`" "%1"` {
+		t.Errorf("open command %q", get(`Classes\Monoform.json\shell\open\command`, ""))
 	}
-	// Each type has its own icon; pictures open in a quick view, Edit opens the editor.
+	// Each type has its own icon; pictures, Markdown, PDFs, media, … open in a
+	// quick view, Edit opens the editor.
 	if get(`Classes\Monoform.md\DefaultIcon`, "") != join(dir, "file-markdown.ico") || get(`Classes\Monoform.png\DefaultIcon`, "") != join(dir, "file-image.ico") {
 		t.Errorf("icons %q %q", get(`Classes\Monoform.md\DefaultIcon`, ""), get(`Classes\Monoform.png\DefaultIcon`, ""))
 	}
-	if get(`Classes\Monoform.png\shell\open\command`, "") != `"`+join(dir, Exe)+`" --peek "%1"` || get(`Classes\Monoform.png\shell\edit\command`, "") != `"`+join(dir, Exe)+`" "%1"` {
-		t.Errorf("png open %q edit %q", get(`Classes\Monoform.png\shell\open\command`, ""), get(`Classes\Monoform.png\shell\edit\command`, ""))
+	for _, ext := range []string{"png", "md"} {
+		if get(`Classes\Monoform.`+ext+`\shell\open\command`, "") != `"`+join(dir, Exe)+`" --peek "%1"` || get(`Classes\Monoform.`+ext+`\shell\edit\command`, "") != `"`+join(dir, Exe)+`" "%1"` {
+			t.Errorf("%s open %q edit %q", ext, get(`Classes\Monoform.`+ext+`\shell\open\command`, ""), get(`Classes\Monoform.`+ext+`\shell\edit\command`, ""))
+		}
 	}
-	if get(`Classes\Monoform.md\shell\edit\command`, "") != "" {
+	if get(`Classes\Monoform.json\shell\edit\command`, "") != "" {
 		t.Error("edit verb on a type that opens in the editor anyway")
 	}
 	if get(`Classes\SystemFileAssociations\.docx\shell\Monoform.Convert\command`, "") != `"`+join(dir, Exe)+`" --convert "%1"` || get(`Classes\SystemFileAssociations\.png\shell\Monoform.Convert`, "") != "Convert with Monoform…" {
@@ -185,5 +188,22 @@ func TestConvertExtsMatchConverter(t *testing.T) {
 	slices.Sort(got)
 	if !slices.Equal(got, want) {
 		t.Errorf("ConvertExts %v, convert.Formats %v", got, want)
+	}
+}
+
+func TestQuickViewTypesAreRegistered(t *testing.T) {
+	known := map[string]bool{}
+	for _, a := range Assocs {
+		known[a.Ext] = true
+	}
+	for ext := range quickView {
+		if !known[ext] {
+			t.Errorf("quick view type %q isn't one of the app's types", ext)
+		}
+	}
+	for _, ext := range []string{"txt", "json", "csv", "xlsx", "zip", "html"} {
+		if QuickView(ext) {
+			t.Errorf("%s opens in quick view; it's opened to be changed", ext)
+		}
 	}
 }

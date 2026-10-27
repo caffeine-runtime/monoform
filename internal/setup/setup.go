@@ -96,8 +96,6 @@ func Icons(assocs []Assoc) []string {
 	return out
 }
 
-// quickView are the types that open in a quick-view window (no session,
-// panels or tools until Edit): pictures, like the system's photo viewer.
 // ConvertExts are the types "Convert with Monoform…" is offered on: those
 // internal/convert converts (a test keeps the lists the same).
 var ConvertExts = []string{"png", "jpg", "jpeg", "gif", "webp", "bmp", "tif", "tiff", "ico", "icns", "heic", "heif", "avif",
@@ -109,7 +107,19 @@ func convertVerb(ext string) string {
 	return `Classes\SystemFileAssociations\.` + ext + `\shell\Monoform.Convert`
 }
 
-var quickView = map[string]bool{"png": true, "jpg": true, "jpeg": true, "gif": true, "webp": true, "bmp": true, "svg": true}
+// quickView are the types that open in a quick-view window (no session,
+// panels or tools until Edit), like the system's photo viewer: files that are
+// mostly looked at — pictures, PDFs, Word documents, Markdown, audio, video
+// and 3D models. Text, data, spreadsheets, archives and web pages open in the
+// editor.
+var quickView = map[string]bool{}
+
+func init() {
+	for _, e := range strings.Fields(`png jpg jpeg gif webp bmp svg pdf docx doc md markdown
+		mp3 wav flac ogg m4a opus mp4 mov webm mkv glb gltf stl step stp obj fbx 3mf ply`) {
+		quickView[e] = true
+	}
+}
 
 // QuickView says files with this extension open in the quick-view window.
 func QuickView(ext string) bool { return quickView[ext] }

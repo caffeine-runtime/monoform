@@ -44,6 +44,7 @@
   import { jobs } from '../../core/jobs.svelte';
   import { basename, dirname, join, stem } from '../../core/paths';
   import { workspace, type Tab } from '../../core/tabs.svelte';
+  import { peek } from '../../core/peek.svelte';
   import { menu, toastError, ui } from '../../core/ui.svelte';
   import { formatShortcut } from '../../core/keys';
   import { num, t, tn } from '../../core/i18n';
@@ -963,16 +964,19 @@
   <button class="btn ghost" title={t('Zoom in ({shortcut})', { shortcut: formatShortcut('Mod+=') })} onclick={() => zoom(1)}>+</button>
   <button class="btn ghost" onclick={() => viewer && (viewer.currentScaleValue = 'page-width')}><Icon icon={ArrowLeftRight} size={14} /> {t('Fit width')}</button>
   <button class="btn ghost" onclick={() => viewer && (viewer.currentScaleValue = 'page-fit')}><Icon icon={Maximize} size={14} /> {t('Fit page')}</button>
-  <span class="sep"></span>
-  {#each tools as tl (tl.id)}
-    <button class="icon-btn" class:on={tool === tl.id} title={tl.label} disabled={tab.readOnly && tl.id !== 'none'} onclick={() => setTool(tl.id)}><Icon icon={tl.icon} /></button>
-  {/each}
-  <button class="icon-btn" class:on={markMode === 'sign' || signOpen} title={t('Sign — draw, type or import your signature and place it on the page')} disabled={tab.readOnly} onclick={startSign}><Icon icon={SignatureIcon} /></button>
-  <button class="icon-btn" class:on={markMode === 'redact'} title={t('Redact — drag black boxes over what must go, then Apply (the content underneath is removed, not just covered)')} disabled={tab.readOnly} onclick={startRedact}><Icon icon={Redact} /></button>
+  <!-- The quick view is for reading: no markup tools (Edit opens the editor). -->
+  {#if !peek.on}
+    <span class="sep"></span>
+    {#each tools as tl (tl.id)}
+      <button class="icon-btn" class:on={tool === tl.id} title={tl.label} disabled={tab.readOnly && tl.id !== 'none'} onclick={() => setTool(tl.id)}><Icon icon={tl.icon} /></button>
+    {/each}
+    <button class="icon-btn" class:on={markMode === 'sign' || signOpen} title={t('Sign — draw, type or import your signature and place it on the page')} disabled={tab.readOnly} onclick={startSign}><Icon icon={SignatureIcon} /></button>
+    <button class="icon-btn" class:on={markMode === 'redact'} title={t('Redact — drag black boxes over what must go, then Apply (the content underneath is removed, not just covered)')} disabled={tab.readOnly} onclick={startRedact}><Icon icon={Redact} /></button>
+  {/if}
   <span class="spacer"></span>
   <button class="icon-btn" class:on={ocrOpen} title={t('Recognise text (OCR) — copy text from scanned pages, or make the PDF searchable')} aria-label={t('Recognise text')} onclick={() => (ocrOpen ? (ocrOpen = false) : openOcr(pages > 1 ? 'page' : 'all'))}><Icon icon={ScanText} /></button>
   <button class="icon-btn" class:on={findOpen} title={t('Find ({shortcut})', { shortcut: formatShortcut('Mod+F') })} onclick={() => (findOpen ? closeFind() : openFind())}><Icon icon={Search} /></button>
-  <button class="icon-btn" title={t('Page operations')} disabled={tab.readOnly} onclick={opsMenu}><Icon icon={Ellipsis} /></button>
+  {#if !peek.on}<button class="icon-btn" title={t('Page operations')} disabled={tab.readOnly} onclick={opsMenu}><Icon icon={Ellipsis} /></button>{/if}
 </div>
 
 {#if tool !== 'none'}

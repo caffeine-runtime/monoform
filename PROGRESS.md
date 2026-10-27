@@ -791,6 +791,15 @@
   tests (`parts.test.ts`: the STEP tree, splitting, bounds, the list and its CSV), self-test `m85`. Self-tests now
   run in a process of their own even when Monoform is already open (they were handed to it and exited with
   success).
+- **Quick view for more than pictures.** PDFs, Word documents (.docx, .doc), Markdown, audio, video and 3D models
+  now open in the quick view too (their open command is `--peek`, with *Edit with Monoform* beside it; the Store
+  package has the same Open/Edit verbs). The quick view is a reader or a player: Markdown shows the rendered note
+  without the outline panel, PDFs have no markup, signing or page tools, audio and video no editing or saving (their
+  editing shortcuts do nothing), and the status bar has no preview toggle (the bar's Edit is the way to the editor).
+  A song gets a 720×420 player window. Text, data, spreadsheets, archives and web pages still open in the editor.
+  Installed copies pick this up with the update (the updater runs the installer, which writes the open commands). Go tests
+  (`internal/setup`, `internal/msix`, `peekSize`), self-test `m86` (audio, video, PDF), `m32peek` checks the
+  Markdown preview.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

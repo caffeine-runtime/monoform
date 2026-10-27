@@ -103,15 +103,23 @@ func TestManifest(t *testing.T) {
 		}
 		uniq[n] = true
 	}
-	// Pictures open in quick view; other types get a Quick peek verb.
-	if !strings.Contains(string(data), `<uap:FileType>.png</uap:FileType>`) || strings.Count(string(data), `Id="peek"`) != len(names)-2 {
-		t.Errorf("verbs: %d peek verbs for %d associations", strings.Count(string(data), `Id="peek"`), len(names))
+	// Pictures, PDFs, media, … open in quick view with an Edit verb; other
+	// types get a Quick peek verb.
+	quick := 0
+	for _, g := range Groups(setup.Assocs) {
+		if g.QuickView {
+			quick++
+		}
+	}
+	peeks, edits := strings.Count(string(data), `Id="peek"`), strings.Count(string(data), `Id="edit"`)
+	if !strings.Contains(string(data), `<uap:FileType>.png</uap:FileType>`) || quick < 10 || edits != quick || peeks != len(names)-quick {
+		t.Errorf("verbs: %d peek and %d edit verbs for %d associations (%d quick view)", peeks, edits, len(names), quick)
 	}
 }
 
 func TestReservedLeftOut(t *testing.T) {
-	g := Groups([]setup.Assoc{{Ext: "ttf", Description: "Font", Icon: "file-text"}, {Ext: "md", Description: "Markdown document", Icon: "file-markdown"}})
-	if len(g) != 1 || g[0].Exts[0] != ".md" || g[0].Name != "markdown-document" || g[0].QuickView {
+	g := Groups([]setup.Assoc{{Ext: "ttf", Description: "Font", Icon: "file-text"}, {Ext: "json", Description: "JSON document", Icon: "file-data"}})
+	if len(g) != 1 || g[0].Exts[0] != ".json" || g[0].Name != "json-document" || g[0].QuickView {
 		t.Errorf("%+v", g)
 	}
 }

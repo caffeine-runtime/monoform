@@ -52,7 +52,7 @@ func main() {
 	switch mode {
 	case "peek":
 		// Quick peek: a small window; "Open in editor" makes it full size.
-		width, height = 960, 680
+		width, height = peekSize(files)
 	case "window":
 		// A tab moved out: a little smaller than the main window, so both fit.
 		width, height = 1100, 720
@@ -129,6 +129,22 @@ func singleInstance(mode string, onLaunch func(options.SecondInstanceData)) *opt
 		return &options.SingleInstanceLock{UniqueId: "dev.monoform.convert", OnSecondInstanceLaunch: onLaunch}
 	}
 	return &options.SingleInstanceLock{UniqueId: "dev.monoform.app", OnSecondInstanceLaunch: onLaunch}
+}
+
+// peekSize is the quick-view window's size: a player's for sound alone (cover,
+// controls and the waveform), otherwise room for a picture or a page.
+func peekSize(files []string) (int, int) {
+	for _, f := range files {
+		switch strings.ToLower(strings.TrimPrefix(filepath.Ext(f), ".")) {
+		case "mp3", "wav", "flac", "ogg", "oga", "m4a", "opus":
+		default:
+			return 960, 680
+		}
+	}
+	if len(files) == 0 {
+		return 960, 680
+	}
+	return 720, 420
 }
 
 // parseAt reads --at=X,Y: where (screen pixels) a window a tab was dragged

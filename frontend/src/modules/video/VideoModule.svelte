@@ -40,6 +40,7 @@
   import Wand from '@lucide/svelte/icons/wand-sparkles';
   import { fileUrl, readFile } from '../../core/backend';
   import { workspace } from '../../core/tabs.svelte';
+  import { peek } from '../../core/peek.svelte';
 
   type Opened = Awaited<ReturnType<typeof api.VideoOpen>>;
 
@@ -71,7 +72,8 @@
   let natural = $state({ w: 0, h: 0 });
 
   const dur = $derived(info?.duration || el?.duration || 0);
-  const editable = $derived(!!info?.editable);
+  // The quick view is a player: Edit opens the editor.
+  const editable = $derived(!!info?.editable && !peek.on);
   // ---- effects ----
   const fx = $derived(edit.fx ?? P.EMPTY);
   /** With effects the video is re-encoded, so cuts are exact instead of snapping to keyframes. */
@@ -345,6 +347,7 @@
   }
 
   function needEditable(): boolean {
+    if (peek.on) return false;
     if (editable) return true;
     ui.toast(!info?.reason ? t('This video can be played but not edited.') : `${info.reason}.`, 'info');
     return false;

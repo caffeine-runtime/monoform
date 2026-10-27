@@ -6,6 +6,7 @@
   import Icon from './Icon.svelte';
   import { X } from '../core/icons';
   import { t } from '../core/i18n';
+  import { peek } from '../core/peek.svelte';
 
   const tab = $derived(workspace.active);
   const typeLabel = $derived(tab ? (tab.status.type ?? modules.get(tab.moduleId)?.name ?? '') : '');
@@ -17,7 +18,9 @@
     {#if tab}
       <span>{typeLabel}</span>
       {#if tab.size != null}<span>{formatBytes(tab.size)}</span>{/if}
-      {#if tab.preview}
+      {#if peek.on}
+        <!-- The quick view's bar has Edit. -->
+      {:else if tab.preview}
         <button class="mode" title={t("Preview mode: the file can't be changed. Click to edit it.")} onclick={() => void workspace.setPreview(tab, false)}>{t('Preview')} · <b>{t('Edit')}</b></button>
       {:else if tab.readOnly}<span>{t('Read-only')}</span>
       {:else if tab.source.kind === 'file'}

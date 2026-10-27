@@ -30,6 +30,7 @@
   import { noteIndex, vaultOf } from './noteIndex.svelte';
   import NotePanel, { type NotePanelView } from './NotePanel.svelte';
   import MdWorker from './mdWorker?worker';
+  import { peek } from '../../core/peek.svelte';
   import './preview.css';
 
   let { tab }: { tab: Tab } = $props();
@@ -45,7 +46,8 @@
   }
 
   const restored = tab.restoredState as { view?: ViewMode; panel?: NotePanelView | '' } | undefined;
-  let view = $state<ViewMode>(restored?.view ?? 'split');
+  // A quick view shows the note as it reads; the editor opens it split.
+  let view = $state<ViewMode>(restored?.view ?? (peek.on ? 'preview' : 'split'));
   let ratio = $state(savedRatio('markdown'));
   let html = $state('');
   let previewEl = $state<HTMLDivElement>();
@@ -58,7 +60,7 @@
   let syncing = false;
 
   // Obsidian-style: outline, backlinks, outgoing links, word counts.
-  const start = restored?.panel ?? savedPanel();
+  const start = restored?.panel ?? (peek.on ? '' : savedPanel());
   let panelOpen = $state(!!start);
   let panelView = $state<NotePanelView>(start || 'outline');
   let headings = $state.raw<OutlineItem[]>([]);
@@ -88,6 +90,7 @@
   // New notes open with the panel as it was last left.
   $effect(() => {
     const v = panelOpen ? panelView : '';
+    if (peek.on) return; // a quick view leaves the editor's choice alone
     try {
       localStorage.setItem(PANEL_KEY, v);
     } catch {

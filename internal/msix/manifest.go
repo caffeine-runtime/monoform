@@ -48,7 +48,7 @@ func PackageVersion(v string) (string, error) {
 type Group struct {
 	Name, DisplayName, Icon string
 	Exts                    []string
-	QuickView               bool // opens in the quick-view window (pictures)
+	QuickView               bool // opens in the quick-view window (pictures, PDFs, media, …)
 }
 
 // Groups are the associations in wails.json order, reserved extensions left out.
@@ -127,11 +127,13 @@ func Manifest(m Meta, assocs []setup.Assoc) ([]byte, error) {
 			w(`              <uap:FileType>%s</uap:FileType>`, e)
 		}
 		w(`            </uap:SupportedFileTypes>`)
-		// Like the setup program: pictures open in the quick-view window,
-		// everything else in the app with Quick peek beside Open.
+		// Like the setup program: files that are mostly looked at open in the
+		// quick-view window with Edit beside Open, everything else in the app
+		// with Quick peek beside Open.
 		w(`            <uap2:SupportedVerbs>`)
 		if g.QuickView {
 			w(`              <uap3:Verb Id="open" Parameters="--peek &quot;%%1&quot;">Open</uap3:Verb>`)
+			w(`              <uap3:Verb Id="edit" Parameters="&quot;%%1&quot;">Edit with %s</uap3:Verb>`, setup.Product)
 		} else {
 			w(`              <uap3:Verb Id="open" Parameters="&quot;%%1&quot;">Open</uap3:Verb>`)
 			w(`              <uap3:Verb Id="peek" Parameters="--peek &quot;%%1&quot;">Quick peek with %s</uap3:Verb>`, setup.Product)

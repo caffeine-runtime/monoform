@@ -2,6 +2,7 @@
 
 - **Parts of 3D models**: a Parts panel beside the view lists a STEP assembly's parts (or a glTF's, OBJ's or FBX's objects, or an STL's separate pieces). Click a part to select it, then **hide** it (H), **show only it** (I), see the rest **through glass** (X) or **zoom to it** (F); **Show all** (Alt+H) brings everything back. Also in the right-click menu.
 - **Parts list**: each part once, with how many there are and its size; copy it into a spreadsheet or export it as CSV.
+- **Quick view for more files**: PDFs, Word documents, Markdown notes, songs, videos and 3D models now open in the quick view, like pictures, when Monoform is their default app. Click **Edit** for the full editor.
 
 ## Downloads
 

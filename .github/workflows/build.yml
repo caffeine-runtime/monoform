@@ -103,6 +103,9 @@ jobs:
           MF_SYSTEM_LANG=fr-FR scripts/selftest.sh m47 "$FX"
           # Quick peek: started with --peek FILE.
           scripts/selftest.sh m32peek "$FX" "" --peek "$FX/diagrams/notes.md"
+          scripts/selftest.sh m86 audio "" --peek "$FX/audio/tone.mp3"
+          scripts/selftest.sh m86 video "" --peek "$FX/video/clip.webm"
+          scripts/selftest.sh m86 pdf "" --peek "$FX/pdf/three.pdf"
           # Convert with Monoform (a file manager's right-click menu): started with --convert FILE….
           scripts/selftest.sh m82 "$FX" "" --convert "$FX/convert/photo.png" "$FX/convert/sales.csv"
           MF_AI_FAKE=1 MF_CACHE="$(mktemp -d)" scripts/selftest.sh m43 "$FX"

@@ -33,6 +33,7 @@
   import { Peaks, drawWave, formatTime, tickStep, PEAK_FRAMES, type View } from './waveform';
   import { Player } from './player';
   import { audioViews, type AudioView } from './views';
+  import { peek } from '../../core/peek.svelte';
 
   type Opened = Awaited<ReturnType<typeof api.AudioOpen>>;
 
@@ -383,6 +384,8 @@
   }
 
   function needEditable(): boolean {
+    // The quick view only plays; Edit opens the editor.
+    if (peek.on) return false;
     if (editable) return true;
     ui.toast(t('{reason}. Editing works with WAV, MP3, FLAC and OGG Vorbis files.', { reason: info?.reason || t('This format can be played but not edited') }), 'info');
     return false;
@@ -675,7 +678,7 @@
   <button class="icon-btn" title="{t('Zoom out')} (-)" onclick={() => zoom(-1)}><Icon icon={ZoomOut} size={15} /></button>
   <button class="icon-btn" title="{t('Zoom in')} (+)" onclick={() => zoom(1)}><Icon icon={ZoomIn} size={15} /></button>
   <button class="btn ghost" title="{t('Zoom to fit')} (0)" onclick={() => zoom(0)}><Icon icon={MoveHorizontal} size={14} /> {t('Fit')}</button>
-  {#if editable}
+  {#if editable && !peek.on}
     <span class="sep"></span>
     <button class="icon-btn" title="{t('Undo')} ({formatShortcut('Mod+Z')})" disabled={!canUndo} onclick={() => edit('undo')}><Icon icon={Undo2} size={15} /></button>
     <button class="icon-btn" title="{t('Redo')} ({formatShortcut('Mod+Shift+Z')})" disabled={!canRedo} onclick={() => edit('redo')}><Icon icon={Redo2} size={15} /></button>

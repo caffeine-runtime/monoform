@@ -114,8 +114,11 @@ Get the latest version from **[Releases](https://github.com/caffeine-runtime/mon
 
 ### Quick view and preview mode
 
-On Windows, **pictures open in a quick view** when Monoform is their default app (just the picture, ← / → for the rest
-of the folder); **Edit**, or *Edit with Monoform* on right-click, opens the full editor. **Preview mode** (status bar:
+On Windows, files you mostly look at **open in a quick view** when Monoform is their default app: pictures (← / → for
+the rest of the folder), PDFs, Word documents and Markdown notes to read, songs and videos to play (a song gets a small
+player window), 3D models to turn around and look inside. **Edit**, or *Edit with Monoform* on right-click, opens the
+full editor; text, data, spreadsheets and archives open in the editor straight away. Any file can be quick-viewed with
+right-click → *Quick peek with Monoform*. **Preview mode** (status bar:
 *Preview · Edit*, `Ctrl+Alt+E`, or *Settings → Open files in preview mode*) shows any file read-only until you choose
 to edit it.
 

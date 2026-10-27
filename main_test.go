@@ -46,3 +46,14 @@ func TestParseNewWindow(t *testing.T) {
 		t.Error("only a moved-out window and quick peeks run without the single-instance lock")
 	}
 }
+
+func TestPeekSize(t *testing.T) {
+	if w, h := peekSize([]string{"/m/song.MP3"}); w != 720 || h != 420 {
+		t.Errorf("audio: %d×%d", w, h)
+	}
+	for _, files := range [][]string{{"/m/a.png"}, {"/m/song.mp3", "/m/clip.mp4"}, nil} {
+		if w, h := peekSize(files); w != 960 || h != 680 {
+			t.Errorf("%v: %d×%d", files, w, h)
+		}
+	}
+}

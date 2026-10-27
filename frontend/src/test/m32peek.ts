@@ -7,6 +7,7 @@ import { join } from '../core/paths';
 import { peek } from '../core/peek.svelte';
 import { settings } from '../core/settings.svelte';
 import { workspace } from '../core/tabs.svelte';
+import { markdownViews } from '../modules/markdown/views';
 import { assert, assertEq, log, waitFor } from './harness';
 
 export default async function m32peek(dir: string) {
@@ -20,6 +21,14 @@ export default async function m32peek(dir: string) {
   const bar = await waitFor(() => document.querySelector('.peekbar'), 'peek bar');
   assert(bar.textContent?.includes('notes.md'), 'file name shown');
   assert(document.querySelector('.pathbar')?.textContent?.includes('diagrams'), 'path shown');
+  // A note reads as it looks: the rendered preview, no side panel; the bar's
+  // Edit is the only way to the editor (no preview toggle in the status bar).
+  await waitFor(() => markdownViews.get(t.id), 'Markdown view');
+  log(`markdown view ${markdownViews.get(t.id)!.get()}`);
+  assertEq(markdownViews.get(t.id)!.get(), 'preview', 'Markdown shows the preview');
+  await waitFor(() => document.querySelector('.preview .md h1'), 'rendered note');
+  assert(!document.querySelector('.notepanel'), 'no outline panel');
+  assert(!document.querySelector('.status .mode'), 'no preview toggle in the status bar');
   log(`peek window ${window.innerWidth}×${window.innerHeight}`);
   assert(window.innerWidth <= 1000, `small window (${window.innerWidth})`);
   const sessionBefore = JSON.stringify(settings.value.session);

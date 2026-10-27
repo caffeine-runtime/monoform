@@ -120,7 +120,8 @@ A nightly is a pre-release with a version `x.y.z-nightly.YYYYMMDD` (the next ver
 published like any release (option A or C with that version) from the branch being tried out. Only copies whose
 users chose nightly builds are offered it; everyone else, and the README's download link (`releases/latest`), keeps
 the last normal release. Nightlies sort after each other by date and before their `x.y.z` release, so the release
-replaces them. Betas and release candidates (`-beta.N`, `-rc.N`) are never offered, nightly users included.
+replaces them. A second nightly on the same day adds a number: `x.y.z-nightly.YYYYMMDD.2` (it sorts after the
+first). Betas and release candidates (`-beta.N`, `-rc.N`) are never offered, nightly users included.
 
 ## Microsoft Store
 

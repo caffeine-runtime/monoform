@@ -289,7 +289,8 @@ func TestLatestWithNightlies(t *testing.T) {
 			t.Errorf("IsNightly(%q) = %v", v, !want)
 		}
 	}
-	if !Newer("1.5.0-nightly.20261026", "1.5.0-nightly.20261025") || !Newer("1.5.0", "1.5.0-nightly.20261026") || !Newer("1.5.0-nightly.1", "1.4.2") {
+	if !Newer("1.5.0-nightly.20261026", "1.5.0-nightly.20261025") || !Newer("1.5.0", "1.5.0-nightly.20261026") || !Newer("1.5.0-nightly.1", "1.4.2") ||
+		!Newer("1.5.0-nightly.20261026.2", "1.5.0-nightly.20261026") || !IsNightly("1.5.0-nightly.20261026.2") {
 		t.Error("nightly ordering")
 	}
 }
