@@ -1,7 +1,7 @@
 ## What's new
 
-- **Quitting with unsaved work asks to save**: the question names the files and where they are, **Save all and quit** is the main button (Enter), and **Quit without saving** stands apart. If a file isn't saved, Monoform stays open on it. Restarting for an update asks the same way.
-- **A simpler update popup**: the new version, a note that a restart is needed (your tabs come back), and a **What's new** link to the release page.
+- **Parts of 3D models**: a Parts panel beside the view lists a STEP assembly's parts (or a glTF's, OBJ's or FBX's objects, or an STL's separate pieces). Click a part to select it, then **hide** it (H), **show only it** (I), see the rest **through glass** (X) or **zoom to it** (F); **Show all** (Alt+H) brings everything back. Also in the right-click menu.
+- **Parts list**: each part once, with how many there are and its size; copy it into a spreadsheet or export it as CSV.
 
 ## Downloads
 
