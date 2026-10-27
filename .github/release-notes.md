@@ -1,6 +1,7 @@
 ## What's new
 
-- **STEP models from SolidWorks open properly**: some assemblies (a radiator fan, for one) showed up as a large flat square with the model a dot in its middle. The square came from zero-width faces SolidWorks leaves in some parts; they are now skipped, and the view frames the real model.
+- **Quitting with unsaved work asks to save**: the question names the files and where they are, **Save all and quit** is the main button (Enter), and **Quit without saving** stands apart. If a file isn't saved, Monoform stays open on it. Restarting for an update asks the same way.
+- **A simpler update popup**: the new version, a note that a restart is needed (your tabs come back), and a **What's new** link to the release page.
 
 ## Downloads
 
