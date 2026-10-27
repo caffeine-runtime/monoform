@@ -26,7 +26,6 @@
   "The new language is used from the next start (some tabs have unsaved changes).": "Nowy język zostanie użyty przy następnym uruchomieniu (niektóre karty mają niezapisane zmiany).",
   "Cancel": "Anuluj",
   "Quit without saving": "Zamknij bez zapisywania",
-  "Save changes to {name} before quitting?": "Zapisać zmiany w {name} przed zamknięciem?",
   "Save changes before quitting?": "Zapisać zmiany przed zamknięciem?",
   "{n} files have changes that aren’t saved:": {
     "one": "{n} plik ma niezapisane zmiany:",
@@ -65,7 +64,6 @@
   "Couldn’t install the update: {error}": "Nie udało się zainstalować aktualizacji: {error}",
   "Monoform restarts to install the new version.": "Monoform uruchomi się ponownie, aby zainstalować nową wersję.",
   "Save and restart": "Zapisz i uruchom ponownie",
-  "Save changes to {name} before restarting?": "Zapisać zmiany w {name} przed ponownym uruchomieniem?",
   "Save changes before restarting?": "Zapisać zmiany przed ponownym uruchomieniem?",
   "Save all and restart": "Zapisz wszystko i uruchom ponownie",
   "Not restarting: {name} isn’t saved.": "Bez ponownego uruchomienia: nie zapisano {name}.",

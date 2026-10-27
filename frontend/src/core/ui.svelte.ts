@@ -30,6 +30,14 @@ export interface DialogItem {
   tip?: string;
 }
 
+export interface DialogFile {
+  name: string;
+  /** Its folder, or e.g. "Not saved yet". */
+  where?: string;
+  /** Tooltip (the full path). */
+  tip?: string;
+}
+
 export interface DialogRequest {
   id: number;
   title: string;
@@ -39,6 +47,8 @@ export interface DialogRequest {
   input?: { value: string; placeholder?: string; selectStem?: boolean };
   /** Optional list shown under the message (e.g. file names). */
   details?: string[];
+  /** The one file the question is about, as a card under the title: its icon, name and folder. */
+  file?: DialogFile;
   /** Rows to click: the dialog resolves with button "item" and the row's id as the value. */
   items?: DialogItem[];
   /** A small line above the buttons. */

@@ -26,7 +26,6 @@
   "The new language is used from the next start (some tabs have unsaved changes).": "Die neue Sprache wird ab dem nächsten Start verwendet (einige Tabs haben ungespeicherte Änderungen).",
   "Cancel": "Abbrechen",
   "Quit without saving": "Ohne Speichern beenden",
-  "Save changes to {name} before quitting?": "Änderungen an {name} vor dem Beenden speichern?",
   "Save changes before quitting?": "Änderungen vor dem Beenden speichern?",
   "{n} files have changes that aren’t saved:": {
     "one": "{n} Datei hat ungespeicherte Änderungen:",
@@ -63,7 +62,6 @@
   "Couldn’t install the update: {error}": "Das Update konnte nicht installiert werden: {error}",
   "Monoform restarts to install the new version.": "Monoform startet neu, um die neue Version zu installieren.",
   "Save and restart": "Speichern und neu starten",
-  "Save changes to {name} before restarting?": "Änderungen an {name} vor dem Neustart speichern?",
   "Save changes before restarting?": "Änderungen vor dem Neustart speichern?",
   "Save all and restart": "Alle speichern und neu starten",
   "Not restarting: {name} isn’t saved.": "Kein Neustart: {name} ist nicht gespeichert.",

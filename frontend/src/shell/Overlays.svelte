@@ -6,6 +6,7 @@
   import { menu, ui } from '../core/ui.svelte';
   import { formatShortcut } from '../core/keys';
   import { t } from '../core/i18n';
+  import { iconFor, kindOf } from '../core/fileicons';
 
   let inputValue = $state('');
   let inputEl = $state<HTMLInputElement>();
@@ -59,6 +60,15 @@
   <div class="overlay" onclick={() => d.resolve({ button: 'cancel' })} onkeydown={dialogKey}>
     <div class="dialog" bind:this={dialogEl} role="dialog" aria-modal="true" aria-label={d.title} tabindex="-1" onclick={(e) => e.stopPropagation()}>
       <h2>{d.title}</h2>
+      {#if d.file}
+        <div class="file" title={d.file.tip}>
+          <span class="ficon"><Icon icon={iconFor(d.file.name, kindOf(d.file.name))} size={20} /></span>
+          <span class="ftext">
+            <span class="fname">{d.file.name}</span>
+            {#if d.file.where}<span class="fwhere">{d.file.where}</span>{/if}
+          </span>
+        </div>
+      {/if}
       {#if d.message}<p class="msg">{d.message}</p>{/if}
       {#if d.details?.length}
         <ul class="details">
@@ -142,6 +152,41 @@
   .dialog h2 {
     margin: 0 0 8px;
     font-size: calc(18px * var(--ui-scale));
+  }
+  .file {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 0 14px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    background: var(--bg);
+  }
+  .file .ficon {
+    display: inline-flex;
+    flex: none;
+    color: var(--accent);
+  }
+  .file .ftext {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .file .fname,
+  .file .fwhere {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .file .fname {
+    font-weight: 600;
+    color: var(--text);
+  }
+  .file .fwhere {
+    color: var(--text-muted);
+    font-size: var(--fs-small);
   }
   .msg {
     margin: 0 0 14px;

@@ -95,8 +95,11 @@ export default async function m84(dir: string) {
 
     // One left: named in the question; Save and quit puts it where chosen, then quits.
     d = await closeWindow();
-    assertEq(d.title, `Save changes to ${fresh.title} before quitting?`, d.title);
+    assertEq(d.title, 'Save changes before quitting?', d.title);
     assert(!d.items?.length, 'no list for one file');
+    const card = await waitFor(() => document.querySelector('.dialog .file'), 'the file on a card');
+    assertEq(card.querySelector('.fname')?.textContent, fresh.title, 'named on its card');
+    assertEq(card.querySelector('.fwhere')?.textContent, 'Not saved yet', 'a new document says so');
     const one = await button('.buttons .main button.primary');
     assertEq(one.textContent, 'Save and quit', 'Save and quit');
     where = fnew;

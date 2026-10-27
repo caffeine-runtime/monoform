@@ -800,6 +800,14 @@
   Installed copies pick this up with the update (the updater runs the installer, which writes the open commands). Go tests
   (`internal/setup`, `internal/msix`, `peekSize`), self-test `m86` (audio, video, PDF), `m32peek` checks the
   Markdown preview.
+- **The sidebar keeps the name "Monoform".** It used to disappear below 250 px (× the interface size, so on a
+  computer with a larger interface it was gone at the default width) and was cut off just above it ("Monoforn").
+  Now, when space runs short, *Open folder* and then *Find in folder* move from the header into the ☰ menu (at its
+  top; shortcuts unchanged), and only a sidebar near its narrowest shows just the logo mark. Self-test `m87`
+  (widths 180–400 px at 100/125/150 %: the name is never cut off, buttons fold before it, the menu leads with them).
+- **"Save your changes?" shows the file on a card**: its icon, the name in bold and its folder ("Not saved yet" for
+  a new document) under a short question, instead of the name inside the title's sentence. Also when quitting or
+  restarting with one unsaved file. Self-tests `m48`, `m84`, `m49` updated.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

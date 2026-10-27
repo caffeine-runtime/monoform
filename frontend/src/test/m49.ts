@@ -55,7 +55,9 @@ export default async function m49(dir: string) {
   d.resolve({ button: 'go' });
   await waitFor(() => (updates.downloaded ? true : null), 'downloaded', 10000);
   const save = await dialog('asked to save before restarting');
-  assertEq(save.title, 'Save changes to index.md before restarting?', save.title);
+  assertEq(save.title, 'Save changes before restarting?', save.title);
+  assertEq(save.file?.name, 'index.md', 'the file named on its card');
+  assertEq(save.file?.where, join(dir, 'notes'), 'with its folder');
   assertEq(save.buttons.find((b) => b.primary)?.label, 'Save and restart', 'saving is the main button');
   save.resolve({ button: 'cancel' });
   await sleep(50);

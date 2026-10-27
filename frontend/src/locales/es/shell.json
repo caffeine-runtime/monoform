@@ -191,7 +191,7 @@
   "{name} has unsaved changes. Preview mode shows the file as it is on disk.": "{name} tiene cambios sin guardar. El modo de vista previa muestra el archivo tal como está en el disco.",
   "Discard changes": "Descartar cambios",
   "Untitled-{n}": "Sin título-{n}",
-  "Save changes to {name}?": "¿Guardar los cambios en {name}?",
+  "Save your changes?": "¿Guardar los cambios?",
   "Your changes will be lost if you don’t save them.": "Si no los guardas, perderás los cambios.",
   "Don’t save": "No guardar",
   "This tab has nothing to save.": "Esta pestaña no tiene nada que guardar.",

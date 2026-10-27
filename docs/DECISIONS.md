@@ -709,7 +709,15 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   version* in the update popup: a choice that loses something isn't next to the default. The old question only
   offered to lose the changes or cancel, and with no main button Enter pressed the last one — *Quit without
   saving*. Saving goes tab by tab; a new document asks where, and if one isn't saved Monoform stays open on it.
-  Restarting for an update asks the same way (*Save all and restart*). One file: its name is in the question.
+  Restarting for an update asks the same way (*Save all and restart*). One file (closing a tab, or the only unsaved
+  one): a short question ("Save your changes?") and the file on a card under it — its type's icon, the name in bold,
+  its folder below (`DialogRequest.file`). A name inside the title's sentence, in the same font and size, didn't
+  stand out, and a long name made the title wrap.
+- **The sidebar header keeps the name** (`Sidebar.svelte`, `fit`): when the name and the four buttons don't fit,
+  *Open folder* and then *Find in folder* move to the top of the ☰ menu (their shortcuts stay); only when the name,
+  ☰ and Hide sidebar don't fit either does it show just the logo mark. It is decided by measuring (the title's
+  content against its box, on resize, font load and interface size), not by a fixed width: a 250 px cut-off hid the
+  name on some computers (larger interface size) and clipped it just above ("Monoforn").
 - **The update popup doesn't show the release notes**: the version, one sentence on what happens (it restarts, the
   tabs come back), the current version and download size, and *What's new* as a link to the release page. Most
   people don't read change lists in a popup; the notes (written for GitHub, with the downloads table and install

@@ -26,7 +26,6 @@
   "The new language is used from the next start (some tabs have unsaved changes).": "La nouvelle langue sera utilisée au prochain démarrage (certains onglets ont des modifications non enregistrées).",
   "Cancel": "Annuler",
   "Quit without saving": "Quitter sans enregistrer",
-  "Save changes to {name} before quitting?": "Enregistrer les modifications apportées à {name} avant de quitter ?",
   "Save changes before quitting?": "Enregistrer les modifications avant de quitter ?",
   "{n} files have changes that aren’t saved:": {
     "one": "{n} fichier a des modifications non enregistrées :",
@@ -63,7 +62,6 @@
   "Couldn’t install the update: {error}": "Impossible d’installer la mise à jour : {error}",
   "Monoform restarts to install the new version.": "Monoform redémarre pour installer la nouvelle version.",
   "Save and restart": "Enregistrer et redémarrer",
-  "Save changes to {name} before restarting?": "Enregistrer les modifications apportées à {name} avant de redémarrer ?",
   "Save changes before restarting?": "Enregistrer les modifications avant de redémarrer ?",
   "Save all and restart": "Tout enregistrer et redémarrer",
   "Not restarting: {name} isn’t saved.": "Pas de redémarrage : {name} n’est pas enregistré.",

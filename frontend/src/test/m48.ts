@@ -91,7 +91,9 @@ export default async function m48(dir: string) {
     const lastTemp = last.filePath!;
     const closing = workspace.close(last);
     const d = await waitFor(() => ui.dialog, 'asked before closing');
-    assert(d.title.includes('Pasted text.txt'), d.title);
+    assertEq(d.title, 'Save your changes?', d.title);
+    assertEq(d.file?.name, 'Pasted text.txt', 'the paste named on its card');
+    assertEq(d.file?.where, 'Not saved yet', 'not saved anywhere yet');
     d.resolve({ button: 'discard' });
     assert(await closing, 'closed');
     await sleep(100);

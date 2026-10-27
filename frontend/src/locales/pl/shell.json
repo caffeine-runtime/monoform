@@ -201,7 +201,7 @@
   "{name} has unsaved changes. Preview mode shows the file as it is on disk.": "{name} ma niezapisane zmiany. Tryb podglądu pokazuje plik w takiej postaci, w jakiej jest na dysku.",
   "Discard changes": "Odrzuć zmiany",
   "Untitled-{n}": "Bez tytułu-{n}",
-  "Save changes to {name}?": "Zapisać zmiany w {name}?",
+  "Save your changes?": "Zapisać zmiany?",
   "Your changes will be lost if you don’t save them.": "Jeśli ich nie zapiszesz, zmiany zostaną utracone.",
   "Don’t save": "Nie zapisuj",
   "This tab has nothing to save.": "Ta karta nie ma nic do zapisania.",

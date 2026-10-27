@@ -19,9 +19,35 @@
   import { newFileOfKind } from '../core/newfile';
   import { t } from '../core/i18n';
   import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
+  import { tick } from 'svelte';
 
-  // A narrow sidebar shows only the logo mark, so the buttons always fit.
-  const compact = $derived(settings.value.sidebarWidth < 250 * (settings.value.uiScale || 1));
+  // The header keeps the name: when it doesn't fit, Open folder and then Find
+  // in folder move into the menu (their shortcuts still work); only a sidebar
+  // near its narrowest shows just the logo mark. Decided by what fits, so it
+  // holds at any interface size and font.
+  let fold = $state(0); // 1: no Open folder button, 2: no Find either, 3: no name
+  let head = $state<HTMLElement>();
+  let titleEl = $state<HTMLElement>();
+  let fitSeq = 0;
+  async function fit() {
+    const seq = ++fitSeq;
+    for (let f = 0; f <= 3; f++) {
+      fold = f;
+      await tick();
+      if (seq !== fitSeq || !titleEl || titleEl.scrollWidth <= titleEl.clientWidth) return;
+    }
+  }
+  $effect(() => {
+    if (!head) return;
+    const ro = new ResizeObserver(() => void fit());
+    ro.observe(head);
+    void document.fonts?.ready.then(fit);
+    return () => ro.disconnect();
+  });
+  $effect(() => {
+    void settings.value.uiScale;
+    void fit();
+  });
   let pinnedOpen = $state(true);
   let recentsOpen = $state(true);
 
@@ -32,7 +58,13 @@
 
   function appMenu(e: MouseEvent) {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    menu.show({ clientX: r.left, clientY: r.bottom + 4 }, appMenuItems());
+    // Header buttons that didn't fit come first.
+    const folded = (fold >= 2 ? ['search.inFolder', 'file.openFolder'] : fold >= 1 ? ['file.openFolder'] : []).flatMap((id): MenuItem[] => {
+      const c = commands.get(id);
+      const sc = commands.shortcutOf(id);
+      return c ? [{ label: c.title, shortcut: sc ? formatShortcut(sc) : undefined, run: () => commands.execute(id) }] : [];
+    });
+    menu.show({ clientX: r.left, clientY: r.bottom + 4 }, folded.length ? [...folded, { separator: true }, ...appMenuItems()] : appMenuItems());
   }
 
   function listMenu(e: MouseEvent, path: string, recent: boolean) {
@@ -72,15 +104,19 @@
 </script>
 
 <aside class="sidebar" style:width="{settings.value.sidebarWidth}px">
-  <header class="head" class:mac={boot.platform === 'darwin'}>
-    <h1 class="title" title={compact ? 'Monoform' : undefined}><span class="mark" aria-hidden="true">{@html logoMark}</span>{#if !compact}<span class="word">Monoform</span>{/if}</h1>
+  <header class="head" class:mac={boot.platform === 'darwin'} bind:this={head}>
+    <h1 class="title" bind:this={titleEl} title={fold >= 3 ? 'Monoform' : undefined}><span class="mark" aria-hidden="true">{@html logoMark}</span>{#if fold < 3}<span class="word">Monoform</span>{/if}</h1>
     <div class="actions">
-      <button class="icon-btn" class:on={sidebar.mode === 'search'} title={t('Find in folder ({shortcut})', { shortcut: formatShortcut('Mod+Shift+F') })} onclick={() => commands.execute('search.inFolder')}>
-        <Icon icon={Search} />
-      </button>
-      <button class="icon-btn" title={t('Open folder ({shortcut})', { shortcut: formatShortcut('Mod+Shift+O') })} onclick={() => commands.execute('file.openFolder')}>
-        <Icon icon={FolderOpen} />
-      </button>
+      {#if fold < 2}
+        <button class="icon-btn" class:on={sidebar.mode === 'search'} title={t('Find in folder ({shortcut})', { shortcut: formatShortcut('Mod+Shift+F') })} onclick={() => commands.execute('search.inFolder')}>
+          <Icon icon={Search} />
+        </button>
+      {/if}
+      {#if fold < 1}
+        <button class="icon-btn" title={t('Open folder ({shortcut})', { shortcut: formatShortcut('Mod+Shift+O') })} onclick={() => commands.execute('file.openFolder')}>
+          <Icon icon={FolderOpen} />
+        </button>
+      {/if}
       <button class="icon-btn" title={t('Menu')} onclick={appMenu}><Icon icon={Menu} /></button>
       <button class="icon-btn" title={t('Hide sidebar ({shortcut})', { shortcut: formatShortcut('Mod+B') })} onclick={() => commands.execute('view.toggleSidebar')}><Icon icon={PanelLeftClose} /></button>
     </div>

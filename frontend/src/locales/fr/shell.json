@@ -191,7 +191,7 @@
   "{name} has unsaved changes. Preview mode shows the file as it is on disk.": "{name} contient des modifications non enregistrées. Le mode aperçu affiche le fichier tel qu’il est sur le disque.",
   "Discard changes": "Ignorer les modifications",
   "Untitled-{n}": "Sans titre-{n}",
-  "Save changes to {name}?": "Enregistrer les modifications apportées à {name} ?",
+  "Save your changes?": "Enregistrer les modifications ?",
   "Your changes will be lost if you don’t save them.": "Vos modifications seront perdues si vous ne les enregistrez pas.",
   "Don’t save": "Ne pas enregistrer",
   "This tab has nothing to save.": "Cet onglet n’a rien à enregistrer.",

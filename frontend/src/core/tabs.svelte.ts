@@ -5,7 +5,7 @@ import { api, errorMessage, fileUrl, readFile, saveFile, endpoint, type Body, ty
 import { modules } from './modules';
 import { basename, dirname, extname, join } from './paths';
 import { settings } from './settings.svelte';
-import { ui, toastError, type MenuItem } from './ui.svelte';
+import { ui, toastError, type DialogFile, type MenuItem } from './ui.svelte';
 import { t } from './i18n';
 import type { Accepts, Transfer } from './transfer.svelte';
 
@@ -424,7 +424,8 @@ class Workspace {
     if (tab.dirty && !opts.force) {
       this.activate(tab);
       const r = await ui.ask({
-        title: t('Save changes to {name}?', { name: tab.title }),
+        title: t('Save your changes?'),
+        file: fileCard(tab),
         message: t('Your changes will be lost if you don’t save them.'),
         buttons: [
           { id: 'discard', label: t('Don’t save'), danger: true, aside: true },
@@ -643,3 +644,10 @@ class Workspace {
 }
 
 export const workspace = new Workspace();
+
+/** A tab as the file card of a "save your changes?" question: its name and folder ("Not saved yet" for a new document). */
+export function fileCard(tab: Tab): DialogFile {
+  const path = tab.filePath ?? tab.path;
+  const fresh = !!tab.scratch || tab.source.kind === 'untitled';
+  return { name: tab.title, where: fresh ? t('Not saved yet') : path ? dirname(path) : undefined, tip: fresh ? undefined : path };
+}

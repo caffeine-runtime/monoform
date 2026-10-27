@@ -191,7 +191,7 @@
   "{name} has unsaved changes. Preview mode shows the file as it is on disk.": "{name} hat ungespeicherte Änderungen. Der Vorschaumodus zeigt die Datei so, wie sie auf dem Datenträger ist.",
   "Discard changes": "Änderungen verwerfen",
   "Untitled-{n}": "Unbenannt-{n}",
-  "Save changes to {name}?": "Änderungen an {name} speichern?",
+  "Save your changes?": "Änderungen speichern?",
   "Your changes will be lost if you don’t save them.": "Ihre Änderungen gehen verloren, wenn Sie sie nicht speichern.",
   "Don’t save": "Nicht speichern",
   "This tab has nothing to save.": "Dieser Tab enthält nichts zum Speichern.",

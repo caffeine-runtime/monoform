@@ -6,7 +6,7 @@ import { api } from './backend';
 import { t, tn } from './i18n';
 import { basename, dirname } from './paths';
 import { settings } from './settings.svelte';
-import { workspace, type Tab } from './tabs.svelte';
+import { fileCard, workspace, type Tab } from './tabs.svelte';
 import { ui, type DialogItem } from './ui.svelte';
 
 /** A dialog row per tab: its name and the folder it is in ("Not saved yet" for a new document). */
@@ -52,7 +52,8 @@ export async function confirmQuit(quit: () => unknown = () => api.ConfirmQuit())
   if (dirty.length) {
     const one = dirty.length === 1 ? dirty[0] : null;
     const r = await ui.ask({
-      title: one ? t('Save changes to {name} before quitting?', { name: one.title }) : t('Save changes before quitting?'),
+      title: t('Save changes before quitting?'),
+      file: one ? fileCard(one) : undefined,
       message: one ? t('Your changes will be lost if you don’t save them.') : tn('{n} file has changes that aren’t saved:', '{n} files have changes that aren’t saved:', dirty.length),
       items: one ? undefined : unsavedItems(dirty),
       buttons: [
@@ -74,7 +75,8 @@ export async function saveBeforeRestart(): Promise<boolean> {
   if (!dirty.length) return true;
   const one = dirty.length === 1 ? dirty[0] : null;
   const r = await ui.ask({
-    title: one ? t('Save changes to {name} before restarting?', { name: one.title }) : t('Save changes before restarting?'),
+    title: t('Save changes before restarting?'),
+    file: one ? fileCard(one) : undefined,
     message: one ? t('Monoform restarts to install the new version.') : tn('{n} file has changes that aren’t saved:', '{n} files have changes that aren’t saved:', dirty.length),
     items: one ? undefined : unsavedItems(dirty),
     footnote: one ? undefined : t('Monoform restarts to install the new version.'),
