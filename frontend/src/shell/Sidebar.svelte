@@ -1,3 +1,8 @@
+<script lang="ts" module>
+  // The sidebar slides in and out when shown or hidden, not when the window opens.
+  let started = false;
+</script>
+
 <script lang="ts">
   import logoMark from '../../../build/icon/logo-mark.svg?raw';
   import { appMenuItems } from '../core/appMenu';
@@ -148,8 +153,11 @@
   /** Showing and hiding the whole sidebar: its width grows from or shrinks to nothing. */
   function slide(node: HTMLElement) {
     const w = node.getBoundingClientRect().width;
-    return { duration: ms(240), easing: cubicOut, css: (t: number) => `width: ${t * w}px` };
+    return { duration: started ? ms(240) : 0, easing: cubicOut, css: (t: number) => `width: ${t * w}px` };
   }
+  $effect(() => {
+    requestAnimationFrame(() => (started = true));
+  });
 
   // The strip's labels: beside the icon, at once when one was just shown
   // (so moving down the strip glides from label to label), else after a beat.
