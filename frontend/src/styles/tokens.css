@@ -94,6 +94,8 @@
   --syn-punct: #a3a097;
   --syn-heading: #f0a383;
   --syn-link: #9cc0d8;
+  --syn-md-strong: #ec7b72;
+  --syn-md-emphasis: #c7b7e0;
 }
 :root[data-theme='light'] {
   --syn-keyword: #b5502c;
@@ -107,4 +109,6 @@
   --syn-punct: #6f6b62;
   --syn-heading: #a8502f;
   --syn-link: #2f6c8f;
+  --syn-md-strong: #c23a30;
+  --syn-md-emphasis: #7a4fb0;
 }

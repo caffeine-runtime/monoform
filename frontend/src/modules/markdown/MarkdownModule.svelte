@@ -9,7 +9,7 @@
   import { settings } from '../../core/settings.svelte';
   import { fitBar, isNarrow } from '../../core/fit';
   import { onMount, untrack } from 'svelte';
-  import { markdown } from '@codemirror/lang-markdown';
+  import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
   import { languages } from '@codemirror/language-data';
   import { EditorView } from '@codemirror/view';
   import { EditorState } from '@codemirror/state';
@@ -23,6 +23,7 @@
   import { t } from '../../core/i18n';
   import { countMarkdown, formatCounts, headingAt, type Counts, type OutlineItem } from '../../core/textStats';
   import TextEditor from '../text/TextEditor.svelte';
+  import { mdMarkStyles } from '../text/mdMarks';
   import type { TextController } from '../text/controller';
   import { assetHandlers, noteAccepts } from './assets';
   import { markdownViews, type ViewMode } from './views';
@@ -162,7 +163,7 @@
 
   const options = {
     minimap: false, // a preview sits beside the source
-    language: markdown({ codeLanguages: languages }),
+    language: markdown({ base: markdownLanguage, codeLanguages: languages, extensions: mdMarkStyles }),
     extensions: [assetHandlers(tab), linkClicks, watchSelection, EditorState.languageData.of(() => [{ autocomplete: completeNotes }])],
     onDocChanged: () => schedule(),
     onLoaded: () => render(),

@@ -18,8 +18,15 @@
   import { newFolderIn, copyText } from './treeActions';
   import { newFileOfKind } from '../core/newfile';
   import { t } from '../core/i18n';
+  import { ms } from '../core/motion';
+  import { FULL_MIN, RAIL, sidebarDrag, type SidebarMode } from '../core/sidebarDrag';
   import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
-  import { tick } from 'svelte';
+  import PanelLeftOpen from '@lucide/svelte/icons/panel-left-open';
+  import FolderTree from '@lucide/svelte/icons/folder-tree';
+  import Cog from '@lucide/svelte/icons/settings';
+  import { tick, type Component } from 'svelte';
+  import { fade } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
 
   // The header keeps the name: when it doesn't fit, Open folder and then Find
   // in folder move into the menu (their shortcuts still work); only a sidebar
@@ -64,7 +71,9 @@
       const sc = commands.shortcutOf(id);
       return c ? [{ label: c.title, shortcut: sc ? formatShortcut(sc) : undefined, run: () => commands.execute(id) }] : [];
     });
-    menu.show({ clientX: r.left, clientY: r.bottom + 4 }, folded.length ? [...folded, { separator: true }, ...appMenuItems()] : appMenuItems());
+    // From the icon strip the menu opens beside the button, not under it.
+    const at = layer === 'compact' ? { clientX: r.right + 6, clientY: r.top } : { clientX: r.left, clientY: r.bottom + 4 };
+    menu.show(at, folded.length && layer !== 'compact' ? [...folded, { separator: true }, ...appMenuItems()] : appMenuItems());
   }
 
   function listMenu(e: MouseEvent, path: string, recent: boolean) {
@@ -77,139 +86,299 @@
     menu.show(e, items);
   }
 
-  let resizing = false;
+  // Full, the icon strip (settings.sidebarCompact) or, while its edge is
+  // dragged past the strip, about to hide. Width changes glide; a drag
+  // follows the pointer exactly until it snaps to the strip or away.
+  const scale = $derived(settings.value.uiScale || 1);
+  const fullW = $derived(Math.max(settings.value.sidebarWidth, Math.round(FULL_MIN * scale)));
+  const railW = $derived(Math.round(RAIL * scale));
+  let live = $state<SidebarMode | null>(null);
+  let snapping = $state(false);
+  let snapTimer: ReturnType<typeof setTimeout> | undefined;
+  let widthBefore = 0;
+  const mode = $derived<SidebarMode>(live ?? (settings.value.sidebarCompact ? 'compact' : 'full'));
+  // What's drawn: while it hides, what it was.
+  const layer = $derived(mode === 'hidden' ? (settings.value.sidebarCompact ? 'compact' : 'full') : mode);
+  const width = $derived(mode === 'full' ? fullW : mode === 'compact' ? railW : 0);
+
   function startResize(e: PointerEvent) {
-    resizing = true;
+    if (e.button !== 0) return;
+    live = settings.value.sidebarCompact ? 'compact' : 'full';
+    widthBefore = settings.value.sidebarWidth;
     try {
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
     } catch {
       /* not an active pointer (a synthetic event): the moves still arrive here */
     }
+    document.documentElement.classList.add('mf-col-resizing');
+    e.preventDefault();
   }
   function moveResize(e: PointerEvent) {
-    if (!resizing) return;
-    // Dragged well past the narrowest width: hide the sidebar (the tab bar's button brings it back).
-    if (e.clientX < 110 * (settings.value.uiScale || 1)) {
-      resizing = false;
-      settings.update((s) => (s.sidebarVisible = false));
-      return;
+    if (!live) return;
+    const r = sidebarDrag(e.clientX, scale, live);
+    if (r.mode !== live) {
+      live = r.mode;
+      snapping = true;
+      clearTimeout(snapTimer);
+      snapTimer = setTimeout(() => (snapping = false), ms(260));
     }
-    settings.value.sidebarWidth = Math.max(180, Math.min(560, e.clientX));
+    if (r.mode === 'full') settings.value.sidebarWidth = r.width;
   }
   function endResize() {
-    if (!resizing) return;
-    resizing = false;
-    settings.schedule();
+    if (!live) return;
+    const m = live;
+    live = null;
+    document.documentElement.classList.remove('mf-col-resizing');
+    // Hidden, it comes back (Ctrl+B, the tab bar's button) as it was before
+    // the drag; a strip or hidden sidebar opens again as wide as it was.
+    settings.update((s) => {
+      if (m !== 'full') s.sidebarWidth = widthBefore;
+      if (m === 'hidden') s.sidebarVisible = false;
+      else s.sidebarCompact = m === 'compact';
+    });
   }
+  function resetWidth() {
+    settings.update((s) => {
+      if (s.sidebarCompact) s.sidebarCompact = false;
+      else s.sidebarWidth = 260;
+    });
+  }
+  const expand = () => settings.update((s) => (s.sidebarCompact = false));
+
+  /** Showing and hiding the whole sidebar: its width grows from or shrinks to nothing. */
+  function slide(node: HTMLElement) {
+    const w = node.getBoundingClientRect().width;
+    return { duration: ms(240), easing: cubicOut, css: (t: number) => `width: ${t * w}px` };
+  }
+
+  // The strip's labels: beside the icon, at once when one was just shown
+  // (so moving down the strip glides from label to label), else after a beat.
+  let tip = $state<{ text: string; hint?: string; x: number; y: number } | null>(null);
+  let tipTimer: ReturnType<typeof setTimeout> | undefined;
+  let tipShownAt = 0;
+  function showTip(e: Event, text: string, hint?: string) {
+    const el = e.currentTarget as HTMLElement;
+    clearTimeout(tipTimer);
+    const go = () => {
+      const r = el.getBoundingClientRect();
+      tip = { text, hint, x: r.right + 10, y: r.top + r.height / 2 };
+    };
+    if (tip || performance.now() - tipShownAt < 600) go();
+    else tipTimer = setTimeout(go, 380);
+  }
+  function hideTip() {
+    clearTimeout(tipTimer);
+    tipTimer = setTimeout(() => {
+      if (tip) tipShownAt = performance.now();
+      tip = null;
+    }, 70);
+  }
+  function tipIn(_: Element) {
+    return { duration: ms(140), easing: cubicOut, css: (t: number) => `opacity: ${t}; transform: translate(${(t - 1) * 6}px, -50%)` };
+  }
+  $effect(() => {
+    if (layer !== 'compact') tip = null;
+  });
+
+  const shortcut = (id: string) => {
+    const sc = commands.shortcutOf(id);
+    return sc ? formatShortcut(sc) : undefined;
+  };
+  const railPinned = $derived(settings.value.pinned.slice(0, 6));
+  const railRecents = $derived(recents.slice(0, 8));
 </script>
 
-<aside class="sidebar" style:width="{settings.value.sidebarWidth}px">
-  <header class="head" class:mac={boot.platform === 'darwin'} bind:this={head}>
-    <h1 class="title" bind:this={titleEl} title={fold >= 3 ? 'Monoform' : undefined}><span class="mark" aria-hidden="true">{@html logoMark}</span>{#if fold < 3}<span class="word">Monoform</span>{/if}</h1>
-    <div class="actions">
-      {#if fold < 2}
-        <button class="icon-btn" class:on={sidebar.mode === 'search'} title={t('Find in folder ({shortcut})', { shortcut: formatShortcut('Mod+Shift+F') })} onclick={() => commands.execute('search.inFolder')}>
-          <Icon icon={Search} />
-        </button>
-      {/if}
-      {#if fold < 1}
-        <button class="icon-btn" title={t('Open folder ({shortcut})', { shortcut: formatShortcut('Mod+Shift+O') })} onclick={() => commands.execute('file.openFolder')}>
-          <Icon icon={FolderOpen} />
-        </button>
-      {/if}
-      <button class="icon-btn" title={t('Menu')} onclick={appMenu}><Icon icon={Menu} /></button>
-      <button class="icon-btn" title={t('Hide sidebar ({shortcut})', { shortcut: formatShortcut('Mod+B') })} onclick={() => commands.execute('view.toggleSidebar')}><Icon icon={PanelLeftClose} /></button>
-    </div>
-  </header>
+{#snippet railButton(icon: Component, label: string, run: (e: MouseEvent) => void, opts: { hint?: string; on?: boolean; menu?: (e: MouseEvent) => void; pinned?: boolean } = {})}
+  <button
+    class="rbtn"
+    class:on={opts.on}
+    aria-label={label}
+    onclick={run}
+    oncontextmenu={opts.menu}
+    onpointerenter={(e) => showTip(e, label, opts.hint)}
+    onpointerleave={hideTip}
+    onfocus={(e) => showTip(e, label, opts.hint)}
+    onblur={hideTip}
+  >
+    <Icon {icon} size={18} />
+    {#if opts.pinned}<span class="badge" aria-hidden="true"><Icon icon={Pin} size={9} /></span>{/if}
+  </button>
+{/snippet}
 
-  {#if sidebar.mode === 'search'}
-    <SearchPanel />
-  {:else}
-    <div class="sections">
-      <section class="folder" class:has={!!workspace.folder}>
-        {#if workspace.folder}
-          <div class="label row-label" title={workspace.folder}>
-            <span class="label-text">{folderName}</span>
-            <span class="label-actions">
-              <button class="icon-btn sm" title={t('New file ({shortcut})', { shortcut: formatShortcut('Mod+Alt+N') })} onclick={() => newFileOfKind(workspace.folder)}><Icon icon={FilePlus} size={14} /></button>
-              <button class="icon-btn sm" title={t('New folder')} onclick={() => newFolderIn(workspace.folder)}><Icon icon={FolderPlus} size={14} /></button>
-              <button class="icon-btn sm" title={t('Refresh')} onclick={() => tree.refreshAll()}><Icon icon={RefreshCw} size={14} /></button>
-              <button class="icon-btn sm" title={t('Collapse all')} onclick={() => tree.collapseAll(workspace.folder)}><Icon icon={ListCollapse} size={14} /></button>
-              <button class="icon-btn sm" title={t('Close folder')} onclick={() => commands.execute('folder.close')}><Icon icon={X} size={14} /></button>
-            </span>
+<aside class="sidebar" class:tracking={live === 'full' && !snapping} class:mf-panel-resizing={!!live} style:width="{width}px" transition:slide|global>
+  <div class="clip">
+    {#if layer === 'compact'}
+      <div class="layer rail" style:width="{railW}px" in:fade={{ duration: ms(180), delay: ms(70) }} out:fade={{ duration: ms(90) }}>
+        <header class="rhead" class:mac={boot.platform === 'darwin'}>
+          <button
+            class="logo"
+            aria-label={t('Expand sidebar')}
+            onclick={expand}
+            onpointerenter={(e) => showTip(e, t('Expand sidebar'), shortcut('view.compactSidebar'))}
+            onpointerleave={hideTip}
+            onfocus={(e) => showTip(e, t('Expand sidebar'), shortcut('view.compactSidebar'))}
+            onblur={hideTip}
+          >
+            <span class="mark" aria-hidden="true">{@html logoMark}</span>
+            <span class="open" aria-hidden="true"><Icon icon={PanelLeftOpen} size={18} /></span>
+          </button>
+        </header>
+        <nav class="rgroup" aria-label={t('Sidebar')}>
+          {@render railButton(FolderTree, t('Files'), () => ((sidebar.mode = 'files'), expand()), { hint: shortcut('view.showFiles') })}
+          {@render railButton(Search, t('Find in folder'), () => commands.execute('search.inFolder'), { hint: shortcut('search.inFolder') })}
+          {@render railButton(FolderOpen, t('Open folder'), () => commands.execute('file.openFolder'), { hint: shortcut('file.openFolder') })}
+        </nav>
+        {#if railPinned.length || railRecents.length}
+          <div class="rsep"></div>
+          <div class="rfiles" role="group" aria-label={t('Pinned and recent files')}>
+            {#each railPinned as p (p)}
+              {@render railButton(iconFor(p, kindOf(p)), basename(p), () => workspace.openPath(p), { hint: tildify(dirname(p), boot.home), on: activePath === p, menu: (e) => listMenu(e, p, false), pinned: true })}
+            {/each}
+            {#each railRecents as p (p)}
+              {@render railButton(iconFor(p, kindOf(p)), basename(p), () => workspace.openPath(p), { hint: tildify(dirname(p), boot.home), on: activePath === p, menu: (e) => listMenu(e, p, true) })}
+            {/each}
           </div>
-          <div class="tree-wrap"><FileTree root={workspace.folder} /></div>
         {:else}
-          <div class="no-folder">
-            <button class="btn" onclick={() => commands.execute('file.openFolder')}><Icon icon={FolderOpen} /> {t('Open folder')}</button>
-            {#if settings.value.recentFolders.length}
-              <div class="recent-folders">
-                {#each settings.value.recentFolders.slice(0, 4) as f (f)}
-                  <div class="row">
-                    <button class="item" title={f} onclick={() => workspace.openFolder(f)}>
-                      <span class="ico"><Icon icon={FolderOpen} size={15} /></span>
-                      <span class="name">{basename(f)}</span>
-                      <span class="hint">{tildify(dirname(f), boot.home)}</span>
+          <div class="rfiles"></div>
+        {/if}
+        <div class="rfoot">
+          {@render railButton(Cog, t('Settings'), () => commands.execute('app.settings'), { hint: shortcut('app.settings') })}
+          {@render railButton(Menu, t('Menu'), appMenu)}
+        </div>
+      </div>
+    {:else}
+      <div class="layer full" style:width="{fullW}px" in:fade={{ duration: ms(180), delay: ms(70) }} out:fade={{ duration: ms(90) }}>
+        <header class="head" class:mac={boot.platform === 'darwin'} bind:this={head}>
+          <h1 class="title" bind:this={titleEl} title={fold >= 3 ? 'Monoform' : undefined}><span class="mark" aria-hidden="true">{@html logoMark}</span>{#if fold < 3}<span class="word">Monoform</span>{/if}</h1>
+          <div class="actions">
+            {#if fold < 2}
+              <button class="icon-btn" class:on={sidebar.mode === 'search'} title={t('Find in folder ({shortcut})', { shortcut: formatShortcut('Mod+Shift+F') })} onclick={() => commands.execute('search.inFolder')}>
+                <Icon icon={Search} />
+              </button>
+            {/if}
+            {#if fold < 1}
+              <button class="icon-btn" title={t('Open folder ({shortcut})', { shortcut: formatShortcut('Mod+Shift+O') })} onclick={() => commands.execute('file.openFolder')}>
+                <Icon icon={FolderOpen} />
+              </button>
+            {/if}
+            <button class="icon-btn" title={t('Menu')} onclick={appMenu}><Icon icon={Menu} /></button>
+            <button class="icon-btn" title={t('Collapse sidebar ({shortcut})', { shortcut: formatShortcut('Mod+Shift+B') })} onclick={() => commands.execute('view.compactSidebar')}><Icon icon={PanelLeftClose} /></button>
+          </div>
+        </header>
+
+        {#if sidebar.mode === 'search'}
+          <SearchPanel />
+        {:else}
+          <div class="sections">
+            <section class="folder" class:has={!!workspace.folder}>
+              {#if workspace.folder}
+                <div class="label row-label" title={workspace.folder}>
+                  <span class="label-text">{folderName}</span>
+                  <span class="label-actions">
+                    <button class="icon-btn sm" title={t('New file ({shortcut})', { shortcut: formatShortcut('Mod+Alt+N') })} onclick={() => newFileOfKind(workspace.folder)}><Icon icon={FilePlus} size={14} /></button>
+                    <button class="icon-btn sm" title={t('New folder')} onclick={() => newFolderIn(workspace.folder)}><Icon icon={FolderPlus} size={14} /></button>
+                    <button class="icon-btn sm" title={t('Refresh')} onclick={() => tree.refreshAll()}><Icon icon={RefreshCw} size={14} /></button>
+                    <button class="icon-btn sm" title={t('Collapse all')} onclick={() => tree.collapseAll(workspace.folder)}><Icon icon={ListCollapse} size={14} /></button>
+                    <button class="icon-btn sm" title={t('Close folder')} onclick={() => commands.execute('folder.close')}><Icon icon={X} size={14} /></button>
+                  </span>
+                </div>
+                <div class="tree-wrap"><FileTree root={workspace.folder} /></div>
+              {:else}
+                <div class="no-folder">
+                  <button class="btn" onclick={() => commands.execute('file.openFolder')}><Icon icon={FolderOpen} /> {t('Open folder')}</button>
+                  {#if settings.value.recentFolders.length}
+                    <div class="recent-folders">
+                      {#each settings.value.recentFolders.slice(0, 4) as f (f)}
+                        <div class="row">
+                          <button class="item" title={f} onclick={() => workspace.openFolder(f)}>
+                            <span class="ico"><Icon icon={FolderOpen} size={15} /></span>
+                            <span class="name">{basename(f)}</span>
+                            <span class="hint">{tildify(dirname(f), boot.home)}</span>
+                          </button>
+                          <button class="rm icon-btn xs" title={t('Remove from recent folders')} aria-label={t('Remove {name} from recent folders', { name: basename(f) })} onclick={() => settings.removeRecentFolder(f)}><Icon icon={X} size={12} /></button>
+                        </div>
+                      {/each}
+                    </div>
+                  {/if}
+                </div>
+              {/if}
+            </section>
+
+            {#if settings.value.pinned.length}
+              <section class="list">
+                <button class="label toggle" onclick={() => (pinnedOpen = !pinnedOpen)}>
+                  <span class="chev" class:open={pinnedOpen}><Icon icon={ChevronRight} size={12} /></span>{t('Pinned')}
+                </button>
+                {#if pinnedOpen}
+                  {#each settings.value.pinned as p (p)}
+                    <button class="item" class:active={activePath === p} title={p} onclick={() => workspace.openPath(p)} oncontextmenu={(e) => listMenu(e, p, false)}>
+                      <span class="ico"><Icon icon={Pin} size={14} /></span>
+                      <span class="name">{basename(p)}</span>
                     </button>
-                    <button class="rm icon-btn xs" title={t('Remove from recent folders')} aria-label={t('Remove {name} from recent folders', { name: basename(f) })} onclick={() => settings.removeRecentFolder(f)}><Icon icon={X} size={12} /></button>
-                  </div>
-                {/each}
-              </div>
+                  {/each}
+                {/if}
+              </section>
+            {/if}
+
+            {#if recents.length}
+              <section class="list">
+                <button class="label toggle" onclick={() => (recentsOpen = !recentsOpen)}>
+                  <span class="chev" class:open={recentsOpen}><Icon icon={ChevronRight} size={12} /></span>{t('Recents')}
+                </button>
+                {#if recentsOpen}
+                  {#each recents as p (p)}
+                    <div class="row">
+                      <button class="item" class:active={activePath === p} title={p} onclick={() => workspace.openPath(p)} oncontextmenu={(e) => listMenu(e, p, true)}>
+                        <span class="ico"><Icon icon={iconFor(p, kindOf(p))} size={15} /></span>
+                        <span class="name">{basename(p)}</span>
+                        <span class="hint">{basename(dirname(p))}</span>
+                      </button>
+                      <button class="rm icon-btn xs" title={t('Remove from recents')} aria-label={t('Remove {name} from recents', { name: basename(p) })} onclick={() => settings.removeRecent(p)}><Icon icon={X} size={12} /></button>
+                    </div>
+                  {/each}
+                {/if}
+              </section>
             {/if}
           </div>
         {/if}
-      </section>
-
-      {#if settings.value.pinned.length}
-        <section class="list">
-          <button class="label toggle" onclick={() => (pinnedOpen = !pinnedOpen)}>
-            <span class="chev" class:open={pinnedOpen}><Icon icon={ChevronRight} size={12} /></span>{t('Pinned')}
-          </button>
-          {#if pinnedOpen}
-            {#each settings.value.pinned as p (p)}
-              <button class="item" class:active={activePath === p} title={p} onclick={() => workspace.openPath(p)} oncontextmenu={(e) => listMenu(e, p, false)}>
-                <span class="ico"><Icon icon={Pin} size={14} /></span>
-                <span class="name">{basename(p)}</span>
-              </button>
-            {/each}
-          {/if}
-        </section>
-      {/if}
-
-      {#if recents.length}
-        <section class="list">
-          <button class="label toggle" onclick={() => (recentsOpen = !recentsOpen)}>
-            <span class="chev" class:open={recentsOpen}><Icon icon={ChevronRight} size={12} /></span>{t('Recents')}
-          </button>
-          {#if recentsOpen}
-            {#each recents as p (p)}
-              <div class="row">
-                <button class="item" class:active={activePath === p} title={p} onclick={() => workspace.openPath(p)} oncontextmenu={(e) => listMenu(e, p, true)}>
-                  <span class="ico"><Icon icon={iconFor(p, kindOf(p))} size={15} /></span>
-                  <span class="name">{basename(p)}</span>
-                  <span class="hint">{basename(dirname(p))}</span>
-                </button>
-                <button class="rm icon-btn xs" title={t('Remove from recents')} aria-label={t('Remove {name} from recents', { name: basename(p) })} onclick={() => settings.removeRecent(p)}><Icon icon={X} size={12} /></button>
-              </div>
-            {/each}
-          {/if}
-        </section>
-      {/if}
+      </div>
+    {/if}
+  </div>
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="resizer mf-panel-grip left" title={t('Drag to resize · drag further for icons only, or to hide')} onpointerdown={startResize} onpointermove={moveResize} onpointerup={endResize} onpointercancel={endResize} ondblclick={resetWidth}></div>
+  {#if tip}
+    <div class="rtip" role="tooltip" style:left="{tip.x}px" style:top="{tip.y}px" transition:tipIn>
+      <span>{tip.text}</span>{#if tip.hint}<span class="rtip-hint">{tip.hint}</span>{/if}
     </div>
   {/if}
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="resizer" onpointerdown={startResize} onpointermove={moveResize} onpointerup={endResize}></div>
 </aside>
 
 <style>
   .sidebar {
     position: relative;
-    display: flex;
-    flex-direction: column;
     height: 100%;
     background: var(--bg-sidebar);
-    min-width: calc(180px * var(--ui-scale));
     flex: none;
+    transition: width var(--dur-3) var(--ease-out);
+  }
+  /* Dragged at full width: the edge follows the pointer exactly. */
+  .sidebar.tracking {
+    transition: none;
+  }
+  .clip {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+  /* Each layer keeps its own width while the sidebar's grows or shrinks
+     around it, so nothing squeezes mid-way: it's uncovered or covered. */
+  .layer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
   }
   .head {
     display: flex;
@@ -253,6 +422,193 @@
     width: 100%;
     height: auto;
   }
+
+  /* The icon strip. */
+  .rail {
+    align-items: center;
+  }
+  .rhead {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 10px 0 8px;
+    height: var(--tabbar-h);
+    box-sizing: content-box;
+    flex: none;
+    --wails-draggable: drag;
+  }
+  .rhead.mac {
+    padding-top: 28px;
+  }
+  /* The mark turns into "expand" under the pointer. */
+  .logo {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: calc(36px * var(--ui-scale));
+    height: calc(36px * var(--ui-scale));
+    border: none;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    --wails-draggable: no-drag;
+    transition:
+      background var(--dur-1) var(--ease),
+      transform var(--dur-1) var(--ease-out);
+  }
+  .logo > * {
+    grid-area: 1 / 1;
+    transition:
+      opacity var(--dur-2) var(--ease),
+      transform var(--dur-2) var(--ease-spring);
+  }
+  .logo .open {
+    display: inline-flex;
+    opacity: 0;
+    transform: translateX(-4px) scale(0.8);
+    color: var(--text-muted);
+  }
+  .logo:hover,
+  .logo:focus-visible {
+    background: var(--bg-hover);
+  }
+  .logo:hover .mark,
+  .logo:focus-visible .mark {
+    opacity: 0;
+    transform: scale(0.7) rotate(-12deg);
+  }
+  .logo:hover .open,
+  .logo:focus-visible .open {
+    opacity: 1;
+    transform: none;
+    color: var(--text);
+  }
+  .logo:active {
+    transform: scale(0.92);
+  }
+  .rgroup,
+  .rfoot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    flex: none;
+    width: 100%;
+  }
+  .rfoot {
+    padding: 6px 0 10px;
+  }
+  .rsep {
+    width: calc(22px * var(--ui-scale));
+    height: 1px;
+    background: var(--border-soft);
+    margin: 8px 0;
+    flex: none;
+  }
+  .rfiles {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .rbtn {
+    position: relative;
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: calc(36px * var(--ui-scale));
+    height: calc(36px * var(--ui-scale));
+    border: none;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition:
+      background var(--dur-1) var(--ease),
+      color var(--dur-1) var(--ease),
+      transform var(--dur-1) var(--ease-out);
+  }
+  .rbtn > :global(svg) {
+    transition: transform var(--dur-2) var(--ease-spring);
+  }
+  /* A pill at the strip's edge: a hint of it on hover, full for the open file. */
+  .rbtn::before {
+    content: '';
+    position: absolute;
+    left: calc(-8px * var(--ui-scale));
+    top: 50%;
+    width: 3px;
+    height: 0;
+    border-radius: 0 3px 3px 0;
+    background: var(--accent);
+    opacity: 0;
+    transform: translateY(-50%);
+    transition:
+      height var(--dur-2) var(--ease-spring),
+      opacity var(--dur-2) var(--ease);
+  }
+  .rbtn:hover,
+  .rbtn:focus-visible {
+    background: var(--bg-hover);
+    color: var(--text);
+  }
+  .rbtn:hover > :global(svg) {
+    transform: scale(1.08);
+  }
+  .rbtn:hover::before {
+    height: 8px;
+    opacity: 0.55;
+  }
+  .rbtn.on {
+    color: var(--text);
+    background: color-mix(in srgb, var(--bg-hover) 70%, transparent);
+  }
+  .rbtn.on::before {
+    height: 18px;
+    opacity: 1;
+  }
+  .rbtn:active {
+    transform: scale(0.92);
+  }
+  .badge {
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    display: inline-flex;
+    color: var(--accent);
+  }
+  .rtip {
+    position: fixed;
+    z-index: 200;
+    transform: translate(0, -50%);
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 5px 9px;
+    border-radius: var(--radius);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+    font-size: var(--fs-small);
+    color: var(--text);
+    white-space: nowrap;
+    pointer-events: none;
+    transition: top var(--dur-2) var(--ease-out);
+  }
+  .rtip-hint {
+    color: var(--text-faint);
+    max-width: 40ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .sections {
     flex: 1;
     min-height: 0;
@@ -398,12 +754,7 @@
     margin-left: -8px;
   }
   .resizer {
-    position: absolute;
     top: 0;
-    right: -3px;
-    width: 6px;
     height: 100%;
-    cursor: col-resize;
-    z-index: 5;
   }
 </style>

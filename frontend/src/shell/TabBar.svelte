@@ -181,7 +181,7 @@
 </script>
 
 <svelte:window onpointermove={drag} onpointerup={drop} onpointercancel={cancelDrag} onkeydown={(e) => tabDrag.id && e.key === 'Escape' && cancelDrag()} />
-<div class="tabbar" bind:this={bar} class:mac-collapsed={boot.platform === 'darwin' && !settings.value.sidebarVisible}>
+<div class="tabbar" bind:this={bar} class:mac-collapsed={boot.platform === 'darwin' && !settings.value.sidebarVisible} class:mac-rail={boot.platform === 'darwin' && settings.value.sidebarVisible && settings.value.sidebarCompact}>
   {#if !settings.value.sidebarVisible}
     <button class="icon-btn toggle" title={t('Show sidebar')} onclick={() => commands.execute('view.toggleSidebar')}><Icon icon={PanelLeft} /></button>
   {/if}
@@ -259,6 +259,11 @@
   }
   .tabbar.mac-collapsed {
     padding-left: 78px;
+  }
+  /* Beside the icon strip: clear of the window buttons that reach past it. */
+  .tabbar.mac-rail {
+    padding-left: max(8px, calc(80px - 52px * var(--ui-scale)));
+    transition: padding-left var(--dur-3) var(--ease-out);
   }
   .toggle {
     margin: 0 4px 5px 0;

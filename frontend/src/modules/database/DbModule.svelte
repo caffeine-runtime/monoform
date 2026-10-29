@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resizablePanel } from '../../core/panelResize.svelte';
   import { isNarrow } from '../../core/fit';
   import PanelLeft from '@lucide/svelte/icons/panel-left';
   import LockOpen from '@lucide/svelte/icons/lock-open';
@@ -414,7 +415,7 @@
 
 <div class="db" bind:clientWidth={bodyW}>
   {#if !narrow || schemaOpen}
-  <aside data-sidepanel class="schema" class:floating={narrow} class:left={narrow} aria-label={t('Database objects')}>
+  <aside use:resizablePanel={{ id: 'database', side: 'left' }} data-sidepanel class="schema" class:floating={narrow} class:left={narrow} aria-label={t('Database objects')}>
     <input class="input" placeholder={t('Filter tables')} bind:value={sidebarFilter} aria-label={t('Filter tables')} />
     <h4>{t('Tables')} <span class="muted">{tables.length}</span></h4>
     {#each shownTables as o (o.name)}

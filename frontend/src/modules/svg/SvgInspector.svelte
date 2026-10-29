@@ -2,6 +2,7 @@
   // Properties of the selected SVG element (colours, stroke, geometry, text,
   // every attribute), arrange/duplicate/delete, defaults for new shapes, and
   // an outline of the document to select from.
+  import { resizablePanel } from '../../core/panelResize.svelte';
   import { attr, duplicate, moveSibling, removeEl, setAttr, setAttrs, setContent, type Change, type El } from './svgdoc';
   import { t } from '../../core/i18n';
 
@@ -82,7 +83,7 @@
   const val = (e: Event) => (e.target as HTMLInputElement).value;
 </script>
 
-<aside data-sidepanel class="inspector" aria-label={t('Properties')}>
+<aside use:resizablePanel={{ id: 'svg' }} data-sidepanel class="inspector" aria-label={t('Properties')}>
   {#if el && el.index > 0}
     <div class="head">
       <strong>&lt;{el.tag}&gt;</strong>

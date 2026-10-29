@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resizablePanel } from '../../core/panelResize.svelte';
   import Camera from '@lucide/svelte/icons/camera';
   import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import Sun from '@lucide/svelte/icons/sun';
@@ -465,7 +466,7 @@
     {#if hover}<div class="tip" style:left="{hover.x + 14}px" style:top="{hover.y + 14}px">{hover.text}</div>{/if}
   </div>
   {#if (hasParts || anims.length) && (!narrow || panelOpen)}
-    <aside data-sidepanel class="side" class:floating={narrow} class:right={narrow} aria-label={hasParts ? t('Parts') : t('Animations')}>
+    <aside use:resizablePanel={{ id: 'model3d' }} data-sidepanel class="side" class:floating={narrow} class:right={narrow} aria-label={hasParts ? t('Parts') : t('Animations')}>
       {#if hasParts && parts}
         <section class="parts">
           <div class="phead">

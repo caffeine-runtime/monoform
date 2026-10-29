@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resizablePanel } from '../../core/panelResize.svelte';
   import { isNarrow } from '../../core/fit';
   import { saveAndConvert } from '../../core/convert.svelte';
   import ImageIco from '@lucide/svelte/icons/image';
@@ -1820,7 +1821,7 @@
     {#if busy}<div class="busy"><span class="spinner"></span> {busy}</div>{/if}
   </div>
   {#if editable && panel && editor && es}
-    <aside data-sidepanel class="panel" class:floating={narrow} class:right={narrow}>
+    <aside use:resizablePanel={{ id: 'image' }} data-sidepanel class="panel" class:floating={narrow} class:right={narrow}>
       <div class="ptabs">
         <button class:on={panel === 'layers'} onclick={() => setPanel('layers')}>{t('Layers')}</button>
         <button class:on={panel === 'adjust'} onclick={() => setPanel('adjust')}>{t('Adjust')}</button>

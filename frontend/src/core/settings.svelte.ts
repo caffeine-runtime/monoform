@@ -19,6 +19,8 @@ class SettingsState {
     showWhitespace: false,
     pathBarOff: false,
     panelsHidden: false,
+    panelWidths: {},
+    sidebarCompact: false,
     session: { folder: '', tabs: [], active: 0, expanded: [] },
   } as unknown as Settings);
   private timer: ReturnType<typeof setTimeout> | undefined;

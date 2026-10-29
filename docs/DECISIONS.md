@@ -715,9 +715,27 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   stand out, and a long name made the title wrap.
 - **The sidebar header keeps the name** (`Sidebar.svelte`, `fit`): when the name and the four buttons don't fit,
   *Open folder* and then *Find in folder* move to the top of the ☰ menu (their shortcuts stay); only when the name,
-  ☰ and Hide sidebar don't fit either does it show just the logo mark. It is decided by measuring (the title's
+  ☰ and Collapse sidebar don't fit either does it show just the logo mark. It is decided by measuring (the title's
   content against its box, on resize, font load and interface size), not by a fixed width: a 250 px cut-off hid the
   name on some computers (larger interface size) and clipped it just above ("Monoforn").
+- **The sidebar's three widths are one edge** (`Sidebar.svelte`, `core/sidebarDrag.ts`): full, a strip of icons, or
+  hidden. Dragging decides by where the edge is (below 120 px the strip, below 24 px hidden, at scale 1), with a
+  little more needed to come back out (150 px) so the edge doesn't flicker between full and the strip. Each width
+  draws its own layer at its own width inside a clipping box, so a change uncovers or covers content instead of
+  squeezing it mid-way, and the layers cross-fade. The strip's labels are drawn by the sidebar, not the browser's
+  `title` tooltip: they appear beside the icon after a short pause, then at once while moving along the strip.
+  Ctrl+B keeps meaning hide/show; the strip is its own setting (`sidebarCompact`), so a hidden sidebar comes back the
+  way it was.
+- **Side panels resize through one action** (`core/panelResize.svelte.ts`): `use:resizablePanel={{ id }}` adds the
+  grip, the keys, double-click and the remembered width to any editor's panel, instead of each module growing its
+  own divider. Widths are kept per kind of panel (all notes share one), in pixels at interface scale 1 so they follow
+  the interface size, in the settings file like the sidebar's. The grip follows the panel's scroll so it covers the
+  visible edge of panels that scroll as a whole. Dragging a panel away uses the existing View › *Side panels*
+  switch (all editors' panels) rather than a per-panel hidden state: one way back for all of them.
+- **Markdown marks have colours of their own** (`modules/text/mdMarks.ts`): the parser tags every mark the same
+  (`processingInstruction`); finer tags derived from it, chosen by the mark's parent (`StrongEmphasis/EmphasisMark`
+  is bold), give bold, italic, headings, code, lists, quotes and links their colours, while any other highlighter
+  falls back to the shared one.
 - **Screen recording runs in the webview, in a window of its own** (`monoform --record`, `core/recorder.svelte.ts`,
   `internal/app/record.go`). WebView2 has the browser's screen capture (`getDisplayMedia`) and recorder
   (`MediaRecorder`), which records H.264/AAC MP4 with the GPU's encoder — no capture or encoding library, nothing

@@ -1818,6 +1818,8 @@ export namespace settings {
 	    welcomeDone: boolean;
 	    pathBarOff: boolean;
 	    panelsHidden: boolean;
+	    panelWidths: Record<string, number>;
+	    sidebarCompact: boolean;
 	    lightCanvases: boolean;
 	    reduceMotion: boolean;
 	    language: string;
@@ -1859,6 +1861,8 @@ export namespace settings {
 	        this.welcomeDone = source["welcomeDone"];
 	        this.pathBarOff = source["pathBarOff"];
 	        this.panelsHidden = source["panelsHidden"];
+	        this.panelWidths = source["panelWidths"];
+	        this.sidebarCompact = source["sidebarCompact"];
 	        this.lightCanvases = source["lightCanvases"];
 	        this.reduceMotion = source["reduceMotion"];
 	        this.language = source["language"];

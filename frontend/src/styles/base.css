@@ -396,6 +396,67 @@ select {
   animation-name: mf-slide-right;
 }
 
+/* The grip on a resizable side panel's inner edge (core/panelResize): an
+   accent line grows in on hover and while dragging. */
+.mf-panel-grip {
+  position: absolute;
+  z-index: 6;
+  width: 9px;
+  cursor: col-resize;
+  touch-action: none;
+  outline: none;
+}
+.mf-panel-grip.right {
+  left: -4px;
+}
+.mf-panel-grip.left {
+  right: -4px;
+}
+.mf-panel-grip::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 1px;
+  background: var(--accent);
+  opacity: 0;
+  transition:
+    opacity var(--dur-2) var(--ease),
+    width var(--dur-1) var(--ease-out),
+    left var(--dur-1) var(--ease-out);
+}
+.mf-panel-grip:hover::after,
+.mf-panel-grip:focus-visible::after,
+.mf-panel-resizing > .mf-panel-grip::after {
+  left: 3px;
+  width: 3px;
+  opacity: 1;
+  transition-delay: 0.08s, 0s, 0s;
+}
+.mf-panel-resizing > .mf-panel-grip::after {
+  transition-delay: 0s;
+}
+/* Let go here and the side panels hide. */
+[data-sidepanel],
+.mf-panel-resizing {
+  transition: opacity var(--dur-2) var(--ease);
+}
+.mf-panel-collapsing {
+  opacity: 0.45;
+}
+.mf-panel-glide {
+  transition:
+    width var(--dur-3) var(--ease-out),
+    opacity var(--dur-2) var(--ease);
+}
+/* While a panel or the sidebar is dragged: the resize cursor everywhere, no text selection. */
+:root.mf-col-resizing,
+:root.mf-col-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
 /* Buttons answer the press at once. */
 .btn,
 .icon-btn {

@@ -94,6 +94,11 @@ type Settings struct {
 	PathBarOff bool `json:"pathBarOff"`
 	// PanelsHidden hides editors' side panels (layers, adjustments, …) for more room.
 	PanelsHidden bool `json:"panelsHidden"`
+	// PanelWidths are the widths editors' side panels were dragged to, by
+	// panel ("markdown", "model3d", …), in pixels at interface scale 1.
+	PanelWidths map[string]int `json:"panelWidths"`
+	// SidebarCompact shows the sidebar as a narrow strip of icons.
+	SidebarCompact bool `json:"sidebarCompact"`
 	// LightCanvases keeps drawings and diagrams (Excalidraw, draw.io, Mermaid,
 	// Graphviz) on white in the dark theme instead of darkening them.
 	LightCanvases bool `json:"lightCanvases"`
@@ -258,6 +263,14 @@ func normalize(v Settings) Settings {
 	}
 	if v.SidebarWidth < 160 || v.SidebarWidth > 640 {
 		v.SidebarWidth = d.SidebarWidth
+	}
+	for k, w := range v.PanelWidths {
+		if w < 120 || w > 1200 {
+			delete(v.PanelWidths, k)
+		}
+	}
+	if v.PanelWidths == nil {
+		v.PanelWidths = map[string]int{}
 	}
 	if v.FontSize < 8 || v.FontSize > 40 {
 		v.FontSize = d.FontSize

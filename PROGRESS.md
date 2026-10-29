@@ -821,6 +821,26 @@
   microphone capability), unit tests (`record.test.ts`), self-test `m88` (the recorder with a drawn picture and a
   tone in place of the share step; a finished recording opened by the main window). macOS and Linux: not offered
   yet (their webviews' screen capture is untested).
+- **The sidebar has a compact width**: a strip of icons — the logo mark (it turns into *Expand* under the pointer),
+  Files, Find in folder, Open folder, pinned and recent files (the open one marked by an accent bar at the edge),
+  Settings and the ☰ menu — with labels sliding out beside the icons (gliding from one to the next). Dragging the
+  sidebar's edge narrows it, then snaps it to the strip, then hides it; dragging back out works the same way, and the
+  full width it had is kept. The header's button (Ctrl+Shift+B, View › *Compact sidebar*) switches between full and
+  the strip; Ctrl+B still hides and shows it. Search, *Reveal in sidebar* and opening a folder widen it again. Width
+  changes glide (or snap at once with reduced motion); a drag at full width follows the pointer exactly.
+- **Editors' side panels can be resized** like the sidebar: the Markdown note panel (outline, backlinks, links),
+  the Word outline, 3D parts, image adjustments, SVG properties, CAD, video effects, text recognition and the
+  database's object list. Drag the edge facing the content (an accent line shows under the pointer), use the arrow
+  keys on it, or double-click for the usual width; each kind of panel remembers its width (`panelWidths`, at
+  interface scale 1). Dragged well past its narrowest, it hides the side panels (View › *Side panels* brings them
+  back, as wide as before). The content always keeps room beside a panel.
+- **Markdown marks in colour**: in a note's source, the `**` of bold is red, the `*`/`_` of italic purple, `#` of
+  headings orange, backticks and code fences green, list bullets, numbers and task boxes amber, `>` of quotes and
+  link brackets in their colours, `~~` dimmed; light and dark themes have their own shades. The source is now read
+  as GitHub Markdown (as the preview already was): struck text, task lists and tables are recognised.
+  Unit tests (`mdMarks.test.ts`, `sidebarDrag.test.ts`, `panelResize.test.ts`), a Go settings test, self-test `m89`
+  (dragging the sidebar to the strip and away, the strip's buttons and labels, the note panel's width by dragging,
+  keys and double-click, dragged away hiding the panels, and the marks' colours in the editor); `m79` updated.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

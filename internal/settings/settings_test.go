@@ -59,6 +59,16 @@ func TestNormalize(t *testing.T) {
 	}
 }
 
+func TestNormalizePanelWidths(t *testing.T) {
+	if n := normalize(Settings{}); n.PanelWidths == nil {
+		t.Fatal("no panel widths map")
+	}
+	n := normalize(Settings{PanelWidths: map[string]int{"markdown": 320, "model3d": 5, "image": 99999}})
+	if len(n.PanelWidths) != 1 || n.PanelWidths["markdown"] != 320 {
+		t.Fatalf("panel widths = %v", n.PanelWidths)
+	}
+}
+
 func TestNormalizeScaleAndSplit(t *testing.T) {
 	tabs := []SessionTab{{Kind: "file"}, {Kind: "file"}, {Kind: "file"}}
 	n := normalize(Settings{UIScale: 9, Session: Session{Tabs: tabs, Split: &SessionSplit{Layout: "columns", Panes: []int{0, 2}, X: 0.99}}})

@@ -2,6 +2,7 @@
   // The text recognised in an image or PDF pages: languages to use (the
   // bundled English plus any added .traineddata files), progress, the text
   // (editable, to copy from) and a Copy button. Hosts can add actions.
+  import { resizablePanel } from '../../core/panelResize.svelte';
   import { onMount, type Snippet } from 'svelte';
   import Icon from '../../shell/Icon.svelte';
   import X from '@lucide/svelte/icons/x';
@@ -92,7 +93,7 @@
   });
 </script>
 
-<aside class="ocr" aria-label={title}>
+<aside use:resizablePanel={{ id: 'ocr', collapse: false }} class="ocr" aria-label={title}>
   <header>
     <h3>{title}</h3>
     <span class="spacer"></span>

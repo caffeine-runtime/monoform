@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resizablePanel } from '../../core/panelResize.svelte';
   import { fitBar } from '../../core/fit';
   // .docx and .odt editing on a page-like canvas; .doc is converted to .docx.
   import { onMount, tick, untrack } from 'svelte';
@@ -1317,7 +1318,7 @@
   {#if loading}<div class="empty-state overlay"><span class="spinner"></span></div>{/if}
 </div>
 {#if outlineOpen}
-  <aside data-sidepanel class="outline" class:floating={narrow} class:right={narrow} aria-label={t('Outline')}>
+  <aside use:resizablePanel={{ id: 'document' }} data-sidepanel class="outline" class:floating={narrow} class:right={narrow} aria-label={t('Outline')}>
     <div class="head">{t('Outline')}</div>
     <div class="tree"><OutlineTree items={headings} {active} onpick={goHeading} empty={t('No headings. Use Heading 1–3 in the paragraph style menu to build an outline.')} /></div>
   </aside>

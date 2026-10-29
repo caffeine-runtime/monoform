@@ -21,6 +21,7 @@ import { editorPhrases } from './phrases';
 import { indentOnInput, bracketMatching, foldGutter, foldKeymap, syntaxHighlighting, HighlightStyle, LanguageDescription } from '@codemirror/language';
 import { search, searchKeymap, highlightSelectionMatches, selectSelectionMatches } from '@codemirror/search';
 import { tags as t } from '@lezer/highlight';
+import { mdMark } from './mdMarks';
 
 /** Files above this size get a lighter editor (no highlighting/folding). */
 export const LARGE_FILE = 8 << 20;
@@ -46,6 +47,18 @@ export const highlight = HighlightStyle.define([
   { tag: [t.quote], color: 'var(--syn-comment)' },
   { tag: t.meta, color: 'var(--syn-comment)' },
   { tag: t.invalid, color: 'var(--danger)' },
+  // Markdown's marks, each in the colour of what it does.
+  { tag: t.processingInstruction, color: 'var(--syn-punct)' },
+  { tag: mdMark.strong, color: 'var(--syn-md-strong)' },
+  { tag: mdMark.emphasis, color: 'var(--syn-md-emphasis)' },
+  { tag: mdMark.strike, color: 'var(--syn-comment)' },
+  { tag: mdMark.heading, color: 'var(--syn-heading)' },
+  { tag: mdMark.code, color: 'var(--syn-string)' },
+  { tag: mdMark.list, color: 'var(--syn-number)' },
+  { tag: mdMark.quote, color: 'var(--syn-type)' },
+  { tag: mdMark.link, color: 'var(--syn-link)' },
+  { tag: [t.contentSeparator, t.escape], color: 'var(--syn-keyword)' },
+  { tag: t.labelName, color: 'var(--syn-property)' },
 ]);
 
 export const editorTheme = EditorView.theme({

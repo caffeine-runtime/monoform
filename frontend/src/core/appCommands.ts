@@ -31,7 +31,7 @@ export async function openFolderDialog() {
     const p = await api.OpenFolderDialog(t('Open folder'));
     if (p) {
       await workspace.openFolder(p);
-      settings.update((s) => (s.sidebarVisible = true));
+      sidebar.show();
       sidebar.mode = 'files';
     }
   } catch (e) {
@@ -109,7 +109,7 @@ export function registerAppCommands() {
       category: t('File'),
       when: () => hasFile() && !!workspace.folder,
       run: async () => {
-        settings.update((s) => (s.sidebarVisible = true));
+        sidebar.show();
         sidebar.mode = 'files';
         await tree.reveal(workspace.folder, workspace.active!.filePath!);
       },
@@ -166,7 +166,7 @@ export function registerAppCommands() {
       category: t('Edit'),
       shortcut: 'Mod+Shift+F',
       run: (arg) => {
-        settings.update((s) => (s.sidebarVisible = true));
+        sidebar.show();
         sidebar.searchRoot = typeof arg === 'string' ? arg : workspace.folder;
         sidebar.mode = 'search';
         queueMicrotask(() => document.querySelector<HTMLInputElement>('#folder-search')?.focus());
@@ -184,6 +184,17 @@ export function registerAppCommands() {
     { id: 'view.previewByDefault', title: t('Open files in preview mode (on/off)'), category: t('View'), run: () => settings.update((s) => (s.openInPreview = !s.openInPreview)) },
     { id: 'peek.expand', title: t('Open in the full editor'), category: t('View'), when: () => peek.on, run: () => void peek.expand() },
     { id: 'view.toggleSidebar', title: t('Toggle sidebar'), category: t('View'), shortcut: 'Mod+B', run: () => settings.update((s) => (s.sidebarVisible = !s.sidebarVisible)) },
+    {
+      id: 'view.compactSidebar',
+      title: t('Compact sidebar (icons only)'),
+      category: t('View'),
+      shortcut: 'Mod+Shift+B',
+      run: () =>
+        settings.update((s) => {
+          s.sidebarCompact = !(s.sidebarVisible && s.sidebarCompact);
+          s.sidebarVisible = true;
+        }),
+    },
     { id: 'view.togglePathBar', title: t('Show / hide the path bar'), category: t('View'), run: () => settings.update((s) => (s.pathBarOff = !s.pathBarOff)) },
     {
       id: 'view.togglePanels',
@@ -194,7 +205,7 @@ export function registerAppCommands() {
     },
     { id: 'file.showInFolder', title: t('Show current file in the system file manager'), category: t('File'), when: () => !!workspace.active?.filePath, run: () => api.ShowInFolder(workspace.active!.filePath!).catch((e: unknown) => toastError(e)) },
     { id: 'view.showFiles', title: t('Show files'), category: t('View'), shortcut: 'Mod+Shift+E', run: () => {
-        settings.update((s) => (s.sidebarVisible = true));
+        sidebar.show();
         sidebar.mode = 'files';
       } },
     { id: 'app.settings', title: t('Settings'), category: t('View'), shortcut: 'Mod+,', run: () => workspace.openTool('settings') },

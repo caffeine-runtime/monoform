@@ -15,6 +15,7 @@ type Entry = string | '-' | { label: string; items: Entry[] } | { control: MenuC
 /** On/off options: shown as the thing's name with a check mark when it's on. */
 const CHECKS: Record<string, [string, () => boolean]> = {
   'view.toggleSidebar': [t('Sidebar'), () => settings.value.sidebarVisible],
+  'view.compactSidebar': [t('Compact sidebar'), () => settings.value.sidebarVisible && !!settings.value.sidebarCompact],
   'view.togglePanels': [t('Side panels'), () => !settings.value.panelsHidden],
   'view.togglePathBar': [t('Path bar'), () => !settings.value.pathBarOff],
   'view.toggleHidden': [t('Hidden files'), () => settings.value.showHidden],
@@ -86,6 +87,7 @@ const LAYOUT: Entry[] = [
     label: t('View'),
     items: [
       'view.toggleSidebar',
+      'view.compactSidebar',
       'view.togglePanels',
       'view.togglePathBar',
       'view.toggleHidden',

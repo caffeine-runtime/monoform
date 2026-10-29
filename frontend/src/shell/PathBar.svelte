@@ -10,6 +10,7 @@
   import { workspace } from '../core/tabs.svelte';
   import { peek } from '../core/peek.svelte';
   import { settings } from '../core/settings.svelte';
+  import { sidebar } from '../core/sidebar.svelte';
   import { menu, toastError, ui } from '../core/ui.svelte';
   import { api, type Entry } from '../core/backend';
   import { boot } from '../core/boot';
@@ -132,7 +133,7 @@
     if (!pop) return;
     const dir = pop.dir;
     close();
-    settings.update((s) => (s.sidebarVisible = true));
+    sidebar.show();
     await workspace.openFolder(dir);
   }
 

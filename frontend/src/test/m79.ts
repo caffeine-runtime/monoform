@@ -2,8 +2,9 @@
 // folder open, at 100 % and 200 % interface size, nothing in its header or
 // folder row reaches past its right edge (they once spilled over the tab bar),
 // and the header shows only the logo mark; wide again, the name is back. The
-// header's Hide sidebar button hides it and the tab bar's Show sidebar button
-// brings it back; dragging its edge far to the left hides it too.
+// header's Collapse sidebar button makes it the icon strip, Ctrl+B hides it
+// and the tab bar's Show sidebar button brings it back; dragging its edge to
+// the window's edge hides it too.
 import { commands } from '../core/commands';
 import { settings } from '../core/settings.svelte';
 import { workspace } from '../core/tabs.svelte';
@@ -31,7 +32,7 @@ export default async function m79(dir: string) {
   await sleep(200);
   for (const scale of [1, 2]) {
     settings.update((s) => (s.uiScale = scale));
-    await sleep(200);
+    await sleep(450); // the width glides to the new scale
     inside(scale);
     assert(!document.querySelector('.sidebar .head .word'), `only the logo mark at 180 px, ${scale * 100} %`);
   }
@@ -39,23 +40,28 @@ export default async function m79(dir: string) {
   await waitFor(() => document.querySelector('.sidebar .head .word'), 'the name back when wide');
   inside(1);
 
-  // Hide from the header, show from the tab bar.
-  const hide = [...document.querySelectorAll<HTMLButtonElement>('.sidebar .head .icon-btn')].find((b) => b.title.startsWith('Hide sidebar'))!;
-  assert(hide, 'a Hide sidebar button in the header');
-  hide.click();
+  // The header makes it the strip; Ctrl+B hides it, the tab bar shows it again (as it was).
+  const collapse = [...document.querySelectorAll<HTMLButtonElement>('.sidebar .head .icon-btn')].find((b) => b.title.startsWith('Collapse sidebar'))!;
+  assert(collapse, 'a Collapse sidebar button in the header');
+  collapse.click();
+  await waitFor(() => document.querySelector('.sidebar .rail'), 'the icon strip');
+  commands.execute('view.toggleSidebar');
   await waitFor(() => (!side() ? true : null), 'sidebar hidden');
   const show = await waitFor(() => document.querySelector<HTMLButtonElement>('.tabbar .toggle'), 'Show sidebar in the tab bar');
   show.click();
-  await waitFor(() => side(), 'sidebar back');
+  await waitFor(() => side()?.querySelector('.rail'), 'sidebar back as the strip');
+  settings.update((s) => (s.sidebarCompact = false));
+  await waitFor(() => side()?.querySelector('.head'), 'full again');
 
-  // Dragging the edge far left hides it; the width it had stays for next time.
+  // Dragging the edge to the window's edge hides it; the width it had stays for next time.
   const grip = side()!.querySelector<HTMLElement>('.resizer')!;
   const r = grip.getBoundingClientRect();
   const ev = (type: string, x: number) => grip.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: r.top + 40, pointerId: 7 }));
   ev('pointerdown', r.left + 3);
   ev('pointermove', 200);
   ev('pointermove', 60);
-  ev('pointerup', 60);
+  ev('pointermove', 10);
+  ev('pointerup', 10);
   await waitFor(() => (!settings.value.sidebarVisible ? true : null), 'dragged shut');
   assert(settings.value.sidebarWidth >= 180, `the width kept (${settings.value.sidebarWidth})`);
   commands.execute('view.toggleSidebar');

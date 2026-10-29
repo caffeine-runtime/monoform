@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resizablePanel } from '../../core/panelResize.svelte';
   import PanelRight from '@lucide/svelte/icons/panel-right';
   import { isNarrow } from '../../core/fit';
   import { fitBar } from '../../core/fit';
@@ -1280,7 +1281,7 @@
     {#if info && !info.entities && !loading}<div class="empty-state overlay hint">{t('This drawing is empty. Pick a drawing tool on the left to start.')}</div>{/if}
   </div>
   {#if info && (!narrow || panelOpen)}
-    <aside data-sidepanel class="panel" class:floating={narrow} class:right={narrow}>
+    <aside use:resizablePanel={{ id: 'cad' }} data-sidepanel class="panel" class:floating={narrow} class:right={narrow}>
       <div class="ptabs">
         <button class:on={panel === 'props'} onclick={() => (panel = 'props')}>{t('Properties')}</button>
         <button class:on={panel === 'layers'} onclick={() => (panel = 'layers')}>{t('Layers')}</button>

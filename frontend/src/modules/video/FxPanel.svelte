@@ -2,6 +2,7 @@
   // Effects panel: the selected overlay's properties and keyframes (with
   // timing curves), or — with nothing selected — the project's overlays,
   // speed changes, transitions and fades.
+  import { resizablePanel } from '../../core/panelResize.svelte';
   import BezierEditor from './BezierEditor.svelte';
   import { BLUR_KINDS, EASINGS, TRANSITIONS, bezierOf, maskOf, stateAt, withMask, type Easing, type Layer, type Mask, type Project, type State } from './project';
   import { formatTime } from '../audio/waveform';
@@ -80,7 +81,7 @@
   }
 </script>
 
-<aside data-sidepanel class="fxpanel" aria-label={t('Effects')}>
+<aside use:resizablePanel={{ id: 'video' }} data-sidepanel class="fxpanel" aria-label={t('Effects')}>
   {#if selected && now}
     <div class="head">
       <input class="input name" value={selected.name} aria-label={t('Name')} onchange={(e) => onlayer({ ...selected, name: (e.target as HTMLInputElement).value })} />

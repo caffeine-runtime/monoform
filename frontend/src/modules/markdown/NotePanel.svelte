@@ -6,6 +6,7 @@
   // The Markdown side panel, as in Obsidian: the note's outline, the notes
   // that link here (backlinks, with the line each link is on) and the links
   // going out of it (unresolved ones can be created).
+  import { resizablePanel } from '../../core/panelResize.svelte';
   import OutlineTree from '../../shell/OutlineTree.svelte';
   import type { OutlineItem } from '../../core/textStats';
   import { relative } from '../../core/paths';
@@ -67,7 +68,7 @@
   }
 </script>
 
-<aside data-sidepanel class="notepanel" class:floating class:right={floating} aria-label={t('Note outline and links')}>
+<aside use:resizablePanel={{ id: 'markdown' }} data-sidepanel class="notepanel" class:floating class:right={floating} aria-label={t('Note outline and links')}>
   <div class="seg" role="tablist">
     <button role="tab" class:on={view === 'outline'} aria-selected={view === 'outline'} onclick={() => (view = 'outline')}>{t('Outline')}</button>
     <button role="tab" class:on={view === 'backlinks'} aria-selected={view === 'backlinks'} onclick={() => (view = 'backlinks')}>{t('Backlinks')} <span class="n">{backCount}</span></button>
