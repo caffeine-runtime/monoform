@@ -1822,6 +1822,7 @@ export namespace settings {
 	    sidebarCompact: boolean;
 	    lightCanvases: boolean;
 	    reduceMotion: boolean;
+	    forceMotion: boolean;
 	    language: string;
 	    updateCheckOff: boolean;
 	    nightlyUpdates: boolean;
@@ -1865,6 +1866,7 @@ export namespace settings {
 	        this.sidebarCompact = source["sidebarCompact"];
 	        this.lightCanvases = source["lightCanvases"];
 	        this.reduceMotion = source["reduceMotion"];
+	        this.forceMotion = source["forceMotion"];
 	        this.language = source["language"];
 	        this.updateCheckOff = source["updateCheckOff"];
 	        this.nightlyUpdates = source["nightlyUpdates"];

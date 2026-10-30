@@ -69,6 +69,15 @@ func TestNormalizePanelWidths(t *testing.T) {
 	}
 }
 
+func TestNormalizeMotion(t *testing.T) {
+	if n := normalize(Settings{ForceMotion: true}); !n.ForceMotion || n.ReduceMotion {
+		t.Fatalf("animations on = %+v %+v", n.ForceMotion, n.ReduceMotion)
+	}
+	if n := normalize(Settings{ReduceMotion: true, ForceMotion: true}); n.ForceMotion || !n.ReduceMotion {
+		t.Fatalf("off wins = %+v %+v", n.ForceMotion, n.ReduceMotion)
+	}
+}
+
 func TestNormalizeScaleAndSplit(t *testing.T) {
 	tabs := []SessionTab{{Kind: "file"}, {Kind: "file"}, {Kind: "file"}}
 	n := normalize(Settings{UIScale: 9, Session: Session{Tabs: tabs, Split: &SessionSplit{Layout: "columns", Panes: []int{0, 2}, X: 0.99}}})

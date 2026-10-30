@@ -29,6 +29,13 @@
     { id: 'dark', label: t('Dark', {}, 'theme') },
     { id: 'light', label: t('Light', {}, 'theme') },
   ] as const;
+  // Animations: as the system asks (off when it asks for less motion), always, or never.
+  const MOTIONS = [
+    { id: 'system', label: t('System', {}, 'motion'), reduce: false, force: false },
+    { id: 'on', label: t('On', {}, 'motion'), reduce: false, force: true },
+    { id: 'off', label: t('Off', {}, 'motion'), reduce: true, force: false },
+  ] as const;
+  const motion = $derived(s.reduceMotion ? 'off' : s.forceMotion ? 'on' : 'system');
   /** A translated sentence split around its {placeholders}, so they can be shown with markup. */
   const pieces = (s: string) => s.split(/(\{\w+\})/).filter(Boolean);
 
@@ -93,10 +100,14 @@
       <span class="lbl" title={t('Excalidraw and draw.io drawings, Mermaid and Graphviz diagrams. The files and exports keep their colours.')}>{t('Darken drawings and diagrams in the dark theme')}</span>
       <input type="checkbox" checked={!s.lightCanvases} onchange={(e) => theme.setDarkCanvas((e.target as HTMLInputElement).checked)} />
     </label>
-    <label class="row check">
-      <span class="lbl" title={t('Turns the animations off. Monoform also does this when your system asks for less motion.')}>{t('Reduce motion')}</span>
-      <input type="checkbox" checked={s.reduceMotion} onchange={(e) => settings.update((x) => (x.reduceMotion = (e.target as HTMLInputElement).checked))} />
-    </label>
+    <div class="row">
+      <span class="lbl" title={t('System: off when your system asks for less motion (on Windows: Animation effects). On: always.')}>{t('Animations')}</span>
+      <div class="seg" role="radiogroup" aria-label={t('Animations')}>
+        {#each MOTIONS as m (m.id)}
+          <button role="radio" aria-checked={motion === m.id} class:on={motion === m.id} onclick={() => settings.update((x) => ((x.reduceMotion = m.reduce), (x.forceMotion = m.force)))}>{m.label}</button>
+        {/each}
+      </div>
+    </div>
     <div class="row">
       <label class="lbl" for="uis" title={t('Makes text, buttons and icons everywhere larger or smaller ({shortcuts})', { shortcuts: 'Ctrl+Alt+= / Ctrl+Alt+−' })}>{t('Interface size')}</label>
       <span class="scale">

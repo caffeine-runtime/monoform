@@ -2,7 +2,8 @@
 // sidebar's edge narrows it, then makes it a strip of icons (the mark, Files,
 // Find, Open folder, pinned and recent files with their labels beside them,
 // Settings and the menu), then hides it; the mark expands the strip again and
-// Ctrl+Shift+B toggles it. A Markdown note's side panel is as wide as it's
+// Ctrl+Shift+B toggles it: its icons arrive animated while the mark stays
+// put, and a line along its edge sets it apart. A Markdown note's side panel is as wide as it's
 // dragged (remembered, arrow keys, double-click for the usual width), and
 // dragged away it hides the side panels. In the note's source, the marks of
 // bold, italic, headings, code and lists each have their colour.
@@ -12,6 +13,8 @@ import { settings } from '../core/settings.svelte';
 import { sidebar } from '../core/sidebar.svelte';
 import { workspace } from '../core/tabs.svelte';
 import { basename } from '../core/paths';
+import { reducedMotion } from '../core/motion';
+import { tick } from 'svelte';
 import { assert, assertEq, log, sleep, waitFor } from './harness';
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector<T>(sel);
@@ -81,8 +84,24 @@ async function sidebarWidths(dir: string) {
   $<HTMLButtonElement>('.sidebar .logo')!.click();
   await settle(300, 'expanded to the width it had');
   assert(!settings.value.sidebarCompact && $('.sidebar .head'), 'full again');
+  await sleep(500);
+  const markFull = $('.sidebar .head .mark')!.getBoundingClientRect();
   commands.execute('view.compactSidebar');
+  // The strip's icons arrive animated, the name and buttons slide away.
+  await tick();
+  await sleep(0);
+  if (!reducedMotion()) {
+    for (const n of ['Files', 'Settings']) assert($(`.sidebar .rbtn[aria-label="${n}"]`)?.getAnimations().length, `${n} arrives animated`);
+    assert($('.sidebar .head .actions')?.getAnimations().length, 'the header buttons slide away');
+  }
   await settle(rail, 'Ctrl+Shift+B: the strip');
+  await waitFor(() => (!$('.sidebar .head') ? true : null), 'the full header gone again');
+  // The mark doesn't move between the two.
+  const markRail = $('.sidebar .logo .mark')!.getBoundingClientRect();
+  assert(Math.abs(markRail.left - markFull.left) <= 1 && Math.abs(markRail.top - markFull.top) <= 1, `the mark stays put (${markFull.left},${markFull.top} → ${markRail.left},${markRail.top})`);
+  // A line along the edge sets it apart from a toolbox beside it.
+  const line = getComputedStyle($('.sidebar')!, '::after');
+  assert(line.width === '1px' && line.backgroundColor !== 'rgba(0, 0, 0, 0)', `a line along the edge (${line.width} ${line.backgroundColor})`);
   // Find in folder from the strip opens the search, at full width.
   find.isConnected ? find.click() : $<HTMLButtonElement>('.sidebar .rbtn[aria-label="Find in folder"]')!.click();
   await settle(300, 'Find expands it');

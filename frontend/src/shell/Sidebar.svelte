@@ -30,8 +30,8 @@
   import FolderTree from '@lucide/svelte/icons/folder-tree';
   import Cog from '@lucide/svelte/icons/settings';
   import { tick, type Component } from 'svelte';
-  import { fade } from 'svelte/transition';
-  import { cubicOut } from 'svelte/easing';
+  import { flip } from 'svelte/animate';
+  import { backOut, cubicOut } from 'svelte/easing';
 
   // The header keeps the name: when it doesn't fit, Open folder and then Find
   // in folder move into the menu (their shortcuts still work); only a sidebar
@@ -159,6 +159,38 @@
     requestAnimationFrame(() => (started = true));
   });
 
+  // Between full and the strip the mark stays put (it's in the same place in
+  // both) and the name folds into it or unfolds from it. The rest of what
+  // goes slides off to the left as it fades; what comes follows the edge
+  // out, and the strip's icons arrive one after another. Files that move up
+  // the list glide there.
+  const go = (n: number) => (started ? ms(n) : 0);
+  function wipe(_: Element, { delay = 0, duration = 300 } = {}) {
+    return { delay: go(delay), duration: go(duration), easing: cubicOut, css: (t: number, u: number) => `opacity: ${t}; clip-path: inset(0 ${100 * u}% 0 0)` };
+  }
+  function leave(_: Element) {
+    return { duration: go(140), easing: cubicOut, css: (t: number, u: number) => `opacity: ${t}; transform: translateX(${-14 * u}px)` };
+  }
+  function arrive(_: Element, delay = 0) {
+    return { delay: go(70 + delay), duration: go(300), easing: cubicOut, css: (t: number, u: number) => `opacity: ${t}; transform: translateX(${-18 * u}px)` };
+  }
+  function pop(_: Element, i = 0) {
+    if (i < 0) return { duration: 0 };
+    return {
+      delay: go(60 + Math.min(i, 12) * 18),
+      duration: go(340),
+      easing: backOut,
+      css: (t: number, u: number) => `opacity: ${Math.min(1, t * 1.6)}; transform: translateX(${-8 * u}px) scale(${0.55 + 0.45 * t})`,
+    };
+  }
+  function grow(_: Element) {
+    return { delay: go(110), duration: go(300), easing: cubicOut, css: (t: number) => `opacity: ${t}; transform: scaleX(${t})` };
+  }
+  function drop(_: Element) {
+    return { duration: go(160), easing: cubicOut, css: (t: number) => `opacity: ${t}; transform: scale(${0.6 + 0.4 * t})` };
+  }
+  const glide = () => ({ duration: go(260), easing: cubicOut });
+
   // The strip's labels: beside the icon, at once when one was just shown
   // (so moving down the strip glides from label to label), else after a beat.
   let tip = $state<{ text: string; hint?: string; x: number; y: number } | null>(null);
@@ -192,12 +224,12 @@
     const sc = commands.shortcutOf(id);
     return sc ? formatShortcut(sc) : undefined;
   };
-  const railPinned = $derived(settings.value.pinned.slice(0, 6));
-  const railRecents = $derived(recents.slice(0, 8));
+  const railFiles = $derived([...settings.value.pinned.slice(0, 6).map((path) => ({ path, pinned: true })), ...recents.slice(0, 8).map((path) => ({ path, pinned: false }))]);
 </script>
 
-{#snippet railButton(icon: Component, label: string, run: (e: MouseEvent) => void, opts: { hint?: string; on?: boolean; menu?: (e: MouseEvent) => void; pinned?: boolean } = {})}
+{#snippet railButton(icon: Component, label: string, run: (e: MouseEvent) => void, opts: { hint?: string; on?: boolean; menu?: (e: MouseEvent) => void; pinned?: boolean; i?: number } = {})}
   <button
+    in:pop|global={opts.i ?? -1}
     class="rbtn"
     class:on={opts.on}
     aria-label={label}
@@ -216,7 +248,7 @@
 <aside class="sidebar" class:tracking={live === 'full' && !snapping} class:mf-panel-resizing={!!live} style:width="{width}px" transition:slide|global>
   <div class="clip">
     {#if layer === 'compact'}
-      <div class="layer rail" style:width="{railW}px" in:fade={{ duration: ms(180), delay: ms(70) }} out:fade={{ duration: ms(90) }}>
+      <div class="layer rail" style:width="{railW}px">
         <header class="rhead" class:mac={boot.platform === 'darwin'}>
           <button
             class="logo"
@@ -231,34 +263,29 @@
             <span class="open" aria-hidden="true"><Icon icon={PanelLeftOpen} size={18} /></span>
           </button>
         </header>
-        <nav class="rgroup" aria-label={t('Sidebar')}>
-          {@render railButton(FolderTree, t('Files'), () => ((sidebar.mode = 'files'), expand()), { hint: shortcut('view.showFiles') })}
-          {@render railButton(Search, t('Find in folder'), () => commands.execute('search.inFolder'), { hint: shortcut('search.inFolder') })}
-          {@render railButton(FolderOpen, t('Open folder'), () => commands.execute('file.openFolder'), { hint: shortcut('file.openFolder') })}
+        <nav class="rgroup" aria-label={t('Sidebar')} out:leave|global>
+          {@render railButton(FolderTree, t('Files'), () => ((sidebar.mode = 'files'), expand()), { hint: shortcut('view.showFiles'), i: 0 })}
+          {@render railButton(Search, t('Find in folder'), () => commands.execute('search.inFolder'), { hint: shortcut('search.inFolder'), i: 1 })}
+          {@render railButton(FolderOpen, t('Open folder'), () => commands.execute('file.openFolder'), { hint: shortcut('file.openFolder'), i: 2 })}
         </nav>
-        {#if railPinned.length || railRecents.length}
-          <div class="rsep"></div>
-          <div class="rfiles" role="group" aria-label={t('Pinned and recent files')}>
-            {#each railPinned as p (p)}
-              {@render railButton(iconFor(p, kindOf(p)), basename(p), () => workspace.openPath(p), { hint: tildify(dirname(p), boot.home), on: activePath === p, menu: (e) => listMenu(e, p, false), pinned: true })}
-            {/each}
-            {#each railRecents as p (p)}
-              {@render railButton(iconFor(p, kindOf(p)), basename(p), () => workspace.openPath(p), { hint: tildify(dirname(p), boot.home), on: activePath === p, menu: (e) => listMenu(e, p, true) })}
-            {/each}
-          </div>
-        {:else}
-          <div class="rfiles"></div>
-        {/if}
-        <div class="rfoot">
-          {@render railButton(Cog, t('Settings'), () => commands.execute('app.settings'), { hint: shortcut('app.settings') })}
-          {@render railButton(Menu, t('Menu'), appMenu)}
+        {#if railFiles.length}<div class="rsep" in:grow|global out:leave|global></div>{/if}
+        <div class="rfiles" role="group" aria-label={t('Pinned and recent files')} out:leave|global>
+          {#each railFiles as f, i (f.path)}
+            <div class="ritem" animate:flip={glide()} in:pop|global={i + 3} out:drop>
+              {@render railButton(iconFor(f.path, kindOf(f.path)), basename(f.path), () => workspace.openPath(f.path), { hint: tildify(dirname(f.path), boot.home), on: activePath === f.path, menu: (e) => listMenu(e, f.path, !f.pinned), pinned: f.pinned })}
+            </div>
+          {/each}
+        </div>
+        <div class="rfoot" out:leave|global>
+          {@render railButton(Cog, t('Settings'), () => commands.execute('app.settings'), { hint: shortcut('app.settings'), i: 4 })}
+          {@render railButton(Menu, t('Menu'), appMenu, { i: 5 })}
         </div>
       </div>
     {:else}
-      <div class="layer full" style:width="{fullW}px" in:fade={{ duration: ms(180), delay: ms(70) }} out:fade={{ duration: ms(90) }}>
+      <div class="layer full" style:width="{fullW}px">
         <header class="head" class:mac={boot.platform === 'darwin'} bind:this={head}>
-          <h1 class="title" bind:this={titleEl} title={fold >= 3 ? 'Monoform' : undefined}><span class="mark" aria-hidden="true">{@html logoMark}</span>{#if fold < 3}<span class="word">Monoform</span>{/if}</h1>
-          <div class="actions">
+          <h1 class="title" bind:this={titleEl} title={fold >= 3 ? 'Monoform' : undefined}><span class="mark" aria-hidden="true">{@html logoMark}</span><span in:wipe|global={{ delay: 70 }} out:wipe|global={{ duration: 140 }}>{#if fold < 3}<span class="word">Monoform</span>{/if}</span></h1>
+          <div class="actions" in:arrive|global={30} out:leave|global>
             {#if fold < 2}
               <button class="icon-btn" class:on={sidebar.mode === 'search'} title={t('Find in folder ({shortcut})', { shortcut: formatShortcut('Mod+Shift+F') })} onclick={() => commands.execute('search.inFolder')}>
                 <Icon icon={Search} />
@@ -274,81 +301,83 @@
           </div>
         </header>
 
-        {#if sidebar.mode === 'search'}
-          <SearchPanel />
-        {:else}
-          <div class="sections">
-            <section class="folder" class:has={!!workspace.folder}>
-              {#if workspace.folder}
-                <div class="label row-label" title={workspace.folder}>
-                  <span class="label-text">{folderName}</span>
-                  <span class="label-actions">
-                    <button class="icon-btn sm" title={t('New file ({shortcut})', { shortcut: formatShortcut('Mod+Alt+N') })} onclick={() => newFileOfKind(workspace.folder)}><Icon icon={FilePlus} size={14} /></button>
-                    <button class="icon-btn sm" title={t('New folder')} onclick={() => newFolderIn(workspace.folder)}><Icon icon={FolderPlus} size={14} /></button>
-                    <button class="icon-btn sm" title={t('Refresh')} onclick={() => tree.refreshAll()}><Icon icon={RefreshCw} size={14} /></button>
-                    <button class="icon-btn sm" title={t('Collapse all')} onclick={() => tree.collapseAll(workspace.folder)}><Icon icon={ListCollapse} size={14} /></button>
-                    <button class="icon-btn sm" title={t('Close folder')} onclick={() => commands.execute('folder.close')}><Icon icon={X} size={14} /></button>
-                  </span>
-                </div>
-                <div class="tree-wrap"><FileTree root={workspace.folder} /></div>
-              {:else}
-                <div class="no-folder">
-                  <button class="btn" onclick={() => commands.execute('file.openFolder')}><Icon icon={FolderOpen} /> {t('Open folder')}</button>
-                  {#if settings.value.recentFolders.length}
-                    <div class="recent-folders">
-                      {#each settings.value.recentFolders.slice(0, 4) as f (f)}
-                        <div class="row">
-                          <button class="item" title={f} onclick={() => workspace.openFolder(f)}>
-                            <span class="ico"><Icon icon={FolderOpen} size={15} /></span>
-                            <span class="name">{basename(f)}</span>
-                            <span class="hint">{tildify(dirname(f), boot.home)}</span>
-                          </button>
-                          <button class="rm icon-btn xs" title={t('Remove from recent folders')} aria-label={t('Remove {name} from recent folders', { name: basename(f) })} onclick={() => settings.removeRecentFolder(f)}><Icon icon={X} size={12} /></button>
-                        </div>
-                      {/each}
-                    </div>
-                  {/if}
-                </div>
-              {/if}
-            </section>
-
-            {#if settings.value.pinned.length}
-              <section class="list">
-                <button class="label toggle" onclick={() => (pinnedOpen = !pinnedOpen)}>
-                  <span class="chev" class:open={pinnedOpen}><Icon icon={ChevronRight} size={12} /></span>{t('Pinned')}
-                </button>
-                {#if pinnedOpen}
-                  {#each settings.value.pinned as p (p)}
-                    <button class="item" class:active={activePath === p} title={p} onclick={() => workspace.openPath(p)} oncontextmenu={(e) => listMenu(e, p, false)}>
-                      <span class="ico"><Icon icon={Pin} size={14} /></span>
-                      <span class="name">{basename(p)}</span>
-                    </button>
-                  {/each}
+        <div class="body" in:arrive|global={50} out:leave|global>
+          {#if sidebar.mode === 'search'}
+            <SearchPanel />
+          {:else}
+            <div class="sections">
+              <section class="folder" class:has={!!workspace.folder}>
+                {#if workspace.folder}
+                  <div class="label row-label" title={workspace.folder}>
+                    <span class="label-text">{folderName}</span>
+                    <span class="label-actions">
+                      <button class="icon-btn sm" title={t('New file ({shortcut})', { shortcut: formatShortcut('Mod+Alt+N') })} onclick={() => newFileOfKind(workspace.folder)}><Icon icon={FilePlus} size={14} /></button>
+                      <button class="icon-btn sm" title={t('New folder')} onclick={() => newFolderIn(workspace.folder)}><Icon icon={FolderPlus} size={14} /></button>
+                      <button class="icon-btn sm" title={t('Refresh')} onclick={() => tree.refreshAll()}><Icon icon={RefreshCw} size={14} /></button>
+                      <button class="icon-btn sm" title={t('Collapse all')} onclick={() => tree.collapseAll(workspace.folder)}><Icon icon={ListCollapse} size={14} /></button>
+                      <button class="icon-btn sm" title={t('Close folder')} onclick={() => commands.execute('folder.close')}><Icon icon={X} size={14} /></button>
+                    </span>
+                  </div>
+                  <div class="tree-wrap"><FileTree root={workspace.folder} /></div>
+                {:else}
+                  <div class="no-folder">
+                    <button class="btn" onclick={() => commands.execute('file.openFolder')}><Icon icon={FolderOpen} /> {t('Open folder')}</button>
+                    {#if settings.value.recentFolders.length}
+                      <div class="recent-folders">
+                        {#each settings.value.recentFolders.slice(0, 4) as f (f)}
+                          <div class="row">
+                            <button class="item" title={f} onclick={() => workspace.openFolder(f)}>
+                              <span class="ico"><Icon icon={FolderOpen} size={15} /></span>
+                              <span class="name">{basename(f)}</span>
+                              <span class="hint">{tildify(dirname(f), boot.home)}</span>
+                            </button>
+                            <button class="rm icon-btn xs" title={t('Remove from recent folders')} aria-label={t('Remove {name} from recent folders', { name: basename(f) })} onclick={() => settings.removeRecentFolder(f)}><Icon icon={X} size={12} /></button>
+                          </div>
+                        {/each}
+                      </div>
+                    {/if}
+                  </div>
                 {/if}
               </section>
-            {/if}
 
-            {#if recents.length}
-              <section class="list">
-                <button class="label toggle" onclick={() => (recentsOpen = !recentsOpen)}>
-                  <span class="chev" class:open={recentsOpen}><Icon icon={ChevronRight} size={12} /></span>{t('Recents')}
-                </button>
-                {#if recentsOpen}
-                  {#each recents as p (p)}
-                    <div class="row">
-                      <button class="item" class:active={activePath === p} title={p} onclick={() => workspace.openPath(p)} oncontextmenu={(e) => listMenu(e, p, true)}>
-                        <span class="ico"><Icon icon={iconFor(p, kindOf(p))} size={15} /></span>
+              {#if settings.value.pinned.length}
+                <section class="list">
+                  <button class="label toggle" onclick={() => (pinnedOpen = !pinnedOpen)}>
+                    <span class="chev" class:open={pinnedOpen}><Icon icon={ChevronRight} size={12} /></span>{t('Pinned')}
+                  </button>
+                  {#if pinnedOpen}
+                    {#each settings.value.pinned as p (p)}
+                      <button class="item" class:active={activePath === p} title={p} onclick={() => workspace.openPath(p)} oncontextmenu={(e) => listMenu(e, p, false)} animate:flip={glide()}>
+                        <span class="ico"><Icon icon={Pin} size={14} /></span>
                         <span class="name">{basename(p)}</span>
-                        <span class="hint">{basename(dirname(p))}</span>
                       </button>
-                      <button class="rm icon-btn xs" title={t('Remove from recents')} aria-label={t('Remove {name} from recents', { name: basename(p) })} onclick={() => settings.removeRecent(p)}><Icon icon={X} size={12} /></button>
-                    </div>
-                  {/each}
-                {/if}
-              </section>
-            {/if}
-          </div>
-        {/if}
+                    {/each}
+                  {/if}
+                </section>
+              {/if}
+
+              {#if recents.length}
+                <section class="list">
+                  <button class="label toggle" onclick={() => (recentsOpen = !recentsOpen)}>
+                    <span class="chev" class:open={recentsOpen}><Icon icon={ChevronRight} size={12} /></span>{t('Recents')}
+                  </button>
+                  {#if recentsOpen}
+                    {#each recents as p (p)}
+                      <div class="row" animate:flip={glide()}>
+                        <button class="item" class:active={activePath === p} title={p} onclick={() => workspace.openPath(p)} oncontextmenu={(e) => listMenu(e, p, true)}>
+                          <span class="ico"><Icon icon={iconFor(p, kindOf(p))} size={15} /></span>
+                          <span class="name">{basename(p)}</span>
+                          <span class="hint">{basename(dirname(p))}</span>
+                        </button>
+                        <button class="rm icon-btn xs" title={t('Remove from recents')} aria-label={t('Remove {name} from recents', { name: basename(p) })} onclick={() => settings.removeRecent(p)}><Icon icon={X} size={12} /></button>
+                      </div>
+                    {/each}
+                  {/if}
+                </section>
+              {/if}
+            </div>
+          {/if}
+        </div>
       </div>
     {/if}
   </div>
@@ -373,6 +402,18 @@
   .sidebar.tracking {
     transition: none;
   }
+  /* A line along its edge, below the tab bar: editors' toolboxes and panels
+     beside it are the same colour. */
+  .sidebar::after {
+    content: '';
+    position: absolute;
+    top: var(--tabbar-h);
+    bottom: 0;
+    right: 0;
+    width: 1px;
+    background: var(--border);
+    pointer-events: none;
+  }
   .clip {
     position: absolute;
     inset: 0;
@@ -393,7 +434,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 10px 10px 8px 16px;
+    /* The mark where the strip has it. */
+    padding: 10px 10px 8px calc(15px * var(--ui-scale));
     height: var(--tabbar-h);
     box-sizing: content-box;
     /* Whatever the width, nothing in the header reaches over the tab bar. */
@@ -413,7 +455,6 @@
     margin: 0;
     display: flex;
     align-items: center;
-    gap: 8px;
     font-size: calc(17px * var(--ui-scale));
     color: var(--text);
     white-space: nowrap;
@@ -429,6 +470,15 @@
   .mark :global(svg) {
     width: 100%;
     height: auto;
+  }
+  .word {
+    margin-left: 8px;
+  }
+  .body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   /* The icon strip. */
@@ -507,6 +557,10 @@
   }
   .rfoot {
     padding: 6px 0 10px;
+  }
+  .ritem {
+    display: grid;
+    flex: none;
   }
   .rsep {
     width: calc(22px * var(--ui-scale));

@@ -67,12 +67,14 @@
   "Not restarting: {name} isn’t saved.": "Kein Neustart: {name} ist nicht gespeichert.",
   "One request to GitHub when Monoform starts; nothing about you or this computer is sent.": "Eine einzige Anfrage an GitHub beim Start von Monoform; es werden keine Daten über Sie oder diesen Computer gesendet.",
   "The Microsoft Store keeps Monoform up to date.": "Der Microsoft Store hält Monoform auf dem neuesten Stand.",
-  "Reduce motion": "Bewegung reduzieren",
-  "Turns the animations off. Monoform also does this when your system asks for less motion.": "Schaltet die Animationen aus. Monoform tut dies auch, wenn Ihr System weniger Bewegung anfordert.",
   "Look for a new version when Monoform starts": "Beim Start von Monoform nach einer neuen Version suchen",
   "Version {version} is available.": "Version {version} ist verfügbar.",
   "Monoform is up to date.": "Monoform ist auf dem neuesten Stand.",
   "Couldn’t check: {error}": "Prüfung fehlgeschlagen: {error}",
   "Update…": "Aktualisieren…",
-  "Check now": "Jetzt prüfen"
+  "Check now": "Jetzt prüfen",
+  "[motion] System": "System",
+  "[motion] On": "An",
+  "[motion] Off": "Aus",
+  "System: off when your system asks for less motion (on Windows: Animation effects). On: always.": "System: aus, wenn Ihr System weniger Bewegung anfordert (unter Windows: Animationseffekte). An: immer."
 }

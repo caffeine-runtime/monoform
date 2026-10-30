@@ -95,8 +95,8 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   items reorder, not when a neighbour is removed. Menus unfold with a `clip-path` wipe rather than a scale: a transform
   shrinks what `getBoundingClientRect` reports while they open, and menus size and place themselves (and anchor their
   submenus) from those rects. No full-screen backdrop fade and no scaling on the palette: on the
-  software-rendered VM those doubled its frame cost. Settings › Reduce motion (and the system's
-  `prefers-reduced-motion`) cuts CSS animations to 1 ms and script-driven ones to 0 (`core/motion.ts`); spinners keep
+  software-rendered VM those doubled its frame cost. Settings › Animations › Off (and the system's
+  `prefers-reduced-motion`, unless Animations › On) cuts CSS animations to 1 ms and script-driven ones to 0 (`core/motion.ts`); spinners keep
   turning.
 - **Later command registrations win shortcut conflicts** (if their `when` holds), so a module can claim e.g. `Mod+F` while it is active.
   Editors claim the keys they own the same way while the caret is in them (hidden commands: Ctrl+B / Ctrl+K in a Word
@@ -725,7 +725,18 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   squeezing it mid-way, and the layers cross-fade. The strip's labels are drawn by the sidebar, not the browser's
   `title` tooltip: they appear beside the icon after a short pause, then at once while moving along the strip.
   Ctrl+B keeps meaning hide/show; the strip is its own setting (`sidebarCompact`), so a hidden sidebar comes back the
-  way it was.
+  way it was. The sidebar is the one place where leaving content animates (against "entrances only"): its edge takes
+  260 ms to close over it anyway, and the header and lists slide off within that time (140 ms), so nothing waits
+  longer than the edge. The logo mark sits at the same point in both layers (the header's padding is the strip's
+  centre less half the mark) and has no transition of its own, so it doesn't blink. The strip's icons use Svelte
+  transitions marked `|global` so they also play when the sidebar is shown in the strip, gated like the slide so
+  nothing animates as the window opens. A line along its edge starts below the tab bar: the header and the tab bar
+  stay one band.
+- **Animations: System · On · Off** (`reduceMotion`, `forceMotion`): following `prefers-reduced-motion` stays the
+  default (it is an accessibility setting), but Windows reports it whenever *Animation effects* is off, which
+  *Adjust for best performance* and remote sessions also switch off — people who never asked for less motion got
+  none. *On* sets `data-motion="full"`, which base.css and `core/motion.ts` already honoured. Two booleans instead of
+  one string so older settings files keep their *Reduce motion* choice; Off wins if both are set.
 - **Side panels resize through one action** (`core/panelResize.svelte.ts`): `use:resizablePanel={{ id }}` adds the
   grip, the keys, double-click and the remembered width to any editor's panel, instead of each module growing its
   own divider. Widths are kept per kind of panel (all notes share one), in pixels at interface scale 1 so they follow

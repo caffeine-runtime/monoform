@@ -586,8 +586,8 @@
 - **Interface motion**: the palette and quick pick drop in, menus unfold from their corner, dialogs rise, toasts
   slide in, editors' side panels slide from their edge, a shown tab fades in, new tabs grow into the strip and the
   others slide along when tabs open, close or move, the start page settles in, buttons and tiles answer the press —
-  entrances only, transform and opacity only. Settings › Appearance › Reduce motion (also on when the system asks for
-  less motion). Unit test (`motion.test.ts`), self-test `m78` (animations present, longest frames logged, reduce
+  entrances only, transform and opacity only. Settings › Appearance › Animations › Off (also off when the system asks for
+  less motion, unless On is chosen). Unit test (`motion.test.ts`), self-test `m78` (animations present, longest frames logged, reduce
   motion).
 - **Fix: a narrow sidebar spilled its header over the tab bar.** At the narrowest width (180 px) the header needed
   ~230 px (the name never wrapped and nothing clipped it), so its buttons painted over the first tab. The header now
@@ -841,6 +841,16 @@
   Unit tests (`mdMarks.test.ts`, `sidebarDrag.test.ts`, `panelResize.test.ts`), a Go settings test, self-test `m89`
   (dragging the sidebar to the strip and away, the strip's buttons and labels, the note panel's width by dragging,
   keys and double-click, dragged away hiding the panels, and the marks' colours in the editor); `m79` updated.
+- **The sidebar is set apart and moves between its widths**: a line along its edge (below the tab bar) separates it
+  from editors' toolboxes and panels of the same colour. Between full and the strip the logo mark stays where it is
+  and the name folds into it; the header buttons and the lists slide off as the edge closes over them, the strip's
+  icons pop in one after another (and the other way round, the content follows the edge out). Files that move up the
+  strip or the Pinned and Recents lists glide to their place.
+- **Settings › Appearance › Animations: System · On · Off** (was a *Reduce motion* box). *System* (the default) turns
+  them off when the system asks for less motion — on Windows that is *Animation effects* being off, which also comes
+  with *Adjust for best performance* and remote desktop sessions; *On* keeps them on anyway (`forceMotion`,
+  `data-motion="full"`). Go settings test, self-tests `m78` (the three choices) and `m89` (the mark stays put, the
+  strip's icons and the header animate, the line along the edge).
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with
@@ -931,7 +941,7 @@ available here).
 - Video saving without effects doesn't re-encode, so cuts snap to keyframes (the timeline shows the snapped result). With effects the video is rendered to WebM (VP9/VP8 + Opus) — the encoders every webview has; MP4/H.264 output isn't offered (no permissively licensed encoder in pure Go; WebKitGTK has no H.264 WebCodecs encoder). No crop or colour filters on video yet.
 - Video effects: rendering keeps the whole encoded output in memory until it is written (fine for clips; a long 1080p render needs RAM of roughly its file size), and runs at about 1–2× real time at 320×180 on the test VM (WebCodecs) — slower where WebKitGTK's WebCodecs decoder is missing its GStreamer parser (gst-plugins-bad), because frames then come from seeking a <video> element.
 - Motion: on the software-rendered VM a shown tab's fade-in costs 15–30 ms per frame more than without it (tab
-  switches 17–66 ms instead of 17–32 ms); real GPUs composite it for free. Settings › Reduce motion turns it off.
+  switches 17–66 ms instead of 17–32 ms); real GPUs composite it for free. Settings › Animations › Off turns it off.
 - Split view: the first split of a session costs one 75–100 ms UI frame on the test VM (first layout of the panes); later changes 35–55 ms. Two 3D views can be shown, but only the focused one is live — the other keeps a still of its last frame until clicked (they share one WebGL renderer).
 - Interface size scales the design tokens and every font size, plus the shell's bars and controls; some module-specific paddings and canvas overlays stay at their pixel size.
 - Databases: SQLite only (no server databases — they'd need network access); WITHOUT ROWID tables and views are edited through the SQL console, not the grid; BLOBs are shown summarised, not edited.

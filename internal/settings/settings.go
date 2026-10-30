@@ -103,8 +103,11 @@ type Settings struct {
 	// Graphviz) on white in the dark theme instead of darkening them.
 	LightCanvases bool `json:"lightCanvases"`
 	// ReduceMotion turns the interface's animations off (they are also off
-	// when the system asks for reduced motion).
+	// when the system asks for reduced motion, unless ForceMotion).
 	ReduceMotion bool `json:"reduceMotion"`
+	// ForceMotion keeps the animations on when the system asks for less
+	// motion (on Windows, Animation effects off).
+	ForceMotion bool `json:"forceMotion"`
 	// Language of the interface: "en", "pl", "es", "de", "fr", or "" to follow the system.
 	Language string `json:"language"`
 	// UpdateCheckOff stops looking for a new version at startup.
@@ -271,6 +274,9 @@ func normalize(v Settings) Settings {
 	}
 	if v.PanelWidths == nil {
 		v.PanelWidths = map[string]int{}
+	}
+	if v.ReduceMotion {
+		v.ForceMotion = false
 	}
 	if v.FontSize < 8 || v.FontSize > 40 {
 		v.FontSize = d.FontSize

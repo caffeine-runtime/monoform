@@ -2,8 +2,10 @@
 // animation (palette drops in, a menu unfolds, a dialog rises, a toast slides
 // in), a shown tab fades in, a new tab grows into the strip and closing one
 // slides its neighbours along (FLIP) — each with the longest UI frame logged.
-// Settings › Reduce motion turns it off: data-motion="reduce", CSS animations
-// down to 1 ms and script-driven ones to 0.
+// Settings › Appearance › Animations: Off turns it off (data-motion="reduce", CSS
+// animations down to 1 ms and script-driven ones to 0); On keeps it on when the
+// system asks for less motion (data-motion="full"); System is the default.
+import { commands } from '../core/commands';
 import { join } from '../core/paths';
 import { ms } from '../core/motion';
 import { settings } from '../core/settings.svelte';
@@ -17,11 +19,24 @@ const anim = (sel: string) => {
 };
 
 export default async function m78(dir: string) {
-  settings.update((s) => (s.reduceMotion = false));
+  for (const t of [...workspace.tabs]) await workspace.close(t, { force: true });
+  // Settings › Appearance › Animations: System by default (as the system
+  // asks), Off, and On whatever the system asks (data-motion="full"). The rest
+  // runs with On, so it holds where the system asks for less motion too.
+  commands.execute('app.settings');
+  const group = await waitFor(() => document.querySelector<HTMLElement>('[role=radiogroup][aria-label="Animations"]'), 'the Animations choice');
+  const choice = (label: string) => [...group.querySelectorAll<HTMLButtonElement>('[role=radio]')].find((b) => b.textContent === label)!;
+  assertEq(group.querySelector('[aria-checked=true]')?.textContent, 'System', 'as the system asks by default');
+  assertEq(document.documentElement.dataset.motion, 'auto', 'System: data-motion="auto"');
+  choice('Off').click();
+  await waitFor(() => (document.documentElement.dataset.motion === 'reduce' ? true : null), 'Off: data-motion="reduce"');
+  assert(settings.value.reduceMotion && !settings.value.forceMotion, 'Off');
+  choice('On').click();
+  await waitFor(() => (document.documentElement.dataset.motion === 'full' ? true : null), 'On: data-motion="full"');
+  assert(settings.value.forceMotion && !settings.value.reduceMotion && ms(170) === 170, 'animations on whatever the system asks');
   for (const t of [...workspace.tabs]) await workspace.close(t, { force: true });
   for (const f of ['code/sample.ts', 'data/grid.csv', 'img/photo.png']) await workspace.openPath(join(dir, f));
   await sleep(600);
-  assertEq(document.documentElement.dataset.motion, 'auto', 'motion on');
   const frames: string[] = [];
   const measure = async (what: string, fn: () => Promise<void>) => {
     const j = await measureJank(fn);
@@ -105,7 +120,8 @@ export default async function m78(dir: string) {
   assertEq(getComputedStyle(p).animationDuration, '0.001s', 'CSS animations down to 1 ms');
   assertEq(ms(170), 0, 'script-driven animations take no time');
   ui.paletteOpen = false;
-  settings.update((s) => (s.reduceMotion = false));
+  settings.update((s) => ((s.reduceMotion = false), (s.forceMotion = false)));
+  await waitFor(() => (document.documentElement.dataset.motion === 'auto' ? true : null), 'back to System');
   for (const t of [...workspace.tabs]) await workspace.close(t, { force: true });
   log(`motion: ${frames.join(', ')}`);
 }
