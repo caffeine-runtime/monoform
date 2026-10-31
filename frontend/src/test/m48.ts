@@ -5,13 +5,16 @@
 // diagram, Markdown → note, anything else → text). The document is unsaved
 // (dot, "Not saved yet", not in the session) until Save, which asks where
 // (the native dialog is stubbed here), writes it there and drops the temp
-// copy. Closing an unsaved one asks first. Copied file paths open the files.
+// copy — also from the image editor's own Save menu (Save, Save as…, Save a
+// copy), with the tab taking the name typed in the dialog. Closing an
+// unsaved one asks first. Copied file paths open the files.
 import { api } from '../core/backend';
 import { modules } from '../core/modules';
-import { extname, join } from '../core/paths';
+import { dirname, extname, join } from '../core/paths';
+import { settings } from '../core/settings.svelte';
 import { workspace, type Tab } from '../core/tabs.svelte';
 import { give, pasteInto } from '../core/transfer.svelte';
-import { ui } from '../core/ui.svelte';
+import { menu, ui } from '../core/ui.svelte';
 import { assert, assertEq, log, sleep, waitFor } from './harness';
 
 type Go = { SaveFileDialog: (title: string, def: string, filters: unknown) => Promise<string> };
@@ -64,6 +67,40 @@ export default async function m48(dir: string) {
     const [there, tempLeft] = await api.Exists([dest, temp]);
     assert(there && !tempLeft, 'written where chosen; the temp copy is gone');
     log(`picture pasted and saved to ${dest}`);
+
+    // The image editor's own Save menu does the same, also with "Always keep
+    // originals" on (a pasted picture has no original): it asks where, and the
+    // tab takes the name typed in the dialog, saved.
+    const keep = settings.value.imageKeepOriginal;
+    settings.update((s) => (s.imageKeepOriginal = true));
+    for (const item of ['Save', 'Save as…', 'Save a copy (keep original)']) {
+      start = await emptyTab();
+      assert(await give(start, { kind: 'image', image: c, name: 'Pasted image' }), `${item}: a picture pasted`);
+      const pic = await pasted();
+      await waitFor(() => (pic as unknown as { imageTest?: { editor: () => unknown } }).imageTest?.editor() ?? null, `${item}: the image editor`);
+      const picTemp = pic.filePath!;
+      const name = `renamed ${item.split(' ')[0].toLowerCase()}`;
+      asked = '';
+      go().SaveFileDialog = async (_title, def) => {
+        asked = def;
+        return join(out, `${name}.png`);
+      };
+      document.querySelector<HTMLButtonElement>(`.tabview[data-tab-id="${pic.id}"] button[title="Save options"]`)!.click();
+      const items = await waitFor(() => menu.open?.items ?? null, `${item}: the Save menu`);
+      items.find((i) => i.label === item)!.run!();
+      await waitFor(() => (!pic.dirty ? true : null), `${item}: saved`, 8000);
+      assertEq(asked.split(/[\\/]/).pop(), 'Pasted image.png', `${item}: asked where, suggesting its name`);
+      assert(!asked.includes(dirname(picTemp)), `${item}: not in the temp folder (${asked})`);
+      assert(pic.title === `${name}.png` && pic.filePath === join(out, `${name}.png`) && !pic.scratch, `${item}: the tab takes the name typed in the dialog (${pic.title})`);
+      const [saved, picTempLeft] = await api.Exists([join(out, `${name}.png`), picTemp]);
+      assert(saved && !picTempLeft, `${item}: written there; the temp copy is gone`);
+    }
+    settings.update((s) => (s.imageKeepOriginal = keep));
+    go().SaveFileDialog = async (_title, def) => {
+      asked = def;
+      return join(out, 'saved-image');
+    };
+    log('the image editor’s Save, Save as… and Save a copy ask where for a pasted picture');
 
     // Text → the editor for its kind.
     const samples: [string, string, string][] = [

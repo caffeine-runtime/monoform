@@ -517,7 +517,11 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   of its kind, so every editor works on it unchanged; the tab carries `scratch` (its name), counts as unsaved, and
   isn't kept in the session. Its first Save asks where, lets the editor write its temp copy the way it always saves,
   then copies that into place and points the tab there (`Workspace.saveScratch`) — no editor needed changes. Text is
-  classified by content (`core/pasteKind.ts`) rather than asked about.
+  classified by content (`core/pasteKind.ts`) rather than asked about. An editor's own Save menu therefore saves
+  through `workspace.save` (as Ctrl+S does) rather than its handler: called directly, the handler only rewrote the
+  temp copy, so a pasted picture saved from the image editor's menu stayed "Pasted image.png", unsaved. The handler
+  itself, asked by `saveScratch`, just writes the temp copy (no keep-the-original copy for a paste), and its own
+  dialogs suggest the open folder rather than the temp folder.
 - **AI tools always visible** in the image editor (greyed until downloaded) rather than appearing after a download:
   people learn they exist where they'd use them, and the click leads to the one place they are installed (Settings ›
   Add-ons, `core/settingsLink.ts` scrolls to and highlights the row). They are actions next to Select object, not

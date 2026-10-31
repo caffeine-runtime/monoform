@@ -4,6 +4,7 @@
 - **Resizable side panels**: the outline beside a note, a 3D model's parts, image adjustments, SVG properties and the other editors' side panels are as wide as you drag them, and remember it. Double-click the edge for the usual width.
 - **Smoother sidebar**: a line now sets it apart from the editors' toolboxes beside it. Going between the full sidebar and the strip, the logo stays put while the name folds into it, the lists slide away and the strip's icons pop in one after another; files glide to their new place in the lists.
 - **Animations: System · On · Off** in Settings › Appearance. With *System* Monoform follows your system, and Windows asks for no animations whenever *Animation effects* is off (also after *Adjust for best performance*). Choose *On* to have them anyway.
+- **Fix: a pasted picture saved from the image editor's Save menu** now asks where and takes the name you type, like Ctrl+S. Before, it kept "Pasted image.png" with the unsaved dot and asked to save again on closing.
 - **Markdown in colour**: in a note's source, the marks of formatting each have their colour: `**` of bold in red, `*` of italic in purple, `#` of headings, code backticks, list bullets and task boxes, quotes and links. Struck text, task lists and tables are recognised as on GitHub.
 
 ## Downloads

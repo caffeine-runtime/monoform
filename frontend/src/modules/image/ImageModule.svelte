@@ -1255,6 +1255,8 @@
 
   async function saveCopy(): Promise<boolean> {
     if (imgMode || !editor) return false;
+    // A pasted image has no original to keep: saving asks where, as Save does.
+    if (tab.scratch) return workspace.save(tab);
     const target = await copyPath();
     const ok = await writeImage(target);
     if (ok) {
@@ -1273,11 +1275,20 @@
     }
     if (imgMode || !editor) return false;
     if (!tab.filePath || tab.readOnly) return saveAs();
+    // A pasted image: the workspace asked where to keep it and copies this
+    // temp file there once it's written.
+    if (tab.scratch) return writeImage(tab.filePath);
     // Keep originals: the first save of an opened image goes to a copy.
     if (settings.value.imageKeepOriginal && !/ \(edited( \d+)?\)$/.test(stem(tab.filePath))) return saveCopy();
     // HEIC/AVIF can't be written: the edit goes to a JPEG copy next to it.
     if (!SAVE_FORMATS.includes(extname(tab.filePath))) return saveCopy();
     return writeImage(tab.filePath);
+  }
+
+  /** Where a save dialog starts: beside the file, or for a new or pasted image (its file is a temp copy) the open folder. */
+  function suggest(name: string): string {
+    if (tab.filePath && !tab.scratch) return join(dirname(tab.filePath), name);
+    return workspace.folder ? join(workspace.folder, name) : name;
   }
 
   async function saveAs(): Promise<boolean> {
@@ -1286,8 +1297,7 @@
       ui.toast(isSvg ? t('SVG files are view-only.') : t('Start editing to save a copy.'), 'info');
       return false;
     }
-    const base = tab.filePath ?? join(dirname(tab.path ?? ''), tab.title);
-    const path = await api.SaveFileDialog(t('Save image as'), base, [
+    const path = await api.SaveFileDialog(t('Save image as'), suggest(tab.title), [
       { name: 'PNG', patterns: '*.png' },
       { name: 'JPEG', patterns: '*.jpg;*.jpeg' },
       { name: t('WebP (lossless)'), patterns: '*.webp' },
@@ -1306,8 +1316,7 @@
 
   async function saveWithLayers(): Promise<boolean> {
     if (imgMode || !editor) return false;
-    const base = join(dirname(tab.filePath ?? tab.path ?? ''), `${stem(tab.title)}.ora`);
-    const path = await api.SaveFileDialog(t('Save with layers'), base, [{ name: 'OpenRaster (GIMP, Krita, MyPaint)', patterns: '*.ora' }]); // i18n-ignore: format and app names
+    const path = await api.SaveFileDialog(t('Save with layers'), suggest(`${stem(tab.title)}.ora`), [{ name: 'OpenRaster (GIMP, Krita, MyPaint)', patterns: '*.ora' }]); // i18n-ignore: format and app names
     if (!path) return false;
     const target = extname(path) === 'ora' ? path : `${path}.ora`;
     const ok = await writeOraFile(target);
@@ -1347,9 +1356,9 @@
   function saveMenu(e: MouseEvent) {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     menu.show({ clientX: r.left, clientY: r.bottom + 4 }, [
-      { label: t('Save'), shortcut: formatShortcut('Mod+S'), run: () => void save() },
+      { label: t('Save'), shortcut: formatShortcut('Mod+S'), run: () => void workspace.save(tab) },
       { label: t('Save a copy (keep original)'), shortcut: formatShortcut('Mod+Alt+S'), run: () => void saveCopy() },
-      { label: t('Save as…'), shortcut: formatShortcut('Mod+Shift+S'), run: () => void saveAs() },
+      { label: t('Save as…'), shortcut: formatShortcut('Mod+Shift+S'), run: () => void workspace.save(tab, true) },
       { label: t('Save and convert…'), shortcut: formatShortcut('Mod+Alt+Shift+S'), run: () => void saveAndConvert(tab) },
       { label: t('Save with layers (.ora)…'), run: () => void saveWithLayers() },
       { separator: true },

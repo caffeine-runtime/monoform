@@ -841,6 +841,12 @@
   Unit tests (`mdMarks.test.ts`, `sidebarDrag.test.ts`, `panelResize.test.ts`), a Go settings test, self-test `m89`
   (dragging the sidebar to the strip and away, the strip's buttons and labels, the note panel's width by dragging,
   keys and double-click, dragged away hiding the panels, and the marks' colours in the editor); `m79` updated.
+- **Fix: a pasted picture saved from the image editor's Save menu kept its "Pasted image" name and stayed unsaved**:
+  the menu's Save wrote only the hidden temp copy without asking where (with *Always keep originals* on, an
+  "(edited)" copy in the temp folder), so the tab kept its name, the dot and the "Save your changes?" question; Save
+  as…, Save a copy and Save with layers suggested the temp folder. The menu now saves the way Ctrl+S does: it asks
+  where (the open folder first), and the tab takes the name typed in the dialog. Self-test `m48` extended (Save, Save
+  as… and Save a copy from the menu with *Always keep originals* on, each renamed in the dialog).
 - **The sidebar is set apart and moves between its widths**: a line along its edge (below the tab bar) separates it
   from editors' toolboxes and panels of the same colour. Between full and the strip the logo mark stays where it is
   and the name folds into it; the header buttons and the lists slide off as the edge closes over them, the strip's
