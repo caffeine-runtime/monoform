@@ -160,6 +160,18 @@
   "{name} (part)": "{name} (parte)",
   "Cut {w} × {h} px": "Cortado: {w} × {h} px",
   "Copied {w} × {h} px": "Copiado: {w} × {h} px",
+  "Copied {w} × {h} px from {n} layers": {
+    "one": "Copiado: {w} × {h} px de {n} capa",
+    "other": "Copiado: {w} × {h} px de {n} capas"
+  },
+  "Cut {w} × {h} px from {n} layers": {
+    "one": "Cortado: {w} × {h} px de {n} capa",
+    "other": "Cortado: {w} × {h} px de {n} capas"
+  },
+  "{n} layers selected: Copy, Cut and To layer take them together; painting and the settings below are for “{name}”.": {
+    "one": "{n} capa seleccionada: Copiar, Cortar y A capa la toman; la pintura y los ajustes de abajo son para «{name}».",
+    "other": "{n} capas seleccionadas: Copiar, Cortar y A capa las toman juntas; la pintura y los ajustes de abajo son para «{name}»."
+  },
   "The clipboard is empty.": "El portapapeles está vacío.",
   "Pasted": "Pegado",
   "Only pictures can be added as layers.": "Solo se pueden añadir imágenes como capas.",
@@ -445,7 +457,7 @@
   "Removes the selected object and fills the gap with what could be behind it. Select it first, e.g. by clicking it with Select object.": "Quita el objeto seleccionado y rellena el hueco con lo que podría haber detrás. Selecciónalo antes, p. ej. haciendo clic en él con Seleccionar objeto.",
   "Needs an optional download: click to get it in Settings › Add-ons.": "Necesita una descarga opcional: haz clic para obtenerla en Ajustes › Complementos.",
   "Click the object to remove (Shift-click adds a part), then press Remove object (add-on) again.": "Haz clic en el objeto que quieres quitar (Mayús+clic añade una parte) y vuelve a pulsar Quitar objeto (complemento).",
-  "Drag to move it up or down": "Arrastra para moverla arriba o abajo",
+  "Drag to move it up or down. Shift+click or {mod}+click selects several layers, to copy them together.": "Arrastra para moverla arriba o abajo. Shift+clic o {mod}+clic selecciona varias capas, para copiarlas juntas.",
   "Fill failed": "El relleno falló",
   "Paint bucket": "Bote de pintura",
   "Click to fill an area of similar colour on the active layer (only inside the selection, if there is one). Set Tolerance in the toolbar.": "Haz clic para rellenar un área de color similar en la capa activa (solo dentro de la selección, si la hay). Ajusta la Tolerancia en la barra de herramientas.",

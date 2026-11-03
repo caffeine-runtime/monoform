@@ -172,6 +172,24 @@
   "{name} (part)": "{name} (fragment)",
   "Cut {w} × {h} px": "Wycięto {w} × {h} px",
   "Copied {w} × {h} px": "Skopiowano {w} × {h} px",
+  "Copied {w} × {h} px from {n} layers": {
+    "one": "Skopiowano {w} × {h} px z {n} warstwy",
+    "few": "Skopiowano {w} × {h} px z {n} warstw",
+    "many": "Skopiowano {w} × {h} px z {n} warstw",
+    "other": "Skopiowano {w} × {h} px z {n} warstwy"
+  },
+  "Cut {w} × {h} px from {n} layers": {
+    "one": "Wycięto {w} × {h} px z {n} warstwy",
+    "few": "Wycięto {w} × {h} px z {n} warstw",
+    "many": "Wycięto {w} × {h} px z {n} warstw",
+    "other": "Wycięto {w} × {h} px z {n} warstwy"
+  },
+  "{n} layers selected: Copy, Cut and To layer take them together; painting and the settings below are for “{name}”.": {
+    "one": "{n} warstwa zaznaczona: Kopiuj, Wytnij i Na warstwę biorą ją; malowanie i ustawienia poniżej dotyczą „{name}”.",
+    "few": "{n} warstwy zaznaczone: Kopiuj, Wytnij i Na warstwę biorą je razem; malowanie i ustawienia poniżej dotyczą „{name}”.",
+    "many": "{n} warstw zaznaczonych: Kopiuj, Wytnij i Na warstwę biorą je razem; malowanie i ustawienia poniżej dotyczą „{name}”.",
+    "other": "{n} warstwy zaznaczone: Kopiuj, Wytnij i Na warstwę biorą je razem; malowanie i ustawienia poniżej dotyczą „{name}”."
+  },
   "The clipboard is empty.": "Schowek jest pusty.",
   "Pasted": "Wklejone",
   "Only pictures can be added as layers.": "Jako warstwy można dodawać tylko obrazy.",
@@ -457,7 +475,7 @@
   "Removes the selected object and fills the gap with what could be behind it. Select it first, e.g. by clicking it with Select object.": "Usuwa zaznaczony obiekt i wypełnia lukę tym, co mogło być za nim. Najpierw go zaznacz, np. klikając go narzędziem Zaznacz obiekt.",
   "Needs an optional download: click to get it in Settings › Add-ons.": "Wymaga dodatkowego pobrania: kliknij, aby pobrać w Ustawieniach › Dodatki.",
   "Click the object to remove (Shift-click adds a part), then press Remove object (add-on) again.": "Kliknij obiekt do usunięcia (Shift+klik dodaje część), a potem ponownie naciśnij Usuń obiekt (dodatek).",
-  "Drag to move it up or down": "Przeciągnij, aby przenieść wyżej lub niżej",
+  "Drag to move it up or down. Shift+click or {mod}+click selects several layers, to copy them together.": "Przeciągnij, aby przenieść wyżej lub niżej. Shift+kliknięcie lub {mod}+kliknięcie zaznacza kilka warstw, by skopiować je razem.",
   "Fill failed": "Wypełnianie nie zadziałało",
   "Paint bucket": "Wiadro z farbą",
   "Click to fill an area of similar colour on the active layer (only inside the selection, if there is one). Set Tolerance in the toolbar.": "Kliknij, aby wypełnić obszar o podobnym kolorze na aktywnej warstwie (tylko wewnątrz zaznaczenia, jeśli jest). Tolerancję ustawisz na pasku narzędzi.",

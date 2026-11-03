@@ -436,6 +436,14 @@ Choices the brief didn't dictate, one line of reasoning each. Newest at the bott
   renders the mask through the same transform, so it stays aligned. Brush hides / eraser shows by default
   (the brush covering things up matches "paint it out"); X swaps. In `.ora` the layer PNG has the mask applied
   (what GIMP/Krita show); `mf:raw` and `mf:mask` entries keep both parts for us — OpenRaster has no masks.
+- **Several selected layers are for copying, not a group** (`layerPick.ts`, `editor.ts`). Shift+click takes a run
+  from an anchor and Ctrl+click adds or takes off one, like the animation editor's frames and most editors' layer
+  lists. The selection sits beside the active layer rather than replacing it: painting, filters, opacity and blend
+  still act on the layer clicked last, so no tool needs a "several layers" case; only Copy, Cut / Delete pixels and
+  To layer (Ctrl+J) take all of them. Copied together, they are drawn as they look (opacity, blend, mask and style;
+  hidden ones left out), since the point is to paste what those layers show; one layer's copy stays its own pixels
+  at full opacity, as before. The selection lasts only while the same layer stays active, so whatever changes the
+  active layer (a click, a new, duplicated or merged layer, a deleted one) ends it without each operation knowing.
 - **Tabs drag with pointer events, not HTML drag and drop.** HTML DnD inside a webview behaves differently per
   engine (WebView2 with file drop enabled, WebKitGTK, WKWebView) and can't tell "dropped outside the window" from
   "cancelled". With the pointer captured after a 6 px threshold, moves keep arriving outside the window, so one

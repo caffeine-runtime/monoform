@@ -160,6 +160,18 @@
   "{name} (part)": "{name} (partie)",
   "Cut {w} × {h} px": "Coupé : {w} × {h} px",
   "Copied {w} × {h} px": "Copié : {w} × {h} px",
+  "Copied {w} × {h} px from {n} layers": {
+    "one": "Copié : {w} × {h} px de {n} calque",
+    "other": "Copié : {w} × {h} px de {n} calques"
+  },
+  "Cut {w} × {h} px from {n} layers": {
+    "one": "Coupé : {w} × {h} px de {n} calque",
+    "other": "Coupé : {w} × {h} px de {n} calques"
+  },
+  "{n} layers selected: Copy, Cut and To layer take them together; painting and the settings below are for “{name}”.": {
+    "one": "{n} calque sélectionné : Copier, Couper et En calque le prennent ; la peinture et les réglages ci-dessous concernent « {name} ».",
+    "other": "{n} calques sélectionnés : Copier, Couper et En calque les prennent ensemble ; la peinture et les réglages ci-dessous concernent « {name} »."
+  },
   "The clipboard is empty.": "Le presse-papiers est vide.",
   "Pasted": "Collé",
   "Only pictures can be added as layers.": "Seules les images peuvent être ajoutées comme calques.",
@@ -445,7 +457,7 @@
   "Removes the selected object and fills the gap with what could be behind it. Select it first, e.g. by clicking it with Select object.": "Supprime l’objet sélectionné et comble le vide avec ce qui pourrait se trouver derrière. Sélectionnez-le d’abord, par exemple en cliquant dessus avec « Sélectionner un objet ».",
   "Needs an optional download: click to get it in Settings › Add-ons.": "Nécessite un téléchargement facultatif : cliquez pour l’obtenir dans Paramètres › Extensions.",
   "Click the object to remove (Shift-click adds a part), then press Remove object (add-on) again.": "Cliquez sur l’objet à supprimer (Shift+clic ajoute une partie), puis à nouveau sur « Supprimer l’objet (extension) ».",
-  "Drag to move it up or down": "Faites glisser pour le monter ou le descendre",
+  "Drag to move it up or down. Shift+click or {mod}+click selects several layers, to copy them together.": "Faites glisser pour le monter ou le descendre. Shift+clic ou {mod}+clic sélectionne plusieurs calques, pour les copier ensemble.",
   "Fill failed": "Échec du remplissage",
   "Paint bucket": "Pot de peinture",
   "Click to fill an area of similar colour on the active layer (only inside the selection, if there is one). Set Tolerance in the toolbar.": "Cliquez pour remplir une zone de couleur similaire sur le calque actif (uniquement dans la sélection, s’il y en a une). Réglez la tolérance dans la barre d’outils.",

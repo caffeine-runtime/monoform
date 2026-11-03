@@ -36,6 +36,7 @@ import { styleEmpty, type LayerStyle } from './styles';
 import { autoGrid, gridLines, snapSpan, snapValue } from './guides';
 import { apply as applyH, cropSize, dragCorner, dragEdge, forgetUpload, homography, innerRect, invert, quadBounds, quadOk, rectQuad, straightenAngle, warpCanvas, type Pt, type Quad, type WarpMode } from './warp';
 import { renderStyleLater, renderStyleNow, type StyleFx } from './styleJobs';
+import { pickLayers, type LayerPick } from './layerPick';
 import { t } from '../../core/i18n';
 
 /** t, where a local `t` (the text) hides it. */
@@ -116,6 +117,8 @@ export interface EditorState {
   pixelSelection: Rect | null;
   layers: LayerInfo[]; // bottom first
   activeId: string;
+  /** The selected layers, bottom first: the active one, and any Shift- or Ctrl-clicked with it. */
+  selectedIds: string[];
   object: ObjectProps | null;
   adjusting: boolean;
   /** Brush and eraser paint the active layer's mask instead of its pixels. */
@@ -324,6 +327,8 @@ export class ImageEditor {
   private lassoLine: KLine;
   private layers: LiveLayer[] = [];
   private activeId = '';
+  /** Layers Shift- or Ctrl-clicked with the active one (copy and cut take them together), while it stays the active one. */
+  private picked: LayerPick | null = null;
   private draft: KNode | null = null;
   private start: { x: number; y: number } | null = null;
   private lasso: number[] | null = null;
@@ -1434,6 +1439,33 @@ export class ImageEditor {
 
   setActive(id: string) {
     if (!this.layers.some((l) => l.id === id)) return;
+    this.picked = null;
+    this.showActive(id);
+  }
+
+  /** Shift+click in the layer list: the layers from the last one clicked to this one; Ctrl+click: this one added or taken off. */
+  selectLayers(id: string, how: 'range' | 'toggle') {
+    const ids = this.selectedLayers.map((L) => L.id);
+    const anchor = this.picked?.active === this.activeId ? this.picked.anchor : this.activeId;
+    const next = pickLayers(
+      this.layers.map((L) => L.id),
+      { ids, active: this.activeId, anchor },
+      id,
+      how,
+    );
+    if (!next) return;
+    this.picked = next;
+    this.showActive(next.active);
+  }
+
+  /** The selected layers, bottom first: the active one, and those Shift- or Ctrl-clicked with it. */
+  private get selectedLayers(): LiveLayer[] {
+    const p = this.picked;
+    const list = p && p.active === this.activeId ? this.layers.filter((L) => p.ids.includes(L.id)) : [];
+    return list.length > 1 ? list : [this.active];
+  }
+
+  private showActive(id: string) {
     if (this.floating && id !== this.floating.id) this.finishTransform(true);
     if (id !== this.activeId) this.editMask = false;
     this.activeId = id;
@@ -1948,17 +1980,33 @@ export class ImageEditor {
 
   // ---- selection operations ----
 
-  /** Selected pixels (active layer, or all visible layers when merged), cropped to the selection; whole layer without a selection. */
+  /**
+   * Selected pixels (the active layer, the selected layers together, or all
+   * visible layers when merged), cropped to the selection; whole layers
+   * without a selection. Selected layers are taken as they look together:
+   * with their opacity, blend, mask and style, hidden ones left out.
+   */
   copySelection(merged = false): { canvas: HTMLCanvasElement; x: number; y: number } {
-    const src = merged ? this.composite() : this.layerDocCanvas(this.active);
+    const several = this.selectedLayers;
+    let src: HTMLCanvasElement;
+    if (merged) src = this.composite();
+    else if (several.length > 1) {
+      this.flushStyles();
+      src = this.renderLayers(several, true);
+    } else src = this.layerDocCanvas(this.active);
     if (!this.selection) return { canvas: raster.clone(src), x: 0, y: 0 };
     return { canvas: sel.extract(src, this.selection), x: this.selection.bounds.x, y: this.selection.bounds.y };
   }
 
+  /** Delete the selected pixels, from every selected layer (one step). */
   clearSelectionPixels() {
     if (!this.selection) return;
     const s = this.selection;
-    this.pixelOp(t('Delete pixels'), (c) => sel.clearInside(c, s), { ignoreSelection: true });
+    for (const L of this.selectedLayers) {
+      this.bake(L);
+      this.setCanvas(L, sel.clearInside(L.canvas, s));
+    }
+    this.commit(t('Delete pixels'));
   }
 
   fillSelection(color = this.opts.color) {
@@ -3211,6 +3259,7 @@ export class ImageEditor {
       pixelSelection: this.selection ? { ...this.selection.bounds } : null,
       layers: this.layerInfo(),
       activeId: this.activeId,
+      selectedIds: this.selectedLayers.map((L) => L.id),
       object: this.objectProps(),
       adjusting: !!this.adjuster,
       editMask: this.editMask,

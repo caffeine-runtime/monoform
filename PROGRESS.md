@@ -857,6 +857,13 @@
   with *Adjust for best performance* and remote desktop sessions; *On* keeps them on anyway (`forceMotion`,
   `data-motion="full"`). Go settings test, self-tests `m78` (the three choices) and `m89` (the mark stays put, the
   strip's icons and the header animate, the line along the edge).
+- **Several layers selected at once** (image editor): in the Layers panel Shift+click selects the layers from the
+  last one clicked to this one, Ctrl+click (⌘ on a Mac) adds a layer or takes it off, as in the animation editor's
+  frame strip. Copy (Ctrl+C) then takes what's on them together, as it looks (opacity, blend, masks and styles;
+  hidden layers left out), of the whole picture or the selected part, and pasted it is one layer. Cut and Delete
+  empty the selection on each of them in one undo step, and To layer (Ctrl+J) makes one layer of them. The layer
+  clicked last is the one painted on, whose opacity and blend are shown (ringed in the list); a note under the list
+  says so. A plain click, or a new layer, selects one again. Unit test (`layerPick.test.ts`), self-test `m90`.
 
 ## Next (after v1)
 - Code signing / notarization (needs certificates), a project licence file, and third-party notices bundled with

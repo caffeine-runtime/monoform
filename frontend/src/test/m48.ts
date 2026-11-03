@@ -85,7 +85,8 @@ export default async function m48(dir: string) {
         asked = def;
         return join(out, `${name}.png`);
       };
-      document.querySelector<HTMLButtonElement>(`.tabview[data-tab-id="${pic.id}"] button[title="Save options"]`)!.click();
+      const more = await waitFor(() => document.querySelector<HTMLButtonElement>(`.tabview[data-tab-id="${pic.id}"] button[title$="Save options"]`), `${item}: the Save options button`); // (the title may have gained its label: "Save ▾ — Save options")
+      more.click();
       const items = await waitFor(() => menu.open?.items ?? null, `${item}: the Save menu`);
       items.find((i) => i.label === item)!.run!();
       await waitFor(() => (!pic.dirty ? true : null), `${item}: saved`, 8000);

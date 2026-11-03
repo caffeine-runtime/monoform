@@ -160,6 +160,18 @@
   "{name} (part)": "{name} (Teil)",
   "Cut {w} × {h} px": "Ausgeschnitten: {w} × {h} px",
   "Copied {w} × {h} px": "Kopiert: {w} × {h} px",
+  "Copied {w} × {h} px from {n} layers": {
+    "one": "Kopiert: {w} × {h} px aus {n} Ebene",
+    "other": "Kopiert: {w} × {h} px aus {n} Ebenen"
+  },
+  "Cut {w} × {h} px from {n} layers": {
+    "one": "Ausgeschnitten: {w} × {h} px aus {n} Ebene",
+    "other": "Ausgeschnitten: {w} × {h} px aus {n} Ebenen"
+  },
+  "{n} layers selected: Copy, Cut and To layer take them together; painting and the settings below are for “{name}”.": {
+    "one": "{n} Ebene ausgewählt: Kopieren, Ausschneiden und Als Ebene nehmen sie; Malen und die Einstellungen unten gelten für „{name}“.",
+    "other": "{n} Ebenen ausgewählt: Kopieren, Ausschneiden und Als Ebene nehmen sie zusammen; Malen und die Einstellungen unten gelten für „{name}“."
+  },
   "The clipboard is empty.": "Die Zwischenablage ist leer.",
   "Pasted": "Eingefügt",
   "Only pictures can be added as layers.": "Nur Bilder können als Ebenen hinzugefügt werden.",
@@ -445,7 +457,7 @@
   "Removes the selected object and fills the gap with what could be behind it. Select it first, e.g. by clicking it with Select object.": "Entfernt das ausgewählte Objekt und füllt die Lücke mit dem, was dahinter sein könnte. Wählen Sie es zuerst aus, z. B. per Klick mit „Objekt auswählen“.",
   "Needs an optional download: click to get it in Settings › Add-ons.": "Erfordert einen optionalen Download: klicken, um ihn unter Einstellungen › Erweiterungen zu laden.",
   "Click the object to remove (Shift-click adds a part), then press Remove object (add-on) again.": "Klicken Sie auf das zu entfernende Objekt (Shift+Klick fügt einen Teil hinzu) und dann erneut auf „Objekt entfernen (Erweiterung)“.",
-  "Drag to move it up or down": "Ziehen, um sie nach oben oder unten zu verschieben",
+  "Drag to move it up or down. Shift+click or {mod}+click selects several layers, to copy them together.": "Ziehen, um sie nach oben oder unten zu verschieben. Shift+Klick oder {mod}+Klick wählt mehrere Ebenen aus, um sie zusammen zu kopieren.",
   "Fill failed": "Füllen fehlgeschlagen",
   "Paint bucket": "Farbeimer",
   "Click to fill an area of similar colour on the active layer (only inside the selection, if there is one). Set Tolerance in the toolbar.": "Klicken, um einen Bereich ähnlicher Farbe auf der aktiven Ebene zu füllen (nur innerhalb der Auswahl, falls vorhanden). Toleranz in der Werkzeugleiste einstellen.",

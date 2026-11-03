@@ -13,7 +13,8 @@
   import Contrast from '@lucide/svelte/icons/contrast';
   import Sparkles from '@lucide/svelte/icons/sparkles';
   import { menu, ui, type MenuItem } from '../../core/ui.svelte';
-  import { t } from '../../core/i18n';
+  import { t, tn } from '../../core/i18n';
+  import { isMac } from '../../core/keys';
   import type { Blend, EditorState, ImageEditor } from './editor';
   import { GLOW_DEFAULT, SHADOW_DEFAULT, STROKE_DEFAULT, type LayerStyle } from './styles';
 
@@ -56,6 +57,7 @@
   const top = $derived([...es.layers].reverse());
   const active = $derived(es.layers.find((l) => l.id === es.activeId));
   const activeIndex = $derived(es.layers.findIndex((l) => l.id === es.activeId));
+  const several = $derived(es.selectedIds.length > 1);
 
   /** Draw a layer thumbnail (re-run, debounced, when the document changes). */
   function thumb(node: HTMLCanvasElement, args: { id: string; v: number }) {
@@ -106,8 +108,17 @@
     return { update: draw };
   }
 
+  /** Click a layer: it alone is selected. Shift+click: the layers up to it too; Ctrl+click (⌘ on a Mac): it added or taken off. */
+  function choose(e: MouseEvent, id: string) {
+    if (e.shiftKey) editor.selectLayers(id, 'range');
+    else if (e.ctrlKey || e.metaKey) editor.selectLayers(id, 'toggle');
+    else editor.setActive(id);
+  }
+
   function pick(e: MouseEvent, id: string, mask: boolean) {
     e.stopPropagation();
+    // Shift+click on a mask turns it off or on; anywhere else Shift and Ctrl select several layers.
+    if ((e.shiftKey && !mask) || e.ctrlKey || e.metaKey) return choose(e, id);
     editor.setActive(id);
     if (mask && e.shiftKey) editor.toggleMask();
     else editor.setEditMask(mask);
@@ -238,20 +249,21 @@
 </script>
 
 <div class="layers">
-  <div class="list" role="listbox" aria-label={t('Layers')} bind:this={list} class:dragging={!!drag}>
+  <div class="list" role="listbox" aria-label={t('Layers')} aria-multiselectable="true" bind:this={list} class:dragging={!!drag}>
     {#each top as l, i (l.id)}
       <div
         class="layer"
         class:active={l.id === es.activeId}
+        class:picked={several && es.selectedIds.includes(l.id)}
         class:lifted={drag?.id === l.id}
         class:drop-before={drag && drag.slot === i && drag.slot !== drag.from && drag.slot !== drag.from + 1}
         class:drop-after={drag && i === top.length - 1 && drag.slot === top.length && drag.from !== top.length - 1}
         role="option"
-        aria-selected={l.id === es.activeId}
+        aria-selected={es.selectedIds.includes(l.id)}
         tabindex="-1"
-        title={t('Drag to move it up or down')}
+        title={t('Drag to move it up or down. Shift+click or {mod}+click selects several layers, to copy them together.', { mod: isMac ? '⌘' : 'Ctrl' })}
         onpointerdown={(e) => dragStart(e, l.id, i)}
-        onclick={() => !justDragged && editor.setActive(l.id)} ondblclick={() => rename(l.id, l.name)} oncontextmenu={(e) => layerMenu(e, l.id, l.name)} onkeydown={() => {}}>
+        onclick={(e) => !justDragged && choose(e, l.id)} ondblclick={() => rename(l.id, l.name)} oncontextmenu={(e) => layerMenu(e, l.id, l.name)} onkeydown={() => {}}>
         <button class="icon-btn xs eye" title={l.visible ? t('Hide layer') : t('Show layer')} aria-label={l.visible ? t('Hide {name}', { name: l.name }) : t('Show {name}', { name: l.name })} onclick={(e) => (e.stopPropagation(), editor.setLayerProps(l.id, { visible: !l.visible }))}>
           <Icon icon={l.visible ? Eye : EyeOff} size={13} />
         </button>
@@ -274,6 +286,9 @@
       </div>
     {/each}
   </div>
+  {#if several && active}
+    <p class="masknote picknote">{tn('{n} layer selected: Copy, Cut and To layer take it; painting and the settings below are for “{name}”.', '{n} layers selected: Copy, Cut and To layer take them together; painting and the settings below are for “{name}”.', es.selectedIds.length, { name: active.name })}</p>
+  {/if}
   {#if active?.mask && es.editMask}
     <p class="masknote">{editor.opts.maskHide ? t('Painting the mask: the brush hides, the eraser shows.') : t('Painting the mask: the brush shows, the eraser hides.')}</p>
   {/if}
@@ -379,8 +394,13 @@
   .layer:hover {
     background: var(--bg-hover);
   }
-  .layer.active {
+  .layer.active,
+  .layer.picked {
     background: var(--accent-soft);
+  }
+  /* Several selected: the one painted on is ringed. */
+  .layer.picked.active {
+    box-shadow: inset 0 0 0 1px var(--accent);
   }
   .thumb {
     width: 40px;

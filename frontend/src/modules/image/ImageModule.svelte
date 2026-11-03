@@ -911,7 +911,10 @@
     // Also on the system clipboard and for any other tab (Ctrl+V in a video, a note…).
     void copyTransfer({ kind: 'image', image: canvas, name: editor.selection ? t('{name} (part)', { name: stem(tab.title) }) : stem(tab.title) });
     if (cut) editor.clearSelectionPixels();
-    ui.toast(cut ? t('Cut {w} × {h} px', { w: String(canvas.width), h: String(canvas.height) }) : t('Copied {w} × {h} px', { w: String(canvas.width), h: String(canvas.height) }), 'success');
+    const size = { w: String(canvas.width), h: String(canvas.height) };
+    const n = merged ? 1 : (es?.selectedIds.length ?? 1);
+    if (n > 1) ui.toast(cut ? tn('Cut {w} × {h} px from {n} layer', 'Cut {w} × {h} px from {n} layers', n, size) : tn('Copied {w} × {h} px from {n} layer', 'Copied {w} × {h} px from {n} layers', n, size), 'success');
+    else ui.toast(cut ? t('Cut {w} × {h} px', size) : t('Copied {w} × {h} px', size), 'success');
   }
 
   async function paste() {
